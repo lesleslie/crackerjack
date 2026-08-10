@@ -163,7 +163,9 @@ def logger_verbosity(
         "legacy_DISABLE_STRUCTURED_STDERR": os.environ.get(
             "legacy_DISABLE_STRUCTURED_STDERR"
         ),
-        "legacy_FORCE_STRUCTURED_STDERR": os.environ.get("legacy_FORCE_STRUCTURED_STDERR"),
+        "legacy_FORCE_STRUCTURED_STDERR": os.environ.get(
+            "legacy_FORCE_STRUCTURED_STDERR"
+        ),
     }
 
     try:

@@ -111,10 +111,12 @@ ______________________________________________________________________
 from dataclasses import dataclass
 from enum import Enum
 
+
 class OutputFormat(str, Enum):
     JSON = "json"
     TEXT = "text"
     CUSTOM = "custom"
+
 
 @dataclass(frozen=True)
 class ToolConfig:
@@ -127,6 +129,7 @@ class ToolConfig:
     fallback_to_regex: bool = True
     required_json_fields: set[str] = frozenset()
 
+
 # Tool configurations
 TOOL_CONFIGS: dict[str, ToolConfig] = {
     "ruff": ToolConfig(
@@ -134,47 +137,52 @@ TOOL_CONFIGS: dict[str, ToolConfig] = {
         supports_json=True,
         json_flag="--output-format=json",
         output_format=OutputFormat.JSON,
-        required_json_fields={"filename", "location", "code", "message"}
+        required_json_fields={"filename", "location", "code", "message"},
     ),
     "ruff-check": ToolConfig(
         name="ruff-check",
         supports_json=True,
         json_flag="--output-format=json",
         output_format=OutputFormat.JSON,
-        required_json_fields={"filename", "location", "code", "message"}
+        required_json_fields={"filename", "location", "code", "message"},
     ),
     "mypy": ToolConfig(
         name="mypy",
         supports_json=True,
         json_flag="--output=json",
         output_format=OutputFormat.JSON,
-        required_json_fields={"file", "line", "column", "message"}
+        required_json_fields={"file", "line", "column", "message"},
     ),
     "bandit": ToolConfig(
         name="bandit",
         supports_json=True,
         json_flag="-f json",
         output_format=OutputFormat.JSON,
-        required_json_fields={"filename", "issue_text", "line_number", "issue_severity"}
+        required_json_fields={
+            "filename",
+            "issue_text",
+            "line_number",
+            "issue_severity",
+        },
     ),
     "codespell": ToolConfig(
         name="codespell",
         supports_json=False,
         output_format=OutputFormat.TEXT,
-        fallback_to_regex=True
+        fallback_to_regex=True,
     ),
     "refurb": ToolConfig(
         name="refurb",
         supports_json=False,
         output_format=OutputFormat.TEXT,
-        fallback_to_regex=True
+        fallback_to_regex=True,
     ),
     "complexity": ToolConfig(
         name="complexity",
         supports_json=True,
         json_flag="--json",
         output_format=OutputFormat.JSON,
-        required_json_fields={"file", "function", "complexity"}
+        required_json_fields={"file", "function", "complexity"},
     ),
 }
 ```
@@ -187,6 +195,7 @@ TOOL_CONFIGS: dict[str, ToolConfig] = {
 from abc import ABC, abstractmethod
 from typing import Protocol
 
+
 class ToolParser(Protocol):
     """Protocol for tool output parsers."""
 
@@ -194,13 +203,10 @@ class ToolParser(Protocol):
         """Parse tool output into Issue objects."""
         ...
 
-    def validate_output(
-        self,
-        output: str,
-        expected_count: int | None = None
-    ) -> bool:
+    def validate_output(self, output: str, expected_count: int | None = None) -> bool:
         """Validate that output was parsed correctly."""
         ...
+
 
 class JSONParser(ABC):
     """Base class for JSON-based parsers."""
@@ -214,6 +220,7 @@ class JSONParser(ABC):
     def get_issue_count(self, data: dict | list) -> int:
         """Extract issue count from JSON data."""
         ...
+
 
 class RegexParser(ABC):
     """Base class for regex-based parsers (fallback)."""
@@ -237,6 +244,7 @@ from crackerjack.parsers.base_parser import JSONParser
 from crackerjack.agents.base import Issue, IssueType, Priority
 
 logger = logging.getLogger(__name__)
+
 
 class RuffJSONParser(JSONParser):
     """Parse ruff JSON output."""
@@ -265,8 +273,12 @@ class RuffJSONParser(JSONParser):
         for item in data:
             try:
                 # Validate required fields
-                if not all(k in item for k in ["filename", "location", "code", "message"]):
-                    logger.warning(f"Skipping ruff item missing required fields: {item}")
+                if not all(
+                    k in item for k in ["filename", "location", "code", "message"]
+                ):
+                    logger.warning(
+                        f"Skipping ruff item missing required fields: {item}"
+                    )
                     continue
 
                 file_path = item["filename"]
@@ -277,18 +289,17 @@ class RuffJSONParser(JSONParser):
                 issue_type = self._get_issue_type(code)
                 severity = self._get_severity(code)
 
-                issues.append(Issue(
-                    type=issue_type,
-                    severity=severity,
-                    message=f"{code} {message}",
-                    file_path=file_path,
-                    line_number=line_number,
-                    stage="ruff-check",
-                    details=[
-                        f"code: {code}",
-                        f"fixable: {'fix' in item}"
-                    ]
-                ))
+                issues.append(
+                    Issue(
+                        type=issue_type,
+                        severity=severity,
+                        message=f"{code} {message}",
+                        file_path=file_path,
+                        line_number=line_number,
+                        stage="ruff-check",
+                        details=[f"code: {code}", f"fixable: {'fix' in item}"],
+                    )
+                )
             except Exception as e:
                 logger.error(f"Error parsing ruff JSON item: {e}", exc_info=True)
 
@@ -346,7 +357,9 @@ class MypyJSONParser(JSONParser):
             try:
                 # Validate required fields
                 if not all(k in item for k in ["file", "line", "message"]):
-                    logger.warning(f"Skipping mypy item missing required fields: {item}")
+                    logger.warning(
+                        f"Skipping mypy item missing required fields: {item}"
+                    )
                     continue
 
                 file_path = item["file"]
@@ -354,15 +367,19 @@ class MypyJSONParser(JSONParser):
                 message = item["message"]
                 severity_str = item.get("severity", "error")
 
-                issues.append(Issue(
-                    type=IssueType.TYPE_ERROR,
-                    severity=Priority.HIGH if severity_str == "error" else Priority.MEDIUM,
-                    message=message,
-                    file_path=file_path,
-                    line_number=line_number,
-                    stage="mypy",
-                    details=[f"severity: {severity_str}"]
-                ))
+                issues.append(
+                    Issue(
+                        type=IssueType.TYPE_ERROR,
+                        severity=Priority.HIGH
+                        if severity_str == "error"
+                        else Priority.MEDIUM,
+                        message=message,
+                        file_path=file_path,
+                        line_number=line_number,
+                        stage="mypy",
+                        details=[f"severity: {severity_str}"],
+                    )
+                )
             except Exception as e:
                 logger.error(f"Error parsing mypy JSON item: {e}", exc_info=True)
 
@@ -395,7 +412,9 @@ class BanditJSONParser(JSONParser):
         }
         """
         if not isinstance(data, dict) or "results" not in data:
-            logger.warning(f"Expected dict with 'results' from bandit, got {type(data)}")
+            logger.warning(
+                f"Expected dict with 'results' from bandit, got {type(data)}"
+            )
             return []
 
         issues: list[Issue] = []
@@ -403,8 +422,12 @@ class BanditJSONParser(JSONParser):
         for item in data["results"]:
             try:
                 # Validate required fields
-                if not all(k in item for k in ["filename", "issue_text", "line_number"]):
-                    logger.warning(f"Skipping bandit item missing required fields: {item}")
+                if not all(
+                    k in item for k in ["filename", "issue_text", "line_number"]
+                ):
+                    logger.warning(
+                        f"Skipping bandit item missing required fields: {item}"
+                    )
                     continue
 
                 file_path = item["filename"]
@@ -415,18 +438,17 @@ class BanditJSONParser(JSONParser):
 
                 severity = self._map_severity(severity_str)
 
-                issues.append(Issue(
-                    type=IssueType.SECURITY,
-                    severity=severity,
-                    message=f"{test_id}: {message}",
-                    file_path=file_path,
-                    line_number=line_number,
-                    stage="bandit",
-                    details=[
-                        f"test_id: {test_id}",
-                        f"severity: {severity_str}"
-                    ]
-                ))
+                issues.append(
+                    Issue(
+                        type=IssueType.SECURITY,
+                        severity=severity,
+                        message=f"{test_id}: {message}",
+                        file_path=file_path,
+                        line_number=line_number,
+                        stage="bandit",
+                        details=[f"test_id: {test_id}", f"severity: {severity_str}"],
+                    )
+                )
             except Exception as e:
                 logger.error(f"Error parsing bandit JSON item: {e}", exc_info=True)
 
@@ -438,7 +460,7 @@ class BanditJSONParser(JSONParser):
         mapping = {
             "HIGH": Priority.CRITICAL,
             "MEDIUM": Priority.HIGH,
-            "LOW": Priority.MEDIUM
+            "LOW": Priority.MEDIUM,
         }
         return mapping.get(severity_str, Priority.MEDIUM)
 
@@ -761,7 +783,7 @@ issues = parser.parse_json(data)
 # Validate count
 parser.validate_output(
     output=ruff_output,
-    expected_count=16  # 15 errors + 1 warning
+    expected_count=16,  # 15 errors + 1 warning
 )
 
 # If len(issues) != 16 → raise ParsingError
@@ -837,9 +859,7 @@ for line in raw_output.split("\n"):
 # Validation error → explicit exception
 try:
     issues = parser_factory.parse_with_validation(
-        tool_name="ruff",
-        output=raw_output,
-        expected_count=16
+        tool_name="ruff", output=raw_output, expected_count=16
     )
 except ParsingError as e:
     # ✅ Explicit error with context
@@ -865,24 +885,28 @@ import json
 import pytest
 from crackerjack.parsers.json_parsers import RuffJSONParser
 
+
 @pytest.fixture
 def ruff_json_output():
     """Real ruff JSON output sample."""
-    return json.dumps([
-        {
-            "filename": "test.py",
-            "location": {"row": 10, "column": 5},
-            "code": "UP017",
-            "message": "Use `datetime.UTC` alias",
-            "fix": {"applicability": "automatic"}
-        },
-        {
-            "filename": "test.py",
-            "location": {"row": 20, "column": 8},
-            "code": "I001",
-            "message": "Import block is un-sorted",
-        }
-    ])
+    return json.dumps(
+        [
+            {
+                "filename": "test.py",
+                "location": {"row": 10, "column": 5},
+                "code": "UP017",
+                "message": "Use `datetime.UTC` alias",
+                "fix": {"applicability": "automatic"},
+            },
+            {
+                "filename": "test.py",
+                "location": {"row": 20, "column": 8},
+                "code": "I001",
+                "message": "Import block is un-sorted",
+            },
+        ]
+    )
+
 
 def test_parse_ruff_json(ruff_json_output):
     """Test parsing ruff JSON output."""
@@ -901,6 +925,7 @@ def test_parse_ruff_json(ruff_json_output):
     assert "I001" in issues[1].message
     assert issues[1].details[0] == "fixable: False"  # No 'fix' field
 
+
 def test_get_issue_count(ruff_json_output):
     """Test extracting issue count."""
     parser = RuffJSONParser()
@@ -918,13 +943,14 @@ def test_get_issue_count(ruff_json_output):
 import subprocess
 import json
 
+
 def test_ruff_json_parsing_in_workflow():
     """Test that ruff JSON parsing works in full workflow."""
     # Run ruff with JSON output
     result = subprocess.run(
         ["uv", "run", "ruff", "check", "--output-format=json", "."],
         capture_output=True,
-        text=True
+        text=True,
     )
 
     # Parse JSON
@@ -932,12 +958,13 @@ def test_ruff_json_parsing_in_workflow():
 
     # Use parser
     from crackerjack.parsers.parser_factory import ParserFactory
+
     factory = ParserFactory()
 
     issues = factory.parse_with_validation(
         tool_name="ruff",
         output=result.stdout,
-        expected_count=len(data)  # All items should be parsed
+        expected_count=len(data),  # All items should be parsed
     )
 
     # Validate
@@ -950,6 +977,7 @@ def test_ruff_json_parsing_in_workflow():
 ```python
 # tests/regression/test_parser_comparison.py
 
+
 def test_json_regex_parity():
     """Ensure JSON parser produces same results as regex for valid output."""
     # Sample output that both parsers should handle
@@ -959,9 +987,7 @@ def test_json_regex_parity():
 
     # Parse with JSON (simulate)
     json_issues = factory.parse_with_validation(
-        tool_name="ruff",
-        output=sample,
-        expected_count=None
+        tool_name="ruff", output=sample, expected_count=None
     )
 
     # Parse with regex (old way)

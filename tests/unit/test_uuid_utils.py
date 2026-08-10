@@ -66,7 +66,7 @@ class TestAgentBaseUsesUuidUtils:
 
     def test_issue_id_prefix_format(self) -> None:
         """Issue IDs must start with 'issue_' and contain hex characters."""
-        from crackerjack.agents.base import Issue, IssueType, Priority
+        from crackerjack.models.issues import Issue, IssueType, Priority
 
         issue = Issue(
             type=IssueType.FORMATTING,

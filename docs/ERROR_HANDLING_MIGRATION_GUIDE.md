@@ -29,11 +29,7 @@ logger = logging.getLogger(__name__)
 try:
     risky_operation()
 except Exception as e:
-    log_exception(
-        "Failed to process file",
-        file_path=str(path),
-        operation="parse_yaml"
-    )
+    log_exception("Failed to process file", file_path=str(path), operation="parse_yaml")
     raise  # or return error value
 ```
 
@@ -421,11 +417,7 @@ from crackerjack.utils.error_handling import (
 try:
     config = load_config(path)
 except Exception as e:
-    log_and_return_error(
-        e,
-        "Failed to load configuration",
-        file_path=str(path)
-    )
+    log_and_return_error(e, "Failed to load configuration", file_path=str(path))
     return None
 
 # Pattern 2: Safe execute with default
@@ -434,7 +426,7 @@ result = safe_execute(
     json_content,
     error_message="Failed to parse JSON",
     default_return={},
-    file_path=str(path)
+    file_path=str(path),
 )
 
 # Pattern 3: File operations

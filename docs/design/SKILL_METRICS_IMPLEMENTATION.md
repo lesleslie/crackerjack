@@ -82,6 +82,7 @@ class SkillInvocationResult:
         invocation_id: Unique identifier for this invocation
         completer: Callback function to mark invocation complete
     """
+
     invocation_id: str
     completer: Callable[[bool, list[str] | None, str | None], None]
 
@@ -104,6 +105,7 @@ class SkillMetricsData:
         completion_rate: Percentage of invocations that completed
         avg_duration_seconds: Average duration of completed invocations
     """
+
     skill_name: str
     total_invocations: int = 0
     completed_invocations: int = 0
@@ -178,20 +180,20 @@ class SkillMetricsStore:
             busy_timeout: Busy timeout in milliseconds
         """
         # Enable foreign keys
-        self.conn.execute('PRAGMA foreign_keys=ON')
+        self.conn.execute("PRAGMA foreign_keys=ON")
 
         # Set busy timeout for concurrent access
-        self.conn.execute(f'PRAGMA busy_timeout={busy_timeout}')
+        self.conn.execute(f"PRAGMA busy_timeout={busy_timeout}")
 
         # Enable WAL mode for better concurrency
         if enable_wal:
-            self.conn.execute('PRAGMA journal_mode=WAL')
-            self.conn.execute('PRAGMA synchronous=NORMAL')  # Balance safety/performance
+            self.conn.execute("PRAGMA journal_mode=WAL")
+            self.conn.execute("PRAGMA synchronous=NORMAL")  # Balance safety/performance
 
         # Performance optimizations
-        self.conn.execute('PRAGMA temp_store=MEMORY')  # Use RAM for temp tables
-        self.conn.execute('PRAGMA mmap_size=30000000000')  # 30GB memory-mapped I/O
-        self.conn.execute('PRAGMA page_size=4096')  # Optimal page size
+        self.conn.execute("PRAGMA temp_store=MEMORY")  # Use RAM for temp tables
+        self.conn.execute("PRAGMA mmap_size=30000000000")  # 30GB memory-mapped I/O
+        self.conn.execute("PRAGMA page_size=4096")  # Optimal page size
 
     def _ensure_schema_version(self) -> None:
         """Run migrations if needed.
@@ -231,10 +233,18 @@ class SkillMetricsStore:
             """)
 
             # Create indexes
-            self.conn.execute("CREATE INDEX idx_skill_invocation_skill_name ON skill_invocation(skill_name)")
-            self.conn.execute("CREATE INDEX idx_skill_invocation_invoked_at ON skill_invocation(invoked_at DESC)")
-            self.conn.execute("CREATE INDEX idx_skill_invocation_completed ON skill_invocation(completed)")
-            self.conn.execute("CREATE INDEX idx_skill_invocation_skill_time ON skill_invocation(skill_name, invoked_at DESC)")
+            self.conn.execute(
+                "CREATE INDEX idx_skill_invocation_skill_name ON skill_invocation(skill_name)"
+            )
+            self.conn.execute(
+                "CREATE INDEX idx_skill_invocation_invoked_at ON skill_invocation(invoked_at DESC)"
+            )
+            self.conn.execute(
+                "CREATE INDEX idx_skill_invocation_completed ON skill_invocation(completed)"
+            )
+            self.conn.execute(
+                "CREATE INDEX idx_skill_invocation_skill_time ON skill_invocation(skill_name, invoked_at DESC)"
+            )
 
             # Create skill_metrics table
             self.conn.execute("""
@@ -306,7 +316,7 @@ class SkillMetricsStore:
                 # Automatically committed if no exceptions
         """
         try:
-            self.conn.execute('BEGIN IMMEDIATE TRANSACTION')
+            self.conn.execute("BEGIN IMMEDIATE TRANSACTION")
             yield self.conn
             self.conn.commit()
         except Exception:
@@ -352,7 +362,14 @@ class SkillMetricsStore:
                     session_id, project_path, completed
                 ) VALUES (?, ?, ?, ?, ?, ?, 0)
                 """,
-                (invocation_id, skill_name, invoked_at, workflow_path, session_id, project_path)
+                (
+                    invocation_id,
+                    skill_name,
+                    invoked_at,
+                    workflow_path,
+                    session_id,
+                    project_path,
+                ),
             )
 
         def completer(
@@ -393,20 +410,21 @@ class SkillMetricsStore:
                         duration_seconds,
                         json.dumps(follow_up_actions or []),
                         error_type,
-                        invocation_id
-                    )
+                        invocation_id,
+                    ),
                 )
 
                 # Update aggregated metrics
                 self._update_skill_metrics(
-                    skill_name, completed, duration_seconds,
-                    workflow_path, error_type, follow_up_actions
+                    skill_name,
+                    completed,
+                    duration_seconds,
+                    workflow_path,
+                    error_type,
+                    follow_up_actions,
                 )
 
-        return SkillInvocationResult(
-            invocation_id=invocation_id,
-            completer=completer
-        )
+        return SkillInvocationResult(invocation_id=invocation_id, completer=completer)
 
     def _update_skill_metrics(
         self,
@@ -435,15 +453,15 @@ class SkillMetricsStore:
         # Get existing metrics to update JSON fields
         cursor = self.conn.execute(
             "SELECT workflow_paths, common_errors, follow_up_actions FROM skill_metrics WHERE skill_name = ?",
-            (skill_name,)
+            (skill_name,),
         )
         row = cursor.fetchone()
 
         if row:
             # Update existing JSON fields
-            workflow_paths = json.loads(row[0] or '{}')
-            common_errors = json.loads(row[1] or '{}')
-            actions = json.loads(row[2] or '{}')
+            workflow_paths = json.loads(row[0] or "{}")
+            common_errors = json.loads(row[1] or "{}")
+            actions = json.loads(row[2] or "{}")
 
             if workflow_path:
                 workflow_paths[workflow_path] = workflow_paths.get(workflow_path, 0) + 1
@@ -451,7 +469,7 @@ class SkillMetricsStore:
             if error_type:
                 common_errors[error_type] = common_errors.get(error_type, 0) + 1
 
-            for action in (follow_up_actions or []):
+            for action in follow_up_actions or []:
                 actions[action] = actions.get(action, 0) + 1
         else:
             # New skill, initialize JSON fields
@@ -491,7 +509,7 @@ class SkillMetricsStore:
                 1 if completed else 0,  # completed_invocations (UPDATE)
                 0 if completed else 1,  # abandoned_invocations (UPDATE)
                 duration_seconds if completed else 0.0,  # total_duration (UPDATE)
-            )
+            ),
         )
 
     def get_skill_metrics(self, skill_name: str) -> dict[str, object] | None:
@@ -518,7 +536,7 @@ class SkillMetricsStore:
             FROM skill_metrics
             WHERE skill_name = ?
             """,
-            (skill_name,)
+            (skill_name,),
         )
 
         row = cursor.fetchone()
@@ -526,18 +544,18 @@ class SkillMetricsStore:
             return None
 
         return {
-            'skill_name': row[0],
-            'total_invocations': row[1],
-            'completed_invocations': row[2],
-            'abandoned_invocations': row[3],
-            'total_duration_seconds': row[4],
-            'workflow_paths': json.loads(row[5] or '{}'),
-            'common_errors': json.loads(row[6] or '{}'),
-            'follow_up_actions': json.loads(row[7] or '{}'),
-            'first_invoked': row[8],
-            'last_invoked': row[9],
-            'completion_rate': row[10],
-            'avg_duration_seconds': row[11],
+            "skill_name": row[0],
+            "total_invocations": row[1],
+            "completed_invocations": row[2],
+            "abandoned_invocations": row[3],
+            "total_duration_seconds": row[4],
+            "workflow_paths": json.loads(row[5] or "{}"),
+            "common_errors": json.loads(row[6] or "{}"),
+            "follow_up_actions": json.loads(row[7] or "{}"),
+            "first_invoked": row[8],
+            "last_invoked": row[9],
+            "completion_rate": row[10],
+            "avg_duration_seconds": row[11],
         }
 
     def get_all_metrics(self) -> dict[str, dict[str, object]]:
@@ -565,18 +583,18 @@ class SkillMetricsStore:
 
         return {
             row[0]: {
-                'skill_name': row[0],
-                'total_invocations': row[1],
-                'completed_invocations': row[2],
-                'abandoned_invocations': row[3],
-                'total_duration_seconds': row[4],
-                'workflow_paths': json.loads(row[5] or '{}'),
-                'common_errors': json.loads(row[6] or '{}'),
-                'follow_up_actions': json.loads(row[7] or '{}'),
-                'first_invoked': row[8],
-                'last_invoked': row[9],
-                'completion_rate': row[10],
-                'avg_duration_seconds': row[11],
+                "skill_name": row[0],
+                "total_invocations": row[1],
+                "completed_invocations": row[2],
+                "abandoned_invocations": row[3],
+                "total_duration_seconds": row[4],
+                "workflow_paths": json.loads(row[5] or "{}"),
+                "common_errors": json.loads(row[6] or "{}"),
+                "follow_up_actions": json.loads(row[7] or "{}"),
+                "first_invoked": row[8],
+                "last_invoked": row[9],
+                "completion_rate": row[10],
+                "avg_duration_seconds": row[11],
             }
             for row in cursor.fetchall()
         }
@@ -608,15 +626,21 @@ class SkillMetricsStore:
 
         if not row or row[0] == 0:
             return {
-                'total_skills': 0,
-                'total_invocations': 0,
-                'overall_completion_rate': 0.0,
-                'most_used_skill': None,
-                'most_used_count': 0,
-                'avg_duration_seconds': 0.0,
+                "total_skills": 0,
+                "total_invocations": 0,
+                "overall_completion_rate": 0.0,
+                "most_used_skill": None,
+                "most_used_count": 0,
+                "avg_duration_seconds": 0.0,
             }
 
-        total_skills, total_invocations, total_completed, total_duration, total_completed_invocations = row
+        (
+            total_skills,
+            total_invocations,
+            total_completed,
+            total_duration,
+            total_completed_invocations,
+        ) = row
 
         # Get most used skill
         cursor = self.conn.execute(
@@ -625,14 +649,16 @@ class SkillMetricsStore:
         most_used = cursor.fetchone()
 
         return {
-            'total_skills': total_skills,
-            'total_invocations': total_invocations,
-            'overall_completion_rate': (
-                (total_completed / total_invocations * 100) if total_invocations > 0 else 0.0
+            "total_skills": total_skills,
+            "total_invocations": total_invocations,
+            "overall_completion_rate": (
+                (total_completed / total_invocations * 100)
+                if total_invocations > 0
+                else 0.0
             ),
-            'most_used_skill': most_used[0] if most_used else None,
-            'most_used_count': most_used[1] if most_used else 0,
-            'avg_duration_seconds': (
+            "most_used_skill": most_used[0] if most_used else None,
+            "most_used_count": most_used[1] if most_used else 0,
+            "avg_duration_seconds": (
                 total_duration / total_completed_invocations
                 if total_completed_invocations > 0
                 else 0.0
@@ -721,10 +747,7 @@ result = store.track_invocation("crackerjack-run", workflow_path="comprehensive"
 # ... skill logic ...
 
 # Complete the invocation
-result.completer(
-    completed=True,
-    follow_up_actions=["git commit", "git push"]
-)
+result.completer(completed=True, follow_up_actions=["git commit", "git push"])
 
 # Get metrics
 metrics = store.get_skill_metrics("crackerjack-run")
@@ -742,10 +765,7 @@ try:
     # ... skill logic that fails ...
     raise ValueError("Invalid configuration")
 except Exception as e:
-    result.completer(
-        completed=False,
-        error_type=type(e).__name__
-    )
+    result.completer(completed=False, error_type=type(e).__name__)
 ```
 
 **Example 3: Session-Based Tracking**
@@ -768,7 +788,7 @@ cursor = store.conn.execute(
     WHERE session_id = ?
     ORDER BY invocation_count DESC
     """,
-    (session_id,)
+    (session_id,),
 )
 
 for row in cursor.fetchall():
@@ -786,7 +806,9 @@ for bucket in timeline:
 # Workflow path search
 results = store.search_workflow_paths("comprehensive")
 for result in results:
-    print(f"{result['skill_name']} / {result['workflow_path']}: {result['invocation_count']} uses")
+    print(
+        f"{result['skill_name']} / {result['workflow_path']}: {result['invocation_count']} uses"
+    )
 ```
 
 ### Step 4: Testing
@@ -816,9 +838,9 @@ def test_track_invocation(temp_db: SkillMetricsStore) -> None:
 
     metrics = temp_db.get_skill_metrics("test-skill")
     assert metrics is not None
-    assert metrics['total_invocations'] == 1
-    assert metrics['completed_invocations'] == 1
-    assert metrics['completion_rate'] == 100.0
+    assert metrics["total_invocations"] == 1
+    assert metrics["completed_invocations"] == 1
+    assert metrics["completion_rate"] == 100.0
 
 
 def test_failed_invocation(temp_db: SkillMetricsStore) -> None:
@@ -827,8 +849,8 @@ def test_failed_invocation(temp_db: SkillMetricsStore) -> None:
     result.completer(completed=False, error_type="ValueError")
 
     metrics = temp_db.get_skill_metrics("test-skill")
-    assert metrics['abandoned_invocations'] == 1
-    assert metrics['completion_rate'] == 0.0
+    assert metrics["abandoned_invocations"] == 1
+    assert metrics["completion_rate"] == 0.0
 
 
 def test_workflow_path_aggregation(temp_db: SkillMetricsStore) -> None:
@@ -843,8 +865,8 @@ def test_workflow_path_aggregation(temp_db: SkillMetricsStore) -> None:
         result.completer(completed=True)
 
     metrics = temp_db.get_skill_metrics("test-skill")
-    assert metrics['workflow_paths']['quick'] == 3
-    assert metrics['workflow_paths']['comprehensive'] == 2
+    assert metrics["workflow_paths"]["quick"] == 3
+    assert metrics["workflow_paths"]["comprehensive"] == 2
 
 
 def test_concurrent_access(temp_db: SkillMetricsStore) -> None:
@@ -863,7 +885,7 @@ def test_concurrent_access(temp_db: SkillMetricsStore) -> None:
         t.join()
 
     metrics = temp_db.get_skill_metrics("test-skill")
-    assert metrics['total_invocations'] == 10
+    assert metrics["total_invocations"] == 10
 ```
 
 ______________________________________________________________________

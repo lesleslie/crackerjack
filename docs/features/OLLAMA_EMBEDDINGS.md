@@ -65,7 +65,7 @@ config = SemanticConfig(embedding_backend="auto")
 config = SemanticConfig(
     embedding_backend="ollama",
     embedding_model="nomic-embed-text",  # Ollama model
-    ollama_base_url="http://localhost:11434"  # Default Ollama URL
+    ollama_base_url="http://localhost:11434",  # Default Ollama URL
 )
 
 service = EmbeddingService(config)
@@ -139,11 +139,7 @@ print(f"Embedding dimension: {len(embedding)}")
 ### Batch Embeddings
 
 ```python
-texts = [
-    "First code snippet",
-    "Second code snippet",
-    "Third code snippet"
-]
+texts = ["First code snippet", "Second code snippet", "Third code snippet"]
 
 embeddings = service.generate_embeddings_batch(texts)
 print(f"Generated {len(embeddings)} embeddings")
@@ -231,15 +227,11 @@ print(f"Similarity: {similarity:.2%}")  # e.g., "Similarity: 87.45%"
    ```python
    # Before
    config = SemanticConfig(
-       embedding_backend="onnxruntime",
-       embedding_model="all-MiniLM-L6-v2"
+       embedding_backend="onnxruntime", embedding_model="all-MiniLM-L6-v2"
    )
 
    # After
-   config = SemanticConfig(
-       embedding_backend="ollama",
-       embedding_model="nomic-embed-text"
-   )
+   config = SemanticConfig(embedding_backend="ollama", embedding_model="nomic-embed-text")
    ```
 
 1. **No Code Changes Required**: The API is identical across backends

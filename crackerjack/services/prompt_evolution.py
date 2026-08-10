@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from crackerjack.agents.base import Issue
+    from crackerjack.models.issues import Issue
 
 logger = logging.getLogger(__name__)
 

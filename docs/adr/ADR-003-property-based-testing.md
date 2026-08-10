@@ -167,6 +167,7 @@ def test_batch_processor_groups_by_file():
 from hypothesis import given, strategies as st
 from crackerjack.intelligence import BatchProcessor, Issue
 
+
 @given(
     issues=st.lists(
         st.builds(
@@ -289,17 +290,26 @@ TestCacheFSM = ErrorCacheStateMachine.TestCase
 
 ```python
 from hypothesis import given, strategies as st
-from crackerjack.intelligence import AgentOrchestrator, TaskDescription, ExecutionStrategy
+from crackerjack.intelligence import (
+    AgentOrchestrator,
+    TaskDescription,
+    ExecutionStrategy,
+)
+
 
 @given(
-    strategy=st.sampled_from([
-        ExecutionStrategy.SINGLE_BEST,
-        ExecutionStrategy.PARALLEL,
-        ExecutionStrategy.SEQUENTIAL,
-    ]),
+    strategy=st.sampled_from(
+        [
+            ExecutionStrategy.SINGLE_BEST,
+            ExecutionStrategy.PARALLEL,
+            ExecutionStrategy.SEQUENTIAL,
+        ]
+    ),
     num_issues=st.integers(min_value=1, max_value=50),
 )
-def test_orchestrator_handles_all_strategies(strategy: ExecutionStrategy, num_issues: int):
+def test_orchestrator_handles_all_strategies(
+    strategy: ExecutionStrategy, num_issues: int
+):
     """
     Property: Orchestrator must handle all execution strategies
     for any number of issues.
@@ -338,6 +348,7 @@ def test_orchestrator_handles_all_strategies(strategy: ExecutionStrategy, num_is
 from hypothesis import given, strategies as st
 from crackerjack.services import ValidatedPattern
 
+
 @given(
     text=st.text(min_size=0, max_size=10000),
     iterations=st.integers(min_value=1, max_value=10),
@@ -363,6 +374,7 @@ def test_pattern_apply_iteratively_is_idempotent(text: str, iterations: int):
     # Invariant: Second application should not change result
     assert result1 == result2
 
+
 @given(
     text=st.text(),
     pattern=st.from_regex(r"[a-zA-Z0-9_\\[\\]\\*\\+\\?\\|\\^\\$\\.]+"),
@@ -381,6 +393,7 @@ def test_pattern_apply_is_safe(text: str, pattern: str):
 
     # Invariant: Must complete within timeout (no catastrophic backtracking)
     import time
+
     start = time.time()
     result = validated.apply(text, max_iterations=10)
     elapsed = time.time() - start
@@ -511,6 +524,7 @@ def test_agent_selection_is_linear(num_agents):
     agents = [create_agent() for _ in range(num_agents)]
 
     import time
+
     start = time.time()
     result = selector.select_best_agent(task, agents)
     elapsed = time.time() - start

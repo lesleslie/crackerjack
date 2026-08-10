@@ -115,11 +115,7 @@ def test_wrap_non_python_file_path_unchanged() -> None:
 
 
 def test_wrap_preserves_semantics() -> None:
-    code = (
-        "def add(a: int, b: int) -> int:\n"
-        "    return a + b\n"
-        + LONG_LINE_CODE
-    )
+    code = "def add(a: int, b: int) -> int:\n    return a + b\n" + LONG_LINE_CODE
     result = wrap_long_lines(code)
     ast.parse(result)
 
@@ -215,9 +211,7 @@ def wrap_long_lines(
             timeout=RUFF_FORMAT_TIMEOUT_S,
         )
     except (subprocess.TimeoutExpired, OSError) as exc:
-        logger.warning(
-            f"wrap_long_lines: ruff format failed: {exc}; passing through"
-        )
+        logger.warning(f"wrap_long_lines: ruff format failed: {exc}; passing through")
         return code
 
     if proc.returncode != 0:

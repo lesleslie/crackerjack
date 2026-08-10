@@ -57,6 +57,7 @@ class AdapterAttemptRecord:
     Produced by `DharaLearningIntegration.track_adapter_execution` and
     passed to the active adapter learner's `record_adapter_attempt`.
     """
+
     adapter_name: str
     file_type: str
     file_size: int
@@ -79,12 +80,14 @@ class AdapterLearnerProtocol(t.Protocol):
     respective storage so the system can learn which adapters work
     best for which files.
     """
+
     def record_adapter_attempt(self, attempt: AdapterAttemptRecord) -> None: ...
 
 
 @dataclass
 class DharaMCPConfig:
     """Configuration for the Dhara MCP client."""
+
     url: str = "http://localhost:8683"
     timeout_seconds: int = 5
     enabled: bool = True
@@ -103,6 +106,7 @@ class DharaMCPClient:
     list, so the factory is the single point that decides fallback
     policy.
     """
+
     config: DharaMCPConfig
     _client: t.Any = None
     _session: t.Any = None
@@ -122,13 +126,23 @@ class DharaMCPClient:
     async def put(self, key, value, ttl=None) -> dict[str, t.Any] | None: ...
     async def get(self, key) -> dict[str, t.Any] | None: ...
     async def record_time_series(
-        self, metric_type, entity_id, record, timestamp=None,
+        self,
+        metric_type,
+        entity_id,
+        record,
+        timestamp=None,
     ) -> dict[str, t.Any] | None: ...
     async def query_time_series(
-        self, metric_type, entity_id, start_date=None, limit=None,
+        self,
+        metric_type,
+        entity_id,
+        start_date=None,
+        limit=None,
     ) -> list[dict[str, t.Any]]: ...
     async def aggregate_patterns(
-        self, start_date, min_occurrences=2,
+        self,
+        start_date,
+        min_occurrences=2,
     ) -> list[dict[str, t.Any]]: ...
 
 
@@ -144,6 +158,7 @@ class DharaMCPAdapterLearner:
     The record body includes a `pattern` key so the server's
     `aggregate_patterns` tool can group attempts by success/failure.
     """
+
     def __init__(self, config: DharaMCPConfig) -> None:
         """Create a learner with the given MCP config. The session is
         opened lazily on the first `record_adapter_attempt` call."""
@@ -154,6 +169,7 @@ class DharaMCPAdapterLearner:
     def _derive_pattern(self, attempt: AdapterAttemptRecord) -> str:
         """Return a coarse pattern category for `aggregate_patterns`."""
         ...
+
     def close(self) -> None:
         """Best-effort disconnect. Idempotent. Swallows exceptions."""
         ...
@@ -161,6 +177,7 @@ class DharaMCPAdapterLearner:
 
 class DharaMCPSettings(MCPBaseSettings):
     """Settings for the Dhara MCP adapter-learning client."""
+
     url: str = "http://localhost:8683"
     timeout_seconds: int = 5
     enabled: bool = True
@@ -234,6 +251,7 @@ def test_no_aio_thread_leak_when_learner_garbage_collected(
         # Simulate the post-cleanup-module-removal state by ensuring
         # the obsolete atexit walk is not in effect for this test.
         import sys
+
         for mod_name in list(sys.modules):
             if mod_name.startswith("crackerjack.services.aiosqlite_cleanup"):
                 del sys.modules[mod_name]
@@ -359,15 +377,14 @@ The exact insertion point is the last line of `__post_init__`, AFTER `self._init
 In `create_adapter_learner` (around line 786-794 of the current file), DELETE:
 
 ```python
-            def _safe_close(_learner: DharaAdapterLearner = learner) -> None:
-                try:
-                    _learner.close()
-                except Exception as exc:  # pragma: no cover - defensive
-                    logger.debug(
-                        f"DharaAdapterLearner.close() at atexit failed: {exc!r}"
-                    )
+def _safe_close(_learner: DharaAdapterLearner = learner) -> None:
+    try:
+        _learner.close()
+    except Exception as exc:  # pragma: no cover - defensive
+        logger.debug(f"DharaAdapterLearner.close() at atexit failed: {exc!r}")
 
-            atexit.register(_safe_close)
+
+atexit.register(_safe_close)
 ```
 
 And DELETE the comment block immediately above it that begins with `# Register close() with atexit so the aiosqlite connection`.
@@ -469,6 +486,7 @@ class DharaMCPSettings(MCPBaseSettings):
     `MAHAVISHNU_DHARA_MCP_TIMEOUT_SECONDS`, `MAHAVISHNU_DHARA_MCP_ENABLED`,
     `MAHAVISHNU_DHARA_MCP_TOKEN`.
     """
+
     url: str = "http://localhost:8683"
     timeout_seconds: int = 5
     enabled: bool = True
@@ -642,6 +660,7 @@ class DharaMCPConfig:
     as a `Bearer` header on every tool call (the Dhara server gates
     `put` and `record_time_series` with `auth=auth("write")`).
     """
+
     url: str = "http://localhost:8683"
     timeout_seconds: int = 5
     enabled: bool = True
@@ -678,6 +697,7 @@ class DharaMCPClient:
     - Tool methods catch all exceptions internally and return `None`
       or `[]` so a single failed call doesn't break the learner.
     """
+
     config: DharaMCPConfig
     _client: t.Any = field(init=False, default=None)
     _session: t.Any = field(init=False, default=None)
@@ -733,107 +753,112 @@ class DharaMCPClient:
 - [ ] **Step 3: Add the tool wrapper methods**
 
 ```python
-    async def _call_tool(
-        self, name: str, arguments: dict[str, t.Any]
-    ) -> dict[str, t.Any] | None:
-        """Invoke a tool on the connected MCP session.
+async def _call_tool(
+    self, name: str, arguments: dict[str, t.Any]
+) -> dict[str, t.Any] | None:
+    """Invoke a tool on the connected MCP session.
 
-        Returns the tool response as a dict, or None if not connected
-        or if the call raised. Never propagates exceptions.
-        """
-        if not self._is_connected or self._session is None:
-            logger.debug(f"DharaMCPClient._call_tool({name}): not connected")
+    Returns the tool response as a dict, or None if not connected
+    or if the call raised. Never propagates exceptions.
+    """
+    if not self._is_connected or self._session is None:
+        logger.debug(f"DharaMCPClient._call_tool({name}): not connected")
+        return None
+    try:
+        response = await self._session.call_tool(name, arguments=arguments)
+        data = getattr(response, "data", None)
+        if data is None:
             return None
-        try:
-            response = await self._session.call_tool(name, arguments=arguments)
-            data = getattr(response, "data", None)
-            if data is None:
-                return None
-            if isinstance(data, dict):
-                return data
-            return {"value": data}
-        except Exception as exc:
-            logger.debug(
-                f"DharaMCPClient._call_tool({name}) failed: "
-                f"{type(exc).__name__}: {exc!r}"
-            )
-            return None
-
-    async def put(
-        self,
-        key: str,
-        value: t.Any,
-        ttl: int | None = None,
-    ) -> dict[str, t.Any] | None:
-        """Wrap the Dhara MCP `put` tool (key/value store with optional TTL)."""
-        return await self._call_tool("put", {"key": key, "value": value, "ttl": ttl})
-
-    async def get(self, key: str) -> dict[str, t.Any] | None:
-        """Wrap the Dhara MCP `get` tool (read a key/value record)."""
-        return await self._call_tool("get", {"key": key})
-
-    async def record_time_series(
-        self,
-        metric_type: str,
-        entity_id: str,
-        record: dict[str, t.Any],
-        timestamp: str | None = None,
-    ) -> dict[str, t.Any] | None:
-        """Wrap the Dhara MCP `record_time_series` tool (append a time-series record).
-
-        `record` is a free-form dict; include a `pattern` key if you
-        want the server's `aggregate_patterns` tool to group on it.
-        """
-        arguments: dict[str, t.Any] = {
-            "metric_type": metric_type,
-            "entity_id": entity_id,
-            "record": record,
-        }
-        if timestamp is not None:
-            arguments["timestamp"] = timestamp
-        return await self._call_tool("record_time_series", arguments)
-
-    async def query_time_series(
-        self,
-        metric_type: str,
-        entity_id: str,
-        start_date: str | None = None,
-        limit: int | None = None,
-    ) -> list[dict[str, t.Any]]:
-        """Wrap the Dhara MCP `query_time_series` tool (read time-series records)."""
-        arguments: dict[str, t.Any] = {
-            "metric_type": metric_type,
-            "entity_id": entity_id,
-        }
-        if start_date is not None:
-            arguments["start_date"] = start_date
-        if limit is not None:
-            arguments["limit"] = limit
-        result = await self._call_tool("query_time_series", arguments)
-        if isinstance(result, list):
-            return result
-        return []
-
-    async def aggregate_patterns(
-        self,
-        start_date: str,
-        min_occurrences: int = 2,
-    ) -> list[dict[str, t.Any]]:
-        """Wrap the Dhara MCP `aggregate_patterns` tool (group by pattern)."""
-        result = await self._call_tool(
-            "aggregate_patterns",
-            {"start_date": start_date, "min_occurrences": min_occurrences},
+        if isinstance(data, dict):
+            return data
+        return {"value": data}
+    except Exception as exc:
+        logger.debug(
+            f"DharaMCPClient._call_tool({name}) failed: {type(exc).__name__}: {exc!r}"
         )
-        if isinstance(result, list):
-            return result
-        return []
+        return None
 
-    async def is_alive(self) -> bool:
-        """Return True if the session is connected and a probe tool call succeeds."""
-        if not self._is_connected:
-            return False
-        result = await self._call_tool("get", {"key": "__health__"})
-        return result is not None
+
+async def put(
+    self,
+    key: str,
+    value: t.Any,
+    ttl: int | None = None,
+) -> dict[str, t.Any] | None:
+    """Wrap the Dhara MCP `put` tool (key/value store with optional TTL)."""
+    return await self._call_tool("put", {"key": key, "value": value, "ttl": ttl})
+
+
+async def get(self, key: str) -> dict[str, t.Any] | None:
+    """Wrap the Dhara MCP `get` tool (read a key/value record)."""
+    return await self._call_tool("get", {"key": key})
+
+
+async def record_time_series(
+    self,
+    metric_type: str,
+    entity_id: str,
+    record: dict[str, t.Any],
+    timestamp: str | None = None,
+) -> dict[str, t.Any] | None:
+    """Wrap the Dhara MCP `record_time_series` tool (append a time-series record).
+
+    `record` is a free-form dict; include a `pattern` key if you
+    want the server's `aggregate_patterns` tool to group on it.
+    """
+    arguments: dict[str, t.Any] = {
+        "metric_type": metric_type,
+        "entity_id": entity_id,
+        "record": record,
+    }
+    if timestamp is not None:
+        arguments["timestamp"] = timestamp
+    return await self._call_tool("record_time_series", arguments)
+
+
+async def query_time_series(
+    self,
+    metric_type: str,
+    entity_id: str,
+    start_date: str | None = None,
+    limit: int | None = None,
+) -> list[dict[str, t.Any]]:
+    """Wrap the Dhara MCP `query_time_series` tool (read time-series records)."""
+    arguments: dict[str, t.Any] = {
+        "metric_type": metric_type,
+        "entity_id": entity_id,
+    }
+    if start_date is not None:
+        arguments["start_date"] = start_date
+    if limit is not None:
+        arguments["limit"] = limit
+    result = await self._call_tool("query_time_series", arguments)
+    if isinstance(result, list):
+        return result
+    return []
+
+
+async def aggregate_patterns(
+    self,
+    start_date: str,
+    min_occurrences: int = 2,
+) -> list[dict[str, t.Any]]:
+    """Wrap the Dhara MCP `aggregate_patterns` tool (group by pattern)."""
+    result = await self._call_tool(
+        "aggregate_patterns",
+        {"start_date": start_date, "min_occurrences": min_occurrences},
+    )
+    if isinstance(result, list):
+        return result
+    return []
+
+
+async def is_alive(self) -> bool:
+    """Return True if the session is connected and a probe tool call succeeds."""
+    if not self._is_connected:
+        return False
+    result = await self._call_tool("get", {"key": "__health__"})
+    return result is not None
 ```
 
 - [ ] **Step 4: Run the test from Task 4 to verify it PASSES**
@@ -1242,9 +1267,7 @@ def create_adapter_learner(
     if backend in ("auto", "dhara") and mcp_config.enabled:
         try:
             learner = DharaMCPAdapterLearner(mcp_config)
-            logger.info(
-                f"adapter_learning: using Dhara MCP at {mcp_config.url}"
-            )
+            logger.info(f"adapter_learning: using Dhara MCP at {mcp_config.url}")
             return learner
         except Exception as exc:
             logger.info(
@@ -1257,16 +1280,13 @@ def create_adapter_learner(
         for candidate in _dhara_adapter_learning_db_candidates(db_path):
             try:
                 learner = DharaAdapterLearner(
-                    db_path=candidate, min_attempts=min_attempts,
+                    db_path=candidate,
+                    min_attempts=min_attempts,
                 )
-                logger.info(
-                    f"adapter_learning: using in-process Dhara at {candidate}"
-                )
+                logger.info(f"adapter_learning: using in-process Dhara at {candidate}")
                 return learner
             except Exception as exc:
-                logger.warning(
-                    f"Dhara in-process unavailable at {candidate}: {exc}"
-                )
+                logger.warning(f"Dhara in-process unavailable at {candidate}: {exc}")
                 continue
         if backend == "dhara":
             logger.warning("Dhara backend unavailable, using NoOp as requested")
@@ -1275,11 +1295,10 @@ def create_adapter_learner(
     for candidate in _adapter_learning_db_candidates(db_path):
         try:
             learner = SQLiteAdapterLearner(
-                db_path=candidate, min_attempts=min_attempts,
+                db_path=candidate,
+                min_attempts=min_attempts,
             )
-            logger.info(
-                f"adapter_learning: using SQLite at {candidate}"
-            )
+            logger.info(f"adapter_learning: using SQLite at {candidate}")
             return learner
         except Exception as exc:
             logger.warning(f"SQLite adapter learner unavailable: {exc}")
@@ -1302,6 +1321,7 @@ def _load_dhara_mcp_config() -> DharaMCPConfig:
     config", not as a hard error.
     """
     from crackerjack.config.settings import DharaMCPSettings
+
     try:
         settings = DharaMCPSettings()
         return DharaMCPConfig(
@@ -1320,14 +1340,18 @@ def _load_dhara_mcp_config() -> DharaMCPConfig:
 Append to `tests/integration/test_dhara_integration.py`:
 
 ```python
-def test_factory_prefers_mcp_when_server_reachable(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_factory_prefers_mcp_when_server_reachable(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """If the Dhara MCP server is reachable, the factory returns
     `DharaMCPAdapterLearner`."""
     from crackerjack.integration import dhara_integration
     from crackerjack.integration.dhara_integration import DharaMCPAdapterLearner
 
     monkeypatch.setattr(
-        dhara_integration, "_load_dhara_mcp_config", lambda: DharaMCPConfig(enabled=True)
+        dhara_integration,
+        "_load_dhara_mcp_config",
+        lambda: DharaMCPConfig(enabled=True),
     )
 
     class _StubLearner:
@@ -1340,13 +1364,17 @@ def test_factory_prefers_mcp_when_server_reachable(monkeypatch: pytest.MonkeyPat
     assert isinstance(learner, _StubLearner)
 
 
-def test_factory_falls_back_to_noop_when_everything_fails(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_factory_falls_back_to_noop_when_everything_fails(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """If all backends fail, the factory returns NoOpAdapterLearner."""
     from crackerjack.integration import dhara_integration
     from crackerjack.integration.dhara_integration import NoOpAdapterLearner
 
     monkeypatch.setattr(
-        dhara_integration, "_load_dhara_mcp_config", lambda: DharaMCPConfig(enabled=False)
+        dhara_integration,
+        "_load_dhara_mcp_config",
+        lambda: DharaMCPConfig(enabled=False),
     )
 
     def _raise_dhara(*args: t.Any, **kwargs: t.Any) -> t.NoReturn:
@@ -1362,14 +1390,18 @@ def test_factory_falls_back_to_noop_when_everything_fails(monkeypatch: pytest.Mo
     assert isinstance(learner, NoOpAdapterLearner)
 
 
-def test_factory_respects_dhara_mcp_disabled_flag(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_factory_respects_dhara_mcp_disabled_flag(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """When `dhara_mcp.enabled` is False, the factory must skip the
     MCP path and fall through to in-process / SQLite / NoOp.
     """
     from crackerjack.integration import dhara_integration
 
     monkeypatch.setattr(
-        dhara_integration, "_load_dhara_mcp_config", lambda: DharaMCPConfig(enabled=False)
+        dhara_integration,
+        "_load_dhara_mcp_config",
+        lambda: DharaMCPConfig(enabled=False),
     )
 
     used_dhara_mcp = False

@@ -11,7 +11,7 @@ from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
 
-from crackerjack.agents.base import Issue, IssueType, Priority
+from crackerjack.models.issues import Issue, IssueType, Priority
 from crackerjack.services.pattern_detector import (
     AntiPattern,
     PatternDetector,

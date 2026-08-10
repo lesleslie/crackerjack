@@ -37,8 +37,10 @@ Replace fragile regex-based parsing with robust JSON parsing in one complete PR.
 from typing import Protocol
 from crackerjack.agents.base import Issue
 
+
 class ToolParser(Protocol):
     def parse(self, output: str, tool_name: str) -> list[Issue]: ...
+
 
 class JSONParser(Protocol):
     def parse_json(self, data: dict | list) -> list[Issue]: ...
@@ -63,6 +65,7 @@ from crackerjack.agents.base import Issue, IssueType, Priority
 
 logger = logging.getLogger(__name__)
 
+
 class RuffJSONParser(JSONParser):
     def parse_json(self, data: dict | list) -> list[Issue]:
         if not isinstance(data, list):
@@ -71,18 +74,17 @@ class RuffJSONParser(JSONParser):
         issues = []
         for item in data:
             try:
-                issues.append(Issue(
-                    type=self._get_type(item["code"]),
-                    severity=self._get_severity(item["code"]),
-                    message=f"{item['code']} {item['message']}",
-                    file_path=item["filename"],
-                    line_number=item["location"]["row"],
-                    stage="ruff-check",
-                    details=[
-                        f"code: {item['code']}",
-                        f"fixable: {'fix' in item}"
-                    ]
-                ))
+                issues.append(
+                    Issue(
+                        type=self._get_type(item["code"]),
+                        severity=self._get_severity(item["code"]),
+                        message=f"{item['code']} {item['message']}",
+                        file_path=item["filename"],
+                        line_number=item["location"]["row"],
+                        stage="ruff-check",
+                        details=[f"code: {item['code']}", f"fixable: {'fix' in item}"],
+                    )
+                )
             except KeyError as e:
                 logger.error(f"Missing required field in ruff output: {e}")
 

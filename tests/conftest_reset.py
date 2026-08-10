@@ -3,6 +3,10 @@
 This module provides reset_all_singletons() to tear down global state between tests,
 preventing test pollution from shared singletons, caches, and module-level instances.
 
+Restored 2026-08-10 after the AI-fix subsystem wholesale deletion. AI-fix related
+resets (intelligent_system, agent_orchestrator, learning_system, agent_registry,
+issue_embedder, fallback_embedder) were removed with their target modules.
+
 Usage:
     from tests.conftest_reset import reset_all_singletons
     reset_all_singletons()
@@ -79,51 +83,6 @@ def reset_performance_monitor() -> None:
     from crackerjack.core.performance_monitor import _performance_monitor_context
 
     _performance_monitor_context.set(None)
-
-
-def reset_intelligent_system() -> None:
-    """Reset global IntelligentAgentSystem."""
-    from crackerjack.intelligence import integration
-
-    integration._intelligent_system_instance = None
-
-
-def reset_agent_orchestrator() -> None:
-    """Reset global AgentOrchestrator."""
-    from crackerjack.intelligence import agent_orchestrator
-
-    agent_orchestrator._orchestrator_instance = None
-
-
-def reset_learning_system() -> None:
-    """Reset global AdaptiveLearningSystem."""
-    from crackerjack.intelligence import adaptive_learning
-
-    adaptive_learning._learning_system_instance = None
-
-
-def reset_agent_registry() -> None:
-    """Reset global AgentRegistry instance."""
-    from crackerjack.intelligence.agent_registry import agent_registry_instance
-
-    # Reset internal state if initialize was called
-    agent_registry_instance._agents.clear()
-    agent_registry_instance._initialized = False
-    agent_registry_instance._lock = asyncio.Lock()
-
-
-def reset_issue_embedder() -> None:
-    """Reset global IssueEmbedder."""
-    from crackerjack.memory import issue_embedder
-
-    issue_embedder._embedder_instance = None
-
-
-def reset_fallback_embedder() -> None:
-    """Reset global FallbackIssueEmbedder."""
-    from crackerjack.memory import fallback_embedder
-
-    fallback_embedder._embedder_instance = None
 
 
 def reset_connection_pool() -> None:
@@ -213,12 +172,6 @@ def reset_all_singletons() -> None:
     reset_service_watchdog()
     reset_metrics_collector()
     reset_performance_monitor()
-    reset_intelligent_system()
-    reset_agent_orchestrator()
-    reset_learning_system()
-    reset_agent_registry()
-    reset_issue_embedder()
-    reset_fallback_embedder()
     reset_connection_pool()
     reset_structlog()
     clear_lru_caches()

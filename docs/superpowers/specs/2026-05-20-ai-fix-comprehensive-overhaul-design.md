@@ -83,22 +83,55 @@ class AIFixEvent:
     iteration: int
     kind: str
 
+
 @dataclass(frozen=True)
-class IterationStarted(AIFixEvent): strategy: str; issue_count: int
+class IterationStarted(AIFixEvent):
+    strategy: str
+    issue_count: int
+
+
 @dataclass(frozen=True)
-class PreflightStarted(AIFixEvent): tools: list[str]
+class PreflightStarted(AIFixEvent):
+    tools: list[str]
+
+
 @dataclass(frozen=True)
-class PreflightFinished(AIFixEvent): per_tool: dict[str, dict[str, int]]
+class PreflightFinished(AIFixEvent):
+    per_tool: dict[str, dict[str, int]]
+
+
 @dataclass(frozen=True)
-class IssueQueued(AIFixEvent): issue_id: str; hook: str; file: str
+class IssueQueued(AIFixEvent):
+    issue_id: str
+    hook: str
+    file: str
+
+
 @dataclass(frozen=True)
-class AgentDispatched(AIFixEvent): issue_id: str; agent: str
+class AgentDispatched(AIFixEvent):
+    issue_id: str
+    agent: str
+
+
 @dataclass(frozen=True)
-class IssueResolved(AIFixEvent): issue_id: str; agent: str; duration_s: float
+class IssueResolved(AIFixEvent):
+    issue_id: str
+    agent: str
+    duration_s: float
+
+
 @dataclass(frozen=True)
-class IssueFailed(AIFixEvent): issue_id: str; agent: str; reason: str
+class IssueFailed(AIFixEvent):
+    issue_id: str
+    agent: str
+    reason: str
+
+
 @dataclass(frozen=True)
-class IterationFinished(AIFixEvent): resolved: int; failed: int; deferred: int
+class IterationFinished(AIFixEvent):
+    resolved: int
+    failed: int
+    deferred: int
 ```
 
 The bus itself is `AIFixEventBus` — async pub/sub, in-memory, with subscriber sinks:

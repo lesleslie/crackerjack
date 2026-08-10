@@ -127,9 +127,7 @@ def test_import_check_captures_full_traceback_for_top_level_none_dict(tmp_path):
     the fixer can see which line raised AttributeError on None.__dict__."""
     bad_file = tmp_path / "crash.py"
     bad_file.write_text(
-        "import os\n"
-        "value = None\n"
-        "value.__dict__  # NoneType has no __dict__\n"
+        "import os\nvalue = None\nvalue.__dict__  # NoneType has no __dict__\n"
     )
 
     result = import_check(bad_file)
@@ -249,6 +247,7 @@ Add to `tests/unit/ai_fix/test_output_validator.py`:
 def test_import_check_details_none_on_empty_stderr(tmp_path, monkeypatch):
     """If subprocess exits non-zero with empty stderr, details is None."""
     import subprocess
+
     fake_proc = subprocess.CompletedProcess(args=[], returncode=1, stdout="", stderr="")
 
     def fake_run(*args, **kwargs):
@@ -293,9 +292,7 @@ Expected: PASS. Confirms the `reason` extraction path is unchanged.
 Add to `tests/unit/ai_fix/test_output_validator.py`:
 
 ```python
-def test_output_validator_validate_passes_details_through(
-    tmp_path, monkeypatch
-):
+def test_output_validator_validate_passes_details_through(tmp_path, monkeypatch):
     """The wrapper must not drop details; if any check fails with details,
     validate() must return a ValidationResult carrying those details."""
     captured_details: list[str] | None = None
@@ -307,7 +304,7 @@ def test_output_validator_validate_passes_details_through(
             reason="fake failure",
             details=[
                 "Traceback (most recent call last):",
-                "  File \"fake.py\", line 1",
+                '  File "fake.py", line 1',
                 "AttributeError: fake",
             ],
         )
@@ -639,7 +636,7 @@ def test_format_previous_failure_includes_traceback_block():
     """The helper must emit Reason first, then Traceback, then instruction."""
     details = [
         "Traceback (most recent call last):",
-        "  File \"crackerjack/tools/ty_imports.py\", line 220, in apply_import_fix",
+        '  File "crackerjack/tools/ty_imports.py", line 220, in apply_import_fix',
         "    some_obj.__dict__",
         "AttributeError: 'NoneType' object has no attribute '__dict__'",
     ]
@@ -727,15 +724,15 @@ def test_fixer_coordinator_regenerator_prompt_includes_traceback(
 
     # KEY assertions: the captured prompts contain the formatted traceback.
     assert captured_prompts, "no prompts were constructed"
-    assert any(
-        "Previous fix attempt failed with:" in p for p in captured_prompts
-    ), "no prompt contains the 'Previous fix attempt failed with:' header"
-    assert any(
-        "Traceback:" in p for p in captured_prompts
-    ), "no prompt contains a 'Traceback:' block"
-    assert any(
-        "diagnose that frame" in p for p in captured_prompts
-    ), "no prompt contains the explicit LLM instruction"
+    assert any("Previous fix attempt failed with:" in p for p in captured_prompts), (
+        "no prompt contains the 'Previous fix attempt failed with:' header"
+    )
+    assert any("Traceback:" in p for p in captured_prompts), (
+        "no prompt contains a 'Traceback:' block"
+    )
+    assert any("diagnose that frame" in p for p in captured_prompts), (
+        "no prompt contains the explicit LLM instruction"
+    )
 ```
 
 **Why this test passes only after Step 13:** Today, `_build_regenerator_prompt` (or whatever the actual function is) does NOT call `_format_previous_failure`. The test asserts the constructed prompt contains the traceback block, which only happens once Step 13 wires it in. If the test fails today, that's expected — RED state, as designed.

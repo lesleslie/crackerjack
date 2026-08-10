@@ -404,10 +404,10 @@ logger.error(f"Subprocess failed: {error_details}")
 - Add pattern priority enum:
   ```python
   class PatternPriority(IntEnum):
-      EARLY_RETURN = 1      # Try first - smallest change
+      EARLY_RETURN = 1  # Try first - smallest change
       GUARD_CLAUSE = 2
       DECOMPOSE_CONDITIONAL = 3
-      EXTRACT_METHOD = 4    # Try last - largest change
+      EXTRACT_METHOD = 4  # Try last - largest change
   ```
 
 ### Phase 3: Validation & Fallback

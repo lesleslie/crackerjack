@@ -2,7 +2,7 @@
 
 import pytest
 
-from crackerjack.agents.base import IssueType, Priority
+from crackerjack.models.issues import IssueType, Priority
 from crackerjack.parsers.regex_parsers import (
     CodespellRegexParser,
     ComplexityRegexParser,
@@ -419,37 +419,6 @@ class TestTyParserRegistration:
         parser = factory.create_parser("ty")
 
         assert isinstance(parser, TyRegexParser)
-
-
-class TestBetterleaksIssueCountExclusion:
-    """betterleaks writes structured findings to .cache/betterleaks-report.json.
-
-    Its stdout is human-readable UI text (status dots, log lines like
-    ``8:48AM INF ...``) that contains ``:`` characters. Without an
-    exclusion, ``_extract_issue_count_from_text_lines`` counts those
-    log lines as issues and the JSON parser correctly parses 0 issues
-    from stdout — a count mismatch the AI-fix loop can't recover from.
-    """
-
-    def test_betterleaks_returns_none_expected_count(self):
-        from crackerjack.core.autofix_coordinator import AutofixCoordinator
-
-        coordinator = object.__new__(AutofixCoordinator)
-
-        # Real-world betterleaks stdout (status dots + log lines with ':').
-        output = "\n".join(
-            [
-                "○",
-                "○",
-                "●",
-                "○  betterleaks 1.6.0",
-                "",
-                "8:48AM INF scanning =true source=. repo=. version=1.6.0",
-                "8:48AM INF findings=0 commit=HEAD",
-            ]
-        )
-
-        assert coordinator._extract_issue_count(output, "betterleaks") is None
 
 
 class TestCohesionRegexParser:

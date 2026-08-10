@@ -16,7 +16,7 @@ from crackerjack.adapters.format.ruff import (
     _handle_f_prefix,
     MODULE_ID,
 )
-from crackerjack.agents.base import IssueType
+from crackerjack.models.issues import IssueType
 from crackerjack.models.qa_results import QACheckType
 
 

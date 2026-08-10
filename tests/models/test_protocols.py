@@ -12,10 +12,7 @@ import pytest
 from crackerjack.models.protocols import (
     AdapterFactoryProtocol,
     AdapterProtocol,
-    AgentCoordinatorProtocol,
     AgentDelegatorProtocol,
-    AgentRegistryProtocol,
-    AgentTrackerProtocol,
     APIExtractorProtocol,
     AsyncCommandExecutorProtocol,
     AsyncHookExecutorProtocol,
@@ -833,21 +830,6 @@ class TestPluginRegistryProtocol:
         )
 
 
-class TestAgentRegistryProtocol:
-    """Tests for AgentRegistryProtocol."""
-
-    @pytest.mark.asyncio
-    async def test_agent_registry_is_runtime_checkable(self) -> None:
-        """Verify AgentRegistryProtocol can be checked with isinstance."""
-        mock_registry = AsyncMock()
-        mock_registry.register_agent = AsyncMock(return_value=None)
-        mock_registry.get_agent = MagicMock(return_value=None)
-        mock_registry.list_agents = MagicMock(return_value=[])
-        mock_registry.create_agent = AsyncMock(return_value=None)
-
-        assert isinstance(mock_registry, AgentRegistryProtocol)
-
-
 # ============================================================================
 # Async Protocol Tests
 # ============================================================================
@@ -906,39 +888,6 @@ class TestBoundedStatusOperationsProtocol:
         mock_ops.reset_circuit_breaker = MagicMock(return_value=True)
 
         assert isinstance(mock_ops, BoundedStatusOperationsProtocol)
-
-
-# ============================================================================
-# Reflection and Agent Protocols Tests
-# ============================================================================
-
-
-class TestAgentTrackerProtocol:
-    """Tests for AgentTrackerProtocol."""
-
-    def test_agent_tracker_is_runtime_checkable(self) -> None:
-        """Verify AgentTrackerProtocol can be checked with isinstance."""
-        mock_tracker = MagicMock()
-        mock_tracker.register_agents = MagicMock(return_value=None)
-        mock_tracker.track_agent_processing = MagicMock(return_value=None)
-        mock_tracker.track_agent_complete = MagicMock(return_value=None)
-        mock_tracker.set_coordinator_status = MagicMock(return_value=None)
-        mock_tracker.reset = MagicMock(return_value=None)
-
-        assert isinstance(mock_tracker, AgentTrackerProtocol)
-
-
-class TestAgentCoordinatorProtocol:
-    """Tests for AgentCoordinatorProtocol."""
-
-    @pytest.mark.asyncio
-    async def test_agent_coordinator_is_runtime_checkable(self) -> None:
-        """Verify AgentCoordinatorProtocol can be checked with isinstance."""
-        mock_coordinator = AsyncMock()
-        mock_coordinator.handle_issues = AsyncMock(return_value=MagicMock())
-        mock_coordinator.initialize_agents = MagicMock(return_value=None)
-
-        assert isinstance(mock_coordinator, AgentCoordinatorProtocol)
 
 
 # ============================================================================

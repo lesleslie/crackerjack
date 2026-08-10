@@ -174,6 +174,7 @@ from fastmcp import FastMCP
 
 mcp = FastMCP("crackerjack")
 
+
 @mcp.tool()
 async def execute_crackerjack(
     command: str,
@@ -195,6 +196,7 @@ async def execute_crackerjack(
     """
     job_id = await job_manager.create_job(command, args)
     return {"job_id": job_id, "status": "started"}
+
 
 @mcp.tool()
 async def get_job_progress(job_id: str) -> dict:
@@ -283,29 +285,24 @@ websocket:
 ```python
 from mcp import ClientSession, StdioServerParameters
 
+
 async def run_quality_checks():
     server_params = StdioServerParameters(
-        command="uvx",
-        args=["--from", "/path/to/crackerjack", "crackerjack", "start"]
+        command="uvx", args=["--from", "/path/to/crackerjack", "crackerjack", "start"]
     )
 
     async with ClientSession(server_params) as session:
         # Start quality workflow
         result = await session.call_tool(
             "execute_crackerjack",
-            arguments={
-                "command": "test",
-                "ai_agent_mode": True,
-                "timeout": 600
-            }
+            arguments={"command": "test", "ai_agent_mode": True, "timeout": 600},
         )
         job_id = result[1]["job_id"]
 
         # Monitor progress
         while True:
             progress = await session.call_tool(
-                "get_job_progress",
-                arguments={"job_id": job_id}
+                "get_job_progress", arguments={"job_id": job_id}
             )
             print(f"Progress: {progress[1]['percent']}%")
 
@@ -373,9 +370,7 @@ async def run_quality_checks():
 
 ```python
 result = subprocess.run(
-    ["pre-commit", "run", "--all-files"],
-    capture_output=True,
-    text=True
+    ["pre-commit", "run", "--all-files"], capture_output=True, text=True
 )
 ```
 
@@ -384,6 +379,7 @@ result = subprocess.run(
 ```python
 # Direct adapter calls (no subprocess)
 from crackerjack.adapters.ruff_format import RuffFormatAdapter
+
 adapter = RuffFormatAdapter()
 result = await adapter.check(files, config)
 ```

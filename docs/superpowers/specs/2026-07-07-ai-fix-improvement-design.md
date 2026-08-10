@@ -4,7 +4,7 @@ role: implementation
 topic: lifecycle
 date: 2026-07-17
 last_reviewed: 2026-07-17
-superseded_by: null
+superseded_by: 2026-08-06-ai-fix-removal-external-loop-design.md
 blocks_on: []
 ---
 
@@ -88,7 +88,7 @@ Pure function. No I/O. Decision order is explicit. Aggregates are detected by co
 class IssueLifecycle:
     def __init__(self, issue: Issue, kind: IssueKind) -> None: ...
     def record_attempt(self, tier: int, result: FixResult) -> None: ...
-    def should_retry(self) -> bool: ...        # False on no-op, on exhaustion, or NON_FIXABLE
+    def should_retry(self) -> bool: ...  # False on no-op, on exhaustion, or NON_FIXABLE
     def should_escalate_to_next_tier(self) -> bool: ...
     def classification(self) -> IssueKind: ...
 ```
@@ -127,9 +127,14 @@ Replaces `FixerCoordinator.fixers: dict[str, Agent]`. Dynamic: built-in register
 
 ```python
 class FixRouter:
-    def __init__(self, registry: FixerRegistry, skill_store: SkillStore,
-                 tier2: Tier2Dispatcher, tier3: IterativeFixAgent,
-                 classifier: IssueClassifier) -> None: ...
+    def __init__(
+        self,
+        registry: FixerRegistry,
+        skill_store: SkillStore,
+        tier2: Tier2Dispatcher,
+        tier3: IterativeFixAgent,
+        classifier: IssueClassifier,
+    ) -> None: ...
     async def fix(self, issue: Issue) -> FixResult: ...
 ```
 

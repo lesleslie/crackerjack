@@ -184,6 +184,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Final
 
+
 class SkillCategory(str, Enum):
     """Categories of skills."""
 
@@ -206,7 +207,9 @@ class Skill:
     category: SkillCategory
     description: str
     base_confidence: float  # Base confidence score (0.0 to 1.0)
-    tags: set[str]  # Tags for semantic matching (e.g., {"subprocess", "security", "injection"})
+    tags: set[
+        str
+    ]  # Tags for semantic matching (e.g., {"subprocess", "security", "injection"})
 
     def matches_issue(self, issue: Issue) -> float:
         """
@@ -222,7 +225,11 @@ class Skill:
         context_score = self._context_relevance(issue)
 
         # Combine semantic and context scores with base confidence
-        confidence = (semantic_score * 0.5) + (context_score * 0.3) + (self.base_confidence * 0.2)
+        confidence = (
+            (semantic_score * 0.5)
+            + (context_score * 0.3)
+            + (self.base_confidence * 0.2)
+        )
 
         return min(confidence, 1.0)  # Cap at 1.0
 
@@ -268,7 +275,6 @@ ALL_SKILLS: Final[dict[str, Skill]] = {
         base_confidence=0.95,
         tags={"subprocess", "shell", "injection", "security", "command"},
     ),
-
     "weak_crypto_fix": Skill(
         skill_id="weak_crypto_fix",
         name="Weak Cryptography Fix",
@@ -277,7 +283,6 @@ ALL_SKILLS: Final[dict[str, Skill]] = {
         base_confidence=0.92,
         tags={"crypto", "hash", "md5", "sha1", "security", "weak"},
     ),
-
     # RefactoringAgent skills
     "complexity_reduction": Skill(
         skill_id="complexity_reduction",
@@ -287,7 +292,6 @@ ALL_SKILLS: Final[dict[str, Skill]] = {
         base_confidence=0.90,
         tags={"complexity", "refactor", "simplify", "extract"},
     ),
-
     # PerformanceAgent skills
     "algorithm_optimization": Skill(
         skill_id="algorithm_optimization",
@@ -297,7 +301,6 @@ ALL_SKILLS: Final[dict[str, Skill]] = {
         base_confidence=0.88,
         tags={"performance", "algorithm", "optimization", "complexity"},
     ),
-
     # ... (all other skills)
 }
 
@@ -374,6 +377,7 @@ class AgentSkillRegistry:
 ```python
 from dataclasses import dataclass
 from typing import Final
+
 
 @dataclass(frozen=True)
 class RoutingDecision:
@@ -501,7 +505,9 @@ class SkillRouter:
             issue=issue,
             selected_agents=top_agents,
             selected_skills=top_skills,
-            confidence_scores=[score for aid, score in agent_scores if aid in top_agents],
+            confidence_scores=[
+                score for aid, score in agent_scores if aid in top_agents
+            ],
             routing_strategy="parallel",
             reasoning=f"Multiple high-confidence agents ({len(top_agents)}) for collaborative fix",
         )

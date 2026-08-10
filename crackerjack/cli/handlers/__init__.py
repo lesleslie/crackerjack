@@ -36,7 +36,6 @@ from crackerjack.cli.handlers.main_handlers import (
     handle_config_updates,
     handle_interactive_mode,
     handle_standard_mode,
-    setup_ai_agent_env,
 )
 from crackerjack.cli.handlers.provider_selection import handle_select_provider
 from crackerjack.cli.lifecycle_handlers import (
@@ -79,7 +78,6 @@ __all__ = [
     "handle_version_analysis",
     "health_probe_handler",
     "logger",
-    "setup_ai_agent_env",
     "setup_debug_and_verbose_flags",
     "start_handler",
     "stop_handler",

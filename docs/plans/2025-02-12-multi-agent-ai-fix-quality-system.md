@@ -283,14 +283,12 @@ Modify `crackerjack/agents/proactive_agent.py`:
 ```python
 from Edit import Edit  # Import the Edit tool
 
+
 class ProactiveAgent:
     # ... existing code ...
 
     async def _apply_fix_with_edit(
-        self,
-        file_path: str,
-        old_code: str,
-        new_code: str
+        self, file_path: str, old_code: str, new_code: str
     ) -> bool:
         """Apply fix using Edit tool (syntax-validating).
 
@@ -306,11 +304,7 @@ class ProactiveAgent:
             True if successful, False otherwise
         """
         try:
-            edit = Edit(
-                file_path=file_path,
-                old_string=old_code,
-                new_string=new_code
-            )
+            edit = Edit(file_path=file_path, old_string=old_code, new_string=new_code)
             # Edit tool validates syntax automatically
             await edit.apply()
             logger.info(f"✅ Applied fix to {file_path}")
@@ -418,8 +412,7 @@ class ProactiveAgent:
         max_lines = max(len(old_lines), len(new_lines))
         if max_lines > self.MAX_DIFF_LINES:
             logger.warning(
-                f"⚠️  Diff too large: {max_lines} lines "
-                f"(max: {self.MAX_DIFF_LINES})"
+                f"⚠️  Diff too large: {max_lines} lines (max: {self.MAX_DIFF_LINES})"
             )
             return False
 
@@ -431,10 +424,7 @@ class ProactiveAgent:
 
 ```python
 async def _apply_fix_with_edit(
-    self,
-    file_path: str,
-    old_code: str,
-    new_code: str
+    self, file_path: str, old_code: str, new_code: str
 ) -> bool:
     """Apply fix using Edit tool (syntax-validating)."""
     # Validate diff size first
@@ -443,11 +433,7 @@ async def _apply_fix_with_edit(
         return False
 
     try:
-        edit = Edit(
-            file_path=file_path,
-            old_string=old_code,
-            new_string=new_code
-        )
+        edit = Edit(file_path=file_path, old_string=old_code, new_string=new_code)
         await edit.apply()
         logger.info(f"✅ Applied fix to {file_path}")
         return True

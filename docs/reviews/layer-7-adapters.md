@@ -32,12 +32,10 @@ ______________________________________________________________________
 ```python
 class QAAdapter(ABC):
     @abstractmethod
-    def __init__(self, console: ConsoleProtocol, settings: Settings) -> None:
-        ...
+    def __init__(self, console: ConsoleProtocol, settings: Settings) -> None: ...
 
     @abstractmethod
-    async def run_checks(self, file_path: Path) -> list[Issue]:
-        ...
+    async def run_checks(self, file_path: Path) -> list[Issue]: ...
 ```
 
 **Adapter Factory** (`adapters/factory.py`, lines 19-118):

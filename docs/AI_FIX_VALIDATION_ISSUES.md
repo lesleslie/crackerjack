@@ -113,6 +113,7 @@ def some_function(self):
         do_something()
     return  # ← Should be indented at function level
 
+
 # ✅ CORRECT
 def some_function(self):
     if condition:
@@ -219,13 +220,12 @@ ______________________________________________________________________
 def _validate_agent_changes(self, file_path: Path) -> bool:
     """Validate Python syntax after AI agent modifications."""
     try:
-        compile(file_path.read_text(), file_path, 'exec')
+        compile(file_path.read_text(), file_path, "exec")
         return True
     except SyntaxError as e:
-        self.logger.warning(
-            f"Agent introduced syntax error in {file_path}: {e}"
-        )
+        self.logger.warning(f"Agent introduced syntax error in {file_path}: {e}")
         return False
+
 
 # Modify _run_ai_fix_iteration():
 # 1. Apply fixes
@@ -282,7 +282,7 @@ def write_file_content(self, file_path: Path, content: str) -> bool:
     """Write file content with syntax validation."""
     # Validate syntax first
     try:
-        compile(content, str(file_path), 'exec')
+        compile(content, str(file_path), "exec")
     except SyntaxError as e:
         self.logger.error(f"Syntax error in generated code: {e}")
         return False

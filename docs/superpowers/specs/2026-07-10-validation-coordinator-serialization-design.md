@@ -4,7 +4,7 @@ role: implementation
 topic: lifecycle
 date: 2026-07-17
 last_reviewed: 2026-07-17
-superseded_by: null
+superseded_by: 2026-08-06-ai-fix-removal-external-loop-design.md
 blocks_on: []
 ---
 

@@ -810,6 +810,53 @@ git commit -m "refactor(fixers): extract genuinely reusable planning_agent fix-p
 
 ---
 
+### Task 22a: Fix dropped `cwd` pinning across all extracted fixers' `_run_command` helpers
+
+**Files:**
+- Modify: every `crackerjack/fixers/*.py` file created by Tasks 4-22 that defines its own subprocess-invoking helper (confirmed present in at least `refactoring.py`, `security.py`, `documentation.py`, `dry.py`, `formatting.py` as of Tasks 4/6/7/9/10 — re-derive the authoritative current list in Step 1 rather than trusting this list, since Tasks 11-22 ran after this task was written and may have introduced more instances of the same pattern)
+- Test: extend each affected file's existing test file with one new test covering the project-wide (no explicit file path) invocation path
+
+**Interfaces:** N/A — this is a targeted bug fix across existing modules, not a new interface.
+
+**Background:** During Task 10's review, an independent reviewer found that every extracted fixer's `_run_command`-style helper dropped the original `SubAgent.run_command`'s `cwd=self.context.project_path` pinning (`crackerjack/agents/base.py:307-334`). The extracted functions run subprocesses (`ruff`, `codespell`, whitespace-fixer scripts, etc.) against the calling process's ambient working directory instead of the actual project root. This is dormant today — every real caller in the current codebase passes a specific `issue.file_path`, never triggers the project-wide `target = ["."]` branch — but if that branch is ever exercised (e.g., a future caller, or the external ai-fix-loop's fix-dispatch step operating without a specific file target), the subprocess would silently operate on the wrong directory while any co-located mtime-based "what changed" scan (which correctly threads `project_path` through separately) would look in a different place than the subprocess actually touched. The user's decision (recorded 2026-08-07): fix this once, consolidated, across all affected files in a single task after all extractions are done, rather than patching files one at a time or reopening already-reviewed tasks.
+
+- [ ] **Step 1: Derive the authoritative current list of affected files**
+
+Run: `grep -rln "def _run_command" crackerjack/fixers/*.py`
+
+For each match, read the function and confirm whether it accepts a `cwd`/`project_path`/`project_root` parameter already (some later extraction tasks, e.g. Task 7's `documentation.py`, may have already threaded through a project-root parameter for unrelated reasons per that task's own precedent — check whether it's already passed to the subprocess call specifically, not just accepted as a parameter used elsewhere). Build a checklist of files that are genuinely missing `cwd` pinning on their subprocess calls — do not assume the list in this task's Background section is complete or unchanged.
+
+- [ ] **Step 2: For each affected file, add a `project_root: Path` (or equivalently-named) parameter to the subprocess-invoking helper, threaded through to every caller**
+
+The exact signature change depends on each file's existing structure — follow the pattern already established in `documentation.py` (Task 7), which threads `project_root: Path` through its call chain for a different but structurally identical reason (a load-bearing `AgentContext`-derived value). Every function in the call chain between the fixer's public entry point and the subprocess invocation needs the parameter added and passed through — do not silently default it to `Path.cwd()` inside the low-level helper, since that reintroduces the exact ambiguity being fixed; the caller must supply it explicitly.
+
+- [ ] **Step 3: Pass `cwd=project_root` (or the file's equivalent parameter name) to every subprocess invocation in the affected helper**
+
+This should be the single-line fix per file once Step 2's plumbing is in place — e.g. `subprocess.run(cmd, cwd=project_root, ...)` matching the original `SubAgent.run_command`'s behavior.
+
+- [ ] **Step 4: Add one regression test per affected file covering the project-wide invocation path**
+
+For each file, write a test that invokes the fixer's project-wide path (no specific file target — the `target = ["."]`-equivalent branch) against a `tmp_path`-based fake project structure with a marker file, and asserts the subprocess actually ran with `cwd` set to that `tmp_path` (e.g. via `monkeypatch`-capturing the `subprocess.run` call's `cwd` kwarg, or by having the subprocess act on a file only present under `tmp_path` and confirming it was found/modified there). This is the test coverage gap the original review specifically flagged as missing.
+
+- [ ] **Step 5: Run each affected file's full test suite**
+
+Run: `uv run pytest tests/fixers/test_refactoring.py tests/fixers/test_security.py tests/fixers/test_documentation.py tests/fixers/test_dry.py tests/fixers/test_formatting.py -v` (extend this command with any additional files Step 1 found)
+Expected: all PASS, including the new regression tests from Step 4.
+
+- [ ] **Step 6: Run the full `tests/fixers/` suite to confirm no cross-file regression**
+
+Run: `uv run pytest tests/fixers/ -v`
+Expected: PASS (matches or exceeds the aggregate pass count from the last extraction task's report).
+
+- [ ] **Step 7: Commit**
+
+```bash
+git add crackerjack/fixers/
+git commit -m "fix(fixers): thread project_root cwd pinning through all extracted _run_command helpers"
+```
+
+---
+
 ### Task 23: Delete `claude_code_bridge.py` and `enhanced_proactive_agent.py`
 
 **Files:**
@@ -882,6 +929,71 @@ Read the file. It constructs `AgentContext` directly and drives an `agent_skills
 
 Run: `pytest tests/ -x -q 2>&1 | tail -40`
 Expected: no `ImportError`/`ModuleNotFoundError` referencing `crackerjack.agents.coordinator`, `crackerjack.agents.claude_code_bridge`, `crackerjack.skills`, `crackerjack.ai_fix.tier3_factory`, or similar. Fix any that appear before moving to Task 25.
+
+**Note (added 2026-08-08, mid-execution)**: Task 24's Step 2 escalated `tier3_factory.py` — it turned out to be wired into a live, currently-tested code path (`autofix_coordinator.py`'s `_apply_ai_agent_fixes_v2`), not dormant. Tracing that further revealed `autofix_coordinator.py`'s AI-fix control flow (`_apply_fast_stage_fixes`/`_apply_comprehensive_stage_fixes`, gated on `AI_AGENT` env var) is the actual live `--ai-fix` invocation path — it constructs `AnalysisCoordinator`/`FixerCoordinator`/`ValidationCoordinator` from `crackerjack/agents/` and drives tier-3's `IterativeFixAgent` (`LocalClaudeSubprocess`/`MahavishnuPool`/`SessionBuddySkillStore` — an LLM-dispatch + skill-learning loop never named in the original 4-subsystem spec inventory), all woven into the same methods that handle the coordinator's normal non-AI fallback. Task 28 (originally scoped as a light "remove AI-specific methods" pass, and originally scheduled *after* Task 27's bulk deletion of `agents/` — which was backwards, since `autofix_coordinator.py`'s live imports from `agents/` must be gone *before* `agents/` can be safely deleted) is **superseded by Tasks 24a and 24b below**, inserted here per user decision. Do not run Task 28 as originally written.
+
+---
+
+### Task 24a: Scope `autofix_coordinator.py` + `phase_coordinator.py` + `tier3_factory.py` + `iterative_fix_agent.py` — decide AI-dispatch vs. deterministic-fallback
+
+**Files:**
+- Read: `crackerjack/core/autofix_coordinator.py` (5,425 lines, ~226 methods, AI and non-AI interleaved in one class body)
+- Read: `crackerjack/core/phase_coordinator.py` (2,242 lines, partially AI-specific — confirmed eager `from crackerjack.agents.base import FixResult` at module level, plus `AgentCoordinator`/`AgentContext`/`AgentTracker` imports)
+- Read: `crackerjack/core/tier3_factory.py` (234 lines — confirmed live, wired into `autofix_coordinator.py._attach_tier3_agent`, called unconditionally from `_apply_ai_agent_fixes_v2` whenever there are fixable issues)
+- Read: `crackerjack/agents/iterative_fix_agent.py` (496 lines — `IterativeFixAgent`, `LocalClaudeSubprocess`, `MahavishnuPool`, `SessionBuddySkillStore`, `InMemorySkillStore`; the class `tier3_factory.py` builds instances from)
+
+**Interfaces:** N/A — this task produces a decision and a written classification, not code, consumed by Task 24b. Same shape as Task 21's `planning_agent.py` scoping task.
+
+This is the highest-risk, most consequential scoping task in the whole plan: `autofix_coordinator.py`/`phase_coordinator.py` are **not** scheduled for deletion (unlike every other file this plan has touched so far) — they're live, central coordinators that also handle non-AI hook orchestration (formatting, testing phases). Getting the AI-dispatch/deterministic-fallback boundary wrong here risks either leaving dead AI-orchestration code behind, or breaking real, currently-passing non-AI behavior.
+
+- [ ] **Step 1: Read all four files in full.**
+
+- [ ] **Step 2: Trace the live `--ai-fix` control flow precisely.**
+
+Confirmed starting point: `_apply_fast_stage_fixes`/`_apply_comprehensive_stage_fixes` check `os.environ.get("AI_AGENT") == "1"`. When true, they call `_apply_ai_agent_fixes` → `_apply_ai_agent_fixes_v2`, which constructs `AnalysisCoordinator`/`FixerCoordinator`/`ValidationCoordinator` (from `crackerjack/agents/`, all scheduled for deletion in Task 27) and, via `_attach_tier3_agent`, `tier3_factory.build_iterative_agent()` (tier-3). When `AI_AGENT` is unset, the same two methods fall back to `_execute_fast_fixes()` — the deterministic, non-AI path. Map every method reachable from `_apply_ai_agent_fixes_v2`/`_run_v2_ai_fix_iteration_loop` and every method reachable only from the `AI_AGENT`-unset fallback branch.
+
+- [ ] **Step 3: Classify every top-level method in all four files** (matching Task 21's classification format):
+  - **(a) AI-dispatch, drop entirely** — anything only reachable through the `AI_AGENT=1` branch: `_apply_ai_agent_fixes`, `_apply_ai_agent_fixes_v2`, `_attach_tier3_agent`, `_run_v2_ai_fix_iteration_loop`, and their exclusive callees; all of `tier3_factory.py`; all of `iterative_fix_agent.py`; `phase_coordinator.py`'s `AgentCoordinator`/`AgentTracker`-touching methods.
+  - **(b) Deterministic/non-AI, keep as the unconditional path** — `_execute_fast_fixes` and everything the non-`AI_AGENT` fallback already reaches; all genuine tool-orchestration logic (ruff/pytest/hook-suite sequencing) unrelated to AI fixing.
+  - **(c) Shared/ambiguous** — methods called from both branches (e.g. `_collect_fixable_issues`, `_build_ai_fix_scope_files`) — these stay, but any AI-specific parameter/branch inside them gets simplified away in Task 24b.
+  Write this as a named-method checklist (not an abstract description) — this becomes Task 24b's exact worklist, same discipline as Task 21.
+
+- [ ] **Step 4: Second read.** Re-read every (a)-classified method once more, specifically hunting for embedded deterministic logic that would be lost if dropped wholesale (matching Task 21's Step 3/4 pattern) — e.g., confirm `_apply_ai_agent_fixes_v2`'s deterministic prepasses (type-tool fix, zuban fix, refurb prepass, `_execute_fast_fixes()` call before AI analysis even starts) are NOT AI-specific and must be preserved/promoted into the unconditional path, not dropped along with the AI dispatch that currently wraps them.
+
+- [ ] **Step 5: Write the classification** to a report file, following Task 21's format (Summary, per-file classification, mechanical logic recovered from (a) sections, uncertain items, recommendation for Task 24b).
+
+---
+
+### Task 24b: Execute Task 24a's classification — remove the `AI_AGENT`-gated AI-fix control flow
+
+**Files:**
+- Modify: `crackerjack/core/autofix_coordinator.py`
+- Modify: `crackerjack/core/phase_coordinator.py`
+- Delete: `crackerjack/core/tier3_factory.py`
+- Delete: `crackerjack/agents/iterative_fix_agent.py` (and its corresponding test file — find with `find tests -iname "*iterative_fix_agent*" -o -iname "*tier3*"`)
+- Test: run each file's existing test suite before and after every removal batch, matching Task 28's originally-specified incremental discipline.
+
+**Interfaces:** N/A — removes dead/doomed code; whatever public interface these files expose for non-AI hook orchestration must remain intact and passing its existing tests throughout.
+
+- [ ] **Step 1:** Using Task 24a's written classification, remove the (a)-classified methods in small batches (5-10 at a time), testing after each batch — same batching discipline as Task 28's original Step 2. Locate exact test paths with `find tests -iname "*autofix_coordinator*"` / `find tests -iname "*phase_coordinator*"`. Commit after each clean batch.
+
+- [ ] **Step 2:** For every (c)-classified shared method, simplify away the now-unreachable `AI_AGENT`-gated branch, leaving only the deterministic path — per Task 24a's Step 4 finding, make sure any deterministic prepass logic currently nested inside `_apply_ai_agent_fixes_v2` gets preserved/promoted, not deleted along with its AI wrapper.
+
+- [ ] **Step 3:** Remove the `os.environ.get("AI_AGENT") == "1"` branches in `_apply_fast_stage_fixes`/`_apply_comprehensive_stage_fixes` (and any other `AI_AGENT` check found), leaving the deterministic fallback as the only path.
+
+- [ ] **Step 4:** Delete `tier3_factory.py` and `crackerjack/agents/iterative_fix_agent.py` wholesale, plus their test files (`tests/core/test_tier3_factory.py`, and whatever `iterative_fix_agent.py`'s test file is — confirm with `find`).
+
+- [ ] **Step 5:** Verify the `--json` schema (Task 3) still matches: `pytest tests/unit/models/test_issues.py::test_run_result_matches_golden_schema -v`. Expected: PASS.
+
+- [ ] **Step 6: Final full-suite run for both coordinator files.**
+
+Run: `pytest tests/unit/core/ -v`
+Expected: PASS, no AI-related imports remain in either file (`grep -n "crackerjack.agents\|crackerjack.ai_fix\|crackerjack.intelligence\|crackerjack.memory\|crackerjack.skills\|tier3_factory\|AI_AGENT" crackerjack/core/autofix_coordinator.py crackerjack/core/phase_coordinator.py` returns nothing beyond inert comments).
+
+- [ ] **Step 7: Commit** (final batch, after Steps 3-6):
+```bash
+git commit -m "refactor(core): remove AI_AGENT-gated ai-fix control flow from autofix_coordinator/phase_coordinator, delete tier3_factory + iterative_fix_agent"
+```
 
 ---
 
@@ -976,7 +1088,7 @@ Confirm every remaining file is coordination/dispatch plumbing (not a fixer that
 
 Run: `grep -rln "from crackerjack.agents\|import crackerjack.agents" crackerjack/ --include="*.py" | grep -v __pycache__ | grep -v "^crackerjack/agents/"`
 
-Every result must already be handled by Task 24's rewrites. If not, go back and finish Task 24 for that file first.
+Every result must already be handled by Task 24's rewrites **or Task 24b** (added 2026-08-08: `autofix_coordinator.py`/`phase_coordinator.py`'s imports of `AnalysisCoordinator`/`FixerCoordinator`/`ValidationCoordinator`/`AgentTracker`/etc. are handled by Task 24b, not Task 24 — confirm Task 24b has run before proceeding). If anything is still unhandled, go back and finish Task 24/24b for that file first.
 
 - [ ] **Step 3: Delete**
 
@@ -1003,7 +1115,14 @@ git commit -m "refactor: delete remainder of agents/ (coordination/dispatch plum
 
 ---
 
-### Task 28: Remove AI-specific methods from `core/autofix_coordinator.py` and `core/phase_coordinator.py`
+### Task 28 (SUPERSEDED — do not run): Remove AI-specific methods from `core/autofix_coordinator.py` and `core/phase_coordinator.py`
+
+**Status: superseded by Tasks 24a and 24b (inserted 2026-08-08).** This task was originally scheduled *after* Task 27's bulk deletion of `crackerjack/agents/` — backwards, since `autofix_coordinator.py` has live, eager imports from `crackerjack/agents/` (`AnalysisCoordinator`, `FixerCoordinator`, `ValidationCoordinator` via `_apply_ai_agent_fixes_v2`) that must be removed *before* `agents/` can be safely deleted. Tracing the actual scope during Task 24's execution also revealed this isn't a simple "remove AI-specific methods" pass — the AI-fix control flow (gated on the `AI_AGENT` env var) is woven into the same methods that handle the coordinator's normal non-AI fallback, and additionally drives a previously-unscoped subsystem (`tier3_factory.py`/`iterative_fix_agent.py` — `IterativeFixAgent`/`LocalClaudeSubprocess`/`MahavishnuPool`/`SessionBuddySkillStore`, an LLM-dispatch + skill-learning loop never named in the original 4-subsystem spec inventory). Tasks 24a/24b give this the full scope-then-execute treatment Task 21/22 used for `planning_agent.py`. The section below is preserved for historical reference only — **do not execute it**.
+
+<details>
+<summary>Original Task 28 text (superseded, not executed)</summary>
+
+### Task 28 (ORIGINAL, SUPERSEDED): Remove AI-specific methods from `core/autofix_coordinator.py` and `core/phase_coordinator.py`
 
 **Files:**
 - Modify: `crackerjack/core/autofix_coordinator.py` (5,425 lines, ~226 methods, AI and non-AI interleaved in one class body)
@@ -1037,6 +1156,8 @@ Expected: PASS. If this breaks, a removed method was part of the JSON serializat
 
 Run: `pytest tests/unit/core/ -v`
 Expected: PASS, no AI-related imports remain in either file (`grep -n "crackerjack.agents\|crackerjack.ai_fix\|crackerjack.intelligence\|crackerjack.memory\|crackerjack.skills" crackerjack/core/autofix_coordinator.py crackerjack/core/phase_coordinator.py` returns nothing).
+
+</details>
 
 ---
 

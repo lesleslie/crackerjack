@@ -293,23 +293,27 @@ Expected: PASS.
 In `crackerjack/cli/options.py:378-381`, next to the existing `-s/--skip-hooks` flag, add two new `typer.Option` arguments with the same style as the surrounding options:
 
 ```python
-allow_unsafe_fixes: bool = typer.Option(
-    False,
-    "--allow-unsafe-fixes",
-    help=(
-        "Opt in to Ruff unsafe fixes for this run. "
-        "Required for any invocation that emits --unsafe-fixes. "
-        "Pairs with a working-tree guard and per-file .bak siblings."
+allow_unsafe_fixes: bool = (
+    typer.Option(
+        False,
+        "--allow-unsafe-fixes",
+        help=(
+            "Opt in to Ruff unsafe fixes for this run. "
+            "Required for any invocation that emits --unsafe-fixes. "
+            "Pairs with a working-tree guard and per-file .bak siblings."
+        ),
     ),
-),
-safe_only: bool = typer.Option(
-    False,
-    "--safe-only",
-    help=(
-        "Refuse any invocation that would emit --unsafe-fixes, "
-        "even if --allow-unsafe-fixes is set."
+)
+safe_only: bool = (
+    typer.Option(
+        False,
+        "--safe-only",
+        help=(
+            "Refuse any invocation that would emit --unsafe-fixes, "
+            "even if --allow-unsafe-fixes is set."
+        ),
     ),
-),
+)
 ```
 
 If the existing options in `options.py:378-381` use a different style (e.g. `Annotated[bool, typer.Option(...)]`), match it. The defaults MUST be `False`.
@@ -555,7 +559,13 @@ def test_dirty_tree_refuses_fix(tmp_path, monkeypatch) -> None:
         ["git", "commit", "-q", "-m", "init"],
         cwd=repo,
         check=True,
-        env={"GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@x", "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@x", "PATH": __import__("os").environ["PATH"]},
+        env={
+            "GIT_AUTHOR_NAME": "t",
+            "GIT_AUTHOR_EMAIL": "t@x",
+            "GIT_COMMITTER_NAME": "t",
+            "GIT_COMMITTER_EMAIL": "t@x",
+            "PATH": __import__("os").environ["PATH"],
+        },
     )
     (repo / "a.txt").write_text("dirty\n")
 
@@ -680,7 +690,13 @@ def test_dirty_tree_blocks_fix_invocation(tmp_path, monkeypatch) -> None:
         ["git", "commit", "-q", "-m", "init"],
         cwd=repo,
         check=True,
-        env={"GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@x", "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@x", "PATH": __import__("os").environ["PATH"]},
+        env={
+            "GIT_AUTHOR_NAME": "t",
+            "GIT_AUTHOR_EMAIL": "t@x",
+            "GIT_COMMITTER_NAME": "t",
+            "GIT_COMMITTER_EMAIL": "t@x",
+            "PATH": __import__("os").environ["PATH"],
+        },
     )
     (repo / "a.txt").write_text("dirty\n")
     monkeypatch.chdir(repo)
@@ -767,7 +783,9 @@ def test_exit_code_routing() -> None:
 
     with pytest.raises(Exception) as excinfo:
         route_ruff_exit(2, "ruff internal failure")
-    assert "internal" in str(excinfo.value).lower() or "ruff" in str(excinfo.value).lower()
+    assert (
+        "internal" in str(excinfo.value).lower() or "ruff" in str(excinfo.value).lower()
+    )
 ```
 
 If the actual function is named differently, adapt the test to the real name. The contract is: codes 0/1 pass through; code 2 raises.

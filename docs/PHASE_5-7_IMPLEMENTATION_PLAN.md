@@ -42,6 +42,7 @@ Remove all remaining legacy references from the codebase.
 ```python
 # Line ~X: Remove depends.set() registration
 from legacy.depends import depends
+
 ...
 depends.set(RuffAdapter)
 ```
@@ -179,10 +180,9 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from oneiric.core.workflow import WorkflowResult
 
+
 def track_workflow_task(
-    self,
-    task_name: str,
-    result: "WorkflowResult | None" = None
+    self, task_name: str, result: "WorkflowResult | None" = None
 ) -> None:
     """Track workflow task with proper typing."""
 ```

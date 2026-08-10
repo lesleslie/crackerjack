@@ -183,6 +183,7 @@ def _classify_error(self, error: str) -> ErrorCategory:
         # ... 30 more lines ...
     # ... more complexity ...
 
+
 # After: Multiple focused methods
 def _classify_error(self, error: str) -> ErrorCategory:
     if self._is_pytest_error(error):
@@ -191,8 +192,10 @@ def _classify_error(self, error: str) -> ErrorCategory:
         return ErrorCategory.IMPORT
     return ErrorCategory.OTHER
 
+
 def _is_pytest_error(self, error: str) -> bool:
     return "pytest" in error.lower()
+
 
 def _classify_pytest_error(self, error: str) -> ErrorCategory:
     if "warning" in error.lower():

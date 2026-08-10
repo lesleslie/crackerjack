@@ -109,11 +109,18 @@ When Crackerjack is invoked from `/Users/les/Projects/crackerjack` to run tests 
 
 ```python
 # Test command built by session-buddy's TestCommandBuilder
-cmd = ['uv', 'run', 'python', '-m', 'pytest', '/Users/les/Projects/session-buddy/tests/']
+cmd = [
+    "uv",
+    "run",
+    "python",
+    "-m",
+    "pytest",
+    "/Users/les/Projects/session-buddy/tests/",
+]
 
 # Old behavior: Run from crackerjack's directory
-cwd = '/Users/les/Projects/crackerjack'  # ❌ Wrong config
+cwd = "/Users/les/Projects/crackerjack"  # ❌ Wrong config
 
 # New behavior: Run from session-buddy's directory
-cwd = '/Users/les/Projects/session-buddy'  # ✅ Correct config
+cwd = "/Users/les/Projects/session-buddy"  # ✅ Correct config
 ```

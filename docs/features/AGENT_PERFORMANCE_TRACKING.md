@@ -19,13 +19,13 @@ Represents a single agent fix attempt with detailed metrics:
 ```python
 @dataclass
 class AgentAttempt:
-    timestamp: str           # ISO format timestamp
-    agent_name: str          # Agent identifier (e.g., "RefactoringAgent")
-    model_name: str          # Model used (e.g., "claude-sonnet-4-5-20250929")
-    issue_type: str          # Issue category (e.g., "complexity", "security")
-    success: bool            # Whether the fix was successful
-    confidence: float        # Agent's confidence score (0.0-1.0)
-    time_seconds: float      # Execution time in seconds
+    timestamp: str  # ISO format timestamp
+    agent_name: str  # Agent identifier (e.g., "RefactoringAgent")
+    model_name: str  # Model used (e.g., "claude-sonnet-4-5-20250929")
+    issue_type: str  # Issue category (e.g., "complexity", "security")
+    success: bool  # Whether the fix was successful
+    confidence: float  # Agent's confidence score (0.0-1.0)
+    time_seconds: float  # Execution time in seconds
 ```
 
 #### 2. AgentMetrics (Dataclass)
@@ -75,7 +75,7 @@ tracker.record_attempt(
 rate = tracker.get_success_rate(
     agent_name="RefactoringAgent",
     model_name="claude-sonnet-4-5-20250929",
-    issue_type="complexity"
+    issue_type="complexity",
 )
 # Returns: 85.0 (percentage)
 ```
@@ -99,7 +99,7 @@ rates = tracker.get_success_rate(issue_type="complexity")
 ```python
 best = tracker.get_best_agent_for_issue_type(
     "complexity",
-    min_attempts=5  # Require statistical significance
+    min_attempts=5,  # Require statistical significance
 )
 # Returns: {
 #     "agent_name": "RefactoringAgent",
@@ -116,10 +116,7 @@ best = tracker.get_best_agent_for_issue_type(
 **Compare performance across models:**
 
 ```python
-comparison = tracker.get_model_comparison(
-    issue_type="complexity",
-    min_attempts=5
-)
+comparison = tracker.get_model_comparison(issue_type="complexity", min_attempts=5)
 # Returns: {
 #     "claude-sonnet-4-5-20250929": {
 #         "avg_success_rate": 85.0,
@@ -315,7 +312,7 @@ tracker.record_attempt(
 rate = tracker.get_success_rate(
     agent_name="RefactoringAgent",
     model_name="claude-sonnet-4-5-20250929",
-    issue_type="complexity"
+    issue_type="complexity",
 )
 print(f"Success rate: {rate}%")
 ```
@@ -353,7 +350,7 @@ for model, stats in comparison.items():
 report = tracker.generate_performance_report()
 
 # Print summary
-summary = report['summary']
+summary = report["summary"]
 print(f"Total attempts: {summary['total_attempts']}")
 print(f"Overall success rate: {summary['overall_success_rate']}%")
 print(f"Agents tracked: {summary['total_agents']}")
@@ -361,7 +358,7 @@ print(f"Issue types: {summary['total_issue_types']}")
 
 # Print best agents by issue type
 print("\nRecommendations:")
-for issue_type, best in report['recommendations'].items():
+for issue_type, best in report["recommendations"].items():
     print(f"  {issue_type}: {best['agent_name']} ({best['success_rate']}%)")
 ```
 

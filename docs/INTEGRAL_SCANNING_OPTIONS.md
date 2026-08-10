@@ -35,6 +35,7 @@ Scan only files changed since last successful run using git diff.
 ```python
 # crackerjack/services/incremental_scanner.py
 
+
 class IncrementalScanner:
     def __init__(self, repo_path: Path):
         self.repo_path = Path(repo_path)
@@ -43,11 +44,12 @@ class IncrementalScanner:
     def get_changed_files(self, base_ref: str = "HEAD~1") -> list[Path]:
         """Get files changed since base_ref."""
         import subprocess
+
         result = subprocess.run(
             ["git", "diff", "--name-only", base_ref, "HEAD"],
             capture_output=True,
             text=True,
-            cwd=self.repo_path
+            cwd=self.repo_path,
         )
         if result.returncode != 0:
             return []
@@ -71,9 +73,12 @@ class IncrementalScanner:
         }
 
         import fnmatch
+
         matches = []
         for file in changed:
-            if any(fnmatch.fnmatch(file.name, pat) for pat in patterns.get(tool_name, [])):
+            if any(
+                fnmatch.fnmatch(file.name, pat) for pat in patterns.get(tool_name, [])
+            ):
                 matches.append(file)
         return matches
 ```
@@ -82,6 +87,7 @@ class IncrementalScanner:
 
 ```python
 # crackerjack/hooks/refurb_hook.py
+
 
 async def run_refurb_incremental(options) -> HookResult:
     scanner = IncrementalScanner(pkg_path)
@@ -132,6 +138,7 @@ import sqlite3
 from datetime import datetime
 from pathlib import Path
 
+
 class MarkerScanner:
     def __init__(self, repo_path: Path):
         self.db_path = repo_path / ".crackerjack" / "scan_markers.db"
@@ -172,7 +179,7 @@ class MarkerScanner:
                 SELECT last_scan_hash FROM file_markers
                 WHERE file_path = ? AND tool_name = ?
                 """,
-                (str(file), tool_name)
+                (str(file), tool_name),
             )
             row = cursor.fetchone()
 
@@ -185,6 +192,7 @@ class MarkerScanner:
     def mark_scanned(self, tool_name: str, files: list[Path]):
         """Mark files as scanned."""
         import hashlib
+
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
 
@@ -199,7 +207,7 @@ class MarkerScanner:
                 (file_path, tool_name, last_scan_time, last_scan_hash)
                 VALUES (?, ?, ?, ?)
                 """,
-                (str(file), tool_name, datetime.now().isoformat(), file_hash)
+                (str(file), tool_name, datetime.now().isoformat(), file_hash),
             )
 
         conn.commit()
@@ -262,15 +270,14 @@ Use git-diff for daily workflows, with periodic full scans as fallback.
 ```python
 # crackerjack/services/hybrid_scanner.py
 
+
 class HybridScanner:
     def __init__(self, repo_path: Path):
         self.repo_path = repo_path
         self.marker_file = self.repo_path / ".crackerjack" / "last_full_scan"
 
     def get_scan_strategy(
-        self,
-        tool_name: str,
-        force_full: bool = False
+        self, tool_name: str, force_full: bool = False
     ) -> tuple[str, list[Path]]:
         """
         Returns (strategy, files) where strategy is "incremental" or "full".
@@ -391,6 +398,7 @@ Use mahavishnu's pool management to distribute scanning across multiple worker p
 ```python
 # crackerjack/services/pool_scanner.py
 
+
 class PoolBasedScanner:
     def __init__(self, pool_manager):
         """
@@ -407,10 +415,7 @@ class PoolBasedScanner:
         tasks = {}
         for tool in tools:
             task = await self.pool.submit_task(
-                func=self._run_tool_scan,
-                tool_name=tool,
-                files=files,
-                priority="normal"
+                func=self._run_tool_scan, tool_name=tool, files=files, priority="normal"
             )
             tasks[tool] = task
 

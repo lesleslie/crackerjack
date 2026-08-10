@@ -4,7 +4,7 @@ role: implementation
 topic: lifecycle
 date: 2026-07-17
 last_reviewed: 2026-07-17
-superseded_by: null
+superseded_by: 2026-08-06-ai-fix-removal-external-loop-design.md
 blocks_on: []
 ---
 
@@ -67,7 +67,9 @@ I initially planned to update prompts in `crackerjack/agents/planning_agent.py:9
 Single function (not a class — pure utility):
 
 ```python
-def wrap_long_lines(code: str, max_length: int = 88, file_path: Path | None = None) -> str:
+def wrap_long_lines(
+    code: str, max_length: int = 88, file_path: Path | None = None
+) -> str:
     """Best-effort Python code reformat to wrap lines exceeding max_length.
 
     Delegates to `ruff format --line-length N --stdin-filename <name> -` via
@@ -114,7 +116,15 @@ def wrap_long_lines(
         return code
 
     # Run ruff format via subprocess
-    cmd = ["ruff", "format", "--line-length", str(max_length), "--stdin-filename", "<post_processor>", "-"]
+    cmd = [
+        "ruff",
+        "format",
+        "--line-length",
+        str(max_length),
+        "--stdin-filename",
+        "<post_processor>",
+        "-",
+    ]
     try:
         proc = subprocess.run(
             cmd,
@@ -157,6 +167,7 @@ Modified to wrap first:
 ```python
 def write_file_content(self, file_path: str | Path, content: str) -> bool:
     from crackerjack.ai_fix.code_post_processor import wrap_long_lines
+
     path = self._resolve_project_file_path(file_path)
     if path.suffix == ".py":  # only post-process Python files
         wrapped = wrap_long_lines(content)

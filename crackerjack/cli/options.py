@@ -158,8 +158,6 @@ class Options(BaseModel):
     xcode_scheme: str = "MdInjectApp"
     xcode_configuration: str = "Debug"
     xcode_destination: str = "platform=macOS"
-    ai_fix: bool | None = None
-    ai_fix_show_agent_bars: bool = False
     select_provider: bool = False
     dry_run: bool = False
     full_release: str | None = None
@@ -234,14 +232,6 @@ class Options(BaseModel):
     @test.setter
     def test(self, value: bool) -> None:
         self.run_tests = value
-
-    @property
-    def ai_agent(self) -> bool:
-        return self.ai_fix is True
-
-    @ai_agent.setter
-    def ai_agent(self, value: bool) -> None:
-        self.ai_fix = value
 
     @classmethod
     @field_validator("publish", "bump", "full_release", mode="before")
@@ -698,36 +688,6 @@ CLI_OPTIONS = {
         "--xcode-destination",
         help="Xcode destination string.",
     ),
-    "ai_fix": typer.Option(
-        False,
-        "--ai-fix",
-        help=(
-            "Enable AI-powered auto-fixing. "
-            "Iteratively fixes code issues using Claude AI. "
-            "Requires ANTHROPIC_API_KEY environment variable. "
-            "Max 10 iterations, stops when all hooks pass."
-        ),
-    ),
-    "ai_fix_show_agent_bars": typer.Option(
-        False,
-        "--ai-show-agent-bars",
-        help=(
-            "Show per-agent progress bars during AI-fix (default: disabled). "
-            "Displays parallel progress for each specialized agent "
-            "(RefactoringAgent, SecurityAgent, etc.). "
-            "Use with --ai-fix flag for detailed progress tracking."
-        ),
-    ),
-    "ai_fix_max_iterations": typer.Option(
-        10,
-        "--ai-fix-max-iterations",
-        help=(
-            "Maximum iterations for AI fix retry loop (default: 10). "
-            "The loop will exit early if all issues are resolved or "
-            "no progress is made for 3 consecutive iterations. "
-            "Use with --ai-fix flag."
-        ),
-    ),
     "select_provider": typer.Option(
         False,
         "--select-provider",
@@ -1128,7 +1088,6 @@ def create_options(
     xcode_scheme: str = "MdInjectApp",
     xcode_configuration: str = "Debug",
     xcode_destination: str = "platform=macOS",
-    ai_fix: bool | None = None,
     dry_run: bool = False,
     full_release: str | None = None,
     cleanup_pypi: bool = False,

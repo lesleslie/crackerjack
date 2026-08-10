@@ -8,7 +8,7 @@ import typing as t
 
 import pytest
 from crackerjack.parsers.json_parsers import RuffJSONParser
-from crackerjack.agents.base import IssueType, Priority
+from crackerjack.models.issues import IssueType, Priority
 
 
 class TestRuffJSONParserEdgeCases:

@@ -4,7 +4,7 @@ role: implementation
 topic: lifecycle
 date: 2026-07-17
 last_reviewed: 2026-07-17
-superseded_by: null
+superseded_by: 2026-08-06-ai-fix-removal-external-loop-design.md
 blocks_on: []
 ---
 
@@ -272,9 +272,7 @@ def test_import_check_captures_full_traceback_for_top_level_none_dict():
     with tempfile.TemporaryDirectory() as td:
         bad_file = Path(td) / "crash.py"
         bad_file.write_text(
-            "import os\n"
-            "value = None\n"
-            "value.__dict__  # NoneType has no __dict__\n"
+            "import os\nvalue = None\nvalue.__dict__  # NoneType has no __dict__\n"
         )
 
         result = import_check(bad_file)

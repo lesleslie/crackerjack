@@ -146,6 +146,7 @@ job_id = generate_config_id()  # Generates ULID
 def validate_job_id(job_id: str) -> bool:
     # Add ULID validation
     from oneiric.core.ulid import is_config_ulid
+
     return is_config_ulid(job_id)  # Use Oneiric ULID validator
 ```
 
@@ -182,8 +183,12 @@ for legacy_id, ulid in migration_map.items():
     )
     # Also update all child records
     conn.execute("UPDATE errors SET job_id = ? WHERE job_id = ?", (ulid, legacy_id))
-    conn.execute("UPDATE hook_executions SET job_id = ? WHERE job_id = ?", (ulid, legacy_id))
-    conn.execute("UPDATE test_executions SET job_id = ? WHERE job_id = ?", (ulid, legacy_id))
+    conn.execute(
+        "UPDATE hook_executions SET job_id = ? WHERE job_id = ?", (ulid, legacy_id)
+    )
+    conn.execute(
+        "UPDATE test_executions SET job_id = ? WHERE job_id = ?", (ulid, legacy_id)
+    )
     # ... other tables
 ```
 

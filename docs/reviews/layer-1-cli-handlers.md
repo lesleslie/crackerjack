@@ -49,7 +49,9 @@ ______________________________________________________________________
 ```python
 # ❌ WRONG - Present in all 9 files
 from rich.console import Console
+
 console = Console()  # Module-level singleton
+
 
 def handler_function():
     console.print("...")  # Using global dependency
@@ -68,9 +70,11 @@ def handler_function():
 # ✅ CORRECT
 from crackerjack.models.protocols import ConsoleInterface
 
+
 def handler_function(console: ConsoleInterface | None = None) -> None:
     if console is None:
         from crackerjack.core.console import CrackerjackConsole
+
         console = CrackerjackConsole()
     console.print("...")
 ```

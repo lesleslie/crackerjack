@@ -73,9 +73,13 @@ class SessionEventEmitter:
 
     # ... other methods
 
+
 # Try to import real SessionEventEmitter if available
 try:
-    from oneiric.shell.session_tracker import SessionEventEmitter as _RealSessionEventEmitter
+    from oneiric.shell.session_tracker import (
+        SessionEventEmitter as _RealSessionEventEmitter,
+    )
+
     SessionEventEmitter = _RealSessionEventEmitter
     logger.debug("Using Oneiric SessionEventEmitter")
 except ImportError:

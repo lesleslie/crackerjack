@@ -25,10 +25,10 @@ topic: lifecycle
 # In crackerjack/agents/helpers/refactoring/code_transformer.py:46-58
 def _apply_enhanced_complexity_patterns(self, content: str) -> str:
     operations = [
-        self._extract_nested_conditions,      # ✅ Implemented (line 61)
-        self._simplify_boolean_expressions,   # ❌ NOT IMPLEMENTED!
-        self._extract_validation_patterns,    # ✅ Implemented (line 102)
-        self._simplify_data_structures,       # ✅ Implemented (line 117)
+        self._extract_nested_conditions,  # ✅ Implemented (line 61)
+        self._simplify_boolean_expressions,  # ❌ NOT IMPLEMENTED!
+        self._extract_validation_patterns,  # ✅ Implemented (line 102)
+        self._simplify_data_structures,  # ✅ Implemented (line 117)
     ]
 
     for operation in operations:
@@ -70,6 +70,7 @@ So they generate code like:
 async def async_read_file(file_path: Path) -> str:
     self._process_general_1()  # Emulating the pattern!
 
+
 async def async_read_file(file_path: Path) -> str:
     # Real implementation
     loop = asyncio.get_event_loop()
@@ -93,6 +94,7 @@ The broken stub shadows the real function:
 # Lines 81-82: BROKEN STUB (AI-generated)
 async def async_read_file(file_path: Path) -> str:
     self._process_general_1()  # ❌ Calling non-existent method!
+
 
 # Lines 94-105: REAL FUNCTION (shadowing broken stub)
 async def async_read_file(file_path: Path) -> str:
@@ -131,7 +133,7 @@ AI agents use **pattern matching** and **few-shot learning**:
 operations = [
     self._extract_nested_conditions,
     self._simplify_boolean_expressions,  # Missing!
-    ...
+    ...,
 ]
 ```
 
@@ -352,6 +354,7 @@ def test_apply_enhanced_complexity_patterns():
     result = transformer._apply_enhanced_complexity_patterns(test_code)
 
     assert result is not None
+
 
 def test_all_operations_exist():
     """Verify all operations in the list are implemented."""

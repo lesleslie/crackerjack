@@ -103,14 +103,17 @@ Constraint: MUST execute exactly what plan specifies
 @dataclass
 class ChangeSpec:
     """Atomic change specification."""
+
     line_range: tuple[int, int]  # (start, end)
     old_code: str
     new_code: str
     reason: str
 
+
 @dataclass
 class FixPlan:
     """Validated fix plan."""
+
     file_path: str
     issue_type: str
     changes: list[ChangeSpec]
@@ -200,9 +203,7 @@ class FallbackOrchestrator:
     """Fallback to direct Claude Code API when agents fail."""
 
     async def fix_with_fallback(
-        self,
-        issue: Issue,
-        failed_attempts: list[FixAttempt]
+        self, issue: Issue, failed_attempts: list[FixAttempt]
     ) -> FixResult:
         # Try agent-based fixing first (Layers 1-3)
         agent_result = await self._try_agent_fix(issue)
@@ -217,7 +218,9 @@ class FallbackOrchestrator:
 
         # Learn from success
         if claude_result.success:
-            await self._store_successful_pattern(issue, failed_attempts, claude_result.fix)
+            await self._store_successful_pattern(
+                issue, failed_attempts, claude_result.fix
+            )
 
         return claude_result
 ```

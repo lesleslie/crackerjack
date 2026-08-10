@@ -28,11 +28,9 @@ from crackerjack.memory.git_metrics_collector import GitMetricsCollector
 
 mcp = FastMCP("crackerjack-git-metrics")
 
+
 @mcp.tool()
-def collect_git_metrics(
-    repo_path: str,
-    days_back: int = 30
-) -> dict:
+def collect_git_metrics(repo_path: str, days_back: int = 30) -> dict:
     """Collect git metrics for repository.
 
     Args:
@@ -65,11 +63,9 @@ def collect_git_metrics(
         },
     }
 
+
 @mcp.tool()
-def get_repository_velocity(
-    repo_path: str,
-    days_back: int = 30
-) -> float:
+def get_repository_velocity(repo_path: str, days_back: int = 30) -> float:
     """Get commit velocity for repository.
 
     Args:
@@ -83,10 +79,9 @@ def get_repository_velocity(
     metrics = collector.collect_commit_metrics(days_back=days_back)
     return metrics.avg_commits_per_day
 
+
 @mcp.tool()
-def get_repository_health(
-    repo_path: str
-) -> dict:
+def get_repository_health(repo_path: str) -> dict:
     """Get repository health indicators.
 
     Args:
@@ -133,13 +128,14 @@ from crackerjack.agents.base import Issue
 
 mcp = FastMCP("crackerjack-fix-strategy")
 
+
 @mcp.tool()
 def get_strategy_recommendation(
     issue_type: str,
     issue_message: str,
     file_path: str | None = None,
     stage: str = "unknown",
-    db_path: str = ".crackerjack/fix_strategy_memory.db"
+    db_path: str = ".crackerjack/fix_strategy_memory.db",
 ) -> dict | None:
     """Get fix strategy recommendation based on historical success.
 
@@ -178,9 +174,10 @@ def get_strategy_recommendation(
 
     return None
 
+
 @mcp.tool()
 def get_strategy_statistics(
-    db_path: str = ".crackerjack/fix_strategy_memory.db"
+    db_path: str = ".crackerjack/fix_strategy_memory.db",
 ) -> dict:
     """Get overall fix strategy statistics.
 
@@ -193,13 +190,14 @@ def get_strategy_statistics(
     storage = FixStrategyStorage(Path(db_path))
     return storage.get_statistics()
 
+
 @mcp.tool()
 def find_similar_issues(
     issue_type: str,
     issue_message: str,
     k: int = 10,
     min_similarity: float = 0.3,
-    db_path: str = ".crackerjack/fix_strategy_memory.db"
+    db_path: str = ".crackerjack/fix_strategy_memory.db",
 ) -> list[dict]:
     """Find similar historical issues.
 
@@ -274,37 +272,30 @@ from crackerjack.memory.git_metrics_collector import (
     _ConventionalCommitParser,
 )
 
+
 @pytest.fixture
 def temp_repo(tmp_path: Path):
     """Create temporary git repository."""
     import subprocess
+
     repo = tmp_path / "test_repo"
     repo.mkdir()
 
     # Initialize git repo
     subprocess.run(["git", "init"], cwd=repo, check=True)
     subprocess.run(
-        ["git", "config", "user.email", "test@example.com"],
-        cwd=repo,
-        check=True
+        ["git", "config", "user.email", "test@example.com"], cwd=repo, check=True
     )
-    subprocess.run(
-        ["git", "config", "user.name", "Test User"],
-        cwd=repo,
-        check=True
-    )
+    subprocess.run(["git", "config", "user.name", "Test User"], cwd=repo, check=True)
 
     # Create test commit
     test_file = repo / "test.txt"
     test_file.write_text("Hello")
     subprocess.run(["git", "add", "test.txt"], cwd=repo, check=True)
-    subprocess.run(
-        ["git", "commit", "-m", "feat: add test file"],
-        cwd=repo,
-        check=True
-    )
+    subprocess.run(["git", "commit", "-m", "feat: add test file"], cwd=repo, check=True)
 
     return repo
+
 
 def test_conventional_commit_parser():
     """Test conventional commit parsing."""
@@ -325,25 +316,24 @@ def test_conventional_commit_parser():
     assert breaking is True
 
     # Test non-conventional
-    is_conv, type_, scope, breaking = _ConventionalCommitParser.parse(
-        "Add new feature"
-    )
+    is_conv, type_, scope, breaking = _ConventionalCommitParser.parse("Add new feature")
     assert is_conv is False
     assert type_ is None
+
 
 def test_collect_commit_metrics(temp_repo: Path):
     """Test commit metrics collection."""
     collector = GitMetricsCollector(temp_repo)
 
     metrics = collector.collect_commit_metrics(
-        since=datetime.now() - timedelta(days=1),
-        until=datetime.now()
+        since=datetime.now() - timedelta(days=1), until=datetime.now()
     )
 
     assert metrics.total_commits >= 1
     assert metrics.conventional_commits >= 1
     assert 0 <= metrics.conventional_compliance_rate <= 1
     assert metrics.avg_commits_per_day >= 0
+
 
 def test_collect_branch_activity(temp_repo: Path):
     """Test branch activity collection."""
@@ -356,6 +346,7 @@ def test_collect_branch_activity(temp_repo: Path):
     assert metrics.total_branches >= 1  # At least main branch
     assert metrics.branch_switches >= 0
 
+
 def test_velocity_dashboard(temp_repo: Path):
     """Test velocity dashboard generation."""
     collector = GitMetricsCollector(temp_repo)
@@ -367,6 +358,7 @@ def test_velocity_dashboard(temp_repo: Path):
     assert dashboard.branch_metrics.total_branches >= 0
     assert dashboard.merge_metrics.total_merges >= 0
     assert len(dashboard.trend_data) >= 0
+
 
 def test_invalid_repository(tmp_path: Path):
     """Test error handling for invalid repository."""
@@ -406,11 +398,13 @@ from crackerjack.memory.fix_strategy_storage import (
 )
 from crackerjack.agents.base import Issue, FixResult
 
+
 @pytest.fixture
 def storage(tmp_path: Path):
     """Create temporary fix strategy storage."""
     db_path = tmp_path / "test.db"
     return FixStrategyStorage(db_path)
+
 
 def test_record_and_retrieve_fix_attempt(storage: FixStrategyStorage):
     """Test recording and retrieving fix attempts."""
@@ -448,6 +442,7 @@ def test_record_and_retrieve_fix_attempt(storage: FixStrategyStorage):
     assert len(similar) >= 1
     assert similar[0].agent_used == "RefactoringAgent"
     assert similar[0].strategy == "add_type_annotation"
+
 
 def test_strategy_recommendation(storage: FixStrategyStorage):
     """Test strategy recommendation."""
@@ -489,6 +484,7 @@ def test_strategy_recommendation(storage: FixStrategyStorage):
     assert agent_strategy == "RefactoringAgent:fix_type"
     assert confidence > 0
 
+
 def test_cosine_similarity():
     """Test cosine similarity calculation."""
     vec_a = np.array([1.0, 0.0, 0.0])
@@ -502,6 +498,7 @@ def test_cosine_similarity():
     # Orthogonal vectors
     sim_ac = FixStrategyStorage._cosine_similarity(vec_a, vec_c)
     assert sim_ac == pytest.approx(0.0)
+
 
 def test_statistics(storage: FixStrategyStorage):
     """Test statistics retrieval."""
@@ -564,6 +561,7 @@ from typing import List, Dict
 import numpy as np
 from sentence_transformers import SentenceTransformer
 
+
 class GitHistoryEmbedder:
     """Embed git history for semantic search.
 
@@ -573,11 +571,7 @@ class GitHistoryEmbedder:
     - Query optimization based on click-through
     """
 
-    def __init__(
-        self,
-        repo_path: Path,
-        model_name: str = "all-MiniLM-L6-v2"
-    ):
+    def __init__(self, repo_path: Path, model_name: str = "all-MiniLM-L6-v2"):
         self.repo_path = repo_path
         self.model = SentenceTransformer(model_name)
         self.embedding_dim = self.model.get_sentence_embedding_dimension()
@@ -612,10 +606,7 @@ class GitHistoryEmbedder:
             return 0
 
         # Generate embeddings
-        messages = [
-            f"{c['message']} | {c['author']} | {c['date']}"
-            for c in commits
-        ]
+        messages = [f"{c['message']} | {c['author']} | {c['date']}" for c in commits]
 
         new_embeddings = self.model.encode(
             messages,
@@ -633,10 +624,7 @@ class GitHistoryEmbedder:
         return len(commits)
 
     def search(
-        self,
-        query: str,
-        k: int = 10,
-        min_similarity: float = 0.3
+        self, query: str, k: int = 10, min_similarity: float = 0.3
     ) -> List[Dict]:
         """Search git history by semantic similarity.
 
@@ -659,8 +647,7 @@ class GitHistoryEmbedder:
 
         # Calculate similarities
         similarities = np.dot(self.embeddings, query_embedding) / (
-            np.linalg.norm(self.embeddings, axis=1) *
-            np.linalg.norm(query_embedding)
+            np.linalg.norm(self.embeddings, axis=1) * np.linalg.norm(query_embedding)
         )
 
         # Filter and sort
@@ -669,10 +656,12 @@ class GitHistoryEmbedder:
 
         results = []
         for idx in sorted_indices[:k]:
-            results.append({
-                "commit": self.commits[idx],
-                "similarity": float(similarities[idx]),
-            })
+            results.append(
+                {
+                    "commit": self.commits[idx],
+                    "similarity": float(similarities[idx]),
+                }
+            )
 
         return results
 
@@ -685,9 +674,12 @@ class GitHistoryEmbedder:
 
         result = subprocess.run(
             [
-                "git", "-C", str(self.repo_path),
-                "log", f"--since={since}",
-                '--pretty=format:%H|%ai|%an|%s'
+                "git",
+                "-C",
+                str(self.repo_path),
+                "log",
+                f"--since={since}",
+                "--pretty=format:%H|%ai|%an|%s",
             ],
             capture_output=True,
             text=True,
@@ -701,12 +693,14 @@ class GitHistoryEmbedder:
 
             parts = line.split("|", 3)
             if len(parts) == 4:
-                commits.append({
-                    "hash": parts[0],
-                    "date": parts[1],
-                    "author": parts[2],
-                    "message": parts[3],
-                })
+                commits.append(
+                    {
+                        "hash": parts[0],
+                        "date": parts[1],
+                        "author": parts[2],
+                        "message": parts[3],
+                    }
+                )
 
         return commits
 
@@ -738,6 +732,7 @@ ______________________________________________________________________
 ```python
 from dataclasses import dataclass, field
 from typing import Dict
+
 
 @dataclass
 class SessionMetrics:
@@ -773,9 +768,7 @@ class SessionMetrics:
             "avg_velocity": avg_velocity,
             "total_projects": len(self.git_velocity),
             "top_projects": sorted(
-                self.git_velocity.items(),
-                key=lambda x: x[1],
-                reverse=True
+                self.git_velocity.items(), key=lambda x: x[1], reverse=True
             )[:5],
         }
 ```
@@ -800,6 +793,7 @@ ______________________________________________________________________
 import httpx
 from typing import List, Dict
 from pathlib import Path
+
 
 class MahavishnuAggregationClient:
     """Client for fetching aggregated git metrics from Mahavishnu."""
@@ -909,6 +903,7 @@ from session_buddy.integrations.mahavishnu_client import (
 
 mcp = FastMCP("session-buddy-velocity-dashboard")
 
+
 @mcp.tool()
 async def get_velocity_trends(
     project_paths: list[str],
@@ -926,18 +921,18 @@ async def get_velocity_trends(
     client = MahavishnuAggregationClient()
 
     try:
-        dashboard = await client.get_git_velocity_dashboard(
-            project_paths, days_back
-        )
+        dashboard = await client.get_git_velocity_dashboard(project_paths, days_back)
 
         # Transform to trend format
         trends = []
         for project_data in dashboard["projects"]:
-            trends.append({
-                "project": project_data["path"],
-                "commits_per_day": project_data["avg_commits_per_day"],
-                "trend": project_data["daily_commits"],
-            })
+            trends.append(
+                {
+                    "project": project_data["path"],
+                    "commits_per_day": project_data["avg_commits_per_day"],
+                    "trend": project_data["daily_commits"],
+                }
+            )
 
         return {
             "period": f"{days_back} days",
@@ -945,6 +940,7 @@ async def get_velocity_trends(
         }
     finally:
         await client.close()
+
 
 @mcp.tool()
 async def get_branch_activity(

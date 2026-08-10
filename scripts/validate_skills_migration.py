@@ -8,11 +8,6 @@ import logging
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    pass
-
 
 DEFAULT_JSON_PATH = Path.cwd() / ".crackerjack" / "skill_metrics.json"
 DEFAULT_DB_PATH = Path.cwd() / ".session-buddy" / "skills.db"
@@ -109,15 +104,15 @@ def print_validation_result(result: ValidationResult) -> None:
     print("\n" + "=" * 60)
     print("Skills Migration Validation")
     print("=" * 60)
-    print("")
+    print()
 
     status = "✅ VALID" if result.is_valid else "❌ INVALID"
     print(f"Status: {status}")
-    print("")
+    print()
 
     print(f"JSON invocations: {result.json_invocations}")
     print(f"Database invocations: {result.db_invocations}")
-    print("")
+    print()
 
     if result.missing_in_db:
         print(f"⚠️ Skills in JSON but not in database ({len(result.missing_in_db)}):")
@@ -125,17 +120,17 @@ def print_validation_result(result: ValidationResult) -> None:
             print(f" - {skill}")
         if len(result.missing_in_db) > 10:
             print(f" ... and {len(result.missing_in_db) - 10} more")
-        print("")
+        print()
 
     if result.extra_in_db > 0:
         print(f"ℹ️ Extra invocations in database: {result.extra_in_db}")
-        print("")
+        print()
 
     if result.errors:
         print("Errors:")
         for error in result.errors:
             print(f" ❌ {error}")
-        print("")
+        print()
 
     print("=" * 60)
 

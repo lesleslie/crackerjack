@@ -137,9 +137,7 @@ def _apply_ai_agent_fixes(
     )
 
     # Main iteration loop (refactored with sub-helpers)
-    result = self._run_ai_fix_iteration_loop(
-        coordinator, issues, hook_results, stage
-    )
+    result = self._run_ai_fix_iteration_loop(coordinator, issues, hook_results, stage)
 
     # Post-fix validation (Helper 4)
     if result:

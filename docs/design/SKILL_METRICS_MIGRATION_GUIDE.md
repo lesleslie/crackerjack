@@ -57,12 +57,20 @@ class DualWriteMetricsTracker:
             error_type: str | None = None,
         ) -> None:
             # Complete in both systems
-            json_completer(completed=completed, follow_up_actions=follow_up_actions, error_type=error_type)
+            json_completer(
+                completed=completed,
+                follow_up_actions=follow_up_actions,
+                error_type=error_type,
+            )
 
             try:
                 # Track in database (fire-and-forget during migration)
                 result = self.db_store.track_invocation(skill_name, workflow_path)
-                result.completer(completed=completed, follow_up_actions=follow_up_actions, error_type=error_type)
+                result.completer(
+                    completed=completed,
+                    follow_up_actions=follow_up_actions,
+                    error_type=error_type,
+                )
             except Exception as e:
                 # Log but don't fail migration
                 logger.warning(f"Database write failed (dual-write phase): {e}")
@@ -89,6 +97,7 @@ import hashlib
 import json
 from pathlib import Path
 
+
 class DataMigrator:
     """Migrate data from JSON files to database."""
 
@@ -112,18 +121,18 @@ class DataMigrator:
         data = json.loads(self.json_path.read_text())
 
         # Migrate invocations first (immutable log)
-        invocations_migrated = self._migrate_invocations(data.get('invocations', []))
+        invocations_migrated = self._migrate_invocations(data.get("invocations", []))
 
         # Migrate metrics (aggregates)
-        metrics_migrated = self._migrate_metrics(data.get('skills', {}))
+        metrics_migrated = self._migrate_metrics(data.get("skills", {}))
 
         # Validate migration
         validation_errors = self._validate_migration(data)
 
         return {
-            'invocations_migrated': invocations_migrated,
-            'metrics_migrated': metrics_migrated,
-            'validation_errors': len(validation_errors),
+            "invocations_migrated": invocations_migrated,
+            "metrics_migrated": metrics_migrated,
+            "validation_errors": len(validation_errors),
         }
 
     def _migrate_invocations(self, invocations: list[dict]) -> int:
@@ -138,9 +147,9 @@ class DataMigrator:
         migrated = 0
 
         for i in range(0, len(invocations), self.batch_size):
-            batch = invocations[i:i + self.batch_size]
+            batch = invocations[i : i + self.batch_size]
 
-            with self.db_store._isolated_transaction('EXCLUSIVE'):
+            with self.db_store._isolated_transaction("EXCLUSIVE"):
                 for inv in batch:
                     try:
                         self.db_store.conn.execute(
@@ -152,15 +161,15 @@ class DataMigrator:
                             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)
                             """,
                             (
-                                inv.get('id') or str(uuid.uuid4()),
-                                inv['skill_name'],
-                                inv['invoked_at'],
-                                inv.get('workflow_path'),
-                                inv['completed'],
-                                inv.get('duration_seconds'),
-                                json.dumps(inv.get('follow_up_actions', [])),
-                                inv.get('error_type'),
-                            )
+                                inv.get("id") or str(uuid.uuid4()),
+                                inv["skill_name"],
+                                inv["invoked_at"],
+                                inv.get("workflow_path"),
+                                inv["completed"],
+                                inv.get("duration_seconds"),
+                                json.dumps(inv.get("follow_up_actions", [])),
+                                inv.get("error_type"),
+                            ),
                         )
                         migrated += 1
                     except Exception as e:
@@ -184,8 +193,8 @@ class DataMigrator:
         for skill_name, skill_data in skills.items():
             try:
                 # Remove computed fields before migrating
-                skill_data.pop('completion_rate', None)
-                skill_data.pop('avg_duration_seconds', None)
+                skill_data.pop("completion_rate", None)
+                skill_data.pop("avg_duration_seconds", None)
 
                 self.db_store.conn.execute(
                     """
@@ -199,16 +208,16 @@ class DataMigrator:
                     """,
                     (
                         skill_name,
-                        skill_data['total_invocations'],
-                        skill_data['completed_invocations'],
-                        skill_data['abandoned_invocations'],
-                        skill_data['total_duration_seconds'],
-                        json.dumps(skill_data.get('workflow_paths', {})),
-                        json.dumps(skill_data.get('common_errors', {})),
-                        json.dumps(skill_data.get('follow_up_actions', {})),
-                        skill_data.get('first_invoked'),
-                        skill_data.get('last_invoked'),
-                    )
+                        skill_data["total_invocations"],
+                        skill_data["completed_invocations"],
+                        skill_data["abandoned_invocations"],
+                        skill_data["total_duration_seconds"],
+                        json.dumps(skill_data.get("workflow_paths", {})),
+                        json.dumps(skill_data.get("common_errors", {})),
+                        json.dumps(skill_data.get("follow_up_actions", {})),
+                        skill_data.get("first_invoked"),
+                        skill_data.get("last_invoked"),
+                    ),
                 )
                 migrated += 1
             except Exception as e:
@@ -228,16 +237,18 @@ class DataMigrator:
         errors = []
 
         # Validate invocation counts
-        original_count = len(original_data.get('invocations', []))
+        original_count = len(original_data.get("invocations", []))
         db_count = self.db_store.conn.execute(
             "SELECT COUNT(*) FROM skill_invocation"
         ).fetchone()[0]
 
         if original_count != db_count:
-            errors.append(f"Invocation count mismatch: JSON={original_count}, DB={db_count}")
+            errors.append(
+                f"Invocation count mismatch: JSON={original_count}, DB={db_count}"
+            )
 
         # Validate metrics
-        for skill_name, skill_data in original_data.get('skills', {}).items():
+        for skill_name, skill_data in original_data.get("skills", {}).items():
             db_metrics = self.db_store.get_skill_metrics(skill_name)
 
             if not db_metrics:
@@ -245,7 +256,7 @@ class DataMigrator:
                 continue
 
             # Validate counts
-            if skill_data['total_invocations'] != db_metrics['total_invocations']:
+            if skill_data["total_invocations"] != db_metrics["total_invocations"]:
                 errors.append(
                     f"Count mismatch for {skill_name}: "
                     f"JSON={skill_data['total_invocations']}, "
@@ -298,14 +309,14 @@ class DualReadMetricsTracker:
 
         Logs warnings for any inconsistencies.
         """
-        if db_metrics['total_invocations'] != json_metrics.total_invocations:
+        if db_metrics["total_invocations"] != json_metrics.total_invocations:
             logger.warning(
                 f"Inconsistent invocation count for {skill_name}: "
                 f"DB={db_metrics['total_invocations']}, "
                 f"JSON={json_metrics.total_invocations}"
             )
 
-        if abs(db_metrics['completion_rate'] - json_metrics.completion_rate()) > 0.01:
+        if abs(db_metrics["completion_rate"] - json_metrics.completion_rate()) > 0.01:
             logger.warning(
                 f"Inconsistent completion rate for {skill_name}: "
                 f"DB={db_metrics['completion_rate']:.2f}, "
@@ -411,6 +422,7 @@ import hashlib
 from pathlib import Path
 from typing import Optional
 
+
 class MigrationRunner:
     """Run database schema migrations."""
 
@@ -464,8 +476,9 @@ class MigrationRunner:
 
         # Filter out already applied migrations
         pending = [
-            f for f in migration_files
-            if int(f.stem.split('__')[0][1:]) > current_version
+            f
+            for f in migration_files
+            if int(f.stem.split("__")[0][1:]) > current_version
         ]
 
         return pending
@@ -478,8 +491,8 @@ class MigrationRunner:
         """
         # Parse migration metadata
         stem = migration_file.stem  # e.g., "V2__add_success_rate_field"
-        version = int(stem.split('__')[0][1:])
-        description = stem.split('__', 1)[1].replace('_', ' ')
+        version = int(stem.split("__")[0][1:])
+        description = stem.split("__", 1)[1].replace("_", " ")
 
         print(f"Running migration V{version}: {description}")
 
@@ -487,7 +500,7 @@ class MigrationRunner:
         sql = migration_file.read_text()
 
         # Split into forward and rollback migrations
-        parts = sql.split('-- Rollback migration')
+        parts = sql.split("-- Rollback migration")
         forward_sql = parts[0]
         rollback_sql = parts[1] if len(parts) > 1 else None
 
@@ -510,7 +523,7 @@ class MigrationRunner:
                         version, description, checksum, rollback_sql, migration_time_ms
                     ) VALUES (?, ?, ?, ?, ?)
                     """,
-                    (version, description, checksum, rollback_sql, migration_time)
+                    (version, description, checksum, rollback_sql, migration_time),
                 )
 
             print(f"  ✓ Completed in {migration_time:.0f}ms")
@@ -527,8 +540,7 @@ class MigrationRunner:
         """
         # Get migration record
         cursor = self.conn.execute(
-            "SELECT rollback_sql FROM schema_migrations WHERE version = ?",
-            (version,)
+            "SELECT rollback_sql FROM schema_migrations WHERE version = ?", (version,)
         )
         row = cursor.fetchone()
 
@@ -545,7 +557,9 @@ class MigrationRunner:
         try:
             with self._isolated_transaction():
                 self.conn.executescript(rollback_sql)
-                self.conn.execute("DELETE FROM schema_migrations WHERE version = ?", (version,))
+                self.conn.execute(
+                    "DELETE FROM schema_migrations WHERE version = ?", (version,)
+                )
 
             print(f"  ✓ Rollback complete")
 

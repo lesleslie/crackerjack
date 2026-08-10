@@ -228,6 +228,7 @@ if recommendation:
 # with the metrics tracker from `crackerjack.skills.metrics`.
 from crackerjack.intelligence import AgentOrchestrator
 
+
 class LearningAgentOrchestrator(AgentOrchestrator):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -251,6 +252,7 @@ class LearningAgentOrchestrator(AgentOrchestrator):
 ```python
 from crackerjack.integration import create_dag_optimizer
 from crackerjack.runtime.oneiric_workflow import OneiricWorkflow
+
 
 class LearningOneiricWorkflow(OneiricWorkflow):
     def __init__(self, *args, **kwargs):

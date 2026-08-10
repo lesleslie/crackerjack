@@ -406,6 +406,7 @@ ollama_timeout: 600  # Longer timeout for large models
 # In crackerjack/adapters/ai/ollama.py
 # Can customize num_ctx for larger context windows
 
+
 class OllamaCodeFixerSettings(BaseCodeFixerSettings):
     num_ctx: int = Field(
         default=4096,  # Increase for larger context

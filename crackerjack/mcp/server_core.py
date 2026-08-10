@@ -73,21 +73,17 @@ from .context import (
 )
 from .rate_limiter import RateLimitConfig
 from .tools import (
-    initialize_skills,
     register_core_tools,
     register_discover_tools,
     register_doc_tools,
     register_eventbridge_tools,
     register_execution_tools,
-    register_git_semantic_tools,
-    register_intelligence_tools,
     register_monitoring_tools,
     register_otel_tools,
     register_proactive_tools,
     register_progress_tools,
     register_pycharm_tools,
     register_semantic_tools,
-    register_skill_tools,
     register_utility_tools,
 )
 
@@ -231,13 +227,11 @@ def create_mcp_server(config: dict[str, t.Any] | None = None) -> t.Any | None:
     register_discover_tools(mcp_app)
     register_doc_tools(mcp_app)
     register_execution_tools(mcp_app)
-    register_intelligence_tools(mcp_app)
     register_monitoring_tools(mcp_app)
     register_otel_tools(mcp_app)
     register_progress_tools(mcp_app)
     register_proactive_tools(mcp_app)
     register_semantic_tools(mcp_app)
-    register_git_semantic_tools(mcp_app)
     register_utility_tools(mcp_app)
     register_health_tools(
         mcp_app,
@@ -492,16 +486,6 @@ def main(
         mcp_app = _create_and_validate_server(mcp_config)
         if not mcp_app:
             return
-
-        console.print("[cyan]Initializing skill system...[/ cyan]")
-        try:
-            initialize_skills(project_path, mcp_app)
-            register_skill_tools(mcp_app)
-            console.print("[green]✅ Skill system initialized[/ green]")
-        except Exception as e:
-            console.print(
-                f"[yellow]⚠️ Skill system initialization failed: {e}[/ yellow]",
-            )
 
         _show_server_startup_info(project_path, mcp_config, http_mode)
 

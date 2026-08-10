@@ -69,8 +69,8 @@ Use `unittest.mock` or `pytest-mock` to isolate the code under test:
 
 ```python
 def test_example_with_mock(mocker):
-    mock_dependency = mocker.patch('module.dependency.method')
-    mock_dependency.return_value = 'expected_value'
+    mock_dependency = mocker.patch("module.dependency.method")
+    mock_dependency.return_value = "expected_value"
 
     # Test code that uses the dependency
 
@@ -82,11 +82,14 @@ def test_example_with_mock(mocker):
 Use `@pytest.mark.parametrize` for testing multiple inputs:
 
 ```python
-@pytest.mark.parametrize("input_value,expected", [
-    (1, 2),
-    (2, 4),
-    (3, 6),
-])
+@pytest.mark.parametrize(
+    "input_value,expected",
+    [
+        (1, 2),
+        (2, 4),
+        (3, 6),
+    ],
+)
 def test_double_value(input_value, expected):
     result = double_value(input_value)
     assert result == expected
@@ -109,6 +112,7 @@ The test suite uses Hypothesis for property-based testing to validate invariants
 
 ```python
 from hypothesis import given, strategies as st
+
 
 @given(st.text())
 def test_never_fails(text):

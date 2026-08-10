@@ -228,20 +228,6 @@ class TestPhaseCoordinatorMoreMethods:
         assert len(safe_failures) == 1
         assert "missing_module" in safe_failures[0]
 
-    def test_apply_ai_fix_for_tests_disabled(self) -> None:
-        """Test _apply_ai_fix_for_tests when AI fix is disabled."""
-        coordinator = PhaseCoordinator()
-        options = MagicMock()
-        options.ai_fix = False
-
-        # Mock the test manager to return some failures
-        coordinator.test_manager = MagicMock()
-        coordinator.test_manager.get_test_failures.return_value = ["some failure"]
-
-        result = coordinator._apply_ai_fix_for_tests(options)
-        # Should return False when AI fix is disabled
-        assert result is False
-
     def test_handle_no_changes_to_commit(self) -> None:
         """Test _handle_no_changes_to_commit method."""
         coordinator = PhaseCoordinator()
@@ -257,9 +243,13 @@ class TestPhaseCoordinatorMoreMethods:
         # Just ensure it doesn't raise an exception
         coordinator._display_cleaning_header()
 
-    def test_execute_cleaning_process(self) -> None:
+    def test_execute_cleaning_process(self, tmp_path) -> None:
         """Test _execute_cleaning_process method."""
-        coordinator = PhaseCoordinator()
+        # pkg_path must be scoped to tmp_path: PhaseCoordinator() with no
+        # pkg_path defaults to Path.cwd(), and _execute_cleaning_process()
+        # walks and rewrites every .py file under that root in place.
+        (tmp_path / "sample.py").write_text("x = 1  # a comment\n")
+        coordinator = PhaseCoordinator(pkg_path=tmp_path)
 
         # Just ensure it doesn't raise an exception
         # The actual implementation may return different values depending on the code cleaner
@@ -270,9 +260,11 @@ class TestPhaseCoordinatorMoreMethods:
             # Method might not be fully implemented yet
             pass
 
-    def test_clean_python_files(self) -> None:
+    def test_clean_python_files(self, tmp_path) -> None:
         """Test _clean_python_files method."""
-        coordinator = PhaseCoordinator()
+        # See test_execute_cleaning_process above for why pkg_path must be
+        # scoped to tmp_path.
+        coordinator = PhaseCoordinator(pkg_path=tmp_path)
 
         # Just ensure it doesn't raise an exception
         try:

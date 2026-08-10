@@ -30,7 +30,9 @@ Two layers were using **different issue counting logic**:
    ```python
    # Filtered out notes, help, summaries, headers
    def _should_parse_line(self, line: str) -> bool:
-       if any(pattern in line_lower for pattern in (": note:", ": help:", "note: ", "help: ")):
+       if any(
+           pattern in line_lower for pattern in (": note:", ": help:", "note: ", "help: ")
+       ):
            return False  # Filters these out
        # ... more filtering
    ```

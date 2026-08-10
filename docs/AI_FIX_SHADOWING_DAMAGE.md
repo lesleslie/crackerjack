@@ -47,11 +47,13 @@ ______________________________________________________________________
 async def async_read_file(file_path: Path) -> str:
     self._process_general_1()  # ❌ 'self' undefined in module function!
 
+
 # Lines 85-91: __all__ export list
 __all__ = [
     "async_read_file",
     # ...
 ]
+
 
 # Lines 94-105: REAL FUNCTION (shadows broken stub)
 async def async_read_file(file_path: Path) -> str:
@@ -63,7 +65,7 @@ async def async_read_file(file_path: Path) -> str:
 
 ```python
 # In AgentContext.write_file_content():
-compile(content, str(file_path), 'exec')  # ✅ Passes!
+compile(content, str(file_path), "exec")  # ✅ Passes!
 ```
 
 **Why it passes:**
@@ -135,6 +137,7 @@ ______________________________________________________________________
 def broken_function():
     self.nonexistent_method()  # 'self' undefined at runtime
 
+
 # Syntax validators see: Valid function call syntax
 # Runtime sees: NameError: name 'self' is not defined
 ```
@@ -200,6 +203,7 @@ AI agents are generating broken code with this pattern:
 def function_name(args):
     self._process_general_1()  # ❌ Non-existent method!
 
+
 # Step 2: Define real function (shadowing the stub)
 def function_name(args):
     # Actual implementation
@@ -213,7 +217,7 @@ Our current validation only catches syntax errors:
 ```python
 # crackerjack/agents/base.py:111
 try:
-    compile(content, str(file_path), 'exec')  # Only checks syntax
+    compile(content, str(file_path), "exec")  # Only checks syntax
 except SyntaxError as e:
     logger.error(f"Syntax error: {e}")
     return False
@@ -363,7 +367,7 @@ def write_file_content(self, file_path: str | Path, content: str) -> bool:
 
     # Layer 1: Syntax validation
     try:
-        compile(content, str(file_path), 'exec')
+        compile(content, str(file_path), "exec")
         logger.debug(f"✅ Syntax validation passed for {file_path}")
     except SyntaxError as e:
         logger.error(f"❌ Syntax error: {e}")

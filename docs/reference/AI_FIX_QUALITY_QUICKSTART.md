@@ -49,7 +49,7 @@ coordinator = ValidationCoordinator()
 is_valid, feedback = await coordinator.validate_fix(
     code=generated_code,
     file_path=file_path,
-    run_tests=True  # Optional: run tests
+    run_tests=True,  # Optional: run tests
 )
 ```
 
@@ -101,8 +101,7 @@ coordinator = ValidationCoordinator()
 
 # Permissive: passes if ANY validator passes
 is_valid, feedback = await coordinator.validate_fix(
-    code=generated_code,
-    file_path="/path/to/file.py"
+    code=generated_code, file_path="/path/to/file.py"
 )
 
 if is_valid:
@@ -122,7 +121,7 @@ change = ChangeSpec(
     line_range=(1, 10),
     old_code="old code",
     new_code="new code",
-    reason="Refactor for clarity"
+    reason="Refactor for clarity",
 )
 
 plan = FixPlan(
@@ -131,7 +130,7 @@ plan = FixPlan(
     changes=[change],
     rationale="Reduce cyclomatic complexity",
     risk_level="medium",  # low/medium/high
-    validated_by="RefactoringAgent"
+    validated_by="RefactoringAgent",
 )
 
 # Check if acceptable
@@ -186,7 +185,7 @@ async def validate_with_parallel(self, code: str, file_path: str) -> bool:
     is_valid, feedback = await coordinator.validate_fix(
         code=code,
         file_path=file_path,
-        run_tests=False  # Fast mode
+        run_tests=False,  # Fast mode
     )
 
     return is_valid
@@ -242,7 +241,7 @@ python -m pytest tests/models/test_fix_plan.py -v
 # Fewer validators for faster validation
 is_valid, feedback = await coordinator.validate_fix(
     code=code,
-    run_tests=False  # Skip tests (slow)
+    run_tests=False,  # Skip tests (slow)
 )
 ```
 

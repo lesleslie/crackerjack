@@ -49,7 +49,7 @@ ______________________________________________________________________
 def write_file_content(self, file_path: str | Path, content: str) -> bool:
     # Validate syntax before writing
     try:
-        compile(content, str(file_path), 'exec')
+        compile(content, str(file_path), "exec")
         logger.debug(f"✅ Syntax validation passed for {file_path}")
     except SyntaxError as e:
         logger.error(f"❌ Syntax error in AI-generated code for {file_path}:...")

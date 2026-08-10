@@ -2,11 +2,13 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Build the external, agent-driven replacement for crackerjack's deleted `--ai-fix` capability: a `Workflow` script that runs `crackerjack run --json`, dispatches residual issues to an agent for fixing, re-verifies, and repeats until clean or capped — with git snapshot/rollback safety, a durable audit log, and a passive fix-outcome log to Akosha.
+**Goal:** Build the external, agent-driven replacement for crackerjack's deleted `--ai-fix` capability: a `Workflow` script that runs `crackerjack run -v`, dispatches residual issues to an agent for fixing, re-verifies, and repeats until clean or capped — with git snapshot/rollback safety, a durable audit log, and a passive fix-outcome log to Akosha.
 
 **Architecture:** A named `Workflow` script (`.claude/workflows/ai-fix-loop.js`, checked into the crackerjack repo for durability/review) drives the loop entirely through `agent()` calls with structured schemas — Workflow scripts have no direct Bash/filesystem access, so every external action (running crackerjack, git snapshot/rollback, editing files, querying Akosha) happens inside an `agent()` invocation, while the script's own JS control flow owns the loop invariants (iteration count, no-improvement detection, stop reasons) deterministically rather than relying on agent judgment for safety-critical decisions.
 
-**Tech Stack:** Claude Code `Workflow` tool (JS, no TypeScript, no `Date.now()`/`Math.random()`), the `CrackerjackRunResult` JSON contract from the sibling plan (`docs/superpowers/plans/2026-08-06-ai-fix-removal-extraction.md`), Akosha MCP tools (exact tool names TBD via `ToolSearch` — see Task 7).
+**Note on `-v` vs `--json` (revised 2026-08-06, mid-implementation):** This plan originally assumed `crackerjack run --json` existed and depended on it. Investigation during the sibling plan's Task 3 found this is false — `run` has no `--json` flag today, and building one requires real design work (suite aggregation, Issue classification) that isn't a prerequisite for this plan. Since the Verify step below was always going to hand output to an `agent()` call for interpretation rather than `JSON.parse()` it directly in the script body, an LLM agent can interpret `crackerjack run -v`'s existing human-readable Rich-formatted output equally well. This plan uses `-v` throughout; `CrackerjackRunResult` (delivered in the sibling plan) remains available as an internal model but is not a dependency of this plan.
+
+**Tech Stack:** Claude Code `Workflow` tool (JS, no TypeScript, no `Date.now()`/`Math.random()`), `crackerjack run -v`'s existing human-readable output (interpreted per-iteration by an `agent()` call, not machine-parsed), Akosha MCP tools (exact tool names TBD via `ToolSearch` — see Task 7).
 
 **Reference spec:** [docs/superpowers/specs/2026-08-06-ai-fix-removal-external-loop-design.md](../specs/2026-08-06-ai-fix-removal-external-loop-design.md), sections 5-6.
 
@@ -19,7 +21,7 @@
 
 ## Precondition
 
-This plan depends on `crackerjack/models/issues.py`'s `CrackerjackRunResult` (Task 3 of the sibling extraction plan) being merged, and `crackerjack run --json` emitting it. **Task 1 below verifies this precondition before any other work starts** — do not proceed past Task 1 if it fails.
+This plan depends only on `crackerjack run -v` producing informative output — no new crackerjack CLI wiring is required. **Task 1 below verifies this precondition before any other work starts** — do not proceed past Task 1 if it fails.
 
 ## File Structure
 
@@ -32,22 +34,27 @@ This plan depends on `crackerjack/models/issues.py`'s `CrackerjackRunResult` (Ta
 
 ---
 
-### Task 1: Verify the `--json` contract precondition
+### Task 1: Verify the `run -v` precondition
 
 **Files:** None modified — verification task.
 
 **Interfaces:**
-- Consumes: `crackerjack.models.issues.CrackerjackRunResult` (must exist and be wired into `crackerjack run --json`'s actual output).
+- Consumes: `crackerjack run -v`'s existing human-readable output (no new crackerjack code required).
 
-- [ ] **Step 1: Confirm the module exists**
+- [ ] **Step 1: Confirm `run -v` produces informative output on both a dirty and a clean repo state**
 
-Run: `python -c "from crackerjack.models.issues import CrackerjackRunResult; print(CrackerjackRunResult.model_fields.keys())"`
-Expected: prints a `dict_keys` view including `schema_version`, `success`, `issues`, `summary`. If this fails, the sibling extraction plan's Task 3 hasn't landed yet — stop and do not proceed with this plan.
+Run: `uv run python -m crackerjack run -v 2>&1 | tail -40`
+Expected: either a clean pass, or a per-hook results section similar to:
+```
+Fast Hook Results:
+ - codespell        :: FAILED | issues=1
+ - ruff-check       :: FAILED | issues=1250
+```
+Record the actual current output shape (hook names, status markers, issue counts) — this is what Task 3's `agent()` prompt will describe to the verify-agent as the expected shape to interpret. If `run -v` produces no usable per-hook detail at all (e.g., only a bare pass/fail with zero information about what failed), stop and report back — the whole Verify-phase design depends on there being *something* informative to interpret, even if it isn't JSON.
 
-- [ ] **Step 2: Confirm real CLI output matches**
+- [ ] **Step 2: Confirm the command's exit code is a reliable clean/dirty signal**
 
-Run: `python -m crackerjack run --json 2>&1 | tail -1 | python -m json.tool`
-Expected: valid JSON with a `"schema_version"` field. Record the exact top-level key set — this is what Task 3's `agent()` prompt will tell the verify-agent to expect.
+Run: `uv run python -m crackerjack run -v; echo "exit=$?"` on the current (post-extraction-work) repo state, and separately reason about what the exit code would be on a genuinely clean run (0) vs. any failure (non-zero). The Verify agent will use both the exit code and the printed hook summary together, not exit code alone, since a non-zero exit could mean either "hooks found issues" or "the command itself crashed" (per the sibling plan's Task 1 finding that `--skip-hooks --run-tests` has a pre-existing crash bug unrelated to hook findings) — note in your report which failure mode is distinguishable from the output alone and which isn't.
 
 ---
 
@@ -79,10 +86,9 @@ const RUN_RESULT_SCHEMA = {
   properties: {
     cleanExit: { type: 'boolean' },
     issueCount: { type: 'number' },
-    issuesJson: { type: 'string' },
-    schemaVersion: { type: 'string' },
+    issuesSummary: { type: 'string' },
   },
-  required: ['cleanExit', 'issueCount', 'issuesJson', 'schemaVersion'],
+  required: ['cleanExit', 'issueCount', 'issuesSummary'],
 }
 
 let previousIssueCount = Number.POSITIVE_INFINITY
@@ -120,22 +126,26 @@ git commit -m "feat(ai-fix-loop): workflow script skeleton with loop scaffolding
 
 **Interfaces:**
 - Consumes: `RUN_RESULT_SCHEMA` from Task 2.
-- Produces: `verify` object per iteration, with `cleanExit`, `issueCount`, `issuesJson`, `schemaVersion` — consumed by Task 6's stop-condition checks and Task 5's fix-dispatch prompt.
+- Produces: `verify` object per iteration, with `cleanExit`, `issueCount`, `issuesSummary` — consumed by Task 6's stop-condition checks and Task 5's fix-dispatch prompt.
 
 - [ ] **Step 1: Replace the `// Task 3 fills in the Verify phase here.` comment with the real call**
+
+Use the actual output shape recorded in Task 1's Step 1 report in place of the illustrative example below — describe it concretely to the agent rather than assuming the exact wording:
 
 ```js
   phase('Verify')
   const verify = await agent(
-    `Run this exact command in the crackerjack repo: \`python -m crackerjack run --json\`. ` +
-    `The last line of stdout is a JSON object matching this shape: {schema_version, success, issues: [...], summary: {...}}. ` +
-    `Parse it. Return cleanExit=true only if the "issues" array is empty, issueCount=the length of the "issues" array, ` +
-    `issuesJson=the raw JSON string of the full parsed object (not re-serialized, the actual text), and schemaVersion=the "schema_version" field value. ` +
-    `If the command fails to run or produces no parseable JSON, return cleanExit=false, issueCount=-1, issuesJson="", schemaVersion="".`,
+    `Run this exact command in the crackerjack repo: \`python -m crackerjack run -v\`. ` +
+    `This prints Rich-formatted, human-readable quality-check results (not JSON) — for example a "Fast Hook Results" section ` +
+    `listing each hook with a FAILED/PASSED marker and an issue count, e.g. "- ruff-check :: FAILED | issues=1250". ` +
+    `Read the full output and determine: cleanExit=true only if every hook/check passed with zero issues, ` +
+    `issueCount=the total number of issues across all failed hooks/checks (sum the counts you see; if a hook fails with no explicit count, count it as 1 issue), ` +
+    `issuesSummary=a concise plain-text summary of what failed and why, specific enough that another agent reading only this summary (not the raw output) could start fixing the issues. ` +
+    `If the command crashes or produces no usable output at all (distinct from "hooks failed" — a crash means the tool itself errored, not that it found issues), return cleanExit=false, issueCount=-1, issuesSummary="" and describe the crash.`,
     { schema: RUN_RESULT_SCHEMA, label: `verify-iter-${iteration}`, phase: 'Verify' }
   )
   if (!verify || verify.issueCount === -1) {
-    log(`Verify agent failed or crackerjack did not produce parseable JSON on iteration ${iteration} — aborting.`)
+    log(`Verify agent failed or crackerjack crashed on iteration ${iteration} — aborting.`)
     return { stopReason: 'fixer-error', iterations: iteration - 1, auditLog }
   }
   if (verify.cleanExit) {
@@ -146,13 +156,13 @@ git commit -m "feat(ai-fix-loop): workflow script skeleton with loop scaffolding
 
 - [ ] **Step 2: Test against this repo's real current state**
 
-Run the workflow with `maxIterations: 1` against this repo as-is. Confirm the `verify` step correctly reports whether the repo is currently clean or not, matching what `python -m crackerjack run --json` actually shows when run directly.
+Run the workflow with `maxIterations: 1` against this repo as-is. Confirm the `verify` step correctly reports whether the repo is currently clean or not, and that `issueCount`/`issuesSummary` plausibly match what `python -m crackerjack run -v` actually shows when run directly (spot-check by eye, not exact string matching — the agent is summarizing, not transcribing).
 
 - [ ] **Step 3: Commit**
 
 ```bash
 git add .claude/workflows/ai-fix-loop.js
-git commit -m "feat(ai-fix-loop): implement Verify phase (run crackerjack --json, parse result)"
+git commit -m "feat(ai-fix-loop): implement Verify phase (run crackerjack -v, agent-interpreted)"
 ```
 
 ---
@@ -205,7 +215,7 @@ git commit -m "feat(ai-fix-loop): implement Snapshot phase (conditional git stas
 - Modify: `.claude/workflows/ai-fix-loop.js`
 
 **Interfaces:**
-- Consumes: `verify.issuesJson` from Task 3.
+- Consumes: `verify.issuesSummary` from Task 3.
 - Produces: `fix` object per iteration with `changes: Array<{file: string, description: string}>` — appended to `auditLog` in Task 6.
 
 - [ ] **Step 1: Replace the `// Task 5 fills in the Fix phase here.` comment**
@@ -213,7 +223,7 @@ git commit -m "feat(ai-fix-loop): implement Snapshot phase (conditional git stas
 ```js
   phase('Fix')
   const fix = await agent(
-    `You are fixing quality issues in the crackerjack repo reported by \`crackerjack run --json\`. Here is the current issue list as JSON: ${verify.issuesJson}\n\n` +
+    `You are fixing quality issues in the crackerjack repo reported by \`crackerjack run -v\`. Here is a summary of the current issues: ${verify.issuesSummary}\n\n` +
     `Fix as many of these issues as you directly can by editing the affected files. Prefer minimal, targeted edits — do not refactor unrelated code. ` +
     `Do not run \`crackerjack run\` yourself; the loop driving you will re-verify after you finish. ` +
     `When done (or if you get stuck and cannot fix something), return a list of changes you made: each with the file path and a one-sentence description of the fix. ` +
@@ -413,12 +423,12 @@ git commit -m "docs: update CLAUDE.md for external ai-fix-loop workflow (replace
 Run manually after any change to `.claude/workflows/ai-fix-loop.js`:
 
 1. `git status --short` — confirm clean tree before starting.
-2. `python -m crackerjack run --json | tail -1 | python -m json.tool` — record the current real issue count.
+2. `uv run python -m crackerjack run -v 2>&1 | tail -40` — record the current real hook results by eye.
 3. Invoke the workflow: `Workflow({ scriptPath: '.claude/workflows/ai-fix-loop.js', args: { maxIterations: 5 } })`.
 4. Confirm the returned `stopReason` matches expectations:
-   - If step 2 showed 0 issues, expect `stopReason: 'clean'`, `iterations: 0`.
+   - If step 2 showed a clean pass, expect `stopReason: 'clean'`, `iterations: 0`.
    - If step 2 showed issues, expect either `stopReason: 'clean'` with `iterations > 0` and a populated `auditLog`, or `stopReason: 'iteration-cap'`/`'no-improvement'` with a legible partial-progress `auditLog`.
-5. Run `python -m crackerjack run --json | tail -1 | python -m json.tool` again — confirm the real issue count decreased or reached zero, matching what the workflow reported (don't trust the workflow's self-report alone).
+5. Run `uv run python -m crackerjack run -v 2>&1 | tail -40` again — confirm the real hook results improved or reached clean, matching what the workflow reported (don't trust the workflow's self-report alone).
 6. `git log --oneline -10` — confirm no unexpected commits were created (the loop should only stash/pop, not commit, unless a future revision changes that).
 7. `git status --short` — confirm no leftover stash entries (`git stash list` should be empty or only contain pre-existing entries from before this run).
 ```

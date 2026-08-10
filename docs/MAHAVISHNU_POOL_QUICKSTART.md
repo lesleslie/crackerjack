@@ -51,7 +51,7 @@ pool = await pool_spawn(
     name="test-pool",
     min_workers=1,
     max_workers=2,
-    worker_type="terminal-qwen"
+    worker_type="terminal-qwen",
 )
 print(f"Pool ID: {pool['pool_id']}")
 
@@ -65,9 +65,7 @@ print(f"Active pools: {pools}")
 ```python
 # Execute a task in the pool
 result = await pool_execute(
-    pool_id=pool['pool_id'],
-    prompt="echo 'Hello from worker!'",
-    timeout=30
+    pool_id=pool["pool_id"], prompt="echo 'Hello from worker!'", timeout=30
 )
 print(f"Result: {result['output']}")
 ```
@@ -130,13 +128,11 @@ for tool in ["refurb", "complexipy", "skylos"]:
 # With mahavishna pools: Parallel execution
 import asyncio
 
+
 async def scan_with_pools(files):
     # Spawn pool
     pool = await pool_spawn(
-        pool_type="mahavishnu",
-        name="quality-scanners",
-        min_workers=2,
-        max_workers=8
+        pool_type="mahavishnu", name="quality-scanners", min_workers=2, max_workers=8
     )
 
     # Split files into chunks
@@ -147,9 +143,7 @@ async def scan_with_pools(files):
     for tool in ["refurb", "complexipy", "skylos"]:
         for chunk in chunks:
             task = pool_execute(
-                pool_id=pool['pool_id'],
-                prompt=f"{tool} {' '.join(chunk)}",
-                timeout=300
+                pool_id=pool["pool_id"], prompt=f"{tool} {' '.join(chunk)}", timeout=300
             )
             tasks.append(task)
 
@@ -157,7 +151,7 @@ async def scan_with_pools(files):
     results = await asyncio.gather(*tasks)
 
     # Close pool
-    await pool_close(pool['pool_id'])
+    await pool_close(pool["pool_id"])
 
     return results
 ```
@@ -264,7 +258,7 @@ pip install --upgrade mcp-common==0.9.0
 ```python
 pool = await pool_spawn(
     ...,
-    timeout=60  # Increase from default 30
+    timeout=60,  # Increase from default 30
 )
 ```
 
@@ -287,6 +281,7 @@ from mcp__mahavishnu import (
     pool_close,
 )
 
+
 async def main():
     print("🔍 Checking mahavishnu health...")
     health = await pool_health()
@@ -299,7 +294,7 @@ async def main():
         name="test-pool",
         min_workers=1,
         max_workers=2,
-        worker_type="terminal-qwen"
+        worker_type="terminal-qwen",
     )
     print(f"✅ Pool spawned: {pool['pool_id']}")
 
@@ -311,17 +306,16 @@ async def main():
 
     print("\n🧪 Executing test command...")
     result = await pool_execute(
-        pool_id=pool['pool_id'],
-        prompt="echo 'Hello from Mahavishnu pool!'",
-        timeout=30
+        pool_id=pool["pool_id"], prompt="echo 'Hello from Mahavishnu pool!'", timeout=30
     )
     print(f"Output: {result.get('output', 'No output')}")
 
     print("\n🧹 Closing pool...")
-    await pool_close(pool['pool_id'])
+    await pool_close(pool["pool_id"])
     print("✅ Pool closed")
 
     print("\n✅ All tests passed!")
+
 
 if __name__ == "__main__":
     asyncio.run(main())

@@ -151,11 +151,13 @@ fast_hooks:
 # crackerjack/config/settings.py
 class FastHooksSettings(Settings):
     """Settings for incremental fast hooks (only process changed files)."""
+
     incremental: bool = True
     full_scan_threshold: int = 50
     base_branch: str = "main"
     force_incremental: bool = False
     force_full: bool = False
+
 
 # crackerjack/config/hooks.py
 FAST_STRATEGY = HookStrategy(

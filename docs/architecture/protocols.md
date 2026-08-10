@@ -18,6 +18,7 @@ Crackerjack uses **protocol-based dependency injection** for loose coupling and 
 # ✅ Correct - Protocol imports
 from crackerjack.models.protocols import Console, TestManagerProtocol
 
+
 def __init__(
     self,
     console: Console,
@@ -25,6 +26,7 @@ def __init__(
 ) -> None:
     self.console = console
     self.test_manager = test_manager
+
 
 # ❌ Wrong - Direct class imports
 from crackerjack.managers.test_manager import TestManager

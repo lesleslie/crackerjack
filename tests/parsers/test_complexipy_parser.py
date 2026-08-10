@@ -11,7 +11,7 @@ import pytest
 from pathlib import Path
 
 from crackerjack.parsers.json_parsers import ComplexipyJSONParser
-from crackerjack.agents.base import Issue, IssueType, Priority
+from crackerjack.models.issues import Issue, IssueType, Priority
 
 
 class TestComplexipyJSONParserLineNumberExtraction:

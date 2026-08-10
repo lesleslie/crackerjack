@@ -1,6 +1,6 @@
 import logging
 
-from crackerjack.agents.base import Issue
+from crackerjack.models.issues import Issue
 from crackerjack.models.tool_config import supports_json
 from crackerjack.parsers.base import JSONParser, RegexParser
 

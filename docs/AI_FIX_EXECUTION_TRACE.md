@@ -20,19 +20,19 @@ ______________________________________________________________________
 @app.command()
 def run(
     ai_fix: bool = CLI_OPTIONS["ai_fix"],  # Line 129
-    comp: bool = CLI_OPTIONS["comp"],       # Line 154
+    comp: bool = CLI_OPTIONS["comp"],  # Line 154
     # ... other options
 ):
     settings = load_settings(CrackerjackSettings)
     options = _create_and_configure_options(locals())  # Line 238
-    options = _setup_ai_options(locals(), options)      # Line 239
+    options = _setup_ai_options(locals(), options)  # Line 239
 
     # Sets environment variables:
     # - AI_AGENT=1
     # - AI_AGENT_DEBUG=1 (if debug)
     # - AI_AGENT_VERBOSE=1 (if debug)
 
-    _execute_workflow_mode(options, job_id=job_id)      # Line 245
+    _execute_workflow_mode(options, job_id=job_id)  # Line 245
 ```
 
 **Key Points**:
@@ -110,17 +110,18 @@ def register_crackerjack_workflow(
     _register_workflow(runtime, options)
     runtime.workflow_bridge.refresh_dags()
 
+
 def _build_workflow_steps(options: t.Any) -> list[str]:
     steps: list[str] = []
 
-    if _should_run_fast_hooks(options):     # comp=True → False
-        steps.append("fast_hooks")          # SKIPPED
+    if _should_run_fast_hooks(options):  # comp=True → False
+        steps.append("fast_hooks")  # SKIPPED
 
     if _should_run_tests(options) and _should_run_comprehensive_hooks(options):
         steps.extend(("tests", "comprehensive_hooks"))  # ADDED
 
     elif _should_run_comprehensive_hooks(options):  # True when comp=True
-        steps.append("comprehensive_hooks")    # ADDED
+        steps.append("comprehensive_hooks")  # ADDED
 
     steps.extend(("publishing", "commit"))
     return steps
@@ -179,9 +180,7 @@ def run_comprehensive_hooks_only(self, options: OptionsProtocol) -> bool:
                 attempt=2,
             )
         else:
-            self.console.print(
-                "[yellow]⚠️[/yellow] AI agents could not fix all issues"
-            )
+            self.console.print("[yellow]⚠️[/yellow] AI agents could not fix all issues")
 
     return success
 ```
@@ -202,6 +201,7 @@ ______________________________________________________________________
 ```python
 def apply_comprehensive_stage_fixes(self, hook_results: Sequence[object]) -> bool:
     return self._apply_comprehensive_stage_fixes(hook_results)
+
 
 def _apply_comprehensive_stage_fixes(self, hook_results: Sequence[object]) -> bool:
     ai_agent_enabled = os.environ.get("AI_AGENT") == "1"  # True (set in CLI)
@@ -309,9 +309,7 @@ ______________________________________________________________________
 **File**: `/Users/les/Projects/crackerjack/crackerjack/core/autofix_coordinator.py` (Lines 735-856)
 
 ```python
-def _parse_hook_results_to_issues(
-    self, hook_results: Sequence[object]
-) -> list[Issue]:
+def _parse_hook_results_to_issues(self, hook_results: Sequence[object]) -> list[Issue]:
     self.logger.debug(f"Parsing {len(hook_results)} hook results for issues")
 
     issues, parsed_counts_by_hook = self._parse_all_hook_results(hook_results)
@@ -320,6 +318,7 @@ def _parse_hook_results_to_issues(
 
     self._log_parsing_summary(len(issues), len(unique_issues))
     return unique_issues
+
 
 def _parse_single_hook_result(self, result: object) -> list[Issue]:
     if not self._validate_hook_result(result):
@@ -336,6 +335,7 @@ def _parse_single_hook_result(self, result: object) -> list[Issue]:
     # LINE 853: Parse using parser factory
     hook_issues = self._parse_hook_to_issues(hook_name, raw_output)
     return hook_issues
+
 
 def _parse_hook_to_issues(self, hook_name: str, raw_output: str) -> list[Issue]:
     self.logger.debug(f"Parsing hook '{hook_name}'")
@@ -392,6 +392,7 @@ def parse_with_validation(
         self._validate_issue_count(issues, expected_count, tool_name, output)
 
     return issues
+
 
 def _validate_issue_count(
     self,
@@ -461,6 +462,7 @@ async def handle_issues(self, issues: list[Issue]) -> FixResult:
             )
 
     return overall_result
+
 
 async def _handle_issues_by_type(
     self,
@@ -627,7 +629,7 @@ if actual_count != expected_count:
     raise ParsingError(
         f"Parser count mismatch for '{tool_name}': "
         f"expected {expected_count} issues, got {actual_count}",
-        ...
+        ...,
     )
 ```
 

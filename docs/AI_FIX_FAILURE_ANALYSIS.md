@@ -128,7 +128,7 @@ topic: lifecycle
 logger.info(
     "Parsed %d issues from %s tool",
     issue_count,  # This is fine
-    tool_name,    # This is fine
+    tool_name,  # This is fine
     # ❌ But somewhere there's a %.0f or %s that doesn't match args
 )
 ```
@@ -210,12 +210,11 @@ if not success and getattr(options, "ai_fix", False):
 ### Step 3: Parse Hook Results
 ```python
 # autofix_coordinator.py:735
-def _parse_hook_results_to_issues(
-    self, hook_results: Sequence[object]
-) -> list[Issue]:
+def _parse_hook_results_to_issues(self, hook_results: Sequence[object]) -> list[Issue]:
     issues, parsed_counts_by_hook = self._parse_all_hook_results(hook_results)
     unique_issues = self._deduplicate_issues(issues)
     return unique_issues
+
 
 # autofix_coordinator.py:747-758
 def _parse_all_hook_results(
@@ -299,6 +298,7 @@ def parse_with_validation(
 
     return issues
 
+
 # parsers/factory.py:158-169
 def _validate_issue_count(
     self,
@@ -369,7 +369,7 @@ else:
 logger.info(
     "Tool output: %s",
     output,  # output contains format strings
-    extra_arg  # ❌ EXTRA ARG: causes format specifier mismatch
+    extra_arg,  # ❌ EXTRA ARG: causes format specifier mismatch
 )
 ```
 

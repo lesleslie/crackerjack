@@ -175,7 +175,9 @@ class WorkflowEventTracker:
         self._workflow_start_time: float | None = None
         self._node_start_times: dict[str, float] = {}
 
-    def workflow_started(self, workflow_id: str, metadata: dict[str, t.Any] | None = None) -> None:
+    def workflow_started(
+        self, workflow_id: str, metadata: dict[str, t.Any] | None = None
+    ) -> None:
         """Record workflow execution start."""
         self._workflow_start_time = time.time()
         event = WorkflowEvent(
@@ -187,7 +189,9 @@ class WorkflowEventTracker:
         self.events.append(event)
         logger.debug(f"Workflow started: {workflow_id}")
 
-    def node_started(self, node_id: str, metadata: dict[str, t.Any] | None = None) -> None:
+    def node_started(
+        self, node_id: str, metadata: dict[str, t.Any] | None = None
+    ) -> None:
         """Record workflow node execution start."""
         self._node_start_times[node_id] = time.time()
         event = WorkflowEvent(
@@ -227,7 +231,9 @@ class WorkflowEventTracker:
         self.events.append(event)
         logger.debug(f"Node completed: {node_id} (duration: {duration:.2f}s)")
 
-    def workflow_completed(self, success: bool = True, metadata: dict[str, t.Any] | None = None) -> None:
+    def workflow_completed(
+        self, success: bool = True, metadata: dict[str, t.Any] | None = None
+    ) -> None:
         """Record workflow execution completion."""
         duration = None
         if self._workflow_start_time:
@@ -267,6 +273,7 @@ Modify `/Users/les/Projects/crackerjack/crackerjack/runtime/oneiric_workflow.py`
 # Add to imports
 from crackerjack.runtime.workflow_events import WorkflowEventTracker
 
+
 # Add to OneiricWorkflowRuntime class
 @dataclass(frozen=True)
 class OneiricWorkflowRuntime:
@@ -276,6 +283,7 @@ class OneiricWorkflowRuntime:
     event_tracker: WorkflowEventTracker | None = None  # Add this
 
     # ... existing properties ...
+
 
 # Update build_oneiric_runtime function
 def build_oneiric_runtime(session_id: str | None = None) -> OneiricWorkflowRuntime:
@@ -567,15 +575,17 @@ class SkillsWorkflowCorrelator:
         for session_id, session in sorted(
             self.sessions.items(), key=lambda x: x[1].start_time, reverse=True
         ):
-            lines.extend([
-                f"Session: {session_id}",
-                f"  Skills Used: {len(session.skill_invocations)}",
-                f"  Skills Completed: {session.skills_completed}",
-                f"  Workflow Nodes: {session.workflow_nodes_completed}",
-                f"  Skill Duration: {session.total_skill_duration:.1f}s",
-                f"  Workflow Duration: {session.total_workflow_duration:.1f}s",
-                "",
-            ])
+            lines.extend(
+                [
+                    f"Session: {session_id}",
+                    f"  Skills Used: {len(session.skill_invocations)}",
+                    f"  Skills Completed: {session.skills_completed}",
+                    f"  Workflow Nodes: {session.workflow_nodes_completed}",
+                    f"  Skill Duration: {session.total_skill_duration:.1f}s",
+                    f"  Workflow Duration: {session.total_workflow_duration:.1f}s",
+                    "",
+                ]
+            )
 
         lines.append("=" * 60)
         return "\n".join(lines)
@@ -671,6 +681,7 @@ Modify `/Users/les/Projects/crackerjack/crackerjack/core/session_coordinator.py`
 # Add to imports
 from crackerjack.runtime.workflow_events import WorkflowEventTracker
 from crackerjack.skills.correlation import SkillsWorkflowCorrelator
+
 
 # Add to SessionCoordinator.__init__
 class SessionCoordinator:

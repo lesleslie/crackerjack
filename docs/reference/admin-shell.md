@@ -94,17 +94,14 @@ Full integration with Session-Buddy MCP:
            "adapters": ["pytest", "ruff", "mypy", "bandit"],
            "component_type": "inspector",
            "project_root": "/path/to/project",
-       }
+       },
    )
    ```
 
 1. **Session End** (via atexit hook):
 
    ```python
-   await session_tracker.emit_session_end(
-       session_id="session_abc123",
-       metadata={}
-   )
+   await session_tracker.emit_session_end(session_id="session_abc123", metadata={})
    ```
 
 ### Enhanced Banner
@@ -290,10 +287,10 @@ Quality Check Summary:
 ### Individual Checks
 
 ```python
-In [2]: test()        # Run tests only
-In [3]: lint()        # Check code quality
-In [4]: scan()        # Security scan
-In [5]: typecheck()   # Type checking
+In[2]: test()  # Run tests only
+In[3]: lint()  # Check code quality
+In[4]: scan()  # Security scan
+In[5]: typecheck()  # Type checking
 ```
 
 ### Inspection

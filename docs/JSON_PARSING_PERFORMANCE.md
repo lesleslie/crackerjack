@@ -80,7 +80,8 @@ data = json.loads(output)  # Fast enough for <1000 issues
 
 # For very large outputs (>1000 issues), could use ijson
 import ijson
-for item in ijson.items(output, 'item'):
+
+for item in ijson.items(output, "item"):
     issue = self._parse_single_item(item)  # Stream processing
 ```
 
@@ -98,7 +99,7 @@ class ParserFactory:
         self,
         output: str,
         tool_name: str,
-        validate_count: bool = True  # Skip in dev mode
+        validate_count: bool = True,  # Skip in dev mode
     ):
         issues = self._parse(output, tool_name)
 
@@ -133,10 +134,7 @@ for hook_result in hook_results:
 import concurrent.futures
 
 with ThreadPoolExecutor(max_workers=4) as executor:
-    futures = [
-        executor.submit(parse_hook, result)
-        for result in hook_results
-    ]
+    futures = [executor.submit(parse_hook, result) for result in hook_results]
     for future in futures:
         issues.extend(future.result())  # Parallel parsing
 ```
@@ -152,6 +150,7 @@ with ThreadPoolExecutor(max_workers=4) as executor:
 ```python
 # Don't do this (slow):
 from jsonschema import validate
+
 validate(instance=data, schema=RUFF_SCHEMA)  # Adds overhead
 
 # Do this instead (fast):
@@ -174,6 +173,7 @@ import json
 from crackerjack.parsers.factory import ParserFactory
 from crackerjack.parsers.regex_parsers import RuffRegexParser  # Old way
 
+
 def benchmark_ruff_parsing():
     """Compare regex vs JSON parsing for ruff."""
 
@@ -190,10 +190,7 @@ def benchmark_ruff_parsing():
     factory = ParserFactory()
     start = time.perf_counter()
     for _ in range(1000):
-        issues = factory.parse_with_validation(
-            tool_name="ruff",
-            output=sample_json
-        )
+        issues = factory.parse_with_validation(tool_name="ruff", output=sample_json)
     json_time = (time.perf_counter() - start) / 1000 * 1000  # ms per iteration
 
     # Benchmark regex parsing
@@ -206,6 +203,7 @@ def benchmark_ruff_parsing():
     print(f"JSON parsing: {json_time:.2f}ms per iteration")
     print(f"Regex parsing: {regex_time:.2f}ms per iteration")
     print(f"Slowdown: {json_time / regex_time:.1f}x")
+
 
 if __name__ == "__main__":
     benchmark_ruff_parsing()
@@ -248,6 +246,7 @@ Add performance tracking to parser factory:
 import time
 from collections import defaultdict
 
+
 class ParserFactory:
     def __init__(self):
         self._parse_times: dict[str, list[float]] = defaultdict(list)
@@ -267,7 +266,7 @@ class ParserFactory:
             # Log slow parses
             if elapsed > 0.1:  # >100ms
                 logger.warning(
-                    f"Slow parse for '{tool_name}': {elapsed*1000:.1f}ms "
+                    f"Slow parse for '{tool_name}': {elapsed * 1000:.1f}ms "
                     f"(output size: {len(output)} bytes)"
                 )
 
@@ -342,6 +341,7 @@ If JSON is really too slow (unlikely), use msgpack:
 ```python
 # Even faster than JSON
 import msgpack
+
 data = msgpack.unpackb(packed_data)
 ```
 

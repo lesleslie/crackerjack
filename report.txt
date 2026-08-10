@@ -1,0 +1,37 @@
+======================================================================
+Crackerjack Test Selection Report
+======================================================================
+Strategy: fast
+Total Tests: 3223
+Selected: 14
+Skipped: 3209
+Reduction: 99.6%
+Selection Time: 0.00s
+Est. Time Saved: 0.0s
+
+Affected Files: 29
+ - crackerjack/services/pattern_cache.py
+ - crackerjack/__main__.py
+ - crackerjack/cli/options.py
+ - tests/unit/core/test_ai_fix_env_vars.py
+ - tests/test_agents/test_type_error_specialist.py
+ - tests/test_agents/test_import_optimization_agent.py
+ - tests/test_swarm_client.py
+ - tests/conftest_reset.py
+ - tests/test_agents/test_dead_code_removal_agent.py
+ - tests/unit/core/test_ai_fix_sinks.py
+ ... and 19 more
+
+Changed Tests: 14
+ - tests/test_fast_hooks_behavior.py
+ - tests/test_workflow_fast_hooks.py
+ - tests/test_fast_iteration_mode.py
+ - tests/test_fast_hook_results_panel.py
+ - .venv/lib/python3.13/site-packages/scipy/stats/tests/test_fast_gen_inversion.py
+ - .venv/lib/python3.13/site-packages/sklearn/decomposition/tests/test_fastica.py
+ - .venv/lib/python3.13/site-packages/sklearn/utils/tests/test_fast_dict.py
+ - tests/test_fast_hooks_behavior.py
+ - tests/test_workflow_fast_hooks.py
+ - tests/test_fast_iteration_mode.py
+ ... and 4 more
+======================================================================

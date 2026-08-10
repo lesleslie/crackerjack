@@ -65,13 +65,13 @@ QA adapters populate `parsed_issues` with ToolIssue dictionaries:
 
 ```python
 {
-    "file_path": str,           # REQUIRED - path to file with issue
+    "file_path": str,  # REQUIRED - path to file with issue
     "line_number": int | None,  # Line number (if available)
-    "column_number": int | None, # Column number (optional)
-    "message": str,              # Human-readable issue description
-    "code": str | None,          # Tool-specific error code (optional)
-    "severity": str,             # "error", "warning", "info", "note"
-    "suggestion": str | None,    # Fix suggestion (optional)
+    "column_number": int | None,  # Column number (optional)
+    "message": str,  # Human-readable issue description
+    "code": str | None,  # Tool-specific error code (optional)
+    "severity": str,  # "error", "warning", "info", "note"
+    "suggestion": str | None,  # Fix suggestion (optional)
 }
 ```
 
@@ -120,6 +120,7 @@ When creating a QA adapter, populate `parsed_issues`:
 ```python
 from crackerjack.models.qa_results import QAResult, QAResultStatus, QACheckType
 from crackerjack.adapters._tool_adapter_base import BaseToolAdapter
+
 
 class MyToolAdapter(BaseToolAdapter):
     def _parse_results(self, stdout: str, stderr: str) -> list[ToolIssue]:
@@ -171,9 +172,7 @@ def _parse_hook_to_issues(
 ) -> list[Issue]:
     # ✅ Use already-parsed issues if available
     if qa_result and qa_result.parsed_issues:
-        return self._convert_parsed_issues_to_issues(
-            hook_name, qa_result.parsed_issues
-        )
+        return self._convert_parsed_issues_to_issues(hook_name, qa_result.parsed_issues)
 
     # ❌ Fallback to raw parsing (legacy, less reliable)
     return self._parser_factory.parse_with_validation(...)
@@ -193,12 +192,14 @@ def test_qa_result_conversion(coordinator):
         check_type=QACheckType.COMPLEXITY,
         status=QAResultStatus.FAILURE,
         message="Found 1 issue",
-        parsed_issues=[{
-            "file_path": "my_file.py",
-            "line_number": 42,
-            "message": "High complexity",
-            "severity": "error",
-        }],
+        parsed_issues=[
+            {
+                "file_path": "my_file.py",
+                "line_number": 42,
+                "message": "High complexity",
+                "severity": "error",
+            }
+        ],
         files_checked=[Path("my_file.py")],
         issues_found=1,
     )

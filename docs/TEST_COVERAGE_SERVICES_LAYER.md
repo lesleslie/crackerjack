@@ -360,8 +360,10 @@ def test_file_operations_permission_denied(self, tmp_path):
     with pytest.raises(PermissionError):
         readonly_file.write_text("update")
 
+
 def test_file_operations_disk_full(self, tmp_path, monkeypatch):
     """Test handling of disk full errors."""
+
     # Mock os.write to raise ENOSPC
     def mock_write(fd, data):
         raise OSError(28, "No space left on device")
@@ -637,10 +639,12 @@ import pytest
 from pathlib import Path
 from unittest.mock import Mock
 
+
 @pytest.fixture
 def temp_db_path(tmp_path):
     """Create temporary database path."""
     return tmp_path / "test.db"
+
 
 @pytest.fixture
 def mock_console():
@@ -648,6 +652,7 @@ def mock_console():
     console = Mock()
     console.print = Mock()
     return console
+
 
 @pytest.fixture
 def mock_security_logger():

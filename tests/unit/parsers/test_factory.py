@@ -5,7 +5,7 @@ import pytest
 
 from crackerjack.parsers.factory import ParserFactory, ParsingError
 from crackerjack.parsers.base import JSONParser, RegexParser
-from crackerjack.agents.base import Issue, IssueType, Priority
+from crackerjack.models.issues import Issue, IssueType, Priority
 
 
 class TestParserFactory:

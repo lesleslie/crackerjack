@@ -88,6 +88,7 @@ from crackerjack.integration.mahavishnu_integration import (
     MahavishnuConfig,
 )
 
+
 async def main():
     config = MahavishnuConfig(
         db_path=".crackerjack/mahavishnu.db",
@@ -105,6 +106,7 @@ async def main():
 
     print(f"Portfolio velocity: {dashboard.portfolio_velocity:.2f} commits/day")
     print(f"Average health: {dashboard.avg_health_score:.1f}/100")
+
 
 asyncio.run(main())
 ```

@@ -94,6 +94,7 @@ ______________________________________________________________________
 class TestManagerProtocol(ServiceProtocol, t.Protocol):
     def run_tests(self, options: OptionsProtocol) -> bool: ...
     def get_test_failures(self) -> list[str]: ...
+
     # No docstrings explaining purpose, behavior, or contracts
 ```
 
@@ -178,6 +179,7 @@ class TestManagerProtocol(ServiceProtocol, t.Protocol):
 # Current: Type-only contract
 async def acquire_hook_lock(self, hook_name: str) -> t.AsyncContextManager[None]: ...
 
+
 # What developers need:
 async def acquire_hook_lock(self, hook_name: str) -> t.AsyncContextManager[None]:
     """Acquire a lock for hook execution.
@@ -221,6 +223,7 @@ async def acquire_hook_lock(self, hook_name: str) -> t.AsyncContextManager[None]
 # Current: Undermines type safety
 def run_fast_hooks(self) -> list[t.Any]: ...
 def get_custom_metric(self, name: str) -> t.Any: ...
+
 
 # Better: Specific types
 def run_fast_hooks(self) -> list[HookResult]: ...
@@ -344,6 +347,7 @@ def method_name(self, param1: type, param2: type = default) -> return_type:
 # Current
 def run_fast_hooks(self) -> list[t.Any]: ...
 def get_custom_metric(self, name: str) -> t.Any: ...
+
 
 # Better
 def run_fast_hooks(self) -> list[HookResult]: ...

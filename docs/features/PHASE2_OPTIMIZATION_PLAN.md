@@ -83,7 +83,7 @@ def _parse_hook_results_to_issues_with_qa(
 
     for result in hook_results:
         # ✅ Use cached QAResult from HookResult
-        if hasattr(result, 'qa_result') and result.qa_result:
+        if hasattr(result, "qa_result") and result.qa_result:
             qa_result = result.qa_result
             if qa_result.parsed_issues:
                 issues.extend(

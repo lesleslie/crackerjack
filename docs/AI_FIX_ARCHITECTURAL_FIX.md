@@ -69,9 +69,7 @@ These counts don't match for tools that do heavy filtering, causing:
 Modified `/Users/les/Projects/crackerjack/crackerjack/core/autofix_coordinator.py`:
 
 ```python
-def _parse_hook_results_to_issues(
-    self, hook_results: Sequence[object]
-) -> list[Issue]:
+def _parse_hook_results_to_issues(self, hook_results: Sequence[object]) -> list[Issue]:
     issues: list[Issue] = []
 
     # Track parsed counts per hook to update HookResult.issues_count
@@ -100,7 +98,9 @@ def _parse_hook_results_to_issues(
                 old_count = result.issues_count
                 new_count = parsed_counts_by_hook[hook_name]
                 # Only update if we actually parsed something
-                if new_count > 0 or (hasattr(result, "status") and result.status == "failed"):
+                if new_count > 0 or (
+                    hasattr(result, "status") and result.status == "failed"
+                ):
                     if old_count != new_count:
                         self.logger.debug(
                             f"Updated issues_count for '{hook_name}': "

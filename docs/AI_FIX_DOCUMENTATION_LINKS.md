@@ -62,11 +62,11 @@ The `DocumentationAgent` already had the logic to fix broken links:
 
    ```python
    search_paths = [
-       Path(target_file),                              # Original path
-       Path("docs") / target_file,                     # docs/
-       Path("docs") / "reference" / target_file,       # docs/reference/
-       Path("docs") / "features" / target_file,        # docs/features/
-       Path("docs") / "guides" / target_file,          # docs/guides/
+       Path(target_file),  # Original path
+       Path("docs") / target_file,  # docs/
+       Path("docs") / "reference" / target_file,  # docs/reference/
+       Path("docs") / "features" / target_file,  # docs/features/
+       Path("docs") / "guides" / target_file,  # docs/guides/
    ]
    ```
 

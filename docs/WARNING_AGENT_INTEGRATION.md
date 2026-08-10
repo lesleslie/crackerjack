@@ -147,6 +147,7 @@ import pytest
 from crackerjack.agents.warning_suppression_agent import WarningSuppressionAgent
 from crackerjack.agents.base import Issue, IssueType, Priority
 
+
 @pytest.mark.asyncio
 async def test_skip_benchmark_warning():
     agent = WarningSuppressionAgent(context)
@@ -160,6 +161,7 @@ async def test_skip_benchmark_warning():
     result = await agent.analyze_and_fix(issue)
     assert result.success
     assert "Skipped" in result.fixes_applied[0]
+
 
 @pytest.mark.asyncio
 async def test_fix_deprecated_import():

@@ -157,7 +157,7 @@ try:
 except (OSError, UnicodeDecodeError) as e:
     logger.exception(
         f"Failed to read file: {file_path}",
-        extra={"file_path": str(file_path), "error_type": type(e).__name__}
+        extra={"file_path": str(file_path), "error_type": type(e).__name__},
     )
     raise FileNotFoundError(f"Cannot read {file_path}: {e}") from e
 ```
@@ -175,13 +175,12 @@ try:
 except subprocess.TimeoutExpired as e:
     logger.error(
         f"Command timed out: {' '.join(command)}",
-        extra={"command": command, "timeout": 30}
+        extra={"command": command, "timeout": 30},
     )
     raise
 except Exception as e:
     logger.exception(
-        f"Failed to execute command: {' '.join(command)}",
-        extra={"command": command}
+        f"Failed to execute command: {' '.join(command)}", extra={"command": command}
     )
     raise
 ```
@@ -194,7 +193,7 @@ try:
 except json.JSONDecodeError as e:
     logger.warning(
         f"Invalid JSON in {file_path}: {e}",
-        extra={"file_path": str(file_path), "json_error": str(e)}
+        extra={"file_path": str(file_path), "json_error": str(e)},
     )
     return {}  # Return safe default
 ```
@@ -207,7 +206,7 @@ try:
 except Exception as e:
     logger.exception(
         f"Async operation failed: {function_name}",
-        extra={"function": function_name, "args": str(args)}
+        extra={"function": function_name, "args": str(args)},
     )
     raise  # Re-raise for caller to handle
 ```

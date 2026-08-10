@@ -49,22 +49,26 @@ import uuid
 from dataclasses import dataclass, field
 from typing import ClassVar
 
+
 @dataclass(frozen=True)
 class AIFixEvent:
     run_id: str
     iteration: int
-    ts: float = field(default_factory=time.time)   # wall-clock, not monotonic
+    ts: float = field(default_factory=time.time)  # wall-clock, not monotonic
+
 
 @dataclass(frozen=True)
 class RunStarted(AIFixEvent):
     kind: ClassVar[str] = "run_started"
     config_snapshot: dict[str, object] = field(default_factory=dict)
 
+
 @dataclass(frozen=True)
 class IterationStarted(AIFixEvent):
     kind: ClassVar[str] = "iteration_started"
     strategy: str = ""
     issue_count: int = 0
+
 
 # ... PreflightStarted, PreflightFinished,
 #     IssueQueued, AgentDispatched, IssueResolved, IssueFailed,
@@ -82,8 +86,10 @@ from typing import Protocol
 import uuid
 import datetime
 
+
 class Sink(Protocol):
     async def handle(self, event: AIFixEvent) -> None: ...
+
 
 class AIFixEventBus:
     def __init__(self) -> None:
@@ -101,7 +107,11 @@ class AIFixEventBus:
             try:
                 await sink.handle(event)
             except Exception:
-                self._logger.exception("Sink %s raised on event %s", type(sink).__name__, type(event).__name__)
+                self._logger.exception(
+                    "Sink %s raised on event %s",
+                    type(sink).__name__,
+                    type(event).__name__,
+                )
 
     def new_run_id(self) -> str:
         ts = datetime.datetime.now().strftime("%Y-%m-%d-%H%M")

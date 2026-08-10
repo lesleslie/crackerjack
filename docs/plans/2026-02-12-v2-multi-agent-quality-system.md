@@ -43,6 +43,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
 class FileContextReader:
     """Thread-safe file context reader with caching for AI agents."""
 
@@ -56,7 +57,9 @@ class FileContextReader:
             cache_key = str(Path(file_path).absolute())
             if cache_key in self._cache:
                 return self._cache[cache_key]
-            content = await asyncio.to_thread(Path.read_text, Path(file_path), encoding="utf-8")
+            content = await asyncio.to_thread(
+                Path.read_text, Path(file_path), encoding="utf-8"
+            )
             self._cache[cache_key] = content
             return content
 ```
@@ -84,11 +87,9 @@ ______________________________________________________________________
 # In ProactiveAgent._apply_fix_with_edit():
 from crackerjack.agents.file_context import FileContextReader
 
+
 async def _apply_fix_with_edit(
-    self,
-    file_path: str,
-    old_code: str,
-    new_code: str
+    self, file_path: str, old_code: str, new_code: str
 ) -> bool:
     """Apply fix using Edit tool (syntax-validating)."""
     # Read file first
@@ -97,8 +98,8 @@ async def _apply_fix_with_edit(
 
     # Validate diff size
     MAX_DIFF_LINES = 50
-    old_lines = old_code.split('\n')
-    new_lines = new_code.split('\n')
+    old_lines = old_code.split("\n")
+    new_lines = new_code.split("\n")
 
     if len(old_lines) > MAX_DIFF_LINES or len(new_lines) > MAX_DIFF_LINES:
         logger.warning(f"Diff too large: {len(old_lines)} → {len(new_lines)} lines")
@@ -136,7 +137,7 @@ def _validate_diff_size(self, old_code: str, new_code: str) -> bool:
     MAX_DIFF_LINES = 50
 
     def count_lines(code: str) -> int:
-        return len([line for line in code.split('\n') if line.strip()])
+        return len([line for line in code.split("\n") if line.strip()])
 
     old_count = count_lines(old_code)
     new_count = count_lines(new_code)
@@ -175,11 +176,14 @@ from typing import List
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class ValidationResult:
     """Result of code validation."""
+
     valid: bool
     errors: List[str]
+
 
 class SyntaxValidator:
     """AST-based syntax validation for generated code."""
@@ -223,22 +227,27 @@ from dataclasses import dataclass
 from typing import List
 from enum import Enum
 
+
 class RiskLevel(Enum):
     LOW = "low"
     MEDIUM = "medium"
     HIGH = "high"
 
+
 @dataclass
 class ChangeSpec:
     """Atomic change specification."""
+
     line_range: tuple[int, int]
     old_code: str
     new_code: str
     reason: str
 
+
 @dataclass
 class FixPlan:
     """Validated fix plan from analysis team."""
+
     file_path: str
     issue_type: str
     changes: List[ChangeSpec]
@@ -275,6 +284,7 @@ from typing import Dict, Any
 from crackerjack.agents.proactive_agent import ProactiveAgent
 from crackerjack.models.fix_plan import FixPlan
 
+
 class ContextAgent(ProactiveAgent):
     """Extracts file context around issue location."""
 
@@ -293,7 +303,7 @@ class ContextAgent(ProactiveAgent):
             "imports": visitor.imports,
             "functions": visitor.functions,
             "classes": visitor.classes,
-            "context": visitor.context
+            "context": visitor.context,
         }
 ```
 
@@ -322,6 +332,7 @@ from typing import List
 import re
 
 from crackerjack.agents.proactive_agent import ProactiveAgent
+
 
 class PatternAgent(ProactiveAgent):
     """Identifies anti-patterns to avoid during fixing."""
@@ -352,8 +363,8 @@ class PatternAgent(ProactiveAgent):
 
     def _check_unclosed_brackets(self, code: str) -> bool:
         """Check for bracket matching."""
-        open_parens = code.count('(')
-        close_parens = code.count(')')
+        open_parens = code.count("(")
+        close_parens = code.count(")")
         return open_parens != close_parens
 ```
 
@@ -381,14 +392,12 @@ ______________________________________________________________________
 from crackerjack.agents.proactive_agent import ProactiveAgent
 from crackerjack.models.fix_plan import FixPlan, ChangeSpec, RiskLevel
 
+
 class PlanningAgent(ProactiveAgent):
     """Creates FixPlans from context and patterns."""
 
     async def create_fix_plan(
-        self,
-        issue,
-        context: Dict[str, Any],
-        warnings: List[str]
+        self, issue, context: Dict[str, Any], warnings: List[str]
     ) -> FixPlan:
         """Create minimal, targeted fix plan."""
         await self._read_file_context(issue.file_path)
@@ -405,7 +414,7 @@ class PlanningAgent(ProactiveAgent):
             changes=changes,
             rationale=self._generate_rationale(changes, warnings),
             risk_level=risk,
-            validated_by="PlanningAgent"
+            validated_by="PlanningAgent",
         )
 ```
 
@@ -437,6 +446,7 @@ from crackerjack.agents.context_agent import ContextAgent
 from crackerjack.agents.pattern_agent import PatternAgent
 from crackerjack.agents.planning_agent import PlanningAgent
 from crackerjack.models.fix_plan import FixPlan
+
 
 class AnalysisCoordinator:
     """Runs analysis team in parallel with semaphore."""
@@ -489,9 +499,7 @@ async def execute_fix_plan(self, plan: FixPlan) -> FixResult:
     for change in plan.changes:
         # Apply change using Edit tool
         success = await self._apply_fix_with_edit(
-            plan.file_path,
-            change.old_code,
-            change.new_code
+            plan.file_path, change.old_code, change.new_code
         )
 
         if success:
@@ -500,7 +508,9 @@ async def execute_fix_plan(self, plan: FixPlan) -> FixResult:
     return FixResult(
         success=len(fixes_applied) == len(plan.changes),
         fixes_applied=fixes_applied,
-        remaining_issues=[] if len(fixes_applied) == len(plan.changes) else plan.changes
+        remaining_issues=[]
+        if len(fixes_applied) == len(plan.changes)
+        else plan.changes,
     )
 ```
 
@@ -529,6 +539,7 @@ ______________________________________________________________________
 # crackerjack/agents/logic_validator.py
 from typing import List
 from crackerjack.agents.syntax_validator import ValidationResult
+
 
 class LogicValidator(ValidationAgent):
     """Validates logic and patterns in fixes."""
@@ -573,6 +584,7 @@ ______________________________________________________________________
 from typing import List, Optional
 from crackerjack.agents.syntax_validator import ValidationResult
 
+
 class BehaviorValidator(ValidationAgent):
     """Validates behavior by running tests if available."""
 
@@ -595,10 +607,9 @@ class BehaviorValidator(ValidationAgent):
     async def _run_tests(self, test_path: str) -> bool:
         """Run pytest for specific test file."""
         import subprocess
+
         result = subprocess.run(
-            ["pytest", test_path, "-v"],
-            capture_output=True,
-            timeout=30
+            ["pytest", test_path, "-v"], capture_output=True, timeout=30
         )
         return result.returncode == 0
 ```
@@ -633,12 +644,15 @@ from crackerjack.agents.logic_validator import LogicValidator
 from crackerjack.agents.behavior_validator import BehaviorValidator
 from crackerjack.models.fix_plan import FixPlan
 
+
 @dataclass
 class ValidationSummary:
     """Summary of all validation results."""
+
     syntax_result: ValidationResult
     logic_result: ValidationResult
     behavior_result: ValidationResult
+
 
 class ValidationCoordinator:
     """Runs Power Trio validators in PARALLEL."""
@@ -654,15 +668,11 @@ class ValidationCoordinator:
         syntax_result, logic_result, behavior_result = await asyncio.gather(
             self.syntax.validate(fix),
             self.logic.validate(fix),
-            self.behavior.validate(fix)
+            self.behavior.validate(fix),
         )
 
         # Permissive: apply if ANY passes
-        is_valid = any([
-            syntax_result.valid,
-            logic_result.valid,
-            behavior_result.valid
-        ])
+        is_valid = any([syntax_result.valid, logic_result.valid, behavior_result.valid])
 
         if not is_valid:
             # Combine feedback for retry
@@ -704,10 +714,9 @@ from crackerjack.agents.analysis_coordinator import AnalysisCoordinator
 from crackerjack.agents.validation_coordinator import ValidationCoordinator
 from crackerjack.agents.fixer_coordinator import FixerCoordinator
 
+
 async def _apply_ai_agent_fixes(
-    self,
-    hook_results: Sequence[object],
-    stage: str = "fast"
+    self, hook_results: Sequence[object], stage: str = "fast"
 ) -> bool:
     # Setup coordinators
     analysis_coordinator = AnalysisCoordinator()
@@ -726,7 +735,9 @@ async def _apply_ai_agent_fixes(
             fix_result = await fixer_coordinator.execute_plan(plan)
 
             # Validate BEFORE applying (Power Trio in parallel)
-            is_valid, feedback = await validation_coordinator.validate_fix(fix_result.fix)
+            is_valid, feedback = await validation_coordinator.validate_fix(
+                fix_result.fix
+            )
 
             if is_valid:
                 # Apply fix
@@ -778,14 +789,12 @@ from crackerjack.agents.proactive_agent import ProactiveAgent
 
 logger = logging.getLogger(__name__)
 
+
 class FallbackOrchestrator(ProactiveAgent):
     """Fallback to Claude Code when parallel agents fail."""
 
     async def fix_with_fallback(
-        self,
-        issue,
-        failed_attempts: List[object],
-        max_attempts: int = 3
+        self, issue, failed_attempts: List[object], max_attempts: int = 3
     ) -> FixResult:
         """Try parallel agents first, then fallback to Claude Code."""
         # Try parallel agents first
@@ -835,15 +844,18 @@ ______________________________________________________________________
 from dataclasses import dataclass
 from typing import List
 
+
 @dataclass
 class FixPattern:
     """Successful fix pattern for learning."""
+
     issue_type: str
     error_pattern: str
     successful_approach: str
     agent_failures: List[str]
     success_count: int = 0
     usage_count: int = 0
+
 
 class PatternLibrary:
     """Store and retrieve successful fix patterns."""
@@ -939,14 +951,14 @@ Ensure all agents use new infrastructure:
 
 ```python
 # Verify all agents inherit from updated ProactiveAgent:
-- RefactoringAgent
-- ArchitectAgent
-- SecurityAgent
-- FormattingAgent
-- TestCreationAgent
-- DRYAgent
-- ImportOptimizationAgent
-- SemanticAgent
+-RefactoringAgent
+-ArchitectAgent
+-SecurityAgent
+-FormattingAgent
+-TestCreationAgent
+-DRYAgent
+-ImportOptimizationAgent
+-SemanticAgent
 ```
 
 **Steps:**
@@ -973,6 +985,7 @@ End-to-end workflow test:
 # tests/integration/test_ai_fix_workflow.py
 import pytest
 
+
 async def test_full_workflow_with_validation():
     """Test complete AI fix workflow with validation."""
     # Setup
@@ -980,8 +993,7 @@ async def test_full_workflow_with_validation():
 
     # Run workflow
     result = await autofix_coordinator._apply_ai_agent_fixes(
-        hook_results=[],
-        stage="test"
+        hook_results=[], stage="test"
     )
 
     # Assert validation happened
@@ -1020,6 +1032,7 @@ import time
 from crackerjack.agents.analysis_coordinator import AnalysisCoordinator
 from crackerjack.agents.fixer_coordinator import FixerCoordinator
 
+
 def test_analysis_parallel_speed():
     """Benchmark parallel analysis performance."""
     issues = [create_test_issue() for _ in range(100)]
@@ -1031,6 +1044,7 @@ def test_analysis_parallel_speed():
 
     assert elapsed < 5.0  # Should complete in < 5 seconds
     assert len(results) == 100
+
 
 def test_fixer_performance():
     """Benchmark fixer execution speed."""

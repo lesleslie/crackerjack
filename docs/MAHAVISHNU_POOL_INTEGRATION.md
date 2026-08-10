@@ -37,22 +37,22 @@ ______________________________________________________________________
 
 ```python
 # Pool lifecycle management
-pool_spawn()           # Create new pool
-pool_close()           # Close specific pool
-pool_close_all()       # Close all pools
+pool_spawn()  # Create new pool
+pool_close()  # Close specific pool
+pool_close_all()  # Close all pools
 
 # Task execution
-pool_execute()         # Execute on specific pool
-pool_route_execute()   # Auto-route to best pool
+pool_execute()  # Execute on specific pool
+pool_route_execute()  # Auto-route to best pool
 
 # Monitoring
-pool_list()            # List active pools
-pool_monitor()         # Get pool metrics
-pool_health()          # Health status
-pool_scale()           # Adjust worker count
+pool_list()  # List active pools
+pool_monitor()  # Get pool metrics
+pool_health()  # Health status
+pool_scale()  # Adjust worker count
 
 # Advanced features
-pool_search_memory()   # Search memory across pools
+pool_search_memory()  # Search memory across pools
 ```
 
 ### Pool Configuration
@@ -60,10 +60,10 @@ pool_search_memory()   # Search memory across pools
 ```python
 PoolConfig(
     name="quality-scanners",
-    pool_type="mahavishnu",      # or "session-buddy", "kubernetes"
-    min_workers=2,               # Minimum workers (always running)
-    max_workers=10,              # Maximum workers (scale up as needed)
-    worker_type="terminal-qwen", # or "terminal-claude", "container"
+    pool_type="mahavishnu",  # or "session-buddy", "kubernetes"
+    min_workers=2,  # Minimum workers (always running)
+    max_workers=10,  # Maximum workers (scale up as needed)
+    worker_type="terminal-qwen",  # or "terminal-claude", "container"
 )
 ```
 
@@ -123,6 +123,7 @@ import asyncio
 from pathlib import Path
 from typing import Any
 
+
 class CrackerjackPoolClient:
     """Client for Mahavishnu pool execution."""
 
@@ -131,9 +132,7 @@ class CrackerjackPoolClient:
         self.pool_id: str | None = None
 
     async def spawn_scanner_pool(
-        self,
-        min_workers: int = 2,
-        max_workers: int = 8
+        self, min_workers: int = 2, max_workers: int = 8
     ) -> str:
         """Spawn a worker pool for quality scanning.
 
@@ -151,7 +150,7 @@ class CrackerjackPoolClient:
             name="crackerjack-quality-scanners",
             min_workers=min_workers,
             max_workers=max_workers,
-            worker_type="terminal-qwen"
+            worker_type="terminal-qwen",
         )
 
         if result.get("status") == "created":
@@ -161,10 +160,7 @@ class CrackerjackPoolClient:
             raise RuntimeError(f"Failed to spawn pool: {result}")
 
     async def execute_tool_scan(
-        self,
-        tool_name: str,
-        files: list[Path],
-        timeout: int = 300
+        self, tool_name: str, files: list[Path], timeout: int = 300
     ) -> dict[str, Any]:
         """Execute a quality tool on specific files.
 
@@ -187,7 +183,7 @@ class CrackerjackPoolClient:
             "pool_execute",
             pool_id=self.pool_id,
             prompt=f"Execute: {' '.join(map(str, cmd))}",
-            timeout=timeout
+            timeout=timeout,
         )
 
         return result
@@ -217,6 +213,7 @@ class CrackerjackPoolClient:
 
 from crackerjack.services.pool_client import CrackerjackPoolClient
 
+
 async def run_refurb_with_pool(options) -> HookResult:
     """Run refurb on changed files using mahavishnu pool."""
     # Get changed files
@@ -238,7 +235,7 @@ async def run_refurb_with_pool(options) -> HookResult:
         success=result.get("status") == "completed",
         stdout=result.get("output", ""),
         stderr=result.get("error", ""),
-        exit_code=result.get("exit_code", 0)
+        exit_code=result.get("exit_code", 0),
     )
 ```
 
@@ -251,6 +248,7 @@ async def run_refurb_with_pool(options) -> HookResult:
 ```python
 # crackerjack/services/pool_router.py
 
+
 class PoolRouter:
     """Route tools to optimal workers."""
 
@@ -259,22 +257,16 @@ class PoolRouter:
         "refurb": "heavy-cpu-worker",
         "complexipy": "heavy-cpu-worker",
         "skylos": "fast-worker",  # Rust-based, already fast
-
         # Light tools → shared workers
         "ruff": "fast-worker",
         "vulture": "fast-worker",
         "mypy": "fast-worker",
-
         # Security tools → dedicated workers (isolation)
         "gitleaks": "security-worker",
         "semgrep": "security-worker",
     }
 
-    async def route_to_best_pool(
-        self,
-        tool_name: str,
-        files: list[Path]
-    ) -> str:
+    async def route_to_best_pool(self, tool_name: str, files: list[Path]) -> str:
         """Route tool to best pool using pool_route_execute."""
         worker_type = self.TOOL_WORKER_MAP.get(tool_name, "fast-worker")
 
@@ -282,7 +274,7 @@ class PoolRouter:
             "pool_route_execute",
             tool_name=tool_name,
             worker_type=worker_type,
-            files=files
+            files=files,
         )
 
         return result["pool_id"]
@@ -292,6 +284,7 @@ class PoolRouter:
 
 ```python
 # crackerjack/services/pool_scaler.py
+
 
 class PoolScaler:
     """Auto-scale pool workers based on load."""
@@ -307,7 +300,7 @@ class PoolScaler:
                 await self._call_mcp_tool(
                     "pool_scale",
                     pool_id=pool_id,
-                    worker_count=metrics["max_workers"] + 2
+                    worker_count=metrics["max_workers"] + 2,
                 )
 
             # Scale down if idle > 5 minutes
@@ -315,7 +308,7 @@ class PoolScaler:
                 await self._call_mcp_tool(
                     "pool_scale",
                     pool_id=pool_id,
-                    worker_count=max(2, metrics["min_workers"])
+                    worker_count=max(2, metrics["min_workers"]),
                 )
 
             await asyncio.sleep(30)
@@ -328,13 +321,12 @@ class PoolScaler:
 ```python
 # crackerjack/services/memory_aware_scanner.py
 
+
 class MemoryAwareScanner:
     """Scanner that learns from past results."""
 
     async def scan_with_memory(
-        self,
-        tool_name: str,
-        files: list[Path]
+        self, tool_name: str, files: list[Path]
     ) -> dict[str, Any]:
         """Scan files using memory to skip known-good files."""
 
@@ -342,17 +334,15 @@ class MemoryAwareScanner:
         memory_results = await self._call_mcp_tool(
             "pool_search_memory",
             pool_id=self.pool_id,
-            query={
-                "tool": tool_name,
-                "files": [str(f) for f in files]
-            }
+            query={"tool": tool_name, "files": [str(f) for f in files]},
         )
 
         # Filter out files that passed recently
         known_good = [
-            f for f, result in memory_results.items()
-            if result["status"] == "passed" and
-            result["timestamp"] > time.time() - 86400  # 24 hours
+            f
+            for f, result in memory_results.items()
+            if result["status"] == "passed"
+            and result["timestamp"] > time.time() - 86400  # 24 hours
         ]
 
         files_to_scan = [f for f in files if f not in known_good]

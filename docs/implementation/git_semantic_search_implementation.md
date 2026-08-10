@@ -43,6 +43,7 @@ class WorkflowPattern:
     examples: list[GitEvent]
     semantic_tags: list[str]
 
+
 @dataclass
 class PracticeRecommendation:
     recommendation_type: str
@@ -162,11 +163,11 @@ class PracticeRecommendation:
 def enrich_commit_for_search(commit: CommitData) -> str:
     return f"""
     {commit.message}
-    Type: {commit.conventional_type or 'unknown'}
-    Scope: {commit.conventional_scope or 'none'}
+    Type: {commit.conventional_type or "unknown"}
+    Scope: {commit.conventional_scope or "none"}
     Breaking: {commit.has_breaking_change}
     Author: {commit.author_name}
-    Time: {commit.author_timestamp.strftime('%Y-%m-%d %H:%M')}
+    Time: {commit.author_timestamp.strftime("%Y-%m-%d %H:%M")}
     """
 ```
 

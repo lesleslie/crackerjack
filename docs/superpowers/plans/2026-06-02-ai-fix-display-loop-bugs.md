@@ -184,14 +184,10 @@ async def test_v2_comprehensive_stage_runs_fast_fixes(self) -> None:
     """
     pkg_path = Path("/test/path")
     coordinator = AutofixCoordinator(console=Mock(spec=Console), pkg_path=pkg_path)
-    real_issue = SimpleNamespace(
-        file_path="x.py", line=1, message="m", issue_type="t"
-    )
+    real_issue = SimpleNamespace(file_path="x.py", line=1, message="m", issue_type="t")
 
     with (
-        patch.object(
-            coordinator, "_collect_fixable_issues", return_value=[real_issue]
-        ),
+        patch.object(coordinator, "_collect_fixable_issues", return_value=[real_issue]),
         patch.object(
             coordinator,
             "_apply_refurb_fix_prepasses",
@@ -226,18 +222,14 @@ Expected: FAIL with `AssertionError: Expected 'execute_fast_fixes' to have been 
 In `crackerjack/core/autofix_coordinator.py`, replace the `if stage == "fast":` branch (lines 3275-3291) with an unconditional fast-fix dispatch:
 
 ```python
-            self.logger.info(
-                "🧹 Running deterministic fast-fix pass before AI analysis"
-            )
-            deterministic_fix_success = self._execute_fast_fixes()
-            if deterministic_fix_success:
-                self.logger.info(
-                    "✅ Deterministic fast fixes completed before AI analysis"
-                )
-            else:
-                self.logger.warning(
-                    "⚠️ Deterministic fast fixes did not complete cleanly; continuing with AI analysis"
-                )
+self.logger.info("🧹 Running deterministic fast-fix pass before AI analysis")
+deterministic_fix_success = self._execute_fast_fixes()
+if deterministic_fix_success:
+    self.logger.info("✅ Deterministic fast fixes completed before AI analysis")
+else:
+    self.logger.warning(
+        "⚠️ Deterministic fast fixes did not complete cleanly; continuing with AI analysis"
+    )
 ```
 
 - [ ] **Step 4: Run the test to verify it passes**
@@ -262,14 +254,10 @@ async def test_v2_comprehensive_stage_does_not_skip_fast_fix_log(
     """
     pkg_path = Path("/test/path")
     coordinator = AutofixCoordinator(console=Mock(spec=Console), pkg_path=pkg_path)
-    real_issue = SimpleNamespace(
-        file_path="x.py", line=1, message="m", issue_type="t"
-    )
+    real_issue = SimpleNamespace(file_path="x.py", line=1, message="m", issue_type="t")
 
     with (
-        patch.object(
-            coordinator, "_collect_fixable_issues", return_value=[real_issue]
-        ),
+        patch.object(coordinator, "_collect_fixable_issues", return_value=[real_issue]),
         patch.object(
             coordinator,
             "_apply_refurb_fix_prepasses",
@@ -350,26 +338,24 @@ Expected: FAIL — current `finish_session` ignores any iteration argument and r
 In `crackerjack/services/ai_fix_progress.py`, replace `finish_session` (lines 376-384) with:
 
 ```python
-    def finish_session(
-        self,
-        success: bool = True,
-        message: str = "",
-        iteration_count: int | None = None,
-    ) -> None:
-        if not self.enabled:
-            return
+def finish_session(
+    self,
+    success: bool = True,
+    message: str = "",
+    iteration_count: int | None = None,
+) -> None:
+    if not self.enabled:
+        return
 
-        self.end_iteration()
+    self.end_iteration()
 
-        self._last_iteration_count = (
-            iteration_count
-            if iteration_count is not None
-            else len(self.issue_history)
-        )
+    self._last_iteration_count = (
+        iteration_count if iteration_count is not None else len(self.issue_history)
+    )
 
-        self.console.print()
-        self._render_footer_panel(success)
-        self.console.print()
+    self.console.print()
+    self._render_footer_panel(success)
+    self.console.print()
 ```
 
 - [ ] **Step 4: Update `_render_footer_panel` to read the new attribute**
@@ -377,35 +363,33 @@ In `crackerjack/services/ai_fix_progress.py`, replace `finish_session` (lines 37
 Replace lines 118-144 with:
 
 ```python
-    def _render_footer_panel(self, success: bool) -> None:
-        color = "green" if success else "yellow"
+def _render_footer_panel(self, success: bool) -> None:
+    color = "green" if success else "yellow"
 
-        initial = self.issue_history[0] if self.issue_history else 0
-        current = (
-            0 if success else (self.issue_history[-1] if self.issue_history else 0)
-        )
-        reduction = ((initial - current) / initial * 100) if initial > 0 else 0
+    initial = self.issue_history[0] if self.issue_history else 0
+    current = 0 if success else (self.issue_history[-1] if self.issue_history else 0)
+    reduction = ((initial - current) / initial * 100) if initial > 0 else 0
 
-        title = "Session Completed" if success else "Convergence Limit"
+    title = "Session Completed" if success else "Convergence Limit"
 
-        iteration_count = getattr(self, "_last_iteration_count", len(self.issue_history))
+    iteration_count = getattr(self, "_last_iteration_count", len(self.issue_history))
 
-        table = Table(box=rich.box.SIMPLE, show_header=False, padding=0)
-        table.add_column("left", width=1)
-        table.add_column("right", width=38)
+    table = Table(box=rich.box.SIMPLE, show_header=False, padding=0)
+    table.add_column("left", width=1)
+    table.add_column("right", width=38)
 
-        table.add_row("║", f"[dim]Issues:[/dim] [bold]{initial} → {current}[/]")
-        table.add_row("║", f"[dim]Reduction:[/dim] [bold]{reduction:.0f}%[/]")
-        table.add_row("║", f"[dim]Iterations:[/dim] [bold]{iteration_count}[/]")
+    table.add_row("║", f"[dim]Issues:[/dim] [bold]{initial} → {current}[/]")
+    table.add_row("║", f"[dim]Reduction:[/dim] [bold]{reduction:.0f}%[/]")
+    table.add_row("║", f"[dim]Iterations:[/dim] [bold]{iteration_count}[/]")
 
-        panel = Panel(
-            table,
-            title=f"[bold {color}]{title}[/]",
-            border_style=color,
-            padding=0,
-            width=min(42, get_console_width()),
-        )
-        self.console.print(panel)
+    panel = Panel(
+        table,
+        title=f"[bold {color}]{title}[/]",
+        border_style=color,
+        padding=0,
+        width=min(42, get_console_width()),
+    )
+    self.console.print(panel)
 ```
 
 - [ ] **Step 5: Update both v2 call sites to pass `iteration`**
@@ -421,17 +405,13 @@ In `crackerjack/core/autofix_coordinator.py`, change the first `finish_session` 
 Change the second `finish_session` call (around line 3373, the "no plans" branch):
 
 ```python
-                self.progress_manager.finish_session(
-                    success=False, iteration_count=iteration
-                )
+self.progress_manager.finish_session(success=False, iteration_count=iteration)
 ```
 
 Change the third `finish_session` call (around line 3396, the no-fixes branch):
 
 ```python
-                    self.progress_manager.finish_session(
-                        success=False, iteration_count=iteration
-                    )
+self.progress_manager.finish_session(success=False, iteration_count=iteration)
 ```
 
 - [ ] **Step 6: Run the test to verify it passes**
@@ -490,9 +470,7 @@ async def test_v2_loop_passes_previous_fixes_to_completion_check() -> None:
             "_get_iteration_issues_with_log",
             return_value=[SimpleNamespace()] * 20,
         ),
-        patch.object(
-            coordinator, "_create_fix_plans", AsyncMock(return_value=[plan])
-        ),
+        patch.object(coordinator, "_create_fix_plans", AsyncMock(return_value=[plan])),
         patch.object(
             coordinator,
             "_execute_plans_with_validation",
@@ -548,9 +526,7 @@ async def test_v2_loop_passes_iteration_count_to_finish_session() -> None:
             "_get_iteration_issues_with_log",
             return_value=[SimpleNamespace()] * 20,
         ),
-        patch.object(
-            coordinator, "_create_fix_plans", AsyncMock(return_value=[plan])
-        ),
+        patch.object(coordinator, "_create_fix_plans", AsyncMock(return_value=[plan])),
         patch.object(
             coordinator,
             "_execute_plans_with_validation",
@@ -594,68 +570,101 @@ Expected: both FAIL. The first fails with `Expected fixes_applied=1, got 0` (bug
 In `crackerjack/core/autofix_coordinator.py`, replace the **entire body** of `_run_v2_ai_fix_iteration_loop` (lines 3314-3446) with the version below. The line range is **3314-3446**, not 3314-3408 — the function's `except Exception` block at lines 3432-3446 emits `RunFinished(success=False)` and re-raises. Dropping that block (as the original plan line range of 3314-3408 would do) would silently swallow unhandled errors and leave the event bus in an inconsistent state.
 
 ```python
-    async def _run_v2_ai_fix_iteration_loop(
-        self,
-        analysis_coordinator: AnalysisCoordinator,
-        fixer_coordinator: FixerCoordinator,
-        validation_coordinator: ValidationCoordinator,
-        initial_issues: list[Issue],
-        hook_results: Sequence[object],
-        stage: str,
-    ) -> bool:
-        max_iterations = self._get_max_iterations()
-        previous_issue_count = float("inf")
-        no_progress_count = 0
-        previous_fixes_applied = 0
-        iteration = 0
+async def _run_v2_ai_fix_iteration_loop(
+    self,
+    analysis_coordinator: AnalysisCoordinator,
+    fixer_coordinator: FixerCoordinator,
+    validation_coordinator: ValidationCoordinator,
+    initial_issues: list[Issue],
+    hook_results: Sequence[object],
+    stage: str,
+) -> bool:
+    max_iterations = self._get_max_iterations()
+    previous_issue_count = float("inf")
+    no_progress_count = 0
+    previous_fixes_applied = 0
+    iteration = 0
 
-        self.progress_manager.start_fix_session(
-            stage=stage,
-            initial_issue_count=self.progress_manager.compute_hook_total(hook_results),
-        )
+    self.progress_manager.start_fix_session(
+        stage=stage,
+        initial_issue_count=self.progress_manager.compute_hook_total(hook_results),
+    )
 
-        try:
-            while True:
-                issues = self._get_iteration_issues_with_log(
-                    iteration, hook_results, stage, initial_issues
+    try:
+        while True:
+            issues = self._get_iteration_issues_with_log(
+                iteration, hook_results, stage, initial_issues
+            )
+            current_issue_count = len(issues)
+
+            self.progress_manager.start_iteration(iteration, current_issue_count)
+            await self._event_bus.emit(
+                IterationStarted(
+                    run_id=self._run_id,
+                    iteration=iteration,
+                    issue_count=current_issue_count,
                 )
-                current_issue_count = len(issues)
+            )
 
-                self.progress_manager.start_iteration(iteration, current_issue_count)
+            completion_result = self._check_iteration_completion(
+                iteration,
+                current_issue_count,
+                previous_issue_count,
+                no_progress_count,
+                max_iterations,
+                stage,
+                fixes_applied=previous_fixes_applied,
+            )
+            if completion_result is not None:
+                self.progress_manager.end_iteration()
+                self.progress_manager.finish_session(
+                    success=completion_result, iteration_count=iteration
+                )
                 await self._event_bus.emit(
-                    IterationStarted(
+                    RunFinished(
                         run_id=self._run_id,
                         iteration=iteration,
-                        issue_count=current_issue_count,
+                        success=completion_result,
+                        total_iterations=iteration,
                     )
                 )
+                return completion_result
 
-                completion_result = self._check_iteration_completion(
-                    iteration,
-                    current_issue_count,
-                    previous_issue_count,
-                    no_progress_count,
-                    max_iterations,
-                    stage,
-                    fixes_applied=previous_fixes_applied,
+            plans = await self._create_fix_plans(analysis_coordinator, issues)
+            if not plans:
+                self.progress_manager.end_iteration()
+                self.progress_manager.finish_session(
+                    success=False, iteration_count=iteration
                 )
-                if completion_result is not None:
-                    self.progress_manager.end_iteration()
-                    self.progress_manager.finish_session(
-                        success=completion_result, iteration_count=iteration
+                await self._event_bus.emit(
+                    RunFinished(
+                        run_id=self._run_id,
+                        iteration=iteration,
+                        success=False,
+                        total_iterations=iteration,
                     )
-                    await self._event_bus.emit(
-                        RunFinished(
-                            run_id=self._run_id,
-                            iteration=iteration,
-                            success=completion_result,
-                            total_iterations=iteration,
-                        )
-                    )
-                    return completion_result
+                )
+                return False
 
-                plans = await self._create_fix_plans(analysis_coordinator, issues)
-                if not plans:
+            results = await self._execute_plans_with_validation(
+                plans,
+                fixer_coordinator,
+                validation_coordinator,
+                analysis_coordinator,
+                issues,
+            )
+
+            fixes_applied = sum(len(result.fixes_applied) for result in results)
+            no_progress_count = self._update_iteration_progress_with_tracking(
+                iteration,
+                current_issue_count,
+                previous_issue_count,
+                no_progress_count,
+                fixes_applied=fixes_applied,
+            )
+
+            if not self._check_execution_results(results):
+                if fixes_applied == 0:
                     self.progress_manager.end_iteration()
                     self.progress_manager.finish_session(
                         success=False, iteration_count=iteration
@@ -669,76 +678,41 @@ In `crackerjack/core/autofix_coordinator.py`, replace the **entire body** of `_r
                         )
                     )
                     return False
-
-                results = await self._execute_plans_with_validation(
-                    plans,
-                    fixer_coordinator,
-                    validation_coordinator,
-                    analysis_coordinator,
-                    issues,
+                self.logger.info(
+                    "Partial AI-fix progress detected; continuing with remaining issues"
                 )
 
-                fixes_applied = sum(
-                    len(result.fixes_applied) for result in results
-                )
-                no_progress_count = self._update_iteration_progress_with_tracking(
-                    iteration,
-                    current_issue_count,
-                    previous_issue_count,
-                    no_progress_count,
-                    fixes_applied=fixes_applied,
-                )
-
-                if not self._check_execution_results(results):
-                    if fixes_applied == 0:
-                        self.progress_manager.end_iteration()
-                        self.progress_manager.finish_session(
-                            success=False, iteration_count=iteration
-                        )
-                        await self._event_bus.emit(
-                            RunFinished(
-                                run_id=self._run_id,
-                                iteration=iteration,
-                                success=False,
-                                total_iterations=iteration,
-                            )
-                        )
-                        return False
-                    self.logger.info(
-                        "Partial AI-fix progress detected; continuing with remaining issues"
-                    )
-
-                await self._event_bus.emit(
-                    IterationFinished(
-                        run_id=self._run_id,
-                        iteration=iteration,
-                        resolved=fixes_applied,
-                        success=True,
-                    )
-                )
-                self.progress_manager.end_iteration()
-
-                previous_issue_count = current_issue_count
-                previous_fixes_applied = fixes_applied
-                iteration += 1
-
-        except Exception as e:
-            self.logger.exception(f"Error during V2 AI fixing at iteration {iteration}")
-            self.progress_manager.end_iteration()
-            self.progress_manager.finish_session(
-                success=False,
-                message=f"Error during V2 AI fixing: {e}",
-                iteration_count=iteration,
-            )
             await self._event_bus.emit(
-                RunFinished(
+                IterationFinished(
                     run_id=self._run_id,
                     iteration=iteration,
-                    success=False,
-                    total_iterations=iteration,
+                    resolved=fixes_applied,
+                    success=True,
                 )
             )
-            raise
+            self.progress_manager.end_iteration()
+
+            previous_issue_count = current_issue_count
+            previous_fixes_applied = fixes_applied
+            iteration += 1
+
+    except Exception as e:
+        self.logger.exception(f"Error during V2 AI fixing at iteration {iteration}")
+        self.progress_manager.end_iteration()
+        self.progress_manager.finish_session(
+            success=False,
+            message=f"Error during V2 AI fixing: {e}",
+            iteration_count=iteration,
+        )
+        await self._event_bus.emit(
+            RunFinished(
+                run_id=self._run_id,
+                iteration=iteration,
+                success=False,
+                total_iterations=iteration,
+            )
+        )
+        raise
 ```
 
 `★ Insight ─────────────────────────────────────`
@@ -908,24 +882,22 @@ Expected: FAIL — current `_render_header_panel` renders `║` from the SIMPLE-
 In `crackerjack/services/ai_fix_progress.py:99-116`, replace `_render_header_panel` with:
 
 ```python
-    def _render_header_panel(self, stage: str, initial_issues: int) -> None:
-        body_lines: list[str] = [
-            "[bold white]🤖 CRACKERJACK AI-ENGINE v2.0[/]",
-            "",
-            f"[dim]Stage:[/dim] [bold cyan]{stage.upper()}[/]",
-        ]
-        if initial_issues > 0:
-            body_lines.append(
-                f"[dim]Issues:[/dim] [bold yellow]{initial_issues}[/]"
-            )
+def _render_header_panel(self, stage: str, initial_issues: int) -> None:
+    body_lines: list[str] = [
+        "[bold white]🤖 CRACKERJACK AI-ENGINE v2.0[/]",
+        "",
+        f"[dim]Stage:[/dim] [bold cyan]{stage.upper()}[/]",
+    ]
+    if initial_issues > 0:
+        body_lines.append(f"[dim]Issues:[/dim] [bold yellow]{initial_issues}[/]")
 
-        panel = Panel(
-            "\n".join(body_lines),
-            border_style="cyan",
-            padding=(0, 1),
-            width=min(42, get_console_width()),
-        )
-        self.console.print(panel)
+    panel = Panel(
+        "\n".join(body_lines),
+        border_style="cyan",
+        padding=(0, 1),
+        width=min(42, get_console_width()),
+    )
+    self.console.print(panel)
 ```
 
 - [ ] **Step 4: Run the test to verify it passes**
@@ -938,31 +910,29 @@ Expected: PASS — the new layout uses `"\n".join(...)` instead of a SIMPLE-box 
 In `crackerjack/services/ai_fix_progress.py:118-144`, replace `_render_footer_panel` with:
 
 ```python
-    def _render_footer_panel(self, success: bool) -> None:
-        color = "green" if success else "yellow"
+def _render_footer_panel(self, success: bool) -> None:
+    color = "green" if success else "yellow"
 
-        initial = self.issue_history[0] if self.issue_history else 0
-        current = (
-            0 if success else (self.issue_history[-1] if self.issue_history else 0)
-        )
-        reduction = ((initial - current) / initial * 100) if initial > 0 else 0
-        title = "Session Completed" if success else "Convergence Limit"
-        iteration_count = getattr(self, "_last_iteration_count", len(self.issue_history))
+    initial = self.issue_history[0] if self.issue_history else 0
+    current = 0 if success else (self.issue_history[-1] if self.issue_history else 0)
+    reduction = ((initial - current) / initial * 100) if initial > 0 else 0
+    title = "Session Completed" if success else "Convergence Limit"
+    iteration_count = getattr(self, "_last_iteration_count", len(self.issue_history))
 
-        body = (
-            f"[dim]Issues:[/dim] [bold]{initial} → {current}[/]\n"
-            f"[dim]Reduction:[/dim] [bold]{reduction:.0f}%[/]\n"
-            f"[dim]Iterations:[/dim] [bold]{iteration_count}[/]"
-        )
+    body = (
+        f"[dim]Issues:[/dim] [bold]{initial} → {current}[/]\n"
+        f"[dim]Reduction:[/dim] [bold]{reduction:.0f}%[/]\n"
+        f"[dim]Iterations:[/dim] [bold]{iteration_count}[/]"
+    )
 
-        panel = Panel(
-            body,
-            title=f"[bold {color}]{title}[/]",
-            border_style=color,
-            padding=(0, 1),
-            width=min(42, get_console_width()),
-        )
-        self.console.print(panel)
+    panel = Panel(
+        body,
+        title=f"[bold {color}]{title}[/]",
+        border_style=color,
+        padding=(0, 1),
+        width=min(42, get_console_width()),
+    )
+    self.console.print(panel)
 ```
 
 (Note: if Task 3 has already been applied, `iteration_count` here reads `self._last_iteration_count` via the `getattr` fallback. The implementer should reconcile with Task 3 to keep one consistent source of truth for the iteration count.)

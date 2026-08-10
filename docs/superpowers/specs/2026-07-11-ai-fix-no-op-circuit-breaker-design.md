@@ -4,7 +4,7 @@ role: implementation
 topic: lifecycle
 date: 2026-07-17
 last_reviewed: 2026-07-17
-superseded_by: null
+superseded_by: 2026-08-06-ai-fix-removal-external-loop-design.md
 blocks_on: []
 ---
 
@@ -58,6 +58,7 @@ A stable, content-derived hash of a `FixPlan` that:
 ```python
 import hashlib
 import json
+
 
 @staticmethod
 def _plan_signature(plan: FixPlan) -> str:

@@ -2,7 +2,7 @@
 
 import pytest
 
-from crackerjack.agents.base import IssueType, Priority
+from crackerjack.models.issues import IssueType, Priority
 from crackerjack.parsers.json_parsers import (
     BanditJSONParser,
     BetterleaksJSONParser,

@@ -67,8 +67,8 @@ def fix_path_arg_type(issue: Issue, code: str) -> ChangeSpec | None:
     """Fix 'Path' vs 'str' argument type errors."""
     if "Path" in issue.message and "str" in issue.message:
         # Find Path variable and wrap with str()
-        pattern = r'\b(file_path|path)\b(?!\s*\))'
-        new_code = re.sub(pattern, r'str(\1)', code)
+        pattern = r"\b(file_path|path)\b(?!\s*\))"
+        new_code = re.sub(pattern, r"str(\1)", code)
         if new_code != code:
             return ChangeSpec(...)
     return None
@@ -157,13 +157,10 @@ Fix simpler issues first, then complex:
 FIX_ORDER = [
     # Pass 1: Safe fixes (no risk)
     ["name-defined", "var-annotated"],
-
     # Pass 2: Low-risk fixes
     ["call-arg", "arg-type"],
-
     # Pass 3: Medium-risk fixes
     ["attr-defined", "union-attr"],
-
     # Pass 4: Complex fixes
     ["operator", "assignment", "index"],
 ]

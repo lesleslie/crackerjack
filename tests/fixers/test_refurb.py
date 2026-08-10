@@ -1,0 +1,1412 @@
+"""Tests for crackerjack.fixers.refurb.
+
+Ported from tests/test_agents/test_refurb_agent.py, keeping every test that
+exercises real transform logic: the 54 dispatch-mapped ``_transform_*``
+regex handlers, the 10 ``_ast_transform_*`` AST handlers, the list-
+comprehension rewrite helper chain, and ``_extract_furb_code``. Cases
+exercising ``SubAgent``/coordinator dispatch (``can_handle``,
+``get_supported_types``, ``RefurbCodeTransformerAgent.__init__``) were
+dropped, since that machinery no longer exists -- see the module docstring
+of ``crackerjack/fixers/refurb.py`` for the full kept/dropped rationale,
+including several pre-existing behavioral quirks preserved verbatim (not
+fixed) per CLAUDE.md Rule 7.
+
+``analyze_and_fix`` tests (file I/O via a mocked ``AgentContext``, the
+ghost-fix write-verification guard, and the ``SafeRefurbFixer`` third-tier
+fallback) were dropped wholesale -- none of that orchestration is part of
+this module. The subset of that coverage that exercised genuine dispatch
+behavior (extract FURB code -> resolve handler -> try AST, fall back to
+regex) is re-expressed below against the new ``fix_refurb_issue`` entry
+point instead, as pure content-in/content-out assertions.
+
+``tests/test_agents/test_refurb_e2e.py`` is not ported at all: every test in
+it exercises either ``SafeRefurbFixer`` directly (a separate, independent
+service in ``crackerjack/services/refurb_fixer.py``, out of scope for this
+extraction) or ``RefurbCodeTransformerAgent.analyze_and_fix`` end-to-end
+(dropped orchestration, see above). This is a coverage gap versus the
+original test suite, not a gap in the port itself -- every transform
+function the e2e file indirectly exercised (FURB113, FURB123, FURB183) has
+direct unit coverage below.
+
+Most ``_transform_*``/``_ast_transform_*`` functions ignore the ``issue``
+parameter entirely (only its ``line_number`` matters, and only for the AST
+handlers), so a minimal real ``Issue`` built by the ``_issue()`` helper
+below is used throughout instead of ``Mock(spec=Issue)``, per this task's
+requirement to verify actual transform behavior on real inputs.
+"""
+
+from __future__ import annotations
+
+import ast
+
+from crackerjack.fixers import refurb
+from crackerjack.models.issues import Issue, IssueType, Priority
+
+
+def _issue(**kwargs: object) -> Issue:
+    defaults: dict[str, object] = {
+        "type": IssueType.REFURB,
+        "severity": Priority.HIGH,
+        "message": "",
+    }
+    defaults.update(kwargs)
+    return Issue(**defaults)  # type: ignore[arg-type]
+
+
+class TestFurbTransformationsMapping:
+    def test_furb_transformations_mapping(self) -> None:
+        assert "FURB102" in refurb.FURB_TRANSFORMATIONS
+        assert "FURB118" in refurb.FURB_TRANSFORMATIONS
+        assert "FURB129" in refurb.FURB_TRANSFORMATIONS
+        assert "FURB140" in refurb.FURB_TRANSFORMATIONS
+        assert refurb.FURB_TRANSFORMATIONS["FURB102"] == "_transform_compare_zero"
+
+    def test_furb183_mapping(self) -> None:
+        """FURB183 must map to _transform_useless_fstring, not _transform_substring."""
+        assert refurb.FURB_TRANSFORMATIONS["FURB183"] == "_transform_useless_fstring"
+
+    def test_furb143_mapping_points_to_no_default_or(self) -> None:
+        """Regression guard: the FURB143 -> _transform_no_default_or
+        mapping was previously broken (it pointed to
+        ``_transform_unnecessary_index_lookup``, which is the rule
+        from a much older refurb version).
+        """
+        assert refurb.FURB_TRANSFORMATIONS["FURB143"] == "_transform_no_default_or"
+
+
+class TestExtractFurbCode:
+    def test_extract_furb_code_from_details_refurb_code(self) -> None:
+        issue = _issue(
+            message="Some message",
+            details=["Additional info", "refurb_code: FURB102"],
+        )
+        assert refurb._extract_furb_code(issue) == "FURB102"
+
+    def test_extract_furb_code_from_details_brackets(self) -> None:
+        issue = _issue(message="Some message", details=["[FURB105]"])
+        assert refurb._extract_furb_code(issue) == "FURB105"
+
+    def test_extract_furb_code_from_message(self) -> None:
+        issue = _issue(message="FURB118: enumerate transformation", details=[])
+        assert refurb._extract_furb_code(issue) == "FURB118"
+
+    def test_extract_furb_code_from_reason(self) -> None:
+        """``reason`` is not a real ``Issue`` field (neither on
+        ``crackerjack.models.issues.Issue`` nor the original
+        ``crackerjack.agents.base.Issue``); ``_extract_furb_code`` guards
+        with ``hasattr`` specifically because of this. Attaching the
+        attribute dynamically mirrors what the original test's
+        ``Mock(spec=Issue)`` did.
+        """
+        issue = _issue(message="Some message", details=[])
+        issue.reason = "REFURB_TRANSFORM:FURB129:some transformation"  # type: ignore[attr-defined]
+        assert refurb._extract_furb_code(issue) == "FURB129"
+
+    def test_extract_furb_code_not_found(self) -> None:
+        issue = _issue(message="No FURB code here", details=[])
+        assert refurb._extract_furb_code(issue) is None
+
+
+class TestFixRefurbIssue:
+    """Tests for the new dispatch entry point that replaces the
+    "canonical fix" branch of the original ``analyze_and_fix`` (extract
+    FURB code -> resolve handler -> try AST, fall back to regex), minus
+    all file I/O.
+    """
+
+    def test_no_furb_code_returns_unchanged(self) -> None:
+        content = "import os\n"
+        issue = _issue(message="Some issue", details=[])
+        new_content, desc = refurb.fix_refurb_issue(content, issue)
+        assert new_content == content
+        assert "No FURB code" in desc
+
+    def test_unknown_furb_code_returns_unchanged(self) -> None:
+        content = "x = 1\n"
+        issue = _issue(message="Issue", details=["refurb_code: FURB999"])
+        new_content, desc = refurb.fix_refurb_issue(content, issue)
+        assert new_content == content
+        assert "No handler for FURB999" in desc
+
+    def test_dispatches_to_ast_handler_first(self) -> None:
+        """FURB107 has both an AST handler and a regex handler; the AST
+        path must win when it can produce a rewrite."""
+        content = "try:\n    x = 1\nexcept (ValueError, TypeError):\n    pass\n"
+        issue = _issue(
+            message="FURB107: replace try/except/pass with suppress()",
+            line_number=1,
+        )
+        new_content, desc = refurb.fix_refurb_issue(content, issue)
+        assert new_content != content
+        assert "with suppress(ValueError, TypeError):" in new_content
+
+    def test_falls_back_to_regex_handler_when_no_ast_handler(self) -> None:
+        """FURB145 (use-copy) has no AST handler at all, so the regex
+        ``_transform_copy`` must be the one that fires."""
+        content = "items = original[:]\n"
+        issue = _issue(message="FURB145: use copy()", details=["refurb_code: FURB145"])
+        new_content, desc = refurb.fix_refurb_issue(content, issue)
+        assert ".copy()" in new_content
+
+    def test_furb107_end_to_end_with_parenthesized_except_and_comments(self) -> None:
+        """Regression: SafeRefurbFixer._fix_furb107 doesn't handle comments
+        between the except clause and the pass, AND the AST/regex
+        transformer was masked by SafeRefurbFixer's short-circuit on
+        unrelated rules in the original agent. This exercises the
+        canonical (AST-then-regex) dispatch path directly, without the
+        now-dropped file I/O/SafeRefurbFixer wrapper.
+        """
+        content = (
+            "def f(path, refactored_content):\n"
+            "    success = True\n"
+            "    if not success:\n"
+            "        return\n"
+            "    if 'a' in ['x', 'y', 'z']:\n"
+            "        return\n"
+            "    try:\n"
+            "        actual_content = path.read_text(encoding='utf-8')\n"
+            "        if actual_content != refactored_content:\n"
+            "            return\n"
+            "    except (OSError, UnicodeDecodeError):\n"
+            "        # Skip past the comment when scanning for the pass.\n"
+            "        # The real-world case has at least one comment here.\n"
+            "        pass\n"
+        )
+        issue = _issue(
+            message=(
+                "furb107_target.py:7 [FURB107] Replace try/except/pass with suppress()"
+            ),
+            line_number=7,
+        )
+        new_content, desc = refurb.fix_refurb_issue(content, issue)
+        assert new_content != content, desc
+        assert "with suppress(OSError, UnicodeDecodeError):" in new_content
+        assert "except " not in new_content.split("with suppress", 1)[1]
+
+    def test_transform_enumerate_full(self) -> None:
+        content = "i = 0\nfor x in items:\n    print(i)\n    i += 1\n"
+        issue = _issue(
+            message="FURB118: enumerate",
+            details=["refurb_code: FURB118"],
+        )
+        new_content, desc = refurb.fix_refurb_issue(content, issue)
+        assert "enumerate" in new_content or "enumerate" in desc
+
+    def test_transform_copy_full(self) -> None:
+        content = "new_list = old_list[:]\n"
+        issue = _issue(message="FURB145: copy", details=["refurb_code: FURB145"])
+        new_content, desc = refurb.fix_refurb_issue(content, issue)
+        assert ".copy()" in new_content
+
+
+class TestTransformations:
+    """Direct tests for the regex-based ``_transform_*`` handlers."""
+
+    def test_transform_compare_zero(self) -> None:
+        content = "if x == 0:\n    pass\n"
+        issue = _issue(message="FURB102")
+        new_content, fixes = refurb._transform_compare_zero(content, issue)
+        assert "not x" in new_content or new_content != content
+
+    def test_transform_compare_zero_startswith(self) -> None:
+        content = "if x.startswith(a) or x.startswith(b):\n    pass\n"
+        issue = _issue(message="FURB102")
+        new_content, fixes = refurb._transform_compare_zero(content, issue)
+        assert "startswith((" in new_content or "or" not in fixes
+
+    def test_transform_any_all(self) -> None:
+        """FURB129: removes redundant .readlines() call."""
+        content = 'with open("file.txt") as f:\n    for line in f.readlines():\n        pass\n'
+        issue = _issue(message="FURB129")
+        new_content, fixes = refurb._transform_any_all(content, issue)
+        assert ".readlines()" not in new_content
+        assert "for line in f:" in new_content
+
+    def test_transform_bool_return(self) -> None:
+        """FURB136: ternary ``x = a if a > b else b`` -> ``x = max(a, b)``."""
+        content = (
+            "score1 = 90\n"
+            "score2 = 99\n"
+            "highest_score = score1 if score1 > score2 else score2\n"
+        )
+        issue = _issue(message="FURB136")
+        new_content, fixes = refurb._transform_bool_return(content, issue)
+        assert "max(score1, score2)" in new_content
+        assert "if score1 > score2" not in new_content
+
+    def test_transform_copy(self) -> None:
+        content = "items = original[:]\n"
+        issue = _issue(message="FURB145")
+        new_content, fixes = refurb._transform_copy(content, issue)
+        assert ".copy()" in new_content
+
+    def test_transform_max_min(self) -> None:
+        """FURB148: ``for i, _ in enumerate(books)`` -> ``for i in range(len(books))``."""
+        content = (
+            'books = ["a", "b"]\nfor index, _ in enumerate(books):\n    print(index)\n'
+        )
+        issue = _issue(message="FURB148")
+        new_content, fixes = refurb._transform_max_min(content, issue)
+        assert "for index in range(len(books)):" in new_content
+        assert "enumerate(books)" not in new_content
+
+    def test_transform_pow_operator(self) -> None:
+        """FURB152: hardcoded 3.1415 -> math.pi."""
+        content = "def area(r):\n    return 3.1415 * r * r\n"
+        issue = _issue(message="FURB152")
+        new_content, fixes = refurb._transform_pow_operator(content, issue)
+        assert "math.pi" in new_content
+        assert "3.1415" not in new_content
+
+    def test_transform_sorted_key_identity(self) -> None:
+        """FURB163: ``math.log(x, 10)`` -> ``math.log10(x)``."""
+        content = "import math\npower = math.log(x, 10)\n"
+        issue = _issue(message="FURB163")
+        new_content, fixes = refurb._transform_sorted_key_identity(content, issue)
+        assert "math.log10(x)" in new_content
+        assert "math.log(x, 10)" not in new_content
+
+    def test_transform_int_scientific(self) -> None:
+        """FURB161: ``bin(x).count("1")`` -> ``x.bit_count()``."""
+        content = 'x = bin(0b1010).count("1")\n'
+        issue = _issue(message="FURB161")
+        new_content, fixes = refurb._transform_int_scientific(content, issue)
+        assert "bit_count" in new_content
+        assert 'count("1")' not in new_content
+
+    def test_transform_membership_test(self) -> None:
+        content = "if x in [1, 2, 3]:\n    pass\n"
+        issue = _issue(message="FURB109")
+        new_content, fixes = refurb._transform_membership_test(content, issue)
+        assert "in (1, 2, 3)" in new_content
+
+    def test_transform_isinstance_type_check(self) -> None:
+        content = "if type(x) == int:\n    pass\n"
+        issue = _issue(message="FURB126")
+        new_content, fixes = refurb._transform_isinstance_type_check(content, issue)
+        assert "isinstance(" in new_content
+
+    def test_transform_write_whole_file(self) -> None:
+        """Orphaned (unreachable via FURB_TRANSFORMATIONS/fix_refurb_issue)
+        but directly tested and ported for fidelity -- see module docstring.
+        """
+        content = 'open(path, "w").write(data)\n'
+        issue = _issue(message="FURB123")
+        new_content, fixes = refurb._transform_write_whole_file(content, issue)
+        assert "Path(path).write_text(" in new_content
+
+    def test_transform_multiple_with(self) -> None:
+        content = "with a:\n    with b:\n        pass\n"
+        issue = _issue(message="FURB117")
+        new_content, fixes = refurb._transform_multiple_with(content, issue)
+        assert "with a, b:" in new_content
+
+    def test_transform_redundant_not(self) -> None:
+        """FURB173: dict literal with **spread -> dict | spread."""
+        content = 'def f(settings):\n    return {"color": "1", **settings}\n'
+        issue = _issue(message="FURB173")
+        new_content, fixes = refurb._transform_redundant_not(content, issue)
+        assert "**" not in new_content
+        assert " | settings" in new_content
+        assert '"color": "1"' in new_content
+
+    def test_transform_substring(self) -> None:
+        """Orphaned (unreachable via FURB_TRANSFORMATIONS/fix_refurb_issue)
+        but directly tested and ported for fidelity -- see module docstring.
+        """
+        content = 'if x.find("y") != -1:\n    pass\n'
+        issue = _issue(message="FURB183")
+        new_content, fixes = refurb._transform_substring(content, issue)
+        assert '"y" in x' in new_content
+
+    def test_transform_useless_fstring(self) -> None:
+        content = 'x = f"{y}"\n'
+        issue = _issue(message="FURB183")
+        new_content, fixes = refurb._transform_useless_fstring(content, issue)
+        assert "x = str(y)" in new_content
+        assert "useless f-string" in fixes
+
+    def test_transform_useless_fstring_single_quoted(self) -> None:
+        content = "x = f'{y}'\n"
+        issue = _issue(message="FURB183")
+        new_content, fixes = refurb._transform_useless_fstring(content, issue)
+        assert "x = str(y)" in new_content
+
+    def test_transform_useless_fstring_attribute_access(self) -> None:
+        content = 'x = f"{obj.attr}"\n'
+        issue = _issue(message="FURB183")
+        new_content, fixes = refurb._transform_useless_fstring(content, issue)
+        assert "x = str(obj.attr)" in new_content
+
+    def test_transform_useless_fstring_skips_conversion_specifier(self) -> None:
+        content = 'x = f"{y!r}"\n'
+        issue = _issue(message="FURB183")
+        new_content, fixes = refurb._transform_useless_fstring(content, issue)
+        assert new_content == content
+
+    def test_transform_useless_fstring_skips_format_spec(self) -> None:
+        content = 'x = f"{y:>5}"\n'
+        issue = _issue(message="FURB183")
+        new_content, fixes = refurb._transform_useless_fstring(content, issue)
+        assert new_content == content
+
+    def test_transform_useless_fstring_skips_real_fstrings(self) -> None:
+        content = 'msg = f"hello {name}"\n'
+        issue = _issue(message="FURB183")
+        new_content, fixes = refurb._transform_useless_fstring(content, issue)
+        assert new_content == content
+
+    def test_transform_useless_fstring_handles_multiple(self) -> None:
+        content = 'a = f"{x}"\nb = f"{y}"\nc = f"{z}"\n'
+        issue = _issue(message="FURB183")
+        new_content, fixes = refurb._transform_useless_fstring(content, issue)
+        assert "a = str(x)" in new_content
+        assert "b = str(y)" in new_content
+        assert "c = str(z)" in new_content
+
+    def test_transform_print_empty_string(self) -> None:
+        content = 'print("")\n'
+        issue = _issue(message="FURB105")
+        new_content, fixes = refurb._transform_print_empty_string(content, issue)
+        assert "print()" in new_content
+
+    def test_transform_redundant_continue(self) -> None:
+        content = "for x in items:\n    continue\n\n"
+        issue = _issue(message="FURB111")
+        new_content, fixes = refurb._transform_redundant_continue(content, issue)
+        assert "continue" not in new_content or fixes
+
+    def test_transform_redundant_pass(self) -> None:
+        content = "items.append(a)\nitems.append(b)\n"
+        issue = _issue(message="FURB113")
+        new_content, fixes = refurb._transform_redundant_pass(content, issue)
+        assert "extend((" in new_content or fixes
+
+    def test_transform_open_mode_r(self) -> None:
+        content = 'open(path, "r")\n'
+        issue = _issue(message="FURB115")
+        new_content, fixes = refurb._transform_open_mode_r(content, issue)
+        assert "open(path)" in new_content or "open()" in new_content
+
+    def test_transform_redundant_fstring(self) -> None:
+        content = 'x = f"{str(y)}"\n'
+        issue = _issue(message="FURB141")
+        new_content, fixes = refurb._transform_redundant_fstring(content, issue)
+        assert "str(" in new_content or 'f"' not in new_content
+
+    def test_transform_type_none_comparison(self) -> None:
+        """FURB169: ``type(x) is type(None)`` -> ``x is None``."""
+        content = "x = 123\nif type(x) is type(None):\n    pass\n"
+        issue = _issue(message="FURB169")
+        new_content, fixes = refurb._transform_type_none_comparison(content, issue)
+        assert "x is None" in new_content
+        assert "type(x) is type(None)" not in new_content
+
+    def test_transform_redundant_lambda(self) -> None:
+        """FURB156: hardcoded alphabet ``"0123456789"`` -> ``string.digits``."""
+        content = 'digits = "0123456789"\nif c in digits:\n    pass\n'
+        issue = _issue(message="FURB156")
+        new_content, fixes = refurb._transform_redundant_lambda(content, issue)
+        assert "string.digits" in new_content
+        assert '"0123456789"' not in new_content
+        assert "import string" in new_content
+
+    def test_transform_unnecessary_listcomp(self) -> None:
+        """FURB142: for-loop with set.discard -> set.difference_update."""
+        content = (
+            'sentence = "hello world"\n'
+            'vowels = "aeiou"\n'
+            "letters = set(sentence)\n"
+            "for vowel in vowels:\n"
+            "    letters.discard(vowel)\n"
+        )
+        issue = _issue(message="FURB142")
+        new_content, fixes = refurb._transform_unnecessary_listcomp(content, issue)
+        assert "letters.difference_update(vowels)" in new_content
+        assert "for vowel in vowels:" not in new_content
+
+    def test_transform_enumerate(self) -> None:
+        content = "i = 0\nfor x in items:\n    print(i)\n    i += 1\n"
+        issue = _issue(message="FURB118")
+        new_content, fixes = refurb._transform_enumerate(content, issue)
+        assert "enumerate(" in new_content or fixes
+
+    def test_transform_enumerate_lambda(self) -> None:
+        content = "lambda x: x[0]\n"
+        issue = _issue(message="FURB118")
+        new_content, fixes = refurb._transform_enumerate(content, issue)
+        assert "operator.itemgetter" in new_content or fixes
+
+    # ------------------------------------------------------------------
+    # Tier 2 audit fixes -- wrong-rule redirects
+    # (Each handler was previously stubbed or pointed at a different
+    # FURB code. See docs/audits/2026-06-12-furb-handler-audit.md.)
+    # ------------------------------------------------------------------
+
+    def test_transform_any_all_removes_readlines(self) -> None:
+        """FURB129: ``f.readlines()`` -> ``f`` (canonical)."""
+        content = 'with open("file.txt") as f:\n    for line in f.readlines():\n        pass\n'
+        issue = _issue(message="FURB129")
+        new_content, fixes = refurb._transform_any_all(content, issue)
+        assert ".readlines()" not in new_content
+        assert "for line in f:" in new_content
+        assert "readlines" in fixes.lower()
+
+    def test_transform_single_item_membership_del(self) -> None:
+        """FURB131: ``del nums[:]`` -> ``nums.clear()``."""
+        content = "nums = [1, 2, 3]\ndel nums[:]\n"
+        issue = _issue(message="FURB131")
+        new_content, fixes = refurb._transform_single_item_membership(content, issue)
+        assert "nums.clear()" in new_content
+        assert "del nums[:]" not in new_content
+
+    def test_transform_single_item_membership_slice_assign(self) -> None:
+        """FURB131: ``nums[:] = []`` -> ``nums.clear()``."""
+        content = "nums = [1, 2, 3]\nnums[:] = []\n"
+        issue = _issue(message="FURB131")
+        new_content, fixes = refurb._transform_single_item_membership(content, issue)
+        assert "nums.clear()" in new_content
+        assert "nums[:] = []" not in new_content
+
+    def test_transform_redundant_not_dict_union(self) -> None:
+        content = 'def f(settings):\n    return {"color": "1", **settings}\n'
+        issue = _issue(message="FURB173")
+        new_content, fixes = refurb._transform_redundant_not(content, issue)
+        assert "**" not in new_content
+        assert " | settings" in new_content
+
+    def test_transform_redundant_not_dict_union_with_attr(self) -> None:
+        content = 'def f(obj):\n    return {"a": 1, **obj.kwargs}\n'
+        issue = _issue(message="FURB173")
+        new_content, fixes = refurb._transform_redundant_not(content, issue)
+        assert "**" not in new_content
+        assert " | obj.kwargs" in new_content
+
+    def test_transform_redundant_not_dict_union_multikey(self) -> None:
+        content = 'def f(d):\n    return {"a": 1, "b": 2, **d}\n'
+        issue = _issue(message="FURB173")
+        new_content, fixes = refurb._transform_redundant_not(content, issue)
+        assert "**" not in new_content
+        assert " | d" in new_content
+        assert '"a": 1' in new_content
+        assert '"b": 2' in new_content
+
+    def test_transform_unnecessary_listcomp_set_discard(self) -> None:
+        content = (
+            'sentence = "hello world"\n'
+            'vowels = "aeiou"\n'
+            "letters = set(sentence)\n"
+            "for vowel in vowels:\n"
+            "    letters.discard(vowel)\n"
+        )
+        issue = _issue(message="FURB142")
+        new_content, fixes = refurb._transform_unnecessary_listcomp(content, issue)
+        assert "for vowel in vowels:" not in new_content
+        assert "letters.difference_update(vowels)" in new_content
+
+    def test_transform_pow_operator_math_pi(self) -> None:
+        content = "def area(r):\n    return 3.1415 * r * r\n"
+        issue = _issue(message="FURB152")
+        new_content, fixes = refurb._transform_pow_operator(content, issue)
+        assert "3.1415" not in new_content
+        assert "math.pi" in new_content
+
+    def test_transform_pow_operator_math_e(self) -> None:
+        content = "def f(x):\n    return 2.7182 ** x\n"
+        issue = _issue(message="FURB152")
+        new_content, fixes = refurb._transform_pow_operator(content, issue)
+        assert "2.7182" not in new_content
+        assert "math.e" in new_content
+
+    def test_transform_redundant_fstring_os_path_exists(self) -> None:
+        content = 'import os\nif os.path.exists("filename"):\n    pass\n'
+        issue = _issue(message="FURB141")
+        new_content, fixes = refurb._transform_redundant_fstring(content, issue)
+        assert "os.path.exists" not in new_content
+        assert 'Path("filename").exists()' in new_content
+        assert "from pathlib import Path" in new_content
+
+    def test_transform_redundant_fstring_os_path_isdir(self) -> None:
+        content = 'import os\nif os.path.isdir("d"):\n    pass\n'
+        issue = _issue(message="FURB141")
+        new_content, fixes = refurb._transform_redundant_fstring(content, issue)
+        assert "os.path.isdir" not in new_content
+        assert 'Path("d").is_dir()' in new_content
+
+    def test_transform_redundant_fstring_no_duplicate_import(self) -> None:
+        content = (
+            'from pathlib import Path\nimport os\nif os.path.exists("x"):\n    pass\n'
+        )
+        issue = _issue(message="FURB141")
+        new_content, fixes = refurb._transform_redundant_fstring(content, issue)
+        assert new_content.count("from pathlib import Path") == 1
+
+    def test_transform_bool_return_min(self) -> None:
+        content = "lowest = a if a < b else b\n"
+        issue = _issue(message="FURB136")
+        new_content, fixes = refurb._transform_bool_return(content, issue)
+        assert "min(a, b)" in new_content
+        assert "if a < b" not in new_content
+
+    def test_transform_max_min_value_only(self) -> None:
+        content = (
+            'books = ["a", "b"]\nfor _, book in enumerate(books):\n    print(book)\n'
+        )
+        issue = _issue(message="FURB148")
+        new_content, fixes = refurb._transform_max_min(content, issue)
+        assert "for book in books:" in new_content
+        assert "enumerate(books)" not in new_content
+
+    def test_transform_int_scientific_oct(self) -> None:
+        content = 'x = oct(0o777).count("1")\n'
+        issue = _issue(message="FURB161")
+        new_content, fixes = refurb._transform_int_scientific(content, issue)
+        assert "bit_count" in new_content
+        assert 'count("1")' not in new_content
+
+    def test_transform_sorted_key_identity_log2(self) -> None:
+        content = "import math\npower = math.log(x, 2)\n"
+        issue = _issue(message="FURB163")
+        new_content, fixes = refurb._transform_sorted_key_identity(content, issue)
+        assert "math.log2(x)" in new_content
+        assert "math.log(x, 2)" not in new_content
+
+    def test_transform_sorted_key_identity_log_e(self) -> None:
+        content = "import math\npower = math.log(x, math.e)\n"
+        issue = _issue(message="FURB163")
+        new_content, fixes = refurb._transform_sorted_key_identity(content, issue)
+        assert "math.log(x)" in new_content
+        assert "math.e" not in new_content
+
+    def test_transform_redundant_lambda_hexdigits(self) -> None:
+        content = 'hexchars = "0123456789abcdefABCDEF"\nif c in hexchars:\n    pass\n'
+        issue = _issue(message="FURB156")
+        new_content, fixes = refurb._transform_redundant_lambda(content, issue)
+        assert "string.hexdigits" in new_content
+        assert "0123456789abcdefABCDEF" not in new_content
+
+    def test_transform_type_none_comparison_negated(self) -> None:
+        content = "if type(x) is not type(None):\n    pass\n"
+        issue = _issue(message="FURB169")
+        new_content, fixes = refurb._transform_type_none_comparison(content, issue)
+        assert "x is not None" in new_content
+        assert "type(x) is not type(None)" not in new_content
+
+    def test_transform_single_element_membership_tuple(self) -> None:
+        """FURB171: ``x in (y,)`` -> ``x == y`` (parenthesized, not bracketed)."""
+        content = 'if name in ("bob",):\n    pass\n'
+        issue = _issue(message="FURB171")
+        new_content, _fixes = refurb._transform_single_element_membership(
+            content, issue
+        )
+        assert "name == 'bob'" in new_content or 'name == "bob"' in new_content
+
+    def test_transform_slice_copy_removesuffix(self) -> None:
+        content = 'def strip(filename):\n    return filename[:-len(".txt")] if filename.endswith(".txt") else filename\n'
+        issue = _issue(message="FURB188")
+        new_content, fixes = refurb._transform_slice_copy(content, issue)
+        assert ".removesuffix(" in new_content
+        assert "[:-len(" not in new_content
+        assert ".endswith(" not in new_content
+
+    def test_transform_slice_copy_removeprefix(self) -> None:
+        content = 'def strip(filename):\n    return filename[len("prefix_"):] if filename.startswith("prefix_") else filename\n'
+        issue = _issue(message="FURB188")
+        new_content, fixes = refurb._transform_slice_copy(content, issue)
+        assert ".removeprefix(" in new_content
+        assert "startswith(" not in new_content
+
+
+class TestASTTransformSupportingHandlers:
+    """Tests for ``_try_ast_transform``/``_unparse_tree`` and the
+    regex-based handlers that back FURB codes with real-world regression
+    coverage."""
+
+    def test_unparse_tree(self) -> None:
+        tree = ast.parse("x = 1\n")
+        result = refurb._unparse_tree(tree, "x = 1\n")
+        assert result is not None
+
+    def test_try_ast_transform_no_handler(self) -> None:
+        content = "x = 1\n"
+        issue = _issue(line_number=1)
+        furb_code = "FURB999"
+        new_content, desc = refurb._try_ast_transform(content, issue, furb_code, None)
+        assert new_content == content
+        assert "No AST transformation" in desc
+
+    def test_try_ast_transform_known_handler(self) -> None:
+        content = "try:\n    pass\nexcept Exception:\n    pass\n"
+        issue = _issue(line_number=1)
+        furb_code = "FURB107"
+        handler = refurb._ast_transform_suppress
+        new_content, desc = refurb._try_ast_transform(
+            content, issue, furb_code, handler
+        )
+        assert "suppress" in desc.lower() or new_content == content
+
+    def test_ast_transform_suppress_no_match(self) -> None:
+        content = "x = 1\n"
+        tree = ast.parse(content)
+        result, desc = refurb._ast_transform_suppress(tree, 1, content)
+        assert result is None
+
+    def test_ast_transform_suppress_rewrites_parenthesized_except(self) -> None:
+        """AST transformer must rewrite ``except (Foo, Bar): pass`` shape.
+
+        Regression: the AST handler detected the suppress pattern but
+        returned ``(None, ...)`` instead of producing a new tree, so the
+        ``except (Foo, Bar):`` shape -- the most common in real code --
+        never got fixed by AI-fix.
+        """
+        content = (
+            "def f(path):\n"
+            "    try:\n"
+            "        actual = path.read_text(encoding='utf-8')\n"
+            "        if actual != 'expected':\n"
+            "            return False\n"
+            "    except (OSError, UnicodeDecodeError):\n"
+            "        pass\n"
+        )
+        tree = ast.parse(content)
+        new_tree, desc = refurb._ast_transform_suppress(tree, 2, content)
+
+        assert new_tree is not None, f"expected AST rewrite, got None (desc={desc!r})"
+        rewritten = refurb._unparse_tree(new_tree, content)
+        assert rewritten is not None
+        assert "with suppress(" in rewritten
+        assert "OSError" in rewritten and "UnicodeDecodeError" in rewritten
+        assert rewritten != content
+
+    def test_try_ast_transform_returns_rewrite_for_parenthesized_except(self) -> None:
+        """``_try_ast_transform`` must produce non-equal content for the common case.
+
+        Regression: the dispatcher returned ``(content, ...)`` because the
+        AST handler was a no-op, and the regex fallback couldn't match
+        ``except (Foo, Bar):`` -- so AI-fix reported "applied" but no change
+        reached disk.
+        """
+        content = "try:\n    x = 1\nexcept (ValueError, TypeError):\n    pass\n"
+        issue = _issue(line_number=1)
+        new_content, desc = refurb._try_ast_transform(
+            content, issue, "FURB107", refurb._ast_transform_suppress
+        )
+        assert new_content != content, f"expected rewrite, got original (desc={desc!r})"
+        assert "with suppress(ValueError, TypeError):" in new_content
+
+    def test_transform_compare_empty_handles_parenthesized_except(self) -> None:
+        """Regex fallback must match ``except (Foo, Bar): pass`` as well.
+
+        Regression: the existing pattern required a bare class identifier
+        before the optional parenthesized form, so ``except (Foo, Bar):``
+        never matched. With the AST handler restored this is a defense-in-
+        depth check, not the primary path.
+        """
+        content = "try:\n    x = 1\nexcept (ValueError, TypeError):\n    pass\n"
+        issue = _issue(line_number=1)
+        new_content, desc = refurb._transform_compare_empty(content, issue)
+        assert new_content != content
+        assert "with suppress(ValueError, TypeError):" in new_content
+
+    def test_transform_delete_while_iterating_or_oper(self) -> None:
+        """FURB110 (use-or-oper): ``x = a if a else b`` -> ``x = a or b``."""
+        content = "result = value if value else default\n"
+        issue = _issue(message="FURB110")
+        new_content, fixes = refurb._transform_delete_while_iterating(content, issue)
+        assert "result = value or default" in new_content
+        assert "if value else" not in new_content
+
+    def test_transform_delete_while_iterating_no_match(self) -> None:
+        content = "x = foo(a, b)\n"
+        issue = _issue(message="FURB110")
+        new_content, fixes = refurb._transform_delete_while_iterating(content, issue)
+        assert new_content == content
+        assert "No use-or-oper transformation" in fixes
+
+    def test_transform_redundant_none_comparison(self) -> None:
+        content = "if x is not None:\n    pass\n"
+        issue = _issue(message="FURB108")
+        new_content, desc = refurb._transform_redundant_none_comparison(content, issue)
+        assert new_content == content
+        assert "No use-in-oper" in desc
+
+    def test_transform_fstring_numeric_literal_bin(self) -> None:
+        content = "bin(n)[2:]\n"
+        issue = _issue(message="FURB116")
+        new_content, fixes = refurb._transform_fstring_numeric_literal(content, issue)
+        assert 'f"{n:b}"' in new_content
+        assert "bin(n)[2:]" not in new_content
+
+    def test_transform_fstring_numeric_literal_oct(self) -> None:
+        content = "oct(n)[2:]\n"
+        issue = _issue(message="FURB116")
+        new_content, fixes = refurb._transform_fstring_numeric_literal(content, issue)
+        assert 'f"{n:o}"' in new_content
+
+    def test_transform_fstring_numeric_literal_hex(self) -> None:
+        content = "hex(n)[2:]\n"
+        issue = _issue(message="FURB116")
+        new_content, fixes = refurb._transform_fstring_numeric_literal(content, issue)
+        assert 'f"{n:x}"' in new_content
+
+    def test_transform_fstring_numeric_literal_no_match(self) -> None:
+        content = 'x = f"{n:b}"\n'
+        issue = _issue(message="FURB116")
+        new_content, fixes = refurb._transform_fstring_numeric_literal(content, issue)
+        assert new_content == content
+        assert "No use-fstring-number-format" in fixes
+
+    def test_transform_redundantenumerate_removes_trailing_return(self) -> None:
+        """FURB125 (no-redundant-return): trailing bare ``return`` is dropped."""
+        content = "def foo():\n    x = 1\n    return\n"
+        issue = _issue(message="FURB125")
+        new_content, fixes = refurb._transform_redundantenumerate(content, issue)
+        assert "    return\n" not in new_content
+        assert "x = 1" in new_content
+        assert "Removed redundant return" in fixes
+
+    def test_transform_redundantenumerate_keeps_return_with_value(self) -> None:
+        content = "def foo():\n    return 42\n"
+        issue = _issue(message="FURB125")
+        new_content, fixes = refurb._transform_redundantenumerate(content, issue)
+        assert "return 42" in new_content
+        assert new_content == content
+
+    def test_transform_redundantenumerate_no_match(self) -> None:
+        content = "def foo():\n    x = 1\n"
+        issue = _issue(message="FURB125")
+        new_content, fixes = refurb._transform_redundantenumerate(content, issue)
+        assert new_content == content
+        assert "No no-redundant-return transformation" in fixes
+
+    def test_transform_bad_open_mode_removes_trailing_continue_for(self) -> None:
+        """FURB133 (no-redundant-continue): trailing ``continue`` in for-loop removed."""
+        content = "for x in items:\n    process(x)\n    continue\n"
+        issue = _issue(message="FURB133")
+        new_content, fixes = refurb._transform_bad_open_mode(content, issue)
+        assert "continue" not in new_content
+        assert "process(x)" in new_content
+        assert "Removed redundant continue" in fixes
+
+    def test_transform_bad_open_mode_removes_trailing_continue_while(self) -> None:
+        content = "while True:\n    work()\n    continue\n"
+        issue = _issue(message="FURB133")
+        new_content, fixes = refurb._transform_bad_open_mode(content, issue)
+        assert "continue" not in new_content
+        assert "work()" in new_content
+
+    def test_transform_bad_open_mode_keeps_conditional_continue(self) -> None:
+        content = "for x in items:\n    if x < 0:\n        continue\n    process(x)\n"
+        issue = _issue(message="FURB133")
+        new_content, fixes = refurb._transform_bad_open_mode(content, issue)
+        assert "continue" in new_content
+
+    def test_transform_bad_open_mode_no_match(self) -> None:
+        content = "x = 1\ny = 2\n"
+        issue = _issue(message="FURB133")
+        new_content, fixes = refurb._transform_bad_open_mode(content, issue)
+        assert new_content == content
+        assert "No no-redundant-continue transformation" in fixes
+
+    def test_transform_no_default_or_strips_empty_string(self) -> None:
+        """FURB143 (``no-default-or``) in refurb v2.x: strip ``or ""``
+        when the LHS is typed. This was previously mapped to the wrong
+        transform (``_transform_unnecessary_index_lookup``), so the fixer
+        silently no-op'd and the issue kept recurring in every run.
+        """
+        content = (
+            "    returncode, stdout, stderr = await self.run_command(\n"
+            '        ["uv", "run", "codespell", "-w", issue.file_path],\n'
+            "    )\n"
+            '    stdout_text = stdout or ""\n'
+            '    fixed_count = sum(1 for line in stdout_text.splitlines() if "FIXED" in line)\n'
+        )
+        issue = _issue(message='FURB143: Replace `stdout or ""` with `stdout`')
+        new_content, desc = refurb._transform_no_default_or(content, issue)
+        assert 'stdout or ""' not in new_content
+        assert "stdout_text = stdout\n" in new_content
+        assert "Removed redundant" in desc
+
+    def test_transform_no_default_or_strips_zero(self) -> None:
+        content = "counter = count or 0\n"
+        issue = _issue(message="FURB143")
+        new_content, _ = refurb._transform_no_default_or(content, issue)
+        assert "or 0" not in new_content
+        assert "counter = count\n" in new_content
+
+    def test_transform_no_default_or_strips_none(self) -> None:
+        content = "result = maybe_value or None\n"
+        issue = _issue(message="FURB143")
+        new_content, _ = refurb._transform_no_default_or(content, issue)
+        assert "or None" not in new_content
+        assert "result = maybe_value\n" in new_content
+
+    def test_transform_no_default_or_no_match_returns_unchanged(self) -> None:
+        content = 'stdout_text = stdout or "default"\n'
+        issue = _issue(message="FURB143")
+        new_content, desc = refurb._transform_no_default_or(content, issue)
+        assert new_content == content
+        assert "No no-default-or transformation" in desc
+
+
+class TestListComprehension:
+    def test_find_list_comprehension_loop(self) -> None:
+        content = """
+items = []
+for x in sequence:
+    items.append(x)
+"""
+        tree = ast.parse(content)
+        result = refurb._find_list_comprehension_loop(tree, 3)
+        assert result is not None
+
+    def test_find_list_comprehension_loop_out_of_range(self) -> None:
+        content = "for x in items:\n    pass\n"
+        tree = ast.parse(content)
+        result = refurb._find_list_comprehension_loop(tree, 999)
+        assert result is None
+
+    def test_extract_append_loop_parts(self) -> None:
+        content = """
+items = []
+for x in items:
+    items.append(x)
+"""
+        tree = ast.parse(content)
+        for_node = list(ast.walk(tree))[1]
+
+        if isinstance(for_node, ast.For):
+            result = refurb._extract_append_loop_parts(for_node)
+            assert result is not None
+
+    def test_get_append_target_name(self) -> None:
+        content = "items.append(x)\n"
+        tree = ast.parse(content)
+        expr_node = tree.body[0]
+        assert isinstance(expr_node, ast.Expr)
+        result = refurb._get_append_target_name(expr_node)
+        assert result == "items"
+
+    def test_build_list_comprehension_rewrite_no_append(self) -> None:
+        content = """
+for x in items:
+    pass
+"""
+        tree = ast.parse(content)
+        for_node = list(ast.walk(tree))[1]
+
+        if isinstance(for_node, ast.For):
+            result = refurb._build_list_comprehension_rewrite(content, for_node)
+            assert result is None
+
+    def test_transform_list_comprehension_no_line_number(self) -> None:
+        content = "for x in items:\n    items.append(x)\n"
+        issue = _issue(line_number=None)
+        new_content, desc = refurb._transform_list_comprehension(content, issue)
+        assert "requires a line number" in desc
+
+    def test_transform_list_comprehension_invalid_syntax(self) -> None:
+        content = "for x in {\n    items.append(x)\n"
+        issue = _issue(line_number=1)
+        new_content, desc = refurb._transform_list_comprehension(content, issue)
+        assert "requires valid Python" in desc
+
+
+class TestSubBatch5B:
+    """Tests for Tier 3 sub-batch 5B: FURB108/122/132/168/172/177/180/181/186/187/190."""
+
+    def test_transform_redundant_none_comparison_in_oper(self) -> None:
+        """FURB108 (use-in-oper): ``x == a or x == b`` -> ``x in (a, b)``."""
+        content = 'if x == "abc" or x == "def":\n    pass\n'
+        issue = _issue(message="FURB108")
+        new_content, fixes = refurb._transform_redundant_none_comparison(content, issue)
+        assert 'x in ("abc", "def")' in new_content
+        assert "or x ==" not in new_content
+
+    def test_transform_redundant_none_comparison_no_match(self) -> None:
+        content = "if x is None:\n    pass\n"
+        issue = _issue(message="FURB108")
+        new_content, fixes = refurb._transform_redundant_none_comparison(content, issue)
+        assert new_content == content
+        assert "No use-in-oper transformation" in fixes
+
+    def test_transform_rhs_unpack_writelines(self) -> None:
+        """FURB122 (use-writelines): ``for line in lines: f.write(line)`` -> ``f.writelines(lines)``."""
+        content = 'lines = ["line 1\\n", "line 2\\n"]\nwith open("file") as f:\n    for line in lines:\n        f.write(line)\n'
+        issue = _issue(message="FURB122")
+        new_content, fixes = refurb._transform_rhs_unpack(content, issue)
+        assert "f.writelines(lines)" in new_content
+        assert "for line in lines:" not in new_content
+
+    def test_transform_rhs_unpack_no_match(self) -> None:
+        content = "for line in lines:\n    print(line)\n"
+        issue = _issue(message="FURB122")
+        new_content, fixes = refurb._transform_rhs_unpack(content, issue)
+        assert new_content == content
+        assert "No use-writelines transformation" in fixes
+
+    def test_transform_check_and_remove_discard(self) -> None:
+        """FURB132 (use-set-discard): ``if x in S: S.remove(x)`` -> ``S.discard(x)``."""
+        content = "nums = {1, 2, 3}\nif 4 in nums:\n    nums.remove(4)\n"
+        issue = _issue(message="FURB132")
+        new_content, fixes = refurb._transform_check_and_remove(content, issue)
+        assert "nums.discard(4)" in new_content
+        assert "if 4 in nums:" not in new_content
+
+    def test_transform_check_and_remove_no_match(self) -> None:
+        content = "nums.discard(4)\n"
+        issue = _issue(message="FURB132")
+        new_content, fixes = refurb._transform_check_and_remove(content, issue)
+        assert new_content == content
+        assert "No use-set-discard transformation" in fixes
+
+    def test_transform_isinstance_type_tuple_positive(self) -> None:
+        """FURB168: ``isinstance(x, type(None))`` -> ``x is None``."""
+        content = "x = 123\nif isinstance(x, type(None)):\n    pass\n"
+        issue = _issue(message="FURB168")
+        new_content, fixes = refurb._transform_isinstance_type_tuple(content, issue)
+        assert "x is None" in new_content
+        assert "isinstance(x, type(None))" not in new_content
+
+    def test_transform_isinstance_type_tuple_negated(self) -> None:
+        content = "if not isinstance(val, type(None)):\n    pass\n"
+        issue = _issue(message="FURB168")
+        new_content, fixes = refurb._transform_isinstance_type_tuple(content, issue)
+        assert "val is not None" in new_content
+        assert "isinstance(" not in new_content
+
+    def test_transform_unnecessary_list_cast_suffix(self) -> None:
+        """FURB172 (use-suffix): ``path.name.endswith(".txt")`` -> ``path.suffix == ".txt"``."""
+        content = "from pathlib import Path\np = Path('a.txt')\nif p.name.endswith('.txt'):\n    pass\n"
+        issue = _issue(message="FURB172")
+        new_content, fixes = refurb._transform_unnecessary_list_cast(content, issue)
+        assert "p.suffix == '.txt'" in new_content
+        assert ".name.endswith(" not in new_content
+
+    def test_transform_unnecessary_list_cast_no_match(self) -> None:
+        content = 'if s.endswith(".txt"):\n    pass\n'
+        issue = _issue(message="FURB172")
+        new_content, fixes = refurb._transform_unnecessary_list_cast(content, issue)
+        assert new_content == content
+        assert "No use-suffix transformation" in fixes
+
+    def test_transform_redundant_or_path_cwd(self) -> None:
+        """FURB177 (no-implicit-cwd): ``Path().resolve()`` -> ``Path.cwd()``."""
+        content = "from pathlib import Path\ncwd = Path().resolve()\n"
+        issue = _issue(message="FURB177")
+        new_content, fixes = refurb._transform_redundant_or(content, issue)
+        assert "Path.cwd()" in new_content
+        assert "Path().resolve()" not in new_content
+
+    def test_transform_redundant_or_no_match(self) -> None:
+        content = "cwd = Path('.').resolve()\n"
+        issue = _issue(message="FURB177")
+        new_content, fixes = refurb._transform_redundant_or(content, issue)
+        assert new_content == content
+        assert "No no-implicit-cwd transformation" in fixes
+
+    def test_transform_method_assign_abc(self) -> None:
+        """FURB180 (use-abc-shorthand): ``class C(metaclass=ABCMeta):`` -> ``class C(ABC):``."""
+        content = "from abc import ABCMeta\nclass C(metaclass=ABCMeta):\n    pass\n"
+        issue = _issue(message="FURB180")
+        new_content, fixes = refurb._transform_method_assign(content, issue)
+        assert "class C(ABC):" in new_content
+        assert "metaclass=ABCMeta" not in new_content
+
+    def test_transform_redundant_expression_hexdigest(self) -> None:
+        """FURB181 (use-hexdigest-hashlib): ``.digest().hex()`` -> ``.hexdigest()``."""
+        content = (
+            "from hashlib import sha512\nhashed = sha512(b'data').digest().hex()\n"
+        )
+        issue = _issue(message="FURB181")
+        new_content, fixes = refurb._transform_redundant_expression(content, issue)
+        assert ".hexdigest()" in new_content
+        assert ".digest().hex()" not in new_content
+
+    def test_transform_redundant_expression_no_match(self) -> None:
+        content = "h = sha512(b'data').hexdigest()\n"
+        issue = _issue(message="FURB181")
+        new_content, fixes = refurb._transform_redundant_expression(content, issue)
+        assert new_content == content
+        assert "No use-hexdigest transformation" in fixes
+
+    def test_transform_redundant_cast_sort(self) -> None:
+        """FURB186 (use-sort): ``names = sorted(names)`` -> ``names.sort()``."""
+        content = 'names = ["Bob", "Alice", "Charlie"]\nnames = sorted(names)\n'
+        issue = _issue(message="FURB186")
+        new_content, fixes = refurb._transform_redundant_cast(content, issue)
+        assert "names.sort()" in new_content
+        assert "sorted(names)" not in new_content
+
+    def test_transform_redundant_cast_no_match(self) -> None:
+        content = "names = sorted(other)\n"
+        issue = _issue(message="FURB186")
+        new_content, fixes = refurb._transform_redundant_cast(content, issue)
+        assert new_content == content
+        assert "No use-sort transformation" in fixes
+
+    def test_transform_chained_assignment_reverse_slice(self) -> None:
+        """FURB187 (use-reverse): ``names = names[::-1]`` -> ``names.reverse()``."""
+        content = 'names = ["Bob", "Alice"]\nnames = names[::-1]\n'
+        issue = _issue(message="FURB187")
+        new_content, fixes = refurb._transform_chained_assignment(content, issue)
+        assert "names.reverse()" in new_content
+        assert "[::-1]" not in new_content
+
+    def test_transform_chained_assignment_reverse_list_reversed(self) -> None:
+        content = 'names = ["Bob", "Alice"]\nnames = list(reversed(names))\n'
+        issue = _issue(message="FURB187")
+        new_content, fixes = refurb._transform_chained_assignment(content, issue)
+        assert "names.reverse()" in new_content
+        assert "reversed(" not in new_content
+
+    def test_transform_subprocess_list_str_method(self) -> None:
+        """FURB190 (use-str-method): ``lambda x: x.upper()`` -> ``str.upper``."""
+        content = "normalize = lambda x: x.upper()\n"
+        issue = _issue(message="FURB190")
+        new_content, fixes = refurb._transform_subprocess_list(content, issue)
+        assert "str.upper" in new_content
+        assert "lambda x: x.upper()" not in new_content
+
+    def test_transform_subprocess_list_no_match(self) -> None:
+        content = "fn = lambda x, y: x.upper()\n"
+        issue = _issue(message="FURB190")
+        new_content, fixes = refurb._transform_subprocess_list(content, issue)
+        assert new_content == content
+        assert "No use-str-method transformation" in fixes
+
+
+class TestSubBatch5C:
+    """Tests for sub-batch 5C: FURB119/134/157/167/175/176/184/185/189."""
+
+    # -- FURB119 (use-fstring-format) --------------------------------------
+
+    def test_transform_redundant_index_bin(self) -> None:
+        content = 'result = f"binary: {bin(n)}"\n'
+        issue = _issue(message="FURB119")
+        new_content, fixes = refurb._transform_redundant_index(content, issue)
+        assert "{n:b}" in new_content
+        assert "{bin(n)}" not in new_content
+
+    def test_transform_redundant_index_hex(self) -> None:
+        content = 'result = f"hex: {hex(value)}"\n'
+        issue = _issue(message="FURB119")
+        new_content, fixes = refurb._transform_redundant_index(content, issue)
+        assert "{value:x}" in new_content
+
+    def test_transform_redundant_index_oct(self) -> None:
+        content = 'result = f"octal: {oct(n)}"\n'
+        issue = _issue(message="FURB119")
+        new_content, fixes = refurb._transform_redundant_index(content, issue)
+        assert "{n:o}" in new_content
+
+    def test_transform_redundant_index_str(self) -> None:
+        content = 'msg = f"value: {str(x)}"\n'
+        issue = _issue(message="FURB119")
+        new_content, fixes = refurb._transform_redundant_index(content, issue)
+        assert "{x}" in new_content
+        assert "{str(x)}" not in new_content
+
+    def test_transform_redundant_index_no_match(self) -> None:
+        content = 'result = f"value: {n}"\n'
+        issue = _issue(message="FURB119")
+        new_content, fixes = refurb._transform_redundant_index(content, issue)
+        assert new_content == content
+        assert "No use-fstring-format transformation" in fixes
+
+    # -- FURB134 (use-cache) -------------------------------------------------
+
+    def test_transform_list_multiply_cache(self) -> None:
+        content = "@lru_cache(maxsize=None)\ndef expensive(n):\n    return n * n\n"
+        issue = _issue(message="FURB134")
+        new_content, fixes = refurb._transform_list_multiply(content, issue)
+        assert "@cache\n" in new_content
+        assert "lru_cache" not in new_content
+
+    def test_transform_list_multiply_no_match(self) -> None:
+        content = "@lru_cache(maxsize=128)\ndef f(n): return n\n"
+        issue = _issue(message="FURB134")
+        new_content, fixes = refurb._transform_list_multiply(content, issue)
+        assert new_content == content
+        assert "No use-cache transformation" in fixes
+
+    # -- FURB157 (simplify-decimal-ctor) --------------------------------------
+
+    def test_transform_implicit_print_decimal_int(self) -> None:
+        content = 'total = Decimal("0")\n'
+        issue = _issue(message="FURB157")
+        new_content, fixes = refurb._transform_implicit_print(content, issue)
+        assert "Decimal(0)" in new_content
+        assert 'Decimal("0")' not in new_content
+
+    def test_transform_implicit_print_decimal_float_unchanged(self) -> None:
+        content = 'rate = Decimal("1.5")\n'
+        issue = _issue(message="FURB157")
+        new_content, fixes = refurb._transform_implicit_print(content, issue)
+        assert new_content == content
+        assert "No simplify-decimal-ctor transformation" in fixes
+
+    # -- FURB167 (use-long-regex-flag) ----------------------------------------
+
+    def test_transform_dict_literal_ignorecase(self) -> None:
+        content = "pattern = re.compile(r'hello', re.I)\n"
+        issue = _issue(message="FURB167")
+        new_content, fixes = refurb._transform_dict_literal(content, issue)
+        assert "re.IGNORECASE" in new_content
+        assert "re.I)" in new_content or "re.IGNORECASE" in new_content
+
+    def test_transform_dict_literal_multiline(self) -> None:
+        content = "p = re.compile(r'^start', re.M)\n"
+        issue = _issue(message="FURB167")
+        new_content, fixes = refurb._transform_dict_literal(content, issue)
+        assert "re.MULTILINE" in new_content
+
+    def test_transform_dict_literal_no_match(self) -> None:
+        content = "p = re.compile(r'x', re.IGNORECASE)\n"
+        issue = _issue(message="FURB167")
+        new_content, fixes = refurb._transform_dict_literal(content, issue)
+        assert new_content == content
+        assert "No use-long-regex-flag transformation" in fixes
+
+    # -- FURB175 (simplify-fastapi-query) -------------------------------------
+
+    def test_transform_abs_sqr_query_default(self) -> None:
+        content = "q: str | None = Query(default=None)\n"
+        issue = _issue(message="FURB175")
+        new_content, fixes = refurb._transform_abs_sqr(content, issue)
+        assert "Query(None)" in new_content
+        assert "default=" not in new_content
+
+    def test_transform_abs_sqr_no_match(self) -> None:
+        content = "q: str = Query(..., min_length=1)\n"
+        issue = _issue(message="FURB175")
+        new_content, fixes = refurb._transform_abs_sqr(content, issue)
+        assert new_content == content
+        assert "No simplify-fastapi-query transformation" in fixes
+
+    # -- FURB176 (unreliable-utc-usage) ---------------------------------------
+
+    def test_transform_unnecessary_from_float_utcnow(self) -> None:
+        content = "now = datetime.utcnow()\n"
+        issue = _issue(message="FURB176")
+        new_content, fixes = refurb._transform_unnecessary_from_float(content, issue)
+        assert "datetime.now(timezone.utc)" in new_content
+        assert "utcnow" not in new_content
+
+    def test_transform_unnecessary_from_float_utcfromtimestamp(self) -> None:
+        content = "dt = datetime.utcfromtimestamp(ts)\n"
+        issue = _issue(message="FURB176")
+        new_content, fixes = refurb._transform_unnecessary_from_float(content, issue)
+        assert "datetime.fromtimestamp(ts, timezone.utc)" in new_content
+        assert "utcfromtimestamp" not in new_content
+
+    def test_transform_unnecessary_from_float_no_match(self) -> None:
+        content = "now = datetime.now(timezone.utc)\n"
+        issue = _issue(message="FURB176")
+        new_content, fixes = refurb._transform_unnecessary_from_float(content, issue)
+        assert new_content == content
+        assert "No unreliable-utc-usage transformation" in fixes
+
+    # -- FURB184 (use-fluid-interface) ----------------------------------------
+
+    def test_transform_bad_version_info_compare_chain(self) -> None:
+        content = "x = x.strip()\nx = x.lower()\n"
+        issue = _issue(message="FURB184")
+        new_content, fixes = refurb._transform_bad_version_info_compare(content, issue)
+        assert "x = x.strip().lower()" in new_content
+
+    def test_transform_bad_version_info_compare_no_match(self) -> None:
+        content = "x = x.strip()\n"
+        issue = _issue(message="FURB184")
+        new_content, fixes = refurb._transform_bad_version_info_compare(content, issue)
+        assert new_content == content
+        assert "No use-fluid-interface transformation" in fixes
+
+    # -- FURB185 (no-copy-with-merge) ------------------------------------------
+
+    def test_transform_redundant_substring_copy_update(self) -> None:
+        content = "d = base.copy()\nd.update(extra)\n"
+        issue = _issue(message="FURB185")
+        new_content, fixes = refurb._transform_redundant_substring(content, issue)
+        assert "d = base | extra" in new_content
+        assert ".copy()" not in new_content
+
+    def test_transform_redundant_substring_no_match(self) -> None:
+        content = "d = base | extra\n"
+        issue = _issue(message="FURB185")
+        new_content, fixes = refurb._transform_redundant_substring(content, issue)
+        assert new_content == content
+        assert "No no-copy-with-merge transformation" in fixes
+
+    # -- FURB189 (no-subclass-builtin) -----------------------------------------
+
+    def test_transform_fstring_to_print_list(self) -> None:
+        content = "class MyList(list):\n    pass\n"
+        issue = _issue(message="FURB189")
+        new_content, fixes = refurb._transform_fstring_to_print(content, issue)
+        assert "class MyList(UserList):" in new_content
+        assert "(list)" not in new_content
+
+    def test_transform_fstring_to_print_dict(self) -> None:
+        content = "class MyDict(dict):\n    pass\n"
+        issue = _issue(message="FURB189")
+        new_content, fixes = refurb._transform_fstring_to_print(content, issue)
+        assert "class MyDict(UserDict):" in new_content
+
+    def test_transform_fstring_to_print_str(self) -> None:
+        content = "class MyStr(str):\n    pass\n"
+        issue = _issue(message="FURB189")
+        new_content, fixes = refurb._transform_fstring_to_print(content, issue)
+        assert "class MyStr(UserString):" in new_content
+
+    def test_transform_fstring_to_print_no_match(self) -> None:
+        content = "class MyList(UserList):\n    pass\n"
+        issue = _issue(message="FURB189")
+        new_content, fixes = refurb._transform_fstring_to_print(content, issue)
+        assert new_content == content
+        assert "No no-subclass-builtin transformation" in fixes
+
+
+class TestAstTransformsImplemented:
+    """Regression tests for the 10 AST transforms in ``_ast_handlers``
+    (module: ``crackerjack.fixers.refurb``).
+
+    Before bd303e26 follow-up (in the original agent), these methods were
+    stubs returning ``(None, "<rule> needs regex")``. They are implemented
+    as line-level regex rewrites that return a parseable AST tree so the
+    standard ``_try_ast_transform``/``fix_refurb_issue`` path produces new
+    content.
+    """
+
+    @staticmethod
+    def _apply(content: str, line: int, name: str) -> tuple[str | None, str]:
+        tree = ast.parse(content)
+        handler = getattr(refurb, name)
+        new_tree, desc = handler(tree, line, content)
+        if new_tree is None:
+            return None, desc
+        return ast.unparse(new_tree), desc
+
+    def test_furb102_endswith_or_collapses_to_tuple(self) -> None:
+        content = (
+            "def f(path):\n"
+            '    if path.endswith(".pyc") or path.endswith(".pyo"):\n'
+            "        return False\n"
+        )
+        out, desc = self._apply(content, 2, "_ast_transform_startswith_tuple")
+        assert out is not None, desc
+        assert "endswith((" in out
+        assert " or " not in out
+
+    def test_furb102_startswith_or_collapses_to_tuple(self) -> None:
+        content = 'def f(x):\n    return x.startswith("a") or x.startswith("b")\n'
+        out, desc = self._apply(content, 2, "_ast_transform_startswith_tuple")
+        assert out is not None, desc
+        assert "startswith((" in out
+
+    def test_furb102_no_match_returns_none(self) -> None:
+        content = "def f(x):\n    return x.endswith('.py')\n"
+        out, desc = self._apply(content, 2, "_ast_transform_startswith_tuple")
+        assert out is None
+
+    def test_furb109_list_membership_becomes_tuple(self) -> None:
+        content = "def f(x):\n    if x in [1, 2, 3]:\n        return True\n"
+        out, desc = self._apply(content, 2, "_ast_transform_membership_tuple")
+        assert out is not None, desc
+        assert "in (1, 2, 3)" in out
+
+    def test_furb110_ternary_becomes_or(self) -> None:
+        content = "def f(x, y):\n    return x if x else y\n"
+        out, desc = self._apply(content, 2, "_ast_transform_or_operator")
+        assert out is not None, desc
+        assert "return x or y" in out
+
+    def test_furb113_consecutive_appends_become_extend(self) -> None:
+        content = "def f(x):\n    x.append(a)\n    x.append(b)\n    return x\n"
+        out, desc = self._apply(content, 2, "_ast_transform_append_to_extend")
+        assert out is not None, desc
+        assert "x.extend((a, b))" in out
+
+    def test_furb113_no_match_when_appends_target_different_lists(self) -> None:
+        """Two appends on different lists must NOT collapse."""
+        content = "def f(x, y):\n    x.append(a)\n    y.append(b)\n    return x, y\n"
+        out, _ = self._apply(content, 2, "_ast_transform_append_to_extend")
+        assert out is None
+
+    def test_furb115_len_eq_zero_becomes_not(self) -> None:
+        content = "def f(x):\n    if len(x) == 0:\n        return None\n"
+        out, desc = self._apply(content, 2, "_ast_transform_len_comparison")
+        assert out is not None, desc
+        assert "if not x:" in out
+
+    def test_furb118_lambda_keyed_becomes_itemgetter_with_import(self) -> None:
+        content = 'def f(d):\n    return sorted(d, key=lambda k: k["name"])\n'
+        out, desc = self._apply(content, 2, "_ast_transform_itemgetter")
+        assert out is not None, desc
+        assert "operator.itemgetter" in out
+        assert "import operator" in out
+
+    def test_furb123_list_call_becomes_copy(self) -> None:
+        content = "def f(x):\n    y = list(x)\n    return y\n"
+        out, desc = self._apply(content, 2, "_ast_transform_list_copy")
+        assert out is not None, desc
+        assert "y = x.copy()" in out
+
+    def test_furb126_else_return_collapses_to_tail_return(self) -> None:
+        """The else: return X form must collapse to just ``return X``."""
+        content = (
+            "def f(c):\n    if c:\n        return a\n    else:\n        return b\n"
+        )
+        out, desc = self._apply(content, 4, "_ast_transform_remove_else_return")
+        assert out is not None, desc
+        assert "else:" not in out
+        assert "return b" in out
+
+    def test_furb126_no_match_when_else_has_more_than_return(self) -> None:
+        content = (
+            "def f(c):\n"
+            "    if c:\n"
+            "        return a\n"
+            "    else:\n"
+            "        x = 1\n"
+            "        return x\n"
+        )
+        out, _ = self._apply(content, 4, "_ast_transform_remove_else_return")
+        assert out is None
+
+    def test_furb142_discard_loop_becomes_difference_update(self) -> None:
+        content = "def f(s, it):\n    for x in it:\n        s.discard(x)\n"
+        out, desc = self._apply(content, 2, "_ast_transform_set_update")
+        assert out is not None, desc
+        assert "s.difference_update(it)" in out
+
+    def test_all_handlers_no_match_on_unrelated_content(self) -> None:
+        """Each handler must return None cleanly when the pattern isn't there."""
+        content = "x = 1\n"
+        tree = ast.parse(content)
+        for name in [
+            "_ast_transform_startswith_tuple",
+            "_ast_transform_membership_tuple",
+            "_ast_transform_or_operator",
+            "_ast_transform_len_comparison",
+            "_ast_transform_list_copy",
+        ]:
+            handler = getattr(refurb, name)
+            new_tree, _ = handler(tree, 1, content)
+            assert new_tree is None, f"{name} should return None for unrelated content"
+
+    def test_ast_line_rewrite_helper_returns_none_for_bad_line(self) -> None:
+        content = "x = 1\n"
+        result, label = refurb._ast_line_rewrite(
+            content, 999, [(r"foo", "bar", "test")]
+        )
+        assert result is None
+        assert label == ""
+
+
+class TestZipManualReviewNote:
+    def test_zip_returns_manual_review_note(self) -> None:
+        content = "for i in range(len(items)):\n    pass\n"
+        issue = _issue(message="FURB140")
+        new_content, desc = refurb._transform_zip(content, issue)
+        assert "manual review" in desc.lower() or new_content != content

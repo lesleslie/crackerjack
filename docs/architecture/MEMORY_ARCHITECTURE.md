@@ -618,7 +618,9 @@ documents the bug and installs a fixed schema via monkeypatch:
 ```python
 real_schema = (
     Path(__file__).resolve().parents[3]
-    / "crackerjack" / "memory" / "git_metrics_schema.sql"
+    / "crackerjack"
+    / "memory"
+    / "git_metrics_schema.sql"
 )
 with pytest.raises(sqlite3.OperationalError):
     conn.executescript(real_schema.read_text(encoding="utf-8"))

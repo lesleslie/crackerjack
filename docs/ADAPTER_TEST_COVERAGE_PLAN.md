@@ -99,6 +99,7 @@ async def mock_ruff_settings():
         fix_enabled=False,
     )
 
+
 @pytest.fixture
 def sample_python_file(tmp_path):
     """Create a sample Python file for testing."""

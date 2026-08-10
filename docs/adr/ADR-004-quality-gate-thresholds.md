@@ -186,12 +186,13 @@ from enum import Enum
 from dataclasses import dataclass
 from typing import Final
 
+
 class QualityTier(str, Enum):
     """Quality tiers with different threshold levels."""
 
-    BRONZE = "bronze"    # Minimum acceptable quality
-    SILVER = "silver"    # Standard quality for production code
-    GOLD = "gold"        # Excellence level for critical libraries
+    BRONZE = "bronze"  # Minimum acceptable quality
+    SILVER = "silver"  # Standard quality for production code
+    GOLD = "gold"  # Excellence level for critical libraries
 
 
 @dataclass(frozen=True)
@@ -269,6 +270,7 @@ THRESHOLDS_BY_TIER: Final[dict[QualityTier, QualityThresholds]] = {
 from pathlib import Path
 from crackerjack.quality.tiers import QualityTier
 
+
 class QualityContext:
     """Detect project context and recommend appropriate quality tier."""
 
@@ -314,6 +316,7 @@ class QualityContext:
 ```python
 from dataclasses import dataclass
 from typing import Final
+
 
 @dataclass(frozen=True)
 class QualityMetrics:
@@ -385,7 +388,10 @@ class QualityGateEngine:
             )
 
         # Check security issues
-        if metrics.critical_security_issues > self.thresholds.max_critical_security_issues:
+        if (
+            metrics.critical_security_issues
+            > self.thresholds.max_critical_security_issues
+        ):
             violations.append(
                 f"Critical security issues: {metrics.critical_security_issues} "
                 f"(threshold: {self.thresholds.max_critical_security_issues})"
@@ -413,6 +419,7 @@ class QualityGateEngine:
 from pathlib import Path
 import json
 from dataclasses import dataclass, asdict
+
 
 @dataclass
 class QualityBaseline:
@@ -538,6 +545,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
+
 @dataclass
 class QualityExemption:
     """Temporary exemption from quality gate for a specific file."""
@@ -567,7 +575,10 @@ class ExemptionManager:
     ) -> bool:
         """Check if file is exempt from specific quality check."""
         for exemption in self.exemptions:
-            if exemption.file_path == file_path and exemption.exemption_type == exemption_type:
+            if (
+                exemption.file_path == file_path
+                and exemption.exemption_type == exemption_type
+            ):
                 # Check if expired
                 if exemption.expires and datetime.now() > exemption.expires:
                     return False  # Exemption expired
@@ -600,8 +611,7 @@ class ExemptionManager:
         """Remove expired exemptions."""
         now = datetime.now()
         self.exemptions = [
-            e for e in self.exemptions
-            if e.expires is None or e.expires > now
+            e for e in self.exemptions if e.expires is None or e.expires > now
         ]
         self._save_exemptions()
 ```

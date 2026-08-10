@@ -28,7 +28,7 @@ from crackerjack.parsers.regex_parsers import (
     RuffRegexParser,
     register_regex_parsers,
 )
-from crackerjack.agents.base import Issue, IssueType, Priority
+from crackerjack.models.issues import Issue, IssueType, Priority
 
 
 class TestCodespellRegexParser:

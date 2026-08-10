@@ -46,7 +46,7 @@ Every agent invocation records:
     "workflow_phase": "comprehensive_hooks",
     "alternatives_considered": ["PerformanceAgent", "DRYAgent"],
     "selection_rank": 1,  # First choice
-    "error_type": null
+    "error_type": null,
 }
 ```
 
@@ -64,8 +64,7 @@ agent = guess_best_agent(issue)  # Trial and error
 ```python
 # Get data-driven recommendations
 recommendations = tracker.get_recommendations(
-    user_query="Fix complexity in async code",
-    workflow_phase="comprehensive_hooks"
+    user_query="Fix complexity in async code", workflow_phase="comprehensive_hooks"
 )
 # Returns agents ranked by historical success rate for this context
 ```
@@ -277,9 +276,7 @@ ______________________________________________________________________
 from crackerjack.integration.skills_tracking import create_skills_tracker
 
 tracker = create_skills_tracker(
-    session_id="my-session",
-    backend="direct",
-    db_path=Path(".session-buddy/skills.db")
+    session_id="my-session", backend="direct", db_path=Path(".session-buddy/skills.db")
 )
 ```
 
@@ -307,9 +304,7 @@ tracker = create_skills_tracker(
 
 ```python
 tracker = create_skills_tracker(
-    session_id="my-session",
-    backend="mcp",
-    mcp_server_url="http://localhost:8678"
+    session_id="my-session", backend="mcp", mcp_server_url="http://localhost:8678"
 )
 ```
 
@@ -329,7 +324,7 @@ tracker = create_skills_tracker(
 ```python
 tracker = create_skills_tracker(
     session_id="my-session",
-    backend="auto"  # Recommended!
+    backend="auto",  # Recommended!
 )
 ```
 
@@ -369,10 +364,7 @@ from crackerjack.integration.skills_tracking import create_skills_tracker
 tracker = create_skills_tracker(session_id="custom-session")
 
 # Create context with tracker
-context = AgentContext(
-    project_path=Path("/my/project"),
-    skills_tracker=tracker
-)
+context = AgentContext(project_path=Path("/my/project"), skills_tracker=tracker)
 
 # Track invocation
 completer = context.track_skill_invocation(
@@ -380,17 +372,13 @@ completer = context.track_skill_invocation(
     user_query="Fix memory leak in async code",
     workflow_phase="comprehensive_hooks",
     alternatives_considered=["PerformanceAgent", "TestSpecialistAgent"],
-    selection_rank=1
+    selection_rank=1,
 )
 
 # ... do work ...
 
 # Complete tracking
-completer(
-    completed=True,
-    follow_up_actions=["Run memory profiler"],
-    error_type=None
-)
+completer(completed=True, follow_up_actions=["Run memory profiler"], error_type=None)
 ```
 
 ### 3. Get Recommendations
@@ -402,7 +390,7 @@ Find the best agent for a problem:
 recommendations = context.get_skill_recommendations(
     user_query="I need to fix type errors in async functions",
     limit=5,
-    workflow_phase="comprehensive_hooks"
+    workflow_phase="comprehensive_hooks",
 )
 
 # Process recommendations
@@ -444,16 +432,12 @@ Get recommendations specific to Oneiric workflow phase:
 ```python
 # Fast hooks phase (quick quality checks)
 fast_recs = context.get_skill_recommendations(
-    user_query="Fix import errors",
-    workflow_phase="fast_hooks",
-    limit=3
+    user_query="Fix import errors", workflow_phase="fast_hooks", limit=3
 )
 
 # Comprehensive hooks phase (deep analysis)
 comp_recs = context.get_skill_recommendations(
-    user_query="Fix complexity issues",
-    workflow_phase="comprehensive_hooks",
-    limit=3
+    user_query="Fix complexity issues", workflow_phase="comprehensive_hooks", limit=3
 )
 
 # Only agents effective in this phase will be recommended
@@ -466,8 +450,7 @@ Find agents using natural language:
 ```python
 # Describe your problem in plain English
 recommendations = context.get_skill_recommendations(
-    user_query="My tests are flaky and I need to stabilize them",
-    limit=5
+    user_query="My tests are flaky and I need to stabilize them", limit=5
 )
 
 # Semantic search finds:
@@ -523,6 +506,7 @@ def completer(
     """Complete the skill invocation tracking."""
     ...
 
+
 # Usage
 completer(completed=True)
 completer(completed=False, error_type="SyntaxError")
@@ -553,13 +537,13 @@ def get_recommendations(
 ```python
 [
     {
-        "skill_name": str,           # Agent name
-        "similarity_score": float,   # Semantic similarity (0.0-1.0)
-        "completed": bool,           # Historical completion rate
-        "duration_seconds": float,   # Average duration
-        "workflow_phase": str,       # Most effective phase
+        "skill_name": str,  # Agent name
+        "similarity_score": float,  # Semantic similarity (0.0-1.0)
+        "completed": bool,  # Historical completion rate
+        "duration_seconds": float,  # Average duration
+        "workflow_phase": str,  # Most effective phase
     },
-    ...
+    ...,
 ]
 ```
 
@@ -611,7 +595,7 @@ def track_skill_invocation(
 completer = context.track_skill_invocation(
     skill_name="RefactoringAgent",
     user_query="Fix complexity",
-    workflow_phase="comprehensive_hooks"
+    workflow_phase="comprehensive_hooks",
 )
 
 if completer:
@@ -643,9 +627,7 @@ def get_skill_recommendations(
 
 ```python
 recommendations = context.get_skill_recommendations(
-    user_query="Fix type errors",
-    limit=5,
-    workflow_phase="comprehensive_hooks"
+    user_query="Fix type errors", limit=5, workflow_phase="comprehensive_hooks"
 )
 
 for rec in recommendations:
@@ -689,25 +671,18 @@ tracker = create_skills_tracker(session_id="test", enabled=False)
 
 # Direct backend
 tracker = create_skills_tracker(
-    session_id="my-session",
-    backend="direct",
-    db_path=Path(".session-buddy/skills.db")
+    session_id="my-session", backend="direct", db_path=Path(".session-buddy/skills.db")
 )
 # Returns: SessionBuddyDirectTracker()
 
 # MCP backend
 tracker = create_skills_tracker(
-    session_id="my-session",
-    backend="mcp",
-    mcp_server_url="http://localhost:8678"
+    session_id="my-session", backend="mcp", mcp_server_url="http://localhost:8678"
 )
 # Returns: SessionBuddyMCPTracker()
 
 # Auto detection (recommended)
-tracker = create_skills_tracker(
-    session_id="my-session",
-    backend="auto"
-)
+tracker = create_skills_tracker(session_id="my-session", backend="auto")
 # Returns: SessionBuddyMCPTracker() if available, else SessionBuddyDirectTracker()
 ```
 
@@ -782,7 +757,7 @@ from datetime import datetime
 export_data = {
     "exported_at": datetime.now().isoformat(),
     "invocations": tracker.get_all_invocations(),  # Pseudo-code
-    "skills": tracker.get_all_skills()  # Pseudo-code
+    "skills": tracker.get_all_skills(),  # Pseudo-code
 }
 
 with open("skills_export.json", "w") as f:

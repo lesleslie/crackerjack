@@ -412,6 +412,7 @@ SELECT * FROM skill_metrics_summary;
 import sqlite3
 from threading import local
 
+
 class ConnectionPool:
     def __init__(self, db_path: str, pool_size: int = 5):
         self.db_path = db_path
@@ -419,18 +420,18 @@ class ConnectionPool:
         self.local = local()
 
     def get_connection(self) -> sqlite3.Connection:
-        if not hasattr(self.local, 'conn'):
+        if not hasattr(self.local, "conn"):
             self.local.conn = sqlite3.connect(
                 self.db_path,
                 check_same_thread=False,
-                isolation_level=None  # Autocommit mode
+                isolation_level=None,  # Autocommit mode
             )
-            self.local.conn.execute('PRAGMA journal_mode=WAL')
-            self.local.conn.execute('PRAGMA busy_timeout=5000')
+            self.local.conn.execute("PRAGMA journal_mode=WAL")
+            self.local.conn.execute("PRAGMA busy_timeout=5000")
         return self.local.conn
 
     def close_all(self):
-        if hasattr(self.local, 'conn'):
+        if hasattr(self.local, "conn"):
             self.local.conn.close()
             del self.local.conn
 ```

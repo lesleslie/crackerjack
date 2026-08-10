@@ -84,19 +84,25 @@ def _make_plan(
 def test_plan_signature_is_stable_for_identical_plans() -> None:
     p1 = _make_plan()
     p2 = _make_plan()
-    assert AutofixCoordinator._plan_signature(p1) == AutofixCoordinator._plan_signature(p2)
+    assert AutofixCoordinator._plan_signature(p1) == AutofixCoordinator._plan_signature(
+        p2
+    )
 
 
 def test_plan_signature_differs_for_distinct_file_paths() -> None:
     p1 = _make_plan(file_path="crackerjack/a.py")
     p2 = _make_plan(file_path="crackerjack/b.py")
-    assert AutofixCoordinator._plan_signature(p1) != AutofixCoordinator._plan_signature(p2)
+    assert AutofixCoordinator._plan_signature(p1) != AutofixCoordinator._plan_signature(
+        p2
+    )
 
 
 def test_plan_signature_ignores_rationale() -> None:
     p1 = _make_plan(rationale="first")
     p2 = _make_plan(rationale="second")
-    assert AutofixCoordinator._plan_signature(p1) == AutofixCoordinator._plan_signature(p2)
+    assert AutofixCoordinator._plan_signature(p1) == AutofixCoordinator._plan_signature(
+        p2
+    )
 
 
 def test_plan_signature_differs_for_distinct_changes() -> None:
@@ -120,7 +126,9 @@ def test_plan_signature_differs_for_distinct_changes() -> None:
             ),
         )
     )
-    assert AutofixCoordinator._plan_signature(p1) != AutofixCoordinator._plan_signature(p2)
+    assert AutofixCoordinator._plan_signature(p1) != AutofixCoordinator._plan_signature(
+        p2
+    )
 
 
 @pytest.mark.asyncio
@@ -177,25 +185,24 @@ import json
 Then insert the method:
 
 ```python
-
-    @staticmethod
-    def _plan_signature(plan: FixPlan) -> str:
-        """Stable content hash for a FixPlan (excludes free-form rationale)."""
-        stable = {
-            "issue_type": plan.issue_type,
-            "file_path": str(plan.file_path),
-            "changes": sorted(
-                (
-                    tuple(c.line_range),
-                    c.old_code,
-                    c.new_code,
-                    c.reason,
-                )
-                for c in plan.changes
-            ),
-        }
-        raw = json.dumps(stable, sort_keys=True, default=str).encode("utf-8")
-        return hashlib.sha256(raw).hexdigest()[:16]
+@staticmethod
+def _plan_signature(plan: FixPlan) -> str:
+    """Stable content hash for a FixPlan (excludes free-form rationale)."""
+    stable = {
+        "issue_type": plan.issue_type,
+        "file_path": str(plan.file_path),
+        "changes": sorted(
+            (
+                tuple(c.line_range),
+                c.old_code,
+                c.new_code,
+                c.reason,
+            )
+            for c in plan.changes
+        ),
+    }
+    raw = json.dumps(stable, sort_keys=True, default=str).encode("utf-8")
+    return hashlib.sha256(raw).hexdigest()[:16]
 ```
 
 Verify `FixPlan` and `ChangeSpec` are importable from `crackerjack.models.fix_plan` (existing module). If not, fix the import.

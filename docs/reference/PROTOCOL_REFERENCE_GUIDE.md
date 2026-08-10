@@ -35,6 +35,7 @@ ______________________________________________________________________
 ```python
 from typing import Protocol
 
+
 @runtime_checkable
 class ServiceProtocol(Protocol):
     """Base interface for all services."""
@@ -66,10 +67,12 @@ class ServiceProtocol(Protocol):
 ```python
 from crackerjack.models.protocols import ConsoleInterface
 
+
 # Any class with a print() method implements ConsoleInterface
 class MyConsole:
     def print(self, *args: Any, **kwargs: Any) -> None:
         print(*args, **kwargs)
+
 
 # Type checker verifies compliance
 console: ConsoleInterface = MyConsole()  # ✅ Valid
@@ -88,11 +91,14 @@ ______________________________________________________________________
 # ❌ Tightly coupled (concrete class dependency)
 from crackerjack.managers.test_manager import TestManager
 
+
 def run_tests(manager: TestManager) -> None:
     manager.run_tests(options)
 
+
 # ✅ Loosely coupled (protocol dependency)
 from crackerjack.models.protocols import TestManagerProtocol
+
 
 def run_tests(manager: TestManagerProtocol) -> None:
     manager.run_tests(options)
@@ -114,6 +120,7 @@ class MockTestManager:
 
     def get_test_failures(self) -> list[str]:
         return []
+
 
 # Use in tests
 mock = MockTestManager()
@@ -585,6 +592,7 @@ class ConsoleInterface(t.Protocol):
    ```python
    from rich.console import Console
 
+
    class CrackerjackConsole:
        def __init__(self) -> None:
            self.console = Console()
@@ -611,6 +619,7 @@ def display_results(console: ConsoleInterface, results: dict[str, Any]) -> None:
     """Display results using any console implementation."""
     console.print(f"[green]Success:[/green] {results['success']}")
     console.print(f"[blue]Duration:[/blue] {results['duration']}s")
+
 
 # Production
 console: ConsoleInterface = CrackerjackConsole()
@@ -736,6 +745,7 @@ def process_file(fs: FileSystemInterface, path: str) -> None:
     content = fs.read_file(path)
     processed = content.upper()
     fs.write_file(path, processed)
+
 
 # Production
 fs: FileSystemInterface = RealFileSystem()
@@ -899,6 +909,7 @@ from crackerjack.models.protocols import (
     FileSystemInterface,
 )
 
+
 class SessionCoordinator:
     """Coordinates quality check session."""
 
@@ -921,6 +932,7 @@ class SessionCoordinator:
             success = self.test_manager.run_tests(options)
             if not success:
                 self.console.print("Tests failed!")
+
 
 # Usage
 console: ConsoleInterface = CrackerjackConsole()
@@ -969,12 +981,12 @@ ______________________________________________________________________
 ```python
 from crackerjack.models.protocols import ServiceProtocol
 
+
 def register_service(service: Any) -> None:
     """Register service after validating protocol compliance."""
     if not isinstance(service, ServiceProtocol):
         raise TypeError(
-            f"Service must implement ServiceProtocol, "
-            f"got {type(service).__name__}"
+            f"Service must implement ServiceProtocol, got {type(service).__name__}"
         )
 
     # Safe to use ServiceProtocol methods
@@ -999,6 +1011,7 @@ from crackerjack.models.protocols import (
     CoverageRatchetProtocol,
 )
 
+
 class ComprehensiveTestService:
     """Implements multiple protocols."""
 
@@ -1014,6 +1027,7 @@ class ComprehensiveTestService:
     # CoverageRatchetProtocol methods
     def get_baseline_coverage(self) -> float: ...
     def update_baseline_coverage(self, new_coverage: float) -> bool: ...
+
 
 # Check all protocols
 service = ComprehensiveTestService()
@@ -1175,6 +1189,7 @@ def verify_service(service: Any) -> ServiceProtocol:
 
     return service
 
+
 # Usage
 my_service = MyService(config)
 verified = verify_service(my_service)
@@ -1194,7 +1209,9 @@ ______________________________________________________________________
 class BrokenService:
     def initialize(self) -> None: ...
     def health_check(self) -> bool: ...
+
     # cleanup() is missing!
+
 
 # Type checker will catch this, but runtime isinstance() passes
 service = BrokenService()
@@ -1220,9 +1237,9 @@ def test_protocol_compliance() -> None:
     service = GoodService()
 
     # Check each method exists
-    assert hasattr(service, 'initialize')
-    assert hasattr(service, 'cleanup')
-    assert hasattr(service, 'health_check')
+    assert hasattr(service, "initialize")
+    assert hasattr(service, "cleanup")
+    assert hasattr(service, "health_check")
 
     # Test callable
     assert callable(service.initialize)
@@ -1241,6 +1258,7 @@ ______________________________________________________________________
 class BadService:
     def health_check(self) -> str:  # Should return bool!
         return "healthy"
+
 
 # Type checker error, but runtime isinstance() passes
 service = BadService()
@@ -1298,6 +1316,7 @@ class ServiceContext:
     def __exit__(self, *args: Any) -> None:
         self.service.cleanup()
 
+
 # Usage
 with ServiceContext(service) as s:
     s.do_work()  # Automatically initialized/cleaned up
@@ -1313,8 +1332,10 @@ ______________________________________________________________________
 # WRONG: Importing concrete class
 from crackerjack.managers.test_manager import TestManager
 
+
 def run_tests(manager: TestManager) -> None:
     manager.run_tests(options)
+
 
 # Tightly coupled to TestManager implementation
 ```
@@ -1325,8 +1346,10 @@ def run_tests(manager: TestManager) -> None:
 # CORRECT: Importing protocol
 from crackerjack.models.protocols import TestManagerProtocol
 
+
 def run_tests(manager: TestManagerProtocol) -> None:
     manager.run_tests(options)
+
 
 # Works with any TestManagerProtocol implementation
 ```
@@ -1405,6 +1428,7 @@ from crackerjack.models.protocols import TestManagerProtocol
 # ❌ WRONG: Missing method
 class BadService:
     def initialize(self) -> None: ...
+
     # cleanup() is missing!
 ```
 
@@ -1423,6 +1447,7 @@ def setup(service: ServiceProtocol):
 ```python
 # ❌ WRONG
 console = Console()  # Global
+
 
 # ✅ CORRECT
 def __init__(self, console: ConsoleInterface):

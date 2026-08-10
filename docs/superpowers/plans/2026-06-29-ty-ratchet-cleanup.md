@@ -253,48 +253,44 @@ Expected: FAIL with `TypeError: cannot unpack non-iterable int object` (because 
 Replace the entire method (lines 1495-1520 in the current file) with:
 
 ```python
-    def _parse_ty_ratchet(self, output: str) -> tuple[int, list[str]]:
-        """Extract the test-ratchet advisories from a ``--split`` run.
+def _parse_ty_ratchet(self, output: str) -> tuple[int, list[str]]:
+    """Extract the test-ratchet advisories from a ``--split`` run.
 
-        Returns ``(files_processed, advisory_issues)``. ``files_processed``
-        is always 0 (the prior negative-encoding sentinel has been
-        removed — see ``HookResult.advisory_issues``).
+    Returns ``(files_processed, advisory_issues)``. ``files_processed``
+    is always 0 (the prior negative-encoding sentinel has been
+    removed — see ``HookResult.advisory_issues``).
 
-        ``advisory_issues`` carries concise-format diagnostic lines from
-        the test-gate run when that gate fails. It is the post-stage
-        warning signal: the prod gate drives the exit code, and the
-        test-gate diagnostics are surfaced via
-        ``_display_hook_result``'s ``⚠️`` banner.
-        """
-        import re
+    ``advisory_issues`` carries concise-format diagnostic lines from
+    the test-gate run when that gate fails. It is the post-stage
+    warning signal: the prod gate drives the exit code, and the
+    test-gate diagnostics are surfaced via
+    ``_display_hook_result``'s ``⚠️`` banner.
+    """
+    import re
 
-        test_re = re.compile(
-            r"ty ratchet \[split\] test:\s+(?P<status>PASS|FAIL)\s+"
-            r"\((?P<count>\d+)/(?P<max>\d+)\)"
-        )
-        concise_diag_re = re.compile(
-            r"^[\w./-]+:\d+:\d+:\s+(?:error|warning)\["
-        )
+    test_re = re.compile(
+        r"ty ratchet \[split\] test:\s+(?P<status>PASS|FAIL)\s+"
+        r"\((?P<count>\d+)/(?P<max>\d+)\)"
+    )
+    concise_diag_re = re.compile(r"^[\w./-]+:\d+:\d+:\s+(?:error|warning)\[")
 
-        test_failed = False
-        for line in output.splitlines():
-            line = line.strip()
-            if not line:
-                continue
-            m = test_re.search(line)
-            if m and m.group("status") == "FAIL":
-                test_failed = True
-                break
+    test_failed = False
+    for line in output.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        m = test_re.search(line)
+        if m and m.group("status") == "FAIL":
+            test_failed = True
+            break
 
-        if not test_failed:
-            return 0, []
+    if not test_failed:
+        return 0, []
 
-        advisories = [
-            raw.strip()
-            for raw in output.splitlines()
-            if concise_diag_re.match(raw.strip())
-        ]
-        return 0, advisories
+    advisories = [
+        raw.strip() for raw in output.splitlines() if concise_diag_re.match(raw.strip())
+    ]
+    return 0, advisories
 ```
 
 - [ ] **Step 4: Run tests to verify they pass**
@@ -514,11 +510,7 @@ In `crackerjack/executors/hook_executor.py`, in `_display_hook_result`, replace 
 
 ```python
 # before:
-if (
-    result.name == "ty"
-    and result.status == "passed"
-    and result.files_processed < 0
-):
+if result.name == "ty" and result.status == "passed" and result.files_processed < 0:
     test_count = -result.files_processed
     self.console.print(
         f"⚠️  ty test ratchet FAIL: {test_count} diagnostic(s) in tests/ "
@@ -530,11 +522,7 @@ With:
 
 ```python
 # after:
-if (
-    result.name == "ty"
-    and result.status == "passed"
-    and result.advisory_issues
-):
+if result.name == "ty" and result.status == "passed" and result.advisory_issues:
     self.console.print(
         f"⚠️  ty test ratchet FAIL: {len(result.advisory_issues)} "
         f"diagnostic(s) in tests/ (advisory only; prod gate controls stage)"
@@ -622,9 +610,7 @@ class TestSplitModeMissingDirs:
     (0 ≤ any budget). No IO-error diagnostic leaks into the count.
     """
 
-    def test_split_mode_missing_prod_dir_is_vacuous_pass(
-        self, tmp_path: Path
-    ) -> None:
+    def test_split_mode_missing_prod_dir_is_vacuous_pass(self, tmp_path: Path) -> None:
         """Missing prod dir → exit 0, prod count = 0, stderr warning."""
         prod_missing = tmp_path / "does_not_exist"
         test_dir = tmp_path / "tests"
@@ -669,9 +655,7 @@ class TestSplitModeMissingDirs:
         assert summary["prod_dir_exists"] is False
         assert summary["test_dir_exists"] is True
 
-    def test_split_mode_missing_test_dir_is_vacuous_pass(
-        self, tmp_path: Path
-    ) -> None:
+    def test_split_mode_missing_test_dir_is_vacuous_pass(self, tmp_path: Path) -> None:
         """Missing test dir → exit 0, test count = 0, stderr warning."""
         prod_dir = tmp_path / "pkg"
         test_missing = tmp_path / "does_not_exist"
@@ -887,9 +871,7 @@ class TestAdvisoryBannerEndToEnd:
     construction -> display -> console output. Locks in the E.3 contract.
     """
 
-    def test_warning_banner_prints_advisory_count(
-        self, tmp_path: Path
-    ) -> None:
+    def test_warning_banner_prints_advisory_count(self, tmp_path: Path) -> None:
         """When ty hook has advisory_issues and status=passed, banner prints."""
         from crackerjack.executors.hook_executor import HookExecutor
         from crackerjack.models.task import HookResult
@@ -919,8 +901,7 @@ class TestAdvisoryBannerEndToEnd:
         banner_calls = [
             call_args
             for call_args in console.print.call_args_list
-            if call_args.args
-            and "ty test ratchet FAIL" in str(call_args.args[0])
+            if call_args.args and "ty test ratchet FAIL" in str(call_args.args[0])
         ]
         assert len(banner_calls) == 1, (
             f"Expected exactly 1 warning banner; got {len(banner_calls)}. "
@@ -931,9 +912,7 @@ class TestAdvisoryBannerEndToEnd:
         assert "tests/" in banner_text
         assert "advisory only" in banner_text
 
-    def test_no_banner_when_advisory_issues_empty(
-        self, tmp_path: Path
-    ) -> None:
+    def test_no_banner_when_advisory_issues_empty(self, tmp_path: Path) -> None:
         """When advisory_issues is empty, no warning banner prints."""
         from crackerjack.executors.hook_executor import HookExecutor
         from crackerjack.models.task import HookResult
@@ -959,14 +938,11 @@ class TestAdvisoryBannerEndToEnd:
         banner_calls = [
             call_args
             for call_args in console.print.call_args_list
-            if call_args.args
-            and "ty test ratchet FAIL" in str(call_args.args[0])
+            if call_args.args and "ty test ratchet FAIL" in str(call_args.args[0])
         ]
         assert len(banner_calls) == 0
 
-    def test_no_banner_when_status_failed(
-        self, tmp_path: Path
-    ) -> None:
+    def test_no_banner_when_status_failed(self, tmp_path: Path) -> None:
         """When the hook status is 'failed', no advisory banner (gate is the signal)."""
         from crackerjack.executors.hook_executor import HookExecutor
         from crackerjack.models.task import HookResult
@@ -994,8 +970,7 @@ class TestAdvisoryBannerEndToEnd:
         banner_calls = [
             call_args
             for call_args in console.print.call_args_list
-            if call_args.args
-            and "ty test ratchet FAIL" in str(call_args.args[0])
+            if call_args.args and "ty test ratchet FAIL" in str(call_args.args[0])
         ]
         assert len(banner_calls) == 0, (
             "Banner must not fire when status=failed (gate is the visible signal)."

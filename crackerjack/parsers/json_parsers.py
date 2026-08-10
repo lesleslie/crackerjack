@@ -5,7 +5,7 @@ import logging
 import typing as t
 from pathlib import Path
 
-from crackerjack.agents.base import Issue, IssueType, Priority
+from crackerjack.models.issues import Issue, IssueType, Priority
 from crackerjack.parsers.base import JSONParser
 from crackerjack.parsers.factory import ParserFactory
 from crackerjack.services.testing.test_result_parser import TestResultParser

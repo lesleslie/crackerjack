@@ -5,7 +5,7 @@ import pytest
 
 from crackerjack.parsers.factory import ParserFactory
 from crackerjack.parsers.json_parsers import RuffJSONParser, MypyJSONParser, BanditJSONParser
-from crackerjack.agents.base import Issue
+from crackerjack.models.issues import Issue
 
 
 class TestRuffJSONParser:

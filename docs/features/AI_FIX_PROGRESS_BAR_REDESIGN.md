@@ -64,12 +64,14 @@ Use `NamedTuple` for event structure (Python Pro recommendation):
 ```python
 from typing import NamedTuple
 
+
 class ActivityEvent(NamedTuple):
     """Type-safe activity event."""
-    agent: str      # "RefactoringAgent"
-    action: str     # "fixing", "analyzing", "skipped"
-    file: str       # "crackerjack/managers/test_manager.py"
-    severity: str   # "info", "warning", "error", "success"
+
+    agent: str  # "RefactoringAgent"
+    action: str  # "fixing", "analyzing", "skipped"
+    file: str  # "crackerjack/managers/test_manager.py"
+    severity: str  # "info", "warning", "error", "success"
 ```
 
 **Benefits**:
@@ -174,12 +176,15 @@ from rich.console import Console
 from rich.live import Live
 from rich.panel import Panel
 
+
 class ActivityEvent(NamedTuple):
     """Type-safe activity event for progress tracking."""
+
     agent: str
     action: str
     file: str
     severity: str = "info"
+
 
 class AIFixProgressManager:
     """Progress manager for AI-fix with Live display and activity feed.
@@ -280,6 +285,7 @@ def log_event(
 
 ```python
 import asyncio
+
 
 async def async_log_event(
     self,
@@ -475,12 +481,14 @@ def test_activity_event_namedtuple():
     assert event.agent == "RefactoringAgent"
     assert event.action == "fixing"
 
+
 def test_log_event_thread_safety():
     """Test log_event() from multiple threads."""
     manager = AIFixProgressManager()
     manager.start_iteration(0, 10)
 
     import threading
+
     threads = [
         threading.Thread(
             target=manager.log_event,

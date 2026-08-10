@@ -144,15 +144,19 @@ ARROW_MATCH_PATTERN = re.compile(r"-->\s+(\S+):(\d+):(\d+)")
 import timeit
 import re
 
+
 # Inline version
 def inline_regex(text):
     return re.search(r"(\d+)\s+collected", text, re.IGNORECASE)
 
+
 # Precompiled version
 COLLECTED_PATTERN = re.compile(r"(\d+)\s+collected", re.IGNORECASE)
 
+
 def precompiled_regex(text):
     return COLLECTED_PATTERN.search(text)
+
 
 # Benchmark
 test_text = "150 collected in 2.5s"

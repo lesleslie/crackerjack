@@ -139,11 +139,22 @@ Add `ty` to `_get_hook_specific_fixes()` with sensible auto-fix strategies:
 
 ```python
 if "ty" in failed_hooks:
-    fixes.extend([
-        # Phase A: pure cleanup — remove stale # type: ignore directives
-        # (could be a custom script or ruff rule)
-        (["uv", "run", "python", "-m", "crackerjack.tools.remove_unused_type_ignore"], "remove stale type ignores"),
-    ])
+    fixes.extend(
+        [
+            # Phase A: pure cleanup — remove stale # type: ignore directives
+            # (could be a custom script or ruff rule)
+            (
+                [
+                    "uv",
+                    "run",
+                    "python",
+                    "-m",
+                    "crackerjack.tools.remove_unused_type_ignore",
+                ],
+                "remove stale type ignores",
+            ),
+        ]
+    )
 ```
 
 This handles the 103 cleanup warnings automatically. The remaining 344 errors still require either AI-agent mode or manual fixing.
@@ -1228,6 +1239,7 @@ def main(argv: list[str] | None = None) -> int:
         return _run_split(args)
     # else: legacy single-target mode (back-compat)
 
+
 def _run_split(args: argparse.Namespace) -> int:
     """Run ty on `crackerjack/` and `tests/` separately; gate each."""
     prod_max = _read_split_budget(args.pyproject, "ty_max_errors_prod", default=50)
@@ -1616,6 +1628,7 @@ def test_audit_flags_threshold_breach(tmp_path):
     # Run ty_audit on tmp_path
     # Assert the threshold-breach signal is set
     ...
+
 
 def test_split_ratchet_catches_prod_regression(tmp_path):
     """When prod diagnostics exceed prod budget, gate fails."""

@@ -5,7 +5,7 @@ import pytest
 from unittest.mock import patch, MagicMock
 
 from crackerjack.parsers.factory import ParserFactory, ParsingError
-from crackerjack.agents.base import Issue, IssueType, Priority
+from crackerjack.models.issues import Issue, IssueType, Priority
 
 
 class TestParsingError:

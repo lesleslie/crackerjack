@@ -59,34 +59,6 @@ TOOL_REGISTRY: dict[str, dict[str, str]] = {
         "group": "progress_tools",
         "description": "start/save_checkpoint/complete/reset session state (writes current_session.json + checkpoints)",
     },
-    "list_skills": {
-        "group": "skill_tools",
-        "description": "List all known skills (agent/mcp/hybrid)",
-    },
-    "get_skill_info": {
-        "group": "skill_tools",
-        "description": "Detail for one skill by id",
-    },
-    "search_skills": {
-        "group": "skill_tools",
-        "description": "Free-text search across skill name/description/tags",
-    },
-    "get_skills_for_issue": {
-        "group": "skill_tools",
-        "description": "Map issue_type -> skill set",
-    },
-    "get_skill_statistics": {
-        "group": "skill_tools",
-        "description": "Aggregate counts per registry",
-    },
-    "execute_skill": {
-        "group": "skill_tools",
-        "description": "Run a hybrid skill (may delegate to agents and write fix_attempts)",
-    },
-    "find_best_skill": {
-        "group": "skill_tools",
-        "description": "Pick the top-skill for an issue_type by can_handle confidence",
-    },
     "skill_coverage_report": {
         "group": "skill_coverage",
         "description": "Calls mcp__session-buddy__distilled_skill_health (Contract 5.4)",

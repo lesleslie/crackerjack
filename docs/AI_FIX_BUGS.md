@@ -89,7 +89,7 @@ ______________________________________________________________________
 - This happens because AgentCoordinator merges results with AND logic:
   ```python
   # coordinator.py:56-68
-  success=self.success and other.success  # All agents must succeed
+  success = self.success and other.success  # All agents must succeed
   ```
 - If some agents can't fix issues but others succeed, overall success=True with remaining_issues
 
@@ -136,7 +136,10 @@ ______________________________________________________________________
        if not line:
            return False
        # Skip all contextual note/help lines
-       if any(pattern in line.lower() for pattern in [": note:", ": help:", "note: ", "help: "]):
+       if any(
+           pattern in line.lower()
+           for pattern in [": note:", ": help:", "note: ", "help: "]
+       ):
            return False
        # Skip summary lines
        if line.startswith(("Found", "Checked", "N errors found")):

@@ -99,9 +99,9 @@ nodes = [
 ```python
 nodes = [
     {"id": "fast_hooks"},
-    {"id": "tests", "depends_on": ["fast_hooks"]},                    # Parallel start
-    {"id": "comprehensive_hooks", "depends_on": ["fast_hooks"]},     # Parallel start
-    {"id": "publishing", "depends_on": ["comprehensive_hooks"]},     # Waits for both
+    {"id": "tests", "depends_on": ["fast_hooks"]},  # Parallel start
+    {"id": "comprehensive_hooks", "depends_on": ["fast_hooks"]},  # Parallel start
+    {"id": "publishing", "depends_on": ["comprehensive_hooks"]},  # Waits for both
 ]
 ```
 

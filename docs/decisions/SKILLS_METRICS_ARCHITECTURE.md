@@ -154,9 +154,9 @@ ______________________________________________________________________
 
 ```python
 final_score = (
-    semantic_similarity * 0.6 +    # Vector similarity
-    effectiveness_score * 0.3 +    # Metrics-based
-    context_boost * 0.1            # Session context
+    semantic_similarity * 0.6  # Vector similarity
+    + effectiveness_score * 0.3  # Metrics-based
+    + context_boost * 0.1  # Session context
 ) * penalty_factors
 ```
 

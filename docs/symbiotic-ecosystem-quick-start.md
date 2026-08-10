@@ -46,7 +46,9 @@ dashboard = collector.get_velocity_dashboard(days_back=30)
 # Access metrics
 print(f"Total commits: {dashboard.commit_metrics.total_commits}")
 print(f"Commits per day: {dashboard.commit_metrics.avg_commits_per_day:.1f}")
-print(f"Conventional compliance: {dashboard.commit_metrics.conventional_compliance_rate:.1%}")
+print(
+    f"Conventional compliance: {dashboard.commit_metrics.conventional_compliance_rate:.1%}"
+)
 print(f"Most active hour: {dashboard.commit_metrics.most_active_hour}:00")
 print(f"Branch switches: {dashboard.branch_metrics.branch_switches}")
 print(f"Merge conflict rate: {dashboard.merge_metrics.conflict_rate:.1%}")
@@ -87,6 +89,7 @@ try:
 except ImportError:
     # Use TF-IDF fallback
     from crackerjack.memory.fallback_embedder import FallbackIssueEmbedder
+
     embedder = FallbackIssueEmbedder()
     embedding = embedder.embed_issue(issue)
 
@@ -214,6 +217,7 @@ class CommitMetrics:
     most_active_day: int  # 0=Monday, 6=Sunday
     time_period: timedelta
 
+
 @dataclass
 class BranchMetrics:
     total_branches: int
@@ -223,6 +227,7 @@ class BranchMetrics:
     branches_deleted: int
     avg_branch_lifetime_hours: float
     most_switched_branch: str | None
+
 
 @dataclass
 class MergeMetrics:

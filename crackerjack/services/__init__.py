@@ -1,4 +1,3 @@
-from crackerjack.services.agent_delegator import AgentDelegator
 from crackerjack.services.file_modifier import SafeFileModifier
 from crackerjack.services.pycharm_mcp_integration import (
     CircuitBreakerState,
@@ -21,7 +20,6 @@ from crackerjack.services.workflow_optimization import (
 )
 
 __all__ = [
-    "AgentDelegator",
     "CircuitBreakerState",
     "LocalSequentialClient",
     "MahavishnuSwarmClient",

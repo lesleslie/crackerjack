@@ -70,10 +70,12 @@ python -m crackerjack run -t --ai-fix -v
 
 ```python
 (
-    ["uv", "run", "refurb", str(pkg_dir)],
-    "refurb",
-    120,
-),
+    (
+        ["uv", "run", "refurb", str(pkg_dir)],
+        "refurb",
+        120,
+    ),
+)
 ```
 
 **File Modified:** `crackerjack/core/autofix_coordinator.py:709-718`

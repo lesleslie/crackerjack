@@ -148,6 +148,7 @@ from rich.panel import Panel
 from rich.console import Console as RichConsole
 from rich.panel import Panel
 
+
 def get_rich_console(console: ConsoleInterface | None = None) -> RichConsole:
     return console if isinstance(console, RichConsole) else RichConsole()
 ```
@@ -210,7 +211,9 @@ result = subprocess.run(
 **publish_manager.py** (lines 151-159):
 
 ```python
-def _run_command(self, cmd: list[str], timeout: int = 300) -> subprocess.CompletedProcess[str]:
+def _run_command(
+    self, cmd: list[str], timeout: int = 300
+) -> subprocess.CompletedProcess[str]:
     secure_env = self.security.create_secure_command_env()
 
     result = subprocess.run(

@@ -7,7 +7,7 @@ import typing as t
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
-from crackerjack.agents.base import FixResult, Issue, IssueType
+from crackerjack.models.issues import FixResult, Issue, IssueType
 
 
 @dataclass

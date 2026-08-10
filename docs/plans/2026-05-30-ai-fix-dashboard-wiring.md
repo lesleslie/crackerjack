@@ -41,7 +41,9 @@ Two independent problems:
 # At line ~2950, before emit_nowait:
 primary_key = fixer_coordinator._candidate_fixer_keys(plan.issue_type)[0]
 primary_agent = fixer_coordinator.fixers.get(primary_key)
-agent_name = getattr(primary_agent, "name", primary_key) if primary_agent else "FixerCoordinator"
+agent_name = (
+    getattr(primary_agent, "name", primary_key) if primary_agent else "FixerCoordinator"
+)
 
 self._event_bus.emit_nowait(
     AgentDispatched(

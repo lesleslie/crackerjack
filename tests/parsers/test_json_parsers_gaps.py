@@ -13,7 +13,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from crackerjack.agents.base import Issue, IssueType, Priority
+from crackerjack.models.issues import Issue, IssueType, Priority
 from crackerjack.parsers.json_parsers import (
     BanditJSONParser,
     ComplexipyJSONParser,

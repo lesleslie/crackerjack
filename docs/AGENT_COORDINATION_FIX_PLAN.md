@@ -569,7 +569,9 @@ async def _try_fallback_agents(
 
     # Try each fallback in order
     for fallback in fallback_candidates:
-        self.logger.info(f"Trying fallback agent {fallback.name} (priority {fallback.priority})")
+        self.logger.info(
+            f"Trying fallback agent {fallback.name} (priority {fallback.priority})"
+        )
 
         confidence = await fallback.can_handle(issue)
 
@@ -797,7 +799,9 @@ async def test_fallback_on_primary_failure():
         refactoring_agent,
         "analyze_and_fix",
         new_callable=AsyncMock,
-        return_value=FixResult(success=False, confidence=0.0, remaining_issues=["Failed"]),
+        return_value=FixResult(
+            success=False, confidence=0.0, remaining_issues=["Failed"]
+        ),
     ):
         result = await coordinator._handle_with_single_agent(refactoring_agent, issue)
 

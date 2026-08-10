@@ -4,12 +4,10 @@ import json
 import logging
 import re
 import typing as t
-from concurrent.futures import ThreadPoolExecutor
 from contextlib import suppress
 from pathlib import Path
 
 from rich import box
-from rich.console import Console as RichConsole
 from rich.panel import Panel
 from rich.progress import (
     BarColumn,
@@ -20,7 +18,6 @@ from rich.progress import (
 )
 from rich.table import Table
 
-from crackerjack.agents.base import FixResult
 from crackerjack.cli.formatting import separator as make_separator
 from crackerjack.code_cleaner import CodeCleaner
 from crackerjack.config import get_console_width
@@ -44,8 +41,6 @@ FileSystemCache = t.Any
 GitOperationCache = t.Any
 
 if t.TYPE_CHECKING:
-    from crackerjack.agents.base import AgentContext
-    from crackerjack.agents.coordinator import AgentCoordinator
     from crackerjack.models.protocols import (
         ConfigMergeServiceProtocol,
         FileSystemInterface,
@@ -57,7 +52,6 @@ if t.TYPE_CHECKING:
         TestManagerProtocol,
     )
     from crackerjack.models.task import HookResult
-    from crackerjack.services.cache import CrackerjackCache
     from crackerjack.services.failure_recorder import FailureRecorder
     from crackerjack.services.parallel_executor import (
         AsyncCommandExecutor,
@@ -196,45 +190,6 @@ class PhaseCoordinator:
     def set_event_publisher(self, event_publisher: t.Any | None) -> None:
         self._event_publisher = event_publisher
 
-    async def _fire_exhaustion_record(
-        self, hook_stage: str, run_id: str, iterations: int
-    ) -> None:
-        if self._failure_recorder is None:
-            return
-        from uuid_utils import uuid4
-
-        from crackerjack.services.failure_recorder import (
-            FixAttemptRecord,
-            _compute_fingerprint,
-        )
-
-        failing_hooks = [
-            r.name for r in self._last_hook_results if r.status in ("failed", "error")
-        ]
-        hook_name = failing_hooks[0] if failing_hooks else hook_stage
-        issue_desc = (
-            f"{hook_stage} hooks still failing after {iterations} AI-fix iterations"
-        )
-        fingerprint = _compute_fingerprint(hook_name, "exhausted", issue_desc)
-        rec = FixAttemptRecord(
-            record_id=str(uuid4()),
-            run_id=run_id,
-            fix_task_id="exhausted",
-            repo=self.pkg_path.name,
-            hook=hook_name,
-            issue_type="exhausted",
-            issue_fingerprint=fingerprint,
-            issue_description=issue_desc,
-            strategies_attempted=[hook_stage],
-            fix_code_generated="",
-            failure_reason=issue_desc,
-            iterations_used=iterations,
-            confidence_scores=[],
-            crackerjack_version=getattr(self._settings, "version", "unknown"),
-        )
-        with suppress(Exception):
-            await self._failure_recorder.record(rec)
-
     @property
     def logger(self) -> logging.Logger:
         return self._logger
@@ -242,27 +197,6 @@ class PhaseCoordinator:
     @logger.setter
     def logger(self, value: logging.Logger) -> None:
         self._logger = value
-
-    def _create_enhanced_coordinator_factory(
-        self,
-    ) -> t.Callable[[AgentContext, CrackerjackCache], AgentCoordinator]:
-
-        def factory(context: AgentContext, cache: CrackerjackCache) -> AgentCoordinator:
-            from crackerjack.agents.enhanced_coordinator import (
-                EnhancedAgentCoordinator,
-            )
-            from crackerjack.agents.tracker import AgentTracker
-            from crackerjack.services.debug import get_ai_agent_debugger
-
-            return EnhancedAgentCoordinator(
-                context=context,
-                tracker=AgentTracker(),
-                debugger=get_ai_agent_debugger(),
-                cache=cache,
-                enable_external_agents=True,
-            )
-
-        return factory
 
     @staticmethod
     def _strip_ansi(text: str) -> str:
@@ -394,9 +328,6 @@ class PhaseCoordinator:
 
         success = self._run_fast_hooks_with_retry(options)
 
-        if not success and getattr(options, "ai_fix", False):
-            success = await self._apply_ai_fix_for_fast_hooks(options, success)
-
         self._complete_fast_hooks_task(success)
 
         if success:
@@ -497,264 +428,6 @@ class PhaseCoordinator:
 
         self.console.print()
 
-    def _should_show_ai_fix_banner(self, options: OptionsProtocol) -> bool:
-        return bool(options.verbose or getattr(options, "ai_debug", False))
-
-    async def _apply_ai_fix_for_fast_hooks(
-        self, options: OptionsProtocol, current_success: bool
-    ) -> bool:
-        max_ai_iterations = 3
-        attempt = 2
-
-        from crackerjack.core.autofix_coordinator import AutofixCoordinator
-
-        for ai_iteration in range(max_ai_iterations):
-            ai_iteration_num = ai_iteration + 1
-            attempt += 1
-
-            if self._should_show_ai_fix_banner(options):
-                self.console.print("\n")
-                if ai_iteration_num == 1:
-                    self.console.print(
-                        "[bold bright_magenta]🤖 AI AGENT FIXING[/bold bright_magenta] "
-                        "[bold bright_white]Attempting automated fixes fast hooks[/bold bright_white]"
-                    )
-                else:
-                    self.console.print(
-                        f"[bold bright_magenta]🤖 AI AGENT FIXING[/bold bright_magenta] "
-                        f"[bold bright_white]Iteration {ai_iteration_num}/{max_ai_iterations} - Fixing remaining issues[/bold bright_white]"
-                    )
-                self.console.print(make_separator("-"))
-
-            autofix_coordinator = AutofixCoordinator(
-                console=t.cast("RichConsole", self.console),
-                pkg_path=self.pkg_path,
-                max_iterations=getattr(options, "ai_fix_max_iterations", None),
-                coordinator_factory=self._create_enhanced_coordinator_factory(),
-                adapter_learner_integration=self._adapter_learning,
-            )
-
-            from crackerjack.ui.ai_fix_dashboard import attach_dashboard
-
-            self._dashboard = attach_dashboard(
-                bus=autofix_coordinator._event_bus,
-                mode="auto",
-                max_iterations=10,
-            )
-
-            progress_manager_was_enabled = (
-                autofix_coordinator.progress_manager.enabled
-                if hasattr(autofix_coordinator, "progress_manager")
-                else False
-            )
-            if self._dashboard is not None and progress_manager_was_enabled:
-                autofix_coordinator.progress_manager.enabled = False
-
-            try:
-                ai_fix_success = await autofix_coordinator.apply_fast_stage_fixes(
-                    hook_results=self._last_hook_results
-                )
-            finally:
-                if self._dashboard is not None:
-                    self._dashboard.stop()
-                    self._dashboard = None
-                if progress_manager_was_enabled and hasattr(
-                    autofix_coordinator, "progress_manager"
-                ):
-                    autofix_coordinator.progress_manager.enabled = True
-
-            if not ai_fix_success:
-                if ai_iteration_num == 1:
-                    self.console.print(
-                        "[yellow]⚠️[/yellow] AI agents unable to fix fast hook issues"
-                    )
-                else:
-                    self.console.print(
-                        f"[yellow]⚠️[/yellow] AI agents unable to fix remaining issues (iteration {ai_iteration_num})"
-                    )
-                self.console.print()
-                return current_success
-
-            self.console.print(
-                "[green]✅[/green] AI agents applied fixes, retrying fast hooks..."
-            )
-            self.console.print()
-
-            self._display_hook_phase_header(
-                "FAST HOOKS",
-                "Formatters, import sorting, and quick static analysis",
-            )
-
-            success = self._execute_hooks_once(
-                "fast",
-                self.hook_manager.run_fast_hooks,
-                options,
-                attempt=attempt,
-            )
-
-            if success:
-                self.console.print(
-                    f"[green]✅[/green] Fast hooks passed after AI fixes (iteration {ai_iteration_num})!"
-                )
-                self.console.print()
-                return True
-
-            if ai_iteration_num < max_ai_iterations:
-                self.console.print(
-                    f"[yellow]⚠️[/yellow] Fast hooks still failing after iteration {ai_iteration_num}"
-                )
-                self.console.print()
-            else:
-                self.console.print(
-                    f"[yellow]⚠️[/yellow] Fast hooks still failing after {max_ai_iterations} iterations"
-                )
-                self.console.print()
-                await self._fire_exhaustion_record(
-                    "fast", autofix_coordinator._run_id, max_ai_iterations
-                )
-
-        return False
-
-    def _apply_ai_fix_for_tests(self, options: OptionsProtocol) -> bool:
-        from rich.console import Console as RichConsole
-        from rich.prompt import Confirm
-
-        test_failures = self.test_manager.get_test_failures()
-        if not test_failures:
-            self.console.print("[yellow]⚠️[/yellow] No test failures detected")
-            return False
-
-        safe_failures = self._classify_safe_test_failures(test_failures)
-        if not safe_failures:
-            self.console.print(
-                "[yellow]⚠️[/yellow] Test failures require manual review (not safe for auto-fix)"
-            )
-            self.console.print(
-                "[yellow] Hint:[/yellow] Complex logic errors, assertion failures, or infrastructure issues"
-            )
-            return False
-
-        total_failures = len(test_failures)
-        fixable_count = len(safe_failures)
-
-        self.console.print("\n")
-        self.console.print(
-            f"[cyan]📊 AI Analysis:[/cyan] {fixable_count}/{total_failures} test failures may be auto-fixable"
-        )
-        self.console.print()
-
-        for failure in safe_failures[:3]:
-            self.console.print(f" • {failure[:100]}")
-
-        if len(safe_failures) > 3:
-            self.console.print(f" ... and {len(safe_failures) - 3} more")
-
-        self.console.print()
-        self.console.print(
-            "[bold yellow]⚠️ AI will attempt to fix these test failures[/bold yellow]"
-        )
-        self.console.print(
-            "[bold yellow] Review all changes carefully before accepting[/bold yellow]"
-        )
-        self.console.print()
-
-        try:
-            rich_console = RichConsole()
-            user_confirms = Confirm.ask(
-                "[yellow]Attempt AI auto-fix for these test failures?[/yellow]",
-                console=rich_console,
-                default=False,
-            )
-
-            if not user_confirms:
-                self.console.print("[yellow]Skipped AI-fix for tests[/yellow]")
-                return False
-
-        except Exception:
-            self.console.print(
-                "[yellow]⚠️[/yellow] Test AI-fix requires interactive mode"
-            )
-            return False
-
-        return self._run_ai_test_fix(safe_failures, options)
-
-    def _run_ai_test_fix(
-        self, safe_failures: list[str], options: OptionsProtocol
-    ) -> bool:
-        from crackerjack.agents.base import AgentContext, Issue, IssueType, Priority
-        from crackerjack.agents.coordinator import AgentCoordinator
-        from crackerjack.services.cache import CrackerjackCache
-
-        if self._should_show_ai_fix_banner(options):
-            self.console.print(
-                "[bold bright_magenta]🤖 AI AGENT FIXING[/bold bright_magenta] "
-                "[bold bright_white]Attempting automated test fixes[/bold bright_white]"
-            )
-            self.console.print(make_separator("-") + "\n")
-
-        context = AgentContext(
-            project_path=self.pkg_path,
-            subprocess_timeout=300,
-        )
-        cache = CrackerjackCache()
-
-        from crackerjack.agents.tracker import AgentTracker
-        from crackerjack.services.debug import get_ai_agent_debugger
-
-        coordinator = AgentCoordinator(
-            context=context,
-            tracker=AgentTracker(),
-            debugger=get_ai_agent_debugger(),
-            cache=cache,
-        )
-
-        issues = [
-            Issue(
-                type=IssueType.IMPORT_ERROR,
-                severity=Priority.HIGH,
-                message=failure,
-                file_path="test_failures",
-                line_number=0,
-                stage="tests",
-            )
-            for failure in safe_failures
-        ]
-
-        try:
-            import asyncio
-
-            try:
-                asyncio.get_running_loop()
-                with ThreadPoolExecutor() as executor:
-                    future = executor.submit(
-                        asyncio.run,
-                        coordinator.handle_issues(issues),  # type: ignore[unused-coroutine]
-                    )
-                    fix_result = future.result(timeout=300)
-            except RuntimeError:
-                fix_result = asyncio.run(coordinator.handle_issues(issues))
-
-            if fix_result and isinstance(fix_result, FixResult) and fix_result.success:
-                fixed_count = len(fix_result.fixes_applied)
-                remaining_count = len(fix_result.remaining_issues)
-                self.console.print(
-                    f"[green]✅[/green] AI agents fixed {fixed_count} test failure(s)"
-                )
-                if remaining_count > 0:
-                    self.console.print(
-                        f"[yellow]⚠️[/yellow] {remaining_count} test failures remain"
-                    )
-                return fixed_count == 0
-
-            self.console.print(
-                "[yellow]⚠️[/yellow] AI agents unable to fix test failures"
-            )
-            return False
-
-        except Exception as e:
-            self.console.print(f"[yellow]⚠️[/yellow] AI fix failed: {e}")
-            return False
-
     def _classify_safe_test_failures(self, failures: list[str]) -> list[str]:
         safe_failures = []
         risky_patterns = [
@@ -785,96 +458,6 @@ class PhaseCoordinator:
                 continue
 
         return safe_failures
-
-    async def _apply_ai_fix_for_comprehensive_hooks(
-        self, options: OptionsProtocol, current_success: bool
-    ) -> bool:
-        max_ai_iterations = max(1, int(getattr(options, "ai_fix_max_iterations", 3)))
-        attempt = 1
-
-        from crackerjack.core.autofix_coordinator import AutofixCoordinator
-
-        for ai_iteration in range(max_ai_iterations):
-            ai_iteration_num = ai_iteration + 1
-            attempt += 1
-
-            if self._should_show_ai_fix_banner(options):
-                self.console.print("\n")
-                if ai_iteration_num == 1:
-                    self.console.print(
-                        "[bold bright_magenta]🤖 AI AGENT FIXING[/bold bright_magenta] "
-                        "[bold bright_white]Attempting automated fixes for comprehensive hooks[/bold bright_white]"
-                    )
-                else:
-                    self.console.print(
-                        f"[bold bright_magenta]🤖 AI AGENT FIXING[/bold bright_magenta] "
-                        f"[bold bright_white]Iteration {ai_iteration_num}/{max_ai_iterations} - Fixing remaining issues[/bold bright_white]"
-                    )
-                self.console.print(make_separator("-"))
-
-            autofix_coordinator = AutofixCoordinator(
-                console=t.cast("RichConsole", self.console),
-                pkg_path=self.pkg_path,
-                max_iterations=getattr(options, "ai_fix_max_iterations", None),
-                coordinator_factory=self._create_enhanced_coordinator_factory(),
-                adapter_learner_integration=self._adapter_learning,
-            )
-
-            ai_fix_success = await autofix_coordinator.apply_comprehensive_stage_fixes(
-                hook_results=self._last_hook_results
-            )
-
-            if not ai_fix_success:
-                if ai_iteration_num == 1:
-                    self.console.print(
-                        "[yellow]⚠️[/yellow] AI agents unable to fix comprehensive hook issues"
-                    )
-                else:
-                    self.console.print(
-                        f"[yellow]⚠️[/yellow] AI agents did not fix all issues (iteration {ai_iteration_num})"
-                    )
-                self.console.print()
-                return current_success
-
-            self.console.print(
-                "[green]✅[/green] AI agents applied fixes, retrying comprehensive hooks..."
-            )
-            self.console.print()
-
-            self._display_hook_phase_header(
-                "COMPREHENSIVE HOOKS",
-                "Type, security, and complexity checking",
-            )
-
-            success = self._execute_hooks_once(
-                "comprehensive",
-                self.hook_manager.run_comprehensive_hooks,
-                options,
-                attempt=attempt,
-            )
-
-            if success:
-                self.console.print(
-                    f"[green]✅[/green] Comprehensive hooks passed after AI fixes (iteration {ai_iteration_num})!"
-                )
-                self.console.print()
-                return True
-
-            if ai_iteration_num < max_ai_iterations:
-                self.console.print(
-                    f"[yellow]⚠️[/yellow] Comprehensive hooks still failing after iteration {ai_iteration_num}"
-                )
-                self.console.print()
-            else:
-                self.console.print(
-                    f"[yellow]⚠️[/yellow] Comprehensive hooks still failing after {max_ai_iterations} iterations"
-                )
-                self.console.print()
-                await self._fire_exhaustion_record(
-                    "comprehensive", autofix_coordinator._run_id, max_ai_iterations
-                )
-
-        return False
 
     async def run_snob_tests_phase(self, options: OptionsProtocol) -> bool:
         if getattr(options, "no_snob", False):
@@ -926,31 +509,10 @@ class PhaseCoordinator:
             )
             return False
 
-        fixed = self._apply_ai_fix_for_tests_auto(options, safe)
-        if not fixed:
-            await publish_test_failed(
-                run_id,
-                "snob_tests",
-                "snob tests autofix did not recover",
-                "",
-                publisher=self._event_publisher,
-            )
-            return False
-
-        retry_passed = self._run_pytest_subset(affected)
-        if retry_passed:
-            await publish_test_completed(
-                run_id,
-                tests_completed=len(affected),
-                tests_failed=0,
-                duration_seconds=0.0,
-                publisher=self._event_publisher,
-            )
-            return True
         await publish_test_failed(
             run_id,
             "snob_tests",
-            "snob tests failed after autofix retry",
+            "snob tests autofix did not recover",
             "",
             publisher=self._event_publisher,
         )
@@ -1002,20 +564,6 @@ class PhaseCoordinator:
         result = subprocess.run(cmd, capture_output=False, check=False)
         return result.returncode == 0
 
-    def _apply_ai_fix_for_tests_auto(
-        self, options: OptionsProtocol, safe_failures: list[str]
-    ) -> bool:
-        from crackerjack.core.autofix_coordinator import AutofixCoordinator
-
-        try:
-            coordinator: t.Any = AutofixCoordinator(
-                console=t.cast("RichConsole", self.console),
-                pkg_path=self.pkg_path,
-            )
-            return bool(coordinator.fix_test_failures(safe_failures, options))
-        except Exception:
-            return False
-
     async def run_comprehensive_hooks_only(self, options: OptionsProtocol) -> bool:
         if options.skip_hooks:
             self.console.print(
@@ -1043,9 +591,6 @@ class PhaseCoordinator:
             options,
             attempt=1,
         )
-
-        if not success and getattr(options, "ai_fix", False):
-            success = await self._apply_ai_fix_for_comprehensive_hooks(options, success)
 
         if not success:
             self._display_hook_failures(
@@ -1123,22 +668,6 @@ class PhaseCoordinator:
                 f"Tests passed, coverage: {coverage_info.get('coverage_percent', 0):.1f}%",
             )
         else:
-            if getattr(options, "ai_fix", False):
-                ai_fix_success = self._apply_ai_fix_for_tests(options)
-                if ai_fix_success:
-                    self.console.print(
-                        "[green]✅[/green] AI agents applied fixes, re-running tests..."
-                    )
-                    self.console.print()
-                    test_success = self.test_manager.run_tests(options)
-                    if test_success:
-                        coverage_info = self.test_manager.get_coverage()
-                        self.session.complete_task(
-                            "testing",
-                            f"Tests passed after AI fixes, coverage: {coverage_info.get('coverage_percent', 0):.1f}%",
-                        )
-                        return test_success
-
             self.session.fail_task("testing", "Tests failed")
 
         return test_success

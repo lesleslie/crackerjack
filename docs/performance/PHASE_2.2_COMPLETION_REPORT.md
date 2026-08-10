@@ -47,10 +47,10 @@ ______________________________________________________________________
 
 ```python
 HTTPConnectionPool(
-    timeout=30.0,           # Total request timeout
-    connect_timeout=10.0,   # Connection establishment timeout
-    max_connections=100,    # Maximum total connections
-    max_per_host=30,        # Maximum connections per host
+    timeout=30.0,  # Total request timeout
+    connect_timeout=10.0,  # Connection establishment timeout
+    max_connections=100,  # Maximum total connections
+    max_per_host=30,  # Maximum connections per host
 )
 ```
 
@@ -299,11 +299,13 @@ ______________________________________________________________________
 ```python
 # tests/unit/services/test_connection_pool.py
 
+
 async def test_singleton_initialization():
     """Verify singleton pattern works correctly."""
     pool1 = await get_http_pool()
     pool2 = await get_http_pool()
     assert pool1 is pool2
+
 
 async def test_session_reuse():
     """Verify sessions are reused across calls."""
@@ -312,12 +314,14 @@ async def test_session_reuse():
     session2 = await pool.get_session()
     assert session1 is session2
 
+
 async def test_connection_limits():
     """Verify connection limits are respected."""
     pool = await get_http_pool(max_connections=10, max_per_host=5)
     session = await pool.get_session()
     assert session.connector.limit == 10
     assert session.connector.limit_per_host == 5
+
 
 async def test_cleanup():
     """Verify proper cleanup on close."""
@@ -331,6 +335,7 @@ async def test_cleanup():
 ```python
 # tests/integration/services/test_connection_pool_integration.py
 
+
 async def test_real_http_request():
     """Test real HTTP request through pool."""
     pool = await get_http_pool()
@@ -339,6 +344,7 @@ async def test_real_http_request():
             assert response.status == 200
             data = await response.json()
             assert "url" in data
+
 
 async def test_concurrent_requests():
     """Test multiple concurrent requests."""

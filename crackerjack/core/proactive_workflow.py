@@ -6,8 +6,7 @@ import typing as t
 from contextlib import suppress
 from pathlib import Path
 
-from crackerjack.agents.base import AgentContext, Issue, IssueType, Priority
-from crackerjack.agents.coordinator import AgentCoordinator
+from crackerjack.models.issues import Issue, IssueType, Priority
 from crackerjack.models.enums import WorkflowPhase
 from crackerjack.models.protocols import OptionsProtocol
 
@@ -16,7 +15,11 @@ class ProactiveWorkflowPipeline:
     def __init__(self, project_path: Path) -> None:
         self.project_path = project_path
         self.logger = logging.getLogger(__name__)
-        self._architect_agent_coordinator: AgentCoordinator | None = None
+        # Retained (always None) for back-compat with tests that assert
+        # on this attribute. The AgentCoordinator-backed architect-agent
+        # planning path was removed; the pipeline always falls back to
+        # its deterministic/basic planning strategy.
+        self._architect_agent_coordinator: None = None
 
         self._phase_handlers: dict[  # type: ignore[dict-item]
             str, t.Callable[[OptionsProtocol, dict[str, t.Any]], t.Awaitable[bool]]
@@ -67,18 +70,6 @@ class ProactiveWorkflowPipeline:
 
     async def _assess_codebase_architecture(self) -> ArchitecturalAssessment:
         self.logger.info("Assessing codebase architecture")
-
-        if not self._architect_agent_coordinator:
-            from crackerjack.agents.tracker import get_agent_tracker
-            from crackerjack.services.debug import get_ai_agent_debugger
-
-            agent_context = AgentContext(project_path=self.project_path)
-            self._architect_agent_coordinator = AgentCoordinator(
-                agent_context,
-                tracker=get_agent_tracker(),
-                debugger=get_ai_agent_debugger(),
-            )
-            self._architect_agent_coordinator.initialize_agents()
 
         test_issues = await self._identify_potential_issues()
 
@@ -133,50 +124,15 @@ class ProactiveWorkflowPipeline:
     ) -> dict[str, t.Any]:
         self.logger.info("Creating comprehensive architectural plan")
 
-        if self._architect_agent_coordinator is None:
-            msg = "ArchitectAgentCoordinator is not initialized"
-            raise RuntimeError(msg)
-
-        architect = self._architect_agent_coordinator._get_architect_agent()
-
-        if not architect:
-            self.logger.warning("No ArchitectAgent available, creating basic plan")
-            return {
-                "strategy": "basic_reactive",
-                "phases": ["standard_workflow"],
-                "patterns": ["default"],
-            }
-
-        complex_issues = [
-            issue
-            for issue in assessment.potential_issues
-            if issue.type in {IssueType.COMPLEXITY, IssueType.DRY_VIOLATION}
-        ]
-
-        if complex_issues:
-            primary_issue = complex_issues[0]
-            base_plan = await architect.plan_before_action(primary_issue)
-
-            comprehensive_plan = base_plan | {
-                "phases": [
-                    "configuration_setup",
-                    "fast_hooks_with_architecture",
-                    "architectural_refactoring",
-                    "comprehensive_validation",
-                    "pattern_learning",
-                ],
-                "integration_points": [
-                    "architect_guided_fixing",
-                    "pattern_caching",
-                    "validation_against_plan",
-                ],
-            }
-        else:
-            comprehensive_plan = {
-                "strategy": "lightweight_proactive",
-                "phases": ["standard_workflow_enhanced"],
-                "patterns": ["cached_patterns"],
-            }
+        # No ArchitectAgent is available (the AgentCoordinator-backed
+        # architect planning path was removed); always fall back to the
+        # basic, deterministic plan.
+        self.logger.warning("No ArchitectAgent available, creating basic plan")
+        comprehensive_plan: dict[str, t.Any] = {
+            "strategy": "basic_reactive",
+            "phases": ["standard_workflow"],
+            "patterns": ["default"],
+        }
 
         self.logger.info(
             f"Created plan with strategy: {comprehensive_plan.get('strategy')}",
@@ -260,13 +216,8 @@ class ProactiveWorkflowPipeline:
     ) -> bool:
         self.logger.info("Performing architectural refactoring")
 
-        if self._architect_agent_coordinator:
-            architect = self._architect_agent_coordinator._get_architect_agent()
-            if architect:
-                patterns = plan.get("patterns", [])
-                self.logger.info(f"Applying architectural patterns: {patterns}")
-                return True
-
+        # No ArchitectAgent is available (the AgentCoordinator-backed
+        # architect planning path was removed); nothing further to apply.
         return True
 
     async def _comprehensive_validation(
@@ -287,12 +238,8 @@ class ProactiveWorkflowPipeline:
     ) -> bool:
         self.logger.info("Learning and caching successful patterns")
 
-        if self._architect_agent_coordinator:
-            architect = self._architect_agent_coordinator._get_architect_agent()
-            if architect and hasattr(architect, "get_cached_patterns"):
-                cached_patterns = architect.get_cached_patterns()
-                self.logger.info(f"Cached {len(cached_patterns)} patterns")
-
+        # No ArchitectAgent is available (the AgentCoordinator-backed
+        # architect planning path was removed); nothing further to cache.
         return True
 
     async def _execute_standard_workflow(self, options: OptionsProtocol) -> bool:

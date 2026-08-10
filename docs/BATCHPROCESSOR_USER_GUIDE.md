@@ -553,10 +553,7 @@ async def process_batch_streaming(
     issues: list[Issue],
 ):
     """Process issues and yield results as they complete."""
-    tasks = [
-        processor._process_single_issue(issue, max_retries=2)
-        for issue in issues
-    ]
+    tasks = [processor._process_single_issue(issue, max_retries=2) for issue in issues]
 
     for task in asyncio.as_completed(tasks):
         result = await task
@@ -574,6 +571,7 @@ async for result in process_batch_streaming(processor, issues):
 
 ```python
 from typing import Callable
+
 
 async def process_with_callback(
     issues: list[Issue],
@@ -593,6 +591,7 @@ async def process_with_callback(
 def on_result(result: BatchIssueResult):
     if result.success:
         print(f"Progress: {result.agent_used} fixed {result.issue.message}")
+
 
 await process_with_callback(issues, on_result)
 ```

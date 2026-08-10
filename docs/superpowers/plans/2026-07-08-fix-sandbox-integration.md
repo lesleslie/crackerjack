@@ -190,32 +190,48 @@ from crackerjack.ai_fix.fix_runner import (
 
 def test_run_returns_2_on_missing_plans_json(tmp_path: Path) -> None:
     """A nonexistent plans-json path should return exit code 2 (setup error)."""
-    rc = run([
-        "--plans-json", str(tmp_path / "missing.json"),
-        "--output-json", str(tmp_path / "out.json"),
-        "--project-root", str(tmp_path),
-    ])
+    rc = run(
+        [
+            "--plans-json",
+            str(tmp_path / "missing.json"),
+            "--output-json",
+            str(tmp_path / "out.json"),
+            "--project-root",
+            str(tmp_path),
+        ]
+    )
     assert rc == 2
 
 
 def test_run_returns_2_on_unknown_fixer(tmp_path: Path) -> None:
     """A plan with a non-existent fixer_id should return exit code 2."""
     plans_path = tmp_path / "plans.json"
-    plans_path.write_text(json.dumps([{
-        "fixer_id": "no.such.module:DoesNotExist",
-        "file_path": "f.py",
-        "issue_type": "FORMATTING",
-        "changes": [],
-        "risk_level": "low",
-        "issue_message": "test",
-        "issue_stage": "ruff-check",
-    }]))
+    plans_path.write_text(
+        json.dumps(
+            [
+                {
+                    "fixer_id": "no.such.module:DoesNotExist",
+                    "file_path": "f.py",
+                    "issue_type": "FORMATTING",
+                    "changes": [],
+                    "risk_level": "low",
+                    "issue_message": "test",
+                    "issue_stage": "ruff-check",
+                }
+            ]
+        )
+    )
     out_path = tmp_path / "out.json"
-    rc = run([
-        "--plans-json", str(plans_path),
-        "--output-json", str(out_path),
-        "--project-root", str(tmp_path),
-    ])
+    rc = run(
+        [
+            "--plans-json",
+            str(plans_path),
+            "--output-json",
+            str(out_path),
+            "--project-root",
+            str(tmp_path),
+        ]
+    )
     assert rc == 2
     assert not out_path.exists() or json.loads(out_path.read_text()) == {}
 
@@ -533,11 +549,13 @@ def run(argv: list[str] | None = None) -> int:
         try:
             plan = PlanPayload.model_validate(raw)
         except Exception as exc:
-            results.append(PlanResult(
-                plan_idx=idx,
-                success=False,
-                remaining_issues=[f"plan validation failed: {exc}"],
-            ))
+            results.append(
+                PlanResult(
+                    plan_idx=idx,
+                    success=False,
+                    remaining_issues=[f"plan validation failed: {exc}"],
+                )
+            )
             continue
         result = _process_plan(idx, plan, workdir, args.project_root, validator)
         results.append(result)
@@ -676,20 +694,27 @@ def test_dispatch_batch_happy_path(
     plan = _make_plan(str(source))
 
     sandbox = MagicMock()
-    sandbox.run_command = MagicMock(return_value=SandboxResult(
-        passed=True,
-        modified_content="x = 2\n",
-        duration_s=0.1,
-    ))
+    sandbox.run_command = MagicMock(
+        return_value=SandboxResult(
+            passed=True,
+            modified_content="x = 2\n",
+            duration_s=0.1,
+        )
+    )
 
     def fake_run(_argv: list[str] | None = None) -> int:
-        _write_result_json(output_json, [{
-            "plan_idx": 0,
-            "success": True,
-            "modified_content": "x = 2\n",
-            "files_modified": [str(source)],
-            "remaining_issues": [],
-        }])
+        _write_result_json(
+            output_json,
+            [
+                {
+                    "plan_idx": 0,
+                    "success": True,
+                    "modified_content": "x = 2\n",
+                    "files_modified": [str(source)],
+                    "remaining_issues": [],
+                }
+            ],
+        )
         return 0
 
     monkeypatch.setattr(
@@ -715,11 +740,13 @@ def test_dispatch_batch_subprocess_failure(
     plan = _make_plan(str(source))
 
     sandbox = MagicMock()
-    sandbox.run_command = MagicMock(return_value=SandboxResult(
-        passed=False,
-        reason="subprocess exit code 1",
-        duration_s=0.1,
-    ))
+    sandbox.run_command = MagicMock(
+        return_value=SandboxResult(
+            passed=False,
+            reason="subprocess exit code 1",
+            duration_s=0.1,
+        )
+    )
 
     monkeypatch.setattr(
         "crackerjack.ai_fix.sandboxed_dispatcher.fix_runner.run",
@@ -743,11 +770,13 @@ def test_dispatch_batch_validation_failure_no_fallback(
     plan = _make_plan(str(source))
 
     sandbox = MagicMock()
-    sandbox.run_command = MagicMock(return_value=SandboxResult(
-        passed=False,
-        reason="output validation failed: SyntaxError",
-        duration_s=0.1,
-    ))
+    sandbox.run_command = MagicMock(
+        return_value=SandboxResult(
+            passed=False,
+            reason="output validation failed: SyntaxError",
+            duration_s=0.1,
+        )
+    )
 
     fallback_called = MagicMock()
     monkeypatch.setattr(
@@ -757,7 +786,8 @@ def test_dispatch_batch_validation_failure_no_fallback(
     monkeypatch.setenv("CRACKERJACK_AI_FIX_SANDBOX_FALLBACK", "1")
 
     dispatcher = SandboxedFixerDispatcher(
-        sandbox=sandbox, in_process_fallback=fallback_called,
+        sandbox=sandbox,
+        in_process_fallback=fallback_called,
     )
     results = dispatcher.dispatch_batch([plan], project_root=tmp_path)
 
@@ -776,11 +806,13 @@ def test_dispatch_batch_timeout_with_fallback(
     plan = _make_plan(str(source))
 
     sandbox = MagicMock()
-    sandbox.run_command = MagicMock(return_value=SandboxResult(
-        passed=False,
-        reason="subprocess timeout after 300s",
-        duration_s=300.0,
-    ))
+    sandbox.run_command = MagicMock(
+        return_value=SandboxResult(
+            passed=False,
+            reason="subprocess timeout after 300s",
+            duration_s=300.0,
+        )
+    )
 
     fallback_result = [FixResult(success=True, files_modified=[str(source)])]
     fallback_called = MagicMock(return_value=fallback_result)
@@ -791,7 +823,8 @@ def test_dispatch_batch_timeout_with_fallback(
     monkeypatch.setenv("CRACKERJACK_AI_FIX_SANDBOX_FALLBACK", "1")
 
     dispatcher = SandboxedFixerDispatcher(
-        sandbox=sandbox, in_process_fallback=fallback_called,
+        sandbox=sandbox,
+        in_process_fallback=fallback_called,
     )
     results = dispatcher.dispatch_batch([plan], project_root=tmp_path)
 
@@ -842,11 +875,13 @@ def test_dispatch_batch_malformed_result_json(
     plan = _make_plan(str(source))
 
     sandbox = MagicMock()
-    sandbox.run_command = MagicMock(return_value=SandboxResult(
-        passed=True,
-        modified_content="x = 1\n",
-        duration_s=0.1,
-    ))
+    sandbox.run_command = MagicMock(
+        return_value=SandboxResult(
+            passed=True,
+            modified_content="x = 1\n",
+            duration_s=0.1,
+        )
+    )
 
     monkeypatch.setattr(
         "crackerjack.ai_fix.sandboxed_dispatcher.fix_runner.run",
@@ -926,7 +961,9 @@ class SandboxedFixerDispatcher:
         self._sandbox = sandbox
         self._in_process_fallback = in_process_fallback
 
-    def _serialize_plans(self, plans: list[Any], project_root: Path) -> list[dict[str, Any]]:
+    def _serialize_plans(
+        self, plans: list[Any], project_root: Path
+    ) -> list[dict[str, Any]]:
         """Serialize plans to the JSON contract the runner expects.
 
         Each plan is converted to a ``PlanPayload`` via Pydantic,
@@ -944,8 +981,10 @@ class SandboxedFixerDispatcher:
                 fixer_id=_resolve_fixer_id(plan),
                 file_path=plan.file_path,
                 issue_type=plan.issue_type,
-                changes=[c.model_dump() if hasattr(c, "model_dump") else c
-                         for c in plan.changes],
+                changes=[
+                    c.model_dump() if hasattr(c, "model_dump") else c
+                    for c in plan.changes
+                ],
                 risk_level=plan.risk_level,
                 issue_message=getattr(plan, "issue_message", ""),
                 issue_stage=getattr(plan, "issue_stage", "ruff-check"),
@@ -979,10 +1018,13 @@ class SandboxedFixerDispatcher:
             payloads = self._serialize_plans(plans, project_root)
         except Exception as exc:
             logger.exception("plan serialization failed")
-            return [FixResult(
-                success=False,
-                remaining_issues=[f"plan serialization failed: {exc}"],
-            ) for _ in plans]
+            return [
+                FixResult(
+                    success=False,
+                    remaining_issues=[f"plan serialization failed: {exc}"],
+                )
+                for _ in plans
+            ]
 
         # Write plans JSON to a temp file the sandbox will pass to the runner.
         with tempfile.NamedTemporaryFile(
@@ -1001,16 +1043,26 @@ class SandboxedFixerDispatcher:
         first_plan = plans[0]
         first_file = project_root / first_plan.file_path
         if not first_file.is_file():
-            return [FixResult(
-                success=False,
-                remaining_issues=[f"first plan's file does not exist: {first_file}"],
-            )]
+            return [
+                FixResult(
+                    success=False,
+                    remaining_issues=[
+                        f"first plan's file does not exist: {first_file}"
+                    ],
+                )
+            ]
 
         command = [
-            sys.executable, "-m", "crackerjack", "fix-runner",
-            "--plans-json", str(plans_path),
-            "--output-json", str(output_path),
-            "--project-root", str(project_root),
+            sys.executable,
+            "-m",
+            "crackerjack",
+            "fix-runner",
+            "--plans-json",
+            str(plans_path),
+            "--output-json",
+            str(output_path),
+            "--project-root",
+            str(project_root),
         ]
 
         sandbox_result = self._sandbox.run_command(
@@ -1020,7 +1072,10 @@ class SandboxedFixerDispatcher:
         )
 
         return self._process_sandbox_result(
-            sandbox_result, plans, output_path, plans_path,
+            sandbox_result,
+            plans,
+            output_path,
+            plans_path,
         )
 
     def _process_sandbox_result(
@@ -1056,28 +1111,37 @@ class SandboxedFixerDispatcher:
                 return self._in_process_fallback(plans)
 
             # Surface the failure for the whole batch.
-            return [FixResult(
-                success=False,
-                remaining_issues=[sandbox_result.reason or "sandbox failed"],
-            ) for _ in plans]
+            return [
+                FixResult(
+                    success=False,
+                    remaining_issues=[sandbox_result.reason or "sandbox failed"],
+                )
+                for _ in plans
+            ]
 
         # Sandbox passed; read and parse the result JSON.
         if not output_path.exists():
-            return [FixResult(
-                success=False,
-                remaining_issues=[
-                    f"sandbox passed but output file not found: {output_path}"
-                ],
-            ) for _ in plans]
+            return [
+                FixResult(
+                    success=False,
+                    remaining_issues=[
+                        f"sandbox passed but output file not found: {output_path}"
+                    ],
+                )
+                for _ in plans
+            ]
 
         try:
             results_data = json.loads(output_path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError) as exc:
             logger.exception("malformed result JSON from sandbox")
-            return [FixResult(
-                success=False,
-                remaining_issues=[f"malformed result from sandbox: {exc}"],
-            ) for _ in plans]
+            return [
+                FixResult(
+                    success=False,
+                    remaining_issues=[f"malformed result from sandbox: {exc}"],
+                )
+                for _ in plans
+            ]
 
         # Clean up the output JSON.
         try:
@@ -1089,19 +1153,23 @@ class SandboxedFixerDispatcher:
         results = results_data.get("results", [])
         fix_results: list[FixResult] = []
         for r in results:
-            fix_results.append(FixResult(
-                success=bool(r.get("success", False)),
-                files_modified=list(r.get("files_modified", [])),
-                remaining_issues=list(r.get("remaining_issues", [])),
-            ))
+            fix_results.append(
+                FixResult(
+                    success=bool(r.get("success", False)),
+                    files_modified=list(r.get("files_modified", [])),
+                    remaining_issues=list(r.get("remaining_issues", [])),
+                )
+            )
 
         # Pad with failure results if the runner returned fewer entries
         # than plans (defensive against runner bugs).
         while len(fix_results) < len(plans):
-            fix_results.append(FixResult(
-                success=False,
-                remaining_issues=["runner returned fewer results than plans"],
-            ))
+            fix_results.append(
+                FixResult(
+                    success=False,
+                    remaining_issues=["runner returned fewer results than plans"],
+                )
+            )
 
         return fix_results[: len(plans)]
 
@@ -1201,11 +1269,13 @@ async def test_execute_plans_uses_sandbox_when_enabled(tmp_path: Path) -> None:
     plan_path.write_text("x = 1\n", encoding="utf-8")
 
     fake_sandbox = MagicMock()
-    fake_sandbox.run_command = MagicMock(return_value=SandboxResult(
-        passed=True,
-        modified_content="x = 2\n",
-        duration_s=0.1,
-    ))
+    fake_sandbox.run_command = MagicMock(
+        return_value=SandboxResult(
+            passed=True,
+            modified_content="x = 2\n",
+            duration_s=0.1,
+        )
+    )
 
     coordinator = FixerCoordinator(
         project_path=str(tmp_path),
@@ -1233,6 +1303,7 @@ async def test_execute_plans_uses_sandbox_when_enabled(tmp_path: Path) -> None:
     # was called. The dispatcher's in-process fallback should NOT
     # be invoked because validation didn't fail.
     from unittest.mock import patch
+
     with patch(
         "crackerjack.ai_fix.sandboxed_dispatcher.fix_runner.run",
         lambda _argv=None: 0,
@@ -1304,16 +1375,21 @@ from crackerjack.ai_fix.fix_sandbox import FixSandbox  # noqa: F401  (if not alr
 In `crackerjack/agents/fixer_coordinator.py`, the existing `_execute_single_plan` method (line 190) currently does both selection and dispatch in one body. Extract the in-process dispatch (everything from "for fixer_key in fixer_keys" through "return last_result" plus the tier-3 fallback) into a new method `execute_plans_in_process(plans: list[FixPlan]) -> list[FixResult]`. The new `_execute_single_plan` becomes a 2-line dispatcher:
 
 ```python
-    async def _execute_single_plan(self, plan: FixPlan) -> FixResult:
-        if self.use_sandbox and self._sandboxed_dispatcher is not None:
-            results = await self._sandboxed_dispatcher.dispatch_batch(
-                [plan], project_root=Path(self.project_path),
-            )
-            return results[0] if results else FixResult(
+async def _execute_single_plan(self, plan: FixPlan) -> FixResult:
+    if self.use_sandbox and self._sandboxed_dispatcher is not None:
+        results = await self._sandboxed_dispatcher.dispatch_batch(
+            [plan],
+            project_root=Path(self.project_path),
+        )
+        return (
+            results[0]
+            if results
+            else FixResult(
                 success=False,
                 remaining_issues=["sandboxed dispatch returned no results"],
             )
-        return (await self.execute_plans_in_process([plan]))[0]
+        )
+    return (await self.execute_plans_in_process([plan]))[0]
 ```
 
 **Important**: do not change the existing in-process logic. Move it verbatim; only the structure changes.
@@ -1417,26 +1493,27 @@ Expected: FAIL with `AttributeError: type object 'AutofixCoordinator' has no att
 In `crackerjack/core/autofix_coordinator.py`, near the existing `_get_per_issue_timeout` and `_get_global_retry_budget` helpers (around line 3060-3080), add:
 
 ```python
-    @staticmethod
-    def _get_ai_fix_use_sandbox() -> bool:
-        raw = os.environ.get("CRACKERJACK_AI_FIX_USE_SANDBOX")
-        if raw is None:
-            from crackerjack.config.settings import settings
+@staticmethod
+def _get_ai_fix_use_sandbox() -> bool:
+    raw = os.environ.get("CRACKERJACK_AI_FIX_USE_SANDBOX")
+    if raw is None:
+        from crackerjack.config.settings import settings
 
-            return settings.ai.ai_fix_use_sandbox
-        return raw.lower() in ("1", "true", "yes", "on")
+        return settings.ai.ai_fix_use_sandbox
+    return raw.lower() in ("1", "true", "yes", "on")
 
-    @staticmethod
-    def _get_ai_fix_sandbox_timeout_s() -> int:
-        raw = os.environ.get("CRACKERJACK_AI_FIX_SANDBOX_TIMEOUT_S")
-        if raw is None:
-            from crackerjack.config.settings import settings
 
-            return settings.ai.ai_fix_sandbox_timeout_s
-        try:
-            return int(raw)
-        except ValueError:
-            return 300
+@staticmethod
+def _get_ai_fix_sandbox_timeout_s() -> int:
+    raw = os.environ.get("CRACKERJACK_AI_FIX_SANDBOX_TIMEOUT_S")
+    if raw is None:
+        from crackerjack.config.settings import settings
+
+        return settings.ai.ai_fix_sandbox_timeout_s
+    try:
+        return int(raw)
+    except ValueError:
+        return 300
 ```
 
 (Verify `os` is already imported in this file; if not, add `import os` to the imports.)
@@ -1511,7 +1588,9 @@ def test_sandboxed_fix_in_worktree(tmp_path: Path) -> None:
     # Create a worktree.
     subprocess.run(
         ["git", "worktree", "add", str(worktree), "-b", "test-sandbox-e2e"],
-        cwd=repo, check=True, capture_output=True,
+        cwd=repo,
+        check=True,
+        capture_output=True,
     )
     try:
         # Add a synthetic issue.
@@ -1523,11 +1602,15 @@ def test_sandboxed_fix_in_worktree(tmp_path: Path) -> None:
         )
         subprocess.run(
             ["git", "add", "tests/test_synthetic_sandbox.py"],
-            cwd=worktree, check=True, capture_output=True,
+            cwd=worktree,
+            check=True,
+            capture_output=True,
         )
         subprocess.run(
             ["git", "commit", "-m", "test: synthetic issue"],
-            cwd=worktree, check=True, capture_output=True,
+            cwd=worktree,
+            check=True,
+            capture_output=True,
         )
 
         # Run crackerjack with the sandbox enabled. Bound the run.
@@ -1537,9 +1620,12 @@ def test_sandboxed_fix_in_worktree(tmp_path: Path) -> None:
         env["CRACKERJACK_AI_FIX_PER_ISSUE_TIMEOUT"] = "30"
         env["CRACKERJACK_AI_FIX_GLOBAL_RETRY_BUDGET"] = "5"
         result = subprocess.run(
-            ["uv", "run", "crackerjack", "run", "--ai-fix",
-             "--skip-hooks", "-n"],
-            cwd=worktree, env=env, capture_output=True, text=True, timeout=540,
+            ["uv", "run", "crackerjack", "run", "--ai-fix", "--skip-hooks", "-n"],
+            cwd=worktree,
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=540,
         )
 
         # The run should not crash; the sandbox path is exercised.
@@ -1553,11 +1639,15 @@ def test_sandboxed_fix_in_worktree(tmp_path: Path) -> None:
         # Clean up the worktree.
         subprocess.run(
             ["git", "worktree", "remove", str(worktree), "--force"],
-            cwd=repo, check=False, capture_output=True,
+            cwd=repo,
+            check=False,
+            capture_output=True,
         )
         subprocess.run(
             ["git", "branch", "-D", "test-sandbox-e2e"],
-            cwd=repo, check=False, capture_output=True,
+            cwd=repo,
+            check=False,
+            capture_output=True,
         )
 ```
 

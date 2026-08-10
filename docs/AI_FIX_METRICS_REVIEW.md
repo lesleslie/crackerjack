@@ -140,6 +140,7 @@ def get_agent_success_rate(
 
     if hours:
         from datetime import timedelta
+
         cutoff = datetime.now() - timedelta(hours=hours)
         query += " AND timestamp >= ?"
         params.append(cutoff)
@@ -224,7 +225,9 @@ GROUP BY confidence_level
 **Improvement**:
 
 ```python
-def get_agent_confidence_accuracy(self, agent_name: str, hours: int | None = None) -> dict[str, dict]:
+def get_agent_confidence_accuracy(
+    self, agent_name: str, hours: int | None = None
+) -> dict[str, dict]:
     """Analyze whether confidence predictions match actual success.
 
     Returns:
@@ -470,6 +473,7 @@ class AgentCoordinator:
         self.context = context
         self.job_id = job_id  # STORE: for tracking
         # ... rest of init ...
+
 
 # In orchestration layer, pass job_id:
 coordinator = AgentCoordinator(

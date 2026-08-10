@@ -57,8 +57,6 @@ ______________________________________________________________________
 Append to `tests/unit/core/test_ai_fix_env_vars.py` (after the existing `test_get_ai_fix_sandbox_timeout_s_default` function at line 42, before EOF):
 
 ```python
-
-
 def test_get_regen_timeout_default(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -99,16 +97,15 @@ Expected: 4 FAILED tests with `AttributeError: type object 'AutofixCoordinator' 
 In `crackerjack/core/autofix_coordinator.py`, insert after line 1652 (the `_get_per_issue_timeout` method ends with `return 300` followed by blank line at 1653):
 
 ```python
-
-    @staticmethod
-    def _get_regen_timeout() -> int:
-        raw = os.environ.get("CRACKERJACK_AI_FIX_REGEN_TIMEOUT")
-        if raw is None:
-            return 90
-        try:
-            return int(raw)
-        except ValueError:
-            return 90
+@staticmethod
+def _get_regen_timeout() -> int:
+    raw = os.environ.get("CRACKERJACK_AI_FIX_REGEN_TIMEOUT")
+    if raw is None:
+        return 90
+    try:
+        return int(raw)
+    except ValueError:
+        return 90
 ```
 
 The blank line between the existing `_get_per_issue_timeout` block and the new method preserves the PEP 8 two-blank-lines-between-methods convention for class methods.

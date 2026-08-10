@@ -74,7 +74,6 @@ from crackerjack.cli.handlers.documentation import (
 from crackerjack.cli.handlers.main_handlers import (
     handle_interactive_mode,
     handle_standard_mode,
-    setup_ai_agent_env,
 )
 from crackerjack.cli.lifecycle_handlers import (
     health_probe_handler,
@@ -190,7 +189,6 @@ def run(
     xcode_scheme: str = CLI_OPTIONS["xcode_scheme"],
     xcode_configuration: str = CLI_OPTIONS["xcode_configuration"],
     xcode_destination: str = CLI_OPTIONS["xcode_destination"],
-    ai_fix: bool = CLI_OPTIONS["ai_fix"],
     select_provider: bool = CLI_OPTIONS["select_provider"],
     dry_run: bool = CLI_OPTIONS["dry_run"],
     full_release: str | None = CLI_OPTIONS["full_release"],
@@ -303,7 +301,6 @@ def run(
         return
 
     options = _create_and_configure_options(locals())
-    options = _setup_ai_options(locals(), options)
     _configure_logging(debug)
 
     if not _process_all_commands(locals(), options):
@@ -523,7 +520,6 @@ def _create_and_configure_options(local_vars: dict[str, t.Any]) -> Options:
         xcode_scheme=local_vars["xcode_scheme"],
         xcode_configuration=local_vars["xcode_configuration"],
         xcode_destination=local_vars["xcode_destination"],
-        ai_fix=local_vars["ai_fix"],
         dry_run=local_vars["dry_run"],
         full_release=local_vars["full_release"],
         track_progress=local_vars["track_progress"],
@@ -535,18 +531,6 @@ def _create_and_configure_options(local_vars: dict[str, t.Any]) -> Options:
     options.semantic_stats = local_vars["semantic_stats"]
     options.remove_from_index = local_vars["remove_from_index"]
 
-    return options
-
-
-def _setup_ai_options(local_vars: dict[str, t.Any], options: Options) -> Options:
-    ai_fix, _verbose = setup_debug_and_verbose_flags(
-        local_vars["ai_fix"],
-        local_vars["ai_debug"],
-        local_vars["debug"],
-        local_vars["verbose"],
-        options,
-    )
-    setup_ai_agent_env(ai_fix, local_vars["ai_debug"] or local_vars["debug"])
     return options
 
 

@@ -53,7 +53,7 @@ For every fix attempt, store:
     "success": True,
     "confidence": 0.8,
     "fix_description": "Extracted complex method into helper",
-    "timestamp": "2026-02-11T08:00:00Z"
+    "timestamp": "2026-02-11T08:00:00Z",
 }
 ```
 
@@ -99,34 +99,21 @@ class FixStrategyMemory:
         self.embeddings = np.load(db_path / "issue_embeddings.npy")
         self.strategies = pd.read_csv(db_path / "fix_strategies.csv")
 
-    def find_similar_issues(
-        self,
-        issue: Issue,
-        k: int = 5
-    ) -> list[FixAttempt]:
+    def find_similar_issues(self, issue: Issue, k: int = 5) -> list[FixAttempt]:
         """Find k most similar historical issues."""
 
         # Embed current issue
         issue_embedding = self._embed_issue(issue)
 
         # Calculate cosine similarity
-        similarities = cosine_similarity(
-            [issue_embedding],
-            self.embeddings
-        )[0]
+        similarities = cosine_similarity([issue_embedding], self.embeddings)[0]
 
         # Get top k indices
         top_k_indices = np.argsort(similarities)[-k:][::-1]
 
-        return [
-            self.strategies.iloc[i]
-            for i in top_k_indices
-        ]
+        return [self.strategies.iloc[i] for i in top_k_indices]
 
-    def recommend_strategy(
-        self,
-        issue: Issue
-    ) -> tuple[str, float]:
+    def recommend_strategy(self, issue: Issue) -> tuple[str, float]:
         """Recommend best fix strategy for this issue."""
 
         similar = self.find_similar_issues(issue, k=10)
@@ -146,8 +133,7 @@ class FixStrategyMemory:
 
         # Best strategy = highest weighted similarity
         best_strategy = max(
-            strategy_scores.items(),
-            key=lambda x: sum(x[1]) / len(x[1])
+            strategy_scores.items(), key=lambda x: sum(x[1]) / len(x[1])
         )
 
         confidence = sum(best_strategy[1]) / len(best_strategy[1])
@@ -155,12 +141,7 @@ class FixStrategyMemory:
         return best_strategy[0], confidence
 
     def record_attempt(
-        self,
-        issue: Issue,
-        agent: str,
-        strategy: str,
-        success: bool,
-        confidence: float
+        self, issue: Issue, agent: str, strategy: str, success: bool, confidence: float
     ):
         """Record a fix attempt for future learning."""
 
@@ -168,14 +149,16 @@ class FixStrategyMemory:
         embedding = self._embed_issue(issue)
 
         # Store in database
-        self.strategies.append({
-            "issue_embedding": embedding,
-            "agent": agent,
-            "strategy": strategy,
-            "success": success,
-            "confidence": confidence,
-            "timestamp": datetime.now().isoformat()
-        })
+        self.strategies.append(
+            {
+                "issue_embedding": embedding,
+                "agent": agent,
+                "strategy": strategy,
+                "success": success,
+                "confidence": confidence,
+                "timestamp": datetime.now().isoformat(),
+            }
+        )
 
         # Persist
         self._save_to_disk()

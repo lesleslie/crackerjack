@@ -169,6 +169,7 @@ class DataProcessingService:
 from crackerjack.models.protocols import ServiceProtocol
 from rich.console import Console
 
+
 def use_service() -> None:
     """Demonstrate proper service lifecycle usage."""
     # Create service
@@ -187,6 +188,7 @@ def use_service() -> None:
     finally:
         service.cleanup()
 
+
 # Correct usage pattern with context manager
 class ServiceContext:
     """Context manager for automatic service lifecycle."""
@@ -200,6 +202,7 @@ class ServiceContext:
 
     def __exit__(self, *args: t.Any) -> None:
         self.service.cleanup()
+
 
 # Usage
 def use_service_with_context() -> None:
@@ -347,6 +350,7 @@ from crackerjack.models.protocols import (
     CoverageRatchetProtocol,
 )
 
+
 def verify_protocols() -> None:
     """Verify that service implements all expected protocols."""
     service = ComprehensiveTestService(console)
@@ -451,6 +455,7 @@ from crackerjack.services.test_manager import TestManager
 from crackerjack.services.git_service import GitService
 from crackerjack.services.file_system import FileSystemService
 
+
 def create_real_coordinator() -> SessionCoordinator:
     """Create coordinator with real implementations."""
     console = Console()
@@ -459,6 +464,7 @@ def create_real_coordinator() -> SessionCoordinator:
     git = GitService()
 
     return SessionCoordinator(console, test_manager, filesystem, git)
+
 
 # Usage
 coordinator = create_real_coordinator()
@@ -734,7 +740,9 @@ def mock_console() -> ConsoleMock:
     return ConsoleMock()
 
 
-def test_with_fixtures(mock_service: ServiceProtocol, mock_console: ConsoleMock) -> None:
+def test_with_fixtures(
+    mock_service: ServiceProtocol, mock_console: ConsoleMock
+) -> None:
     """Test using pytest fixtures."""
     # Service is already initialized
     assert mock_service.health_check()
@@ -1066,8 +1074,10 @@ ______________________________________________________________________
 # WRONG: Importing concrete class
 from crackerjack.managers.test_manager import TestManager
 
+
 def run_tests(manager: TestManager) -> None:
     manager.run_tests(options)
+
 
 # Problems:
 # - Tightly coupled to TestManager implementation
@@ -1078,8 +1088,10 @@ def run_tests(manager: TestManager) -> None:
 # CORRECT: Importing protocol
 from crackerjack.models.protocols import TestManagerProtocol
 
+
 def run_tests(manager: TestManagerProtocol) -> None:
     manager.run_tests(options)
+
 
 # Benefits:
 # - Loose coupling (any TestManagerProtocol implementation works)
@@ -1093,8 +1105,10 @@ def run_tests(manager: TestManagerProtocol) -> None:
 # WRONG: Global singleton
 console = Console()  # Global!
 
+
 def print_message(msg: str) -> None:
     console.print(msg)
+
 
 # Problems:
 # - Hard to test (cannot inject mock console)
@@ -1105,6 +1119,7 @@ def print_message(msg: str) -> None:
 # CORRECT: Protocol-based dependency injection
 def print_message(msg: str, console: ConsoleInterface) -> None:
     console.print(msg)
+
 
 # Or with class
 class MessagePrinter:
@@ -1122,9 +1137,11 @@ class MessagePrinter:
 def get_test_manager() -> TestManager:
     return TestManager()
 
+
 def run_tests() -> None:
     manager = get_test_manager()  # Hidden dependency
     manager.run_tests(options)
+
 
 # Problems:
 # - Hidden dependency on TestManager
@@ -1160,6 +1177,7 @@ class BrokenTestManager:
     def run_tests(self, options: OptionsProtocol, extra_param: str) -> bool:
         # Extra parameter breaks protocol contract!
         return True
+
 
 # Problems:
 # - Type checker will complain

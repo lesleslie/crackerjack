@@ -282,6 +282,7 @@ def complex_method(self, data: dict) -> bool:
                     return result
     return False
 
+
 # AFTER: Extracted helpers following single responsibility principle
 def complex_method(self, data: dict) -> bool:
     """Orchestrates the workflow using clear helper methods."""
@@ -290,18 +291,22 @@ def complex_method(self, data: dict) -> bool:
     processed = self._process_data(data)
     return self._save_results(processed)
 
+
 def _validate_input(self, data: dict) -> bool:
     """Clear, single-purpose validation logic."""
     return bool(data and isinstance(data, dict))
+
 
 def _handle_invalid_input(self) -> bool:
     """Clear error handling with user feedback."""
     self.console.print("[red]Invalid input[/red]")
     return False
 
+
 def _process_data(self, data: dict) -> dict:
     """Clear data transformation logic."""
     return {k: v for k, v in data.items() if v}
+
 
 def _save_results(self, processed: dict) -> bool:
     """Clear persistence logic."""

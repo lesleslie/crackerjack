@@ -103,6 +103,7 @@ ______________________________________________________________________
 class TestManagerProtocol(ServiceProtocol, t.Protocol):
     def run_tests(self, options: OptionsProtocol) -> bool: ...
     def get_test_failures(self) -> list[str]: ...
+
     # No docstrings explaining purpose, behavior, or contracts
 ```
 
@@ -261,6 +262,7 @@ ______________________________________________________________________
    class ConsoleInterface(t.Protocol):
        def print(self, *args: t.Any, **kwargs: t.Any) -> None: ...
 
+
    # Enables runtime checks
    if isinstance(console, ConsoleInterface):
        console.print("Safe to call")
@@ -281,6 +283,7 @@ ______________________________________________________________________
        def cleanup(self) -> None: ...
        def health_check(self) -> bool: ...
 
+
    # Specialized protocols extend base
    class TestManagerProtocol(ServiceProtocol, t.Protocol):
        def run_tests(self, options: OptionsProtocol) -> bool: ...
@@ -294,6 +297,7 @@ ______________________________________________________________________
    # Undermines type safety
    def run_fast_hooks(self) -> list[t.Any]: ...
    def get_custom_metric(self, name: str) -> t.Any: ...
+
 
    # Better approach
    def run_fast_hooks(self) -> list[HookResult]: ...
@@ -312,8 +316,10 @@ ______________________________________________________________________
    # Current: Too permissive
    def check(self, config: t.Any | None = None) -> t.Any: ...
 
+
    # Better: Constrained
    from crackerjack.config.hooks import HookConfig
+
 
    def check(
        self,
@@ -591,6 +597,7 @@ def test_service_protocol_compliance():
 ```python
 class MockTestManager:
     """Mock TestManagerProtocol for testing."""
+
     def __init__(self):
         self.tests_run = False
 

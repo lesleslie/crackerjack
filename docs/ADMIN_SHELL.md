@@ -144,14 +144,11 @@ await session_tracker.emit_session_start(
         "adapters": ["pytest", "ruff", "mypy", "bandit"],
         "component_type": "inspector",
         "project_root": "/path/to/project",
-    }
+    },
 )
 
 # Session end event emitted on shell exit
-await session_tracker.emit_session_end(
-    session_id="session_abc123",
-    metadata={}
-)
+await session_tracker.emit_session_end(session_id="session_abc123", metadata={})
 ```
 
 ### QA Adapters
@@ -183,9 +180,11 @@ To add a new helper function:
 
 ```python
 def _add_crackerjack_namespace(self) -> None:
-    self.namespace.update({
-        "my_helper": lambda: asyncio.run(self._my_helper()),
-    })
+    self.namespace.update(
+        {
+            "my_helper": lambda: asyncio.run(self._my_helper()),
+        }
+    )
 ```
 
 2. Implement the async function:
@@ -223,9 +222,9 @@ If quality checks fail:
 
 1. Run individual checks to identify the issue:
    ```python
-   lint()      # Check linting
-   typecheck() # Check types
-   scan()      # Check security
+   lint()  # Check linting
+   typecheck()  # Check types
+   scan()  # Check security
    ```
 1. Check tool installation:
    ```bash

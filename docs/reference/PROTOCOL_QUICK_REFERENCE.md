@@ -31,6 +31,7 @@ ______________________________________________________________________
 ```python
 from typing import Protocol
 
+
 @runtime_checkable
 class ServiceProtocol(Protocol):
     """Base interface for all services."""
@@ -232,6 +233,7 @@ from crackerjack.models.protocols import (
     TestManagerProtocol,
 )
 
+
 def create_coordinator(
     console: ConsoleInterface,
     test_manager: TestManagerProtocol,
@@ -241,6 +243,7 @@ def create_coordinator(
         console=console,
         test_manager=test_manager,
     )
+
 
 # Usage
 console: ConsoleInterface = CrackerjackConsole()
@@ -261,6 +264,7 @@ ______________________________________________________________________
 ```python
 from crackerjack.models.protocols import ServiceProtocol
 
+
 def verify_service(service: t.Any) -> None:
     """Verify object implements ServiceProtocol."""
     if isinstance(service, ServiceProtocol):
@@ -269,6 +273,7 @@ def verify_service(service: t.Any) -> None:
         print("✅ Service implements ServiceProtocol")
     else:
         raise TypeError("Not a valid service")
+
 
 # Usage
 service = MyService()
@@ -288,6 +293,7 @@ class MyService:
 
     def run_tests(self, options: OptionsProtocol) -> bool: ...
     def get_test_failures(self) -> list[str]: ...
+
 
 # Check both protocols
 from crackerjack.models.protocols import (
@@ -317,6 +323,7 @@ class MockTestManager:
         return ["mock_test_1"] if self.should_fail else []
 
     # Implement other TestManagerProtocol methods...
+
 
 # Usage
 mock = MockTestManager()
@@ -373,6 +380,7 @@ def use_service(service: ServiceProtocol) -> None:
     service.initialize()
     assert service.health_check()
 
+
 my_service = MyService(config)
 use_service(my_service)  # Type checker verifies compliance
 ```
@@ -396,6 +404,7 @@ ______________________________________________________________________
 import pytest
 from crackerjack.models.protocols import ServiceProtocol
 
+
 def test_service_implementation():
     """Test that MyService implements ServiceProtocol."""
     service = MyService(config=Config())
@@ -409,6 +418,7 @@ def test_service_implementation():
 
     service.cleanup()
     # Post-cleanup state
+
 
 def test_service_with_mock():
     """Test using protocol mock."""
@@ -428,7 +438,9 @@ ______________________________________________________________________
 class BrokenService:
     def initialize(self) -> None: ...
     def health_check(self) -> bool: ...
+
     # cleanup() is missing!
+
 
 # Type checker will catch this, but runtime won't
 service = BrokenService()
@@ -455,6 +467,7 @@ ______________________________________________________________________
 class BadService:
     def health_check(self) -> str:  # Should return bool!
         return "healthy"
+
 
 # Type checker error, but runtime passes isinstance()
 service = BadService()
@@ -565,6 +578,7 @@ ______________________________________________________________________
    # WRONG: Missing method
    class BadService:
        def initialize(self) -> None: ...
+
        # cleanup() is missing!
    ```
 
@@ -583,6 +597,7 @@ ______________________________________________________________________
    ```python
    # WRONG
    console = Console()  # Global
+
 
    # CORRECT
    def __init__(self, console: ConsoleInterface):

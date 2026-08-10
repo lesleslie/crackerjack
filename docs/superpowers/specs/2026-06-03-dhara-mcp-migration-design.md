@@ -168,6 +168,7 @@ that Dhara's `aggregate_patterns` tool looks for:
 def record_adapter_attempt(self, attempt: AdapterAttemptRecord) -> None:
     asyncio.run(self._record_attempt_async(attempt))
 
+
 async def _record_attempt_async(self, attempt: AdapterAttemptRecord) -> None:
     try:
         record = {
@@ -182,6 +183,7 @@ async def _record_attempt_async(self, attempt: AdapterAttemptRecord) -> None:
         )
     except Exception as exc:
         logger.debug(f"DharaMCPAdapterLearner.record_adapter_attempt failed: {exc!r}")
+
 
 def _derive_pattern(self, attempt: AdapterAttemptRecord) -> str:
     # "success:{name}", "error:{error_class}", etc. — a coarse
@@ -281,14 +283,13 @@ def create_adapter_learner(
         for candidate in _dhara_adapter_learning_db_candidates(db_path):
             try:
                 learner = DharaAdapterLearner(
-                    db_path=candidate, min_attempts=min_attempts,
+                    db_path=candidate,
+                    min_attempts=min_attempts,
                 )
                 logger.info(f"adapter_learning: using in-process Dhara at {candidate}")
                 return learner
             except Exception as exc:
-                logger.warning(
-                    f"Dhara in-process unavailable at {candidate}: {exc}"
-                )
+                logger.warning(f"Dhara in-process unavailable at {candidate}: {exc}")
                 continue
         if backend == "dhara":
             logger.warning("Dhara backend unavailable, using NoOp as requested")
@@ -298,7 +299,8 @@ def create_adapter_learner(
     for candidate in _sqlite_candidate_paths(db_path):
         try:
             learner = SQLiteAdapterLearner(
-                db_path=candidate, min_attempts=min_attempts,
+                db_path=candidate,
+                min_attempts=min_attempts,
             )
             logger.info(f"adapter_learning: using SQLite at {candidate}")
             return learner
@@ -412,7 +414,9 @@ def disconnect(self) -> None:
         except RuntimeError as exc:
             if "cancel scope" not in str(exc):
                 raise
-            logger.debug(f"DharaMCPClient.disconnect: cancel-scope error ignored: {exc!r}")
+            logger.debug(
+                f"DharaMCPClient.disconnect: cancel-scope error ignored: {exc!r}"
+            )
         self._session = None
     if self._client is not None:
         try:
@@ -420,7 +424,9 @@ def disconnect(self) -> None:
         except RuntimeError as exc:
             if "cancel scope" not in str(exc):
                 raise
-            logger.debug(f"DharaMCPClient.disconnect: cancel-scope error ignored: {exc!r}")
+            logger.debug(
+                f"DharaMCPClient.disconnect: cancel-scope error ignored: {exc!r}"
+            )
         self._client = None
     self._is_connected = False
 ```
@@ -570,6 +576,7 @@ def test_no_aio_thread_leak_when_learner_garbage_collected(
         # Simulate the post-commit-3 state by ensuring the module
         # is NOT imported during this test.
         import sys
+
         for mod in list(sys.modules):
             if mod.startswith("crackerjack.services.aiosqlite_cleanup"):
                 del sys.modules[mod]

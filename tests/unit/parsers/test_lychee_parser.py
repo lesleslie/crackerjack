@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from crackerjack.agents.base import IssueType, Priority
+from crackerjack.models.issues import IssueType, Priority
 from crackerjack.parsers.lychee_parser import (
     LycheeRegexParser,
     parse_lychee_output,

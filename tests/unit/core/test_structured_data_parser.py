@@ -3,7 +3,7 @@
 import pytest
 from rich.console import Console
 
-from crackerjack.agents.base import Issue, IssueType, Priority
+from crackerjack.models.issues import Issue, IssueType, Priority
 from crackerjack.parsers.regex_parsers import StructuredDataParser
 
 

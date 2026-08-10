@@ -120,7 +120,7 @@ def test_evaluate_planning_need(temp_project_path):
     pipeline = ProactiveWorkflowPipeline(temp_project_path)
 
     # Mock issues that should trigger planning
-    from crackerjack.agents.base import Issue, IssueType, Priority
+    from crackerjack.models.issues import Issue, IssueType, Priority
 
     mock_issues = [
         Issue(
@@ -162,7 +162,7 @@ async def test_execute_standard_workflow(temp_project_path):
 @pytest.mark.asyncio
 async def test_architectural_assessment_initialization():
     """Test initialization of ArchitecturalAssessment."""
-    from crackerjack.agents.base import Issue, IssueType, Priority
+    from crackerjack.models.issues import Issue, IssueType, Priority
 
     mock_issues = [
         Issue(

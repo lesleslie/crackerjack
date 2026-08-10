@@ -19,6 +19,7 @@ Added `AdapterTimeouts` class with 11 timeout fields:
 ```python
 class AdapterTimeouts(Settings):
     """Timeout settings for QA adapters (in seconds)."""
+
     zuban_lsp_timeout: float = 120.0  # Zubun LSP server
     skylos_timeout: int = 120  # Dead code detection
     refurb_timeout: int = 120  # Modern Python suggestions

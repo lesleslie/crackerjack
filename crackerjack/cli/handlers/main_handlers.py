@@ -15,54 +15,6 @@ if t.TYPE_CHECKING:
     )
 
 
-def setup_ai_agent_env(
-    ai_agent: bool,
-    debug_mode: bool = False,
-    console: ConsoleInterface | None = None,
-) -> None:
-    if console is None:
-        console = sys.modules["crackerjack.cli.handlers"].console
-    if debug_mode:
-        os.environ["CRACKERJACK_DEBUG"] = "1"
-
-    if ai_agent:
-        os.environ["AI_AGENT"] = "1"
-
-        if debug_mode:
-            os.environ["AI_AGENT_DEBUG"] = "1"
-            os.environ["AI_AGENT_VERBOSE"] = "1"
-
-            console.print(
-                "[bold cyan]🐛 AI Agent Debug Mode Configuration: [/ bold cyan]",
-            )
-            console.print(f" • AI Agent: {'✅ Enabled' if ai_agent else '❌ Disabled'}")
-            console.print(
-                f" • Debug Mode: {'✅ Enabled' if os.environ.get('AI_AGENT_DEBUG') == '1' else '❌ Disabled'}",
-            )
-            console.print(
-                f" • Verbose Mode: {'✅ Enabled' if os.environ.get('AI_AGENT_VERBOSE') == '1' else '❌ Disabled'}",
-            )
-            console.print(" • Enhanced logging will be available during execution")
-    elif debug_mode:
-        os.environ["AI_AGENT_DEBUG"] = "1"
-        os.environ["AI_AGENT_VERBOSE"] = "1"
-        console.print(
-            "[bold cyan]🐛 AI Debug Mode Configuration: [/ bold cyan]",
-        )
-        console.print(
-            f" • Debug Mode: {'✅ Enabled' if os.environ.get('AI_AGENT_DEBUG') == '1' else '❌ Disabled'}",
-        )
-        console.print(
-            f" • Verbose Mode: {'✅ Enabled' if os.environ.get('AI_AGENT_VERBOSE') == '1' else '❌ Disabled'}",
-        )
-        console.print(" • Structured logging enabled for debugging")
-
-    if debug_mode:
-        from crackerjack.services.logging import setup_structured_logging
-
-        setup_structured_logging(level="DEBUG", json_output=True)
-
-
 def setup_swarm_env(
     swarm: bool,
     workers: int,

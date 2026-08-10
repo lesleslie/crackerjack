@@ -386,11 +386,13 @@ async def _execute_consensus(
     candidates: list[AgentScore],
 ) -> ExecutionResult:
     """Execute all agents and require consensus."""
-    results = await asyncio.gather(*[
-        agent.execute(request.task, request.context)
-        for agent_score in candidates
-        for agent in [agent_score.agent]
-    ])
+    results = await asyncio.gather(
+        *[
+            agent.execute(request.task, request.context)
+            for agent_score in candidates
+            for agent in [agent_score.agent]
+        ]
+    )
 
     # Check if all agents agree on the fix
     if len(set(r.fix_hash for r in results)) == 1:

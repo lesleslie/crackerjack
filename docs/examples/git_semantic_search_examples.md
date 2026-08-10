@@ -16,7 +16,7 @@ result = await mcp_client.call_tool(
         "query": "security fixes and vulnerability patches",
         "limit": 15,
         "days_back": 90,
-    }
+    },
 )
 
 # Result includes commits related to security even if they don't
@@ -38,7 +38,7 @@ result = await mcp_client.call_tool(
         "pattern_description": "urgent hotfix commits after releases",
         "days_back": 180,
         "min_frequency": 5,
-    }
+    },
 )
 
 # Detects patterns like:
@@ -61,7 +61,7 @@ result = await mcp_client.call_tool(
     {
         "focus_area": "merge_conflicts",
         "days_back": 60,
-    }
+    },
 )
 
 # Returns prioritized recommendations:
@@ -92,7 +92,7 @@ searcher = create_git_semantic_search(
     config=GitSemanticSearchConfig(
         similarity_threshold=0.7,  # Higher threshold = more strict
         max_results=20,
-    )
+    ),
 )
 
 # Search for performance-related commits
@@ -130,7 +130,7 @@ for pattern in patterns["patterns"]:
     print(f"Description: {pattern['description']}")
 
     # Show example commits
-    for example in pattern['examples'][:3]:
+    for example in pattern["examples"][:3]:
         print(f"  - {example['commit_hash'][:8]}: {example['message']}")
     print()
 ```
@@ -146,16 +146,16 @@ recommendations = await searcher.recommend_git_practices(
 
 print(f"Found {recommendations['recommendations_count']} recommendations\n")
 
-for rec in recommendations['recommendations']:
+for rec in recommendations["recommendations"]:
     print(f"Priority {rec['priority']}/5: {rec['title']}")
     print(f"Type: {rec['type']}")
     print(f"Impact: {rec['potential_impact']}")
 
-    if rec.get('metric_baseline'):
+    if rec.get("metric_baseline"):
         print(f"Baseline: {rec['metric_baseline']}")
 
     print("Actionable Steps:")
-    for i, step in enumerate(rec['actionable_steps'], 1):
+    for i, step in enumerate(rec["actionable_steps"], 1):
         print(f"  {i}. {step}")
     print("-" * 60)
 ```
@@ -299,6 +299,7 @@ if results["results_count"] > 3:
 import asyncio
 from datetime import datetime, timedelta
 
+
 async def weekly_health_check(repo_path: str):
     searcher = create_git_semantic_search(repo_path)
 
@@ -307,8 +308,8 @@ async def weekly_health_check(repo_path: str):
         days_back=7,  # Last week
     )
 
-    priority_sum = sum(r['priority'] for r in recommendations['recommendations'])
-    issue_count = len(recommendations['recommendations'])
+    priority_sum = sum(r["priority"] for r in recommendations["recommendations"])
+    issue_count = len(recommendations["recommendations"])
 
     print(f"Weekly Health Score:")
     print(f"  Issues Found: {issue_count}")
@@ -316,6 +317,7 @@ async def weekly_health_check(repo_path: str):
     print(f"  Status: {'NEEDS ATTENTION' if priority_sum > 10 else 'HEALTHY'}")
 
     searcher.close()
+
 
 # Run weekly
 asyncio.run(weekly_health_check("/path/to/repo"))

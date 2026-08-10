@@ -105,7 +105,9 @@ ______________________________________________________________________
 **Refactoring Plan:**
 
 ```python
-def _parse_test_statistics(self, output: str, *, already_clean: bool = False) -> dict[str, t.Any]:
+def _parse_test_statistics(
+    self, output: str, *, already_clean: bool = False
+) -> dict[str, t.Any]:
     """Parse test statistics from pytest output."""
     clean_output = output if already_clean else self._strip_ansi_codes(output)
     stats = self._initialize_test_stats()
@@ -119,12 +121,21 @@ def _parse_test_statistics(self, output: str, *, already_clean: bool = False) ->
 
     return stats
 
+
 def _initialize_test_stats(self) -> dict[str, t.Any]:
     """Initialize empty test statistics dictionary."""
     return {
-        "total": 0, "passed": 0, "failed": 0, "skipped": 0,
-        "errors": 0, "xfailed": 0, "xpassed": 0, "duration": 0.0, "coverage": None
+        "total": 0,
+        "passed": 0,
+        "failed": 0,
+        "skipped": 0,
+        "errors": 0,
+        "xfailed": 0,
+        "xpassed": 0,
+        "duration": 0.0,
+        "coverage": None,
     }
+
 
 def _parse_summary_section(self, output: str, stats: dict[str, t.Any]) -> None:
     """Parse summary section and extract metrics."""
@@ -156,9 +167,13 @@ def _extract_structured_failures(self, output: str) -> list["TestFailure"]:
 
     for i, line in enumerate(lines):
         parse_result = self._parse_failure_line(
-            line, lines, i, parser_state["current_failure"],
-            parser_state["in_traceback"], parser_state["in_captured"],
-            parser_state["capture_type"]
+            line,
+            lines,
+            i,
+            parser_state["current_failure"],
+            parser_state["in_traceback"],
+            parser_state["in_captured"],
+            parser_state["capture_type"],
         )
 
         if parse_result.get("stop_parsing"):
@@ -180,6 +195,7 @@ def _extract_structured_failures(self, output: str) -> list["TestFailure"]:
 
     self._enrich_failures_from_short_summary(failures, output)
     return failures
+
 
 def _initialize_parser_state(self) -> dict[str, t.Any]:
     """Initialize parsing state machine."""
@@ -212,9 +228,12 @@ def _update_coverage_badge(self, ratchet_result: dict[str, t.Any]) -> None:
         if current_coverage is not None and current_coverage >= 0:
             self._update_badge_if_needed(current_coverage)
         else:
-            self.console.print("[yellow]⚠️[/yellow] No valid coverage data found for badge update")
+            self.console.print(
+                "[yellow]⚠️[/yellow] No valid coverage data found for badge update"
+            )
     except Exception as e:
         self.console.print(f"[yellow]⚠️[/yellow] Badge update failed: {e}")
+
 
 def _verify_coverage_files_exist(self) -> None:
     """Verify coverage files exist, logging info if not."""
@@ -222,24 +241,36 @@ def _verify_coverage_files_exist(self) -> None:
     ratchet_path = self.pkg_path / ".coverage-ratchet.json"
 
     if not coverage_json_path.exists():
-        self.console.print("[yellow]ℹ️[/yellow] Coverage file doesn't exist yet, will be created after test run")
+        self.console.print(
+            "[yellow]ℹ️[/yellow] Coverage file doesn't exist yet, will be created after test run"
+        )
     if not ratchet_path.exists():
-        self.console.print("[yellow]ℹ️[/yellow] Coverage ratchet file doesn't exist yet, initializing...")
+        self.console.print(
+            "[yellow]ℹ️[/yellow] Coverage ratchet file doesn't exist yet, initializing..."
+        )
 
-def _extract_coverage_with_fallbacks(self, ratchet_result: dict[str, t.Any]) -> float | None:
+
+def _extract_coverage_with_fallbacks(
+    self, ratchet_result: dict[str, t.Any]
+) -> float | None:
     """Extract coverage using multiple fallback strategies."""
     coverage = self._attempt_coverage_extraction()
     coverage = self._handle_coverage_extraction_result(coverage)
     coverage = self._get_fallback_coverage(ratchet_result, coverage)
     return coverage
 
+
 def _update_badge_if_needed(self, current_coverage: float) -> None:
     """Update badge if coverage has changed significantly."""
     if self._coverage_badge_service.should_update_badge(current_coverage):
         self._coverage_badge_service.update_readme_coverage_badge(current_coverage)
-        self.console.print(f"[green]✅[/green] Badge updated to {current_coverage:.2f}%")
+        self.console.print(
+            f"[green]✅[/green] Badge updated to {current_coverage:.2f}%"
+        )
     else:
-        self.console.print(f"[dim]📊 Badge unchanged (current: {current_coverage:.2f}%)[/dim]")
+        self.console.print(
+            f"[dim]📊 Badge unchanged (current: {current_coverage:.2f}%)[/dim]"
+        )
 ```
 
 **Complexity Reduction:**
@@ -265,6 +296,7 @@ def _render_test_results_panel(
     self._add_metadata_to_table(table, stats, workers)
     self._render_test_results_panel_final(table, stats, success)
 
+
 def _create_test_results_table(self, stats: dict[str, t.Any]) -> "Table":
     """Create and configure test results table."""
     table = Table(box=box.SIMPLE, header_style="bold bright_white")
@@ -272,6 +304,7 @@ def _create_test_results_table(self, stats: dict[str, t.Any]) -> "Table":
     table.add_column("Count", justify="right", style="bright_white")
     table.add_column("Percentage", justify="right", style="magenta")
     return table
+
 
 def _add_test_metrics_to_table(self, table: "Table", stats: dict[str, t.Any]) -> None:
     """Add test metrics to the results table."""
@@ -285,6 +318,7 @@ def _add_test_metrics_to_table(self, table: "Table", stats: dict[str, t.Any]) ->
     table.add_row("─" * 20, "─" * 10, "─" * 15, style="dim")
     table.add_row("📊 Total Tests", str(total), "100.0%", style="bold")
 
+
 def _add_metadata_to_table(
     self, table: "Table", stats: dict[str, t.Any], workers: int | str
 ) -> None:
@@ -293,7 +327,9 @@ def _add_metadata_to_table(
     table.add_row("👥 Workers", str(workers), "", style="bold cyan")
 
     if stats.get("coverage") is not None:
-        table.add_row("📈 Coverage", f"{stats['coverage']:.1f}%", "", style="bold green")
+        table.add_row(
+            "📈 Coverage", f"{stats['coverage']:.1f}%", "", style="bold green"
+        )
 ```
 
 **Complexity Reduction:**
@@ -321,18 +357,26 @@ def _run_ai_fix_iteration_loop(
 ) -> bool:
     """Run main AI fix iteration loop with progress tracking."""
     loop_state = self._initialize_iteration_state()
-    self.progress_manager.start_fix_session(stage=stage, initial_issue_count=len(initial_issues))
+    self.progress_manager.start_fix_session(
+        stage=stage, initial_issue_count=len(initial_issues)
+    )
 
     try:
         while True:
-            issues = self._get_iteration_issues_with_log(loop_state.iteration, hook_results, stage)
+            issues = self._get_iteration_issues_with_log(
+                loop_state.iteration, hook_results, stage
+            )
             current_count = len(issues)
 
             self.progress_manager.start_iteration(loop_state.iteration, current_count)
 
             completion_result = self._check_iteration_completion(
-                loop_state.iteration, current_count, loop_state.previous_count,
-                loop_state.no_progress_count, loop_state.max_iterations, stage
+                loop_state.iteration,
+                current_count,
+                loop_state.previous_count,
+                loop_state.no_progress_count,
+                loop_state.max_iterations,
+                stage,
             )
 
             if completion_result is not None:
@@ -345,6 +389,7 @@ def _run_ai_fix_iteration_loop(
     except Exception as e:
         return self._handle_iteration_error(e, loop_state.iteration)
 
+
 def _initialize_iteration_state(self) -> "IterationState":
     """Initialize iteration loop state."""
     return IterationState(
@@ -354,17 +399,21 @@ def _initialize_iteration_state(self) -> "IterationState":
         iteration=0,
     )
 
+
 def _finalize_iteration_session(self, success: bool) -> bool:
     """Finalize iteration session with progress tracking."""
     self.progress_manager.end_iteration()
     self.progress_manager.finish_session(success=success)
     return success
 
+
 def _handle_iteration_error(self, error: Exception, iteration: int) -> bool:
     """Handle iteration error with cleanup."""
     self.logger.exception(f"Error during AI fixing at iteration {iteration}")
     self.progress_manager.end_iteration()
-    self.progress_manager.finish_session(success=False, message=f"Error during AI fixing: {error}")
+    self.progress_manager.finish_session(
+        success=False, message=f"Error during AI fixing: {error}"
+    )
     raise
 ```
 
@@ -393,6 +442,7 @@ def _determine_issue_type(
     # Fall back to content-based detection
     return self._detect_issue_type_from_content(tool_issue_dict)
 
+
 def _map_tool_to_issue_type(self, tool_name: str) -> IssueType | None:
     """Map tool name to issue type."""
     tool_type_map = {
@@ -417,16 +467,31 @@ def _map_tool_to_issue_type(self, tool_name: str) -> IssueType | None:
     }
     return tool_type_map.get(tool_name)
 
-def _detect_issue_type_from_content(self, tool_issue_dict: dict[str, t.Any]) -> IssueType:
+
+def _detect_issue_type_from_content(
+    self, tool_issue_dict: dict[str, t.Any]
+) -> IssueType:
     """Detect issue type from message/content patterns."""
     message = tool_issue_dict.get("message", "").lower()
     code = tool_issue_dict.get("code", "").lower()
 
     type_detectors = [
-        (lambda m: any(w in m for w in ["test", "pytest", "unittest"]), IssueType.TEST_FAILURE),
-        (lambda m: any(w in m for w in ["complex", "cyclomatic"]), IssueType.COMPLEXITY),
-        (lambda m: any(w in m for w in ["dead", "unused", "redundant"]), IssueType.DEAD_CODE),
-        (lambda m: any(w in m for w in ["security", "vulnerability"]), IssueType.SECURITY),
+        (
+            lambda m: any(w in m for w in ["test", "pytest", "unittest"]),
+            IssueType.TEST_FAILURE,
+        ),
+        (
+            lambda m: any(w in m for w in ["complex", "cyclomatic"]),
+            IssueType.COMPLEXITY,
+        ),
+        (
+            lambda m: any(w in m for w in ["dead", "unused", "redundant"]),
+            IssueType.DEAD_CODE,
+        ),
+        (
+            lambda m: any(w in m for w in ["security", "vulnerability"]),
+            IssueType.SECURITY,
+        ),
         (lambda m: any(w in m for w in ["import", "module"]), IssueType.IMPORT_ERROR),
         (lambda m, c: "type" in m or "type:" in c, IssueType.TYPE_ERROR),
     ]
@@ -470,6 +535,7 @@ def _run_qa_adapters_for_hooks(
 
     return qa_results
 
+
 def _should_run_qa_adapter_for_hook(self, result: object) -> bool:
     """Check if QA adapter should run for this hook result."""
     if not self._validate_hook_result(result):
@@ -481,6 +547,7 @@ def _should_run_qa_adapter_for_hook(self, result: object) -> bool:
 
     hook_name = getattr(result, "name", "")
     return bool(hook_name)
+
 
 def _execute_single_qa_adapter(
     self, hook_name: str, adapter_factory: "DefaultAdapterFactory"
@@ -498,7 +565,9 @@ def _execute_single_qa_adapter(
             return None
 
         if self._is_async_context():
-            self.logger.warning(f"QA adapter for '{hook_name}' called from async context")
+            self.logger.warning(
+                f"QA adapter for '{hook_name}' called from async context"
+            )
             return None
 
         return self._run_qa_adapter_sync(adapter, hook_name)
@@ -507,6 +576,7 @@ def _execute_single_qa_adapter(
         self.logger.warning(f"Failed to run QA adapter for '{hook_name}': {e}")
         return None
 
+
 def _is_async_context(self) -> bool:
     """Check if running in async context."""
     try:
@@ -514,6 +584,7 @@ def _is_async_context(self) -> bool:
         return True
     except RuntimeError:
         return False
+
 
 def _run_qa_adapter_sync(self, adapter, hook_name: str) -> "QAResult":
     """Run QA adapter synchronously."""
@@ -531,7 +602,9 @@ def _run_qa_adapter_sync(self, adapter, hook_name: str) -> "QAResult":
     qa_result: QAResult = asyncio.run(adapter.check(config=config))
 
     if qa_result.parsed_issues:
-        self.logger.info(f"✅ QA adapter for '{hook_name}' found {len(qa_result.parsed_issues)} issues")
+        self.logger.info(
+            f"✅ QA adapter for '{hook_name}' found {len(qa_result.parsed_issues)} issues"
+        )
     else:
         self.logger.debug(f"QA adapter for '{hook_name}' found no issues")
 
@@ -560,6 +633,7 @@ def _validate_modified_files(self, modified_files: list[str]) -> bool:
             return False
     return True
 
+
 def _validate_single_file(self, file_path_str: str) -> bool:
     """Validate a single modified file."""
     file_path = Path(file_path_str)
@@ -578,6 +652,7 @@ def _validate_single_file(self, file_path_str: str) -> bool:
         self.logger.error(f"❌ Failed to validate {file_path}: {e}")
         return False
 
+
 def _should_validate_file(self, file_path: Path) -> bool:
     """Check if file should be validated."""
     if not str(file_path).endswith(".py"):
@@ -585,11 +660,13 @@ def _should_validate_file(self, file_path: Path) -> bool:
         return False
     return True
 
+
 def _validate_file_content(self, content: str, file_path: Path) -> bool:
     """Validate file content for syntax and duplicate definitions."""
     if not self._validate_syntax(content, file_path):
         return False
     return self._validate_no_duplicates(content, file_path)
+
 
 def _validate_syntax(self, content: str, file_path: Path) -> bool:
     """Validate Python syntax."""
@@ -601,6 +678,7 @@ def _validate_syntax(self, content: str, file_path: Path) -> bool:
         self.logger.error(f"❌ Syntax error in {file_path}:{e.lineno}: {e.msg}")
         self.logger.error(f"   {e.text}")
         return False
+
 
 def _validate_no_duplicates(self, content: str, file_path: Path) -> bool:
     """Validate no duplicate definitions exist."""
@@ -657,6 +735,7 @@ def _build_workflow_steps(options: t.Any) -> list[str]:
 
     return steps
 
+
 def _get_cleanup_steps(options: t.Any) -> list[str]:
     """Get cleanup workflow steps."""
     steps = []
@@ -678,6 +757,7 @@ def _get_cleanup_steps(options: t.Any) -> list[str]:
 
     return steps
 
+
 def _get_test_steps(options: t.Any) -> list[str]:
     """Get test-related workflow steps."""
     run_tests = _should_run_tests(options)
@@ -694,6 +774,7 @@ def _get_test_steps(options: t.Any) -> list[str]:
         return ["comprehensive_hooks"]
 
     return []
+
 
 def _get_post_test_steps(options: t.Any) -> list[str]:
     """Get post-test workflow steps."""

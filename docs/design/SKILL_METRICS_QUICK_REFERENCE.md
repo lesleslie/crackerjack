@@ -107,16 +107,13 @@ store = get_store()
 result = store.track_invocation(
     skill_name="crackerjack-run",
     workflow_path="comprehensive",
-    session_id="session-abc123"
+    session_id="session-abc123",
 )
 
 # ... skill logic ...
 
 # Complete (atomic update + metric recalculation)
-result.completer(
-    completed=True,
-    follow_up_actions=["git commit", "git push"]
-)
+result.completer(completed=True, follow_up_actions=["git commit", "git push"])
 ```
 
 ### Pattern 2: Concurrent Access
@@ -177,8 +174,7 @@ class DualWriteMetricsTracker:
 ```python
 # Bulk migrate historical data
 migrator = DataMigrator(
-    json_path=Path(".session-buddy/skill_metrics.json"),
-    db_store=store
+    json_path=Path(".session-buddy/skill_metrics.json"), db_store=store
 )
 
 stats = migrator.migrate_all_data()
@@ -195,7 +191,7 @@ class DualReadMetricsTracker:
         json_metrics = self.json_tracker.get_skill_metrics(skill_name)
 
         # Validate consistency
-        assert db_metrics['total_invocations'] == json_metrics.total_invocations
+        assert db_metrics["total_invocations"] == json_metrics.total_invocations
 
         return db_metrics
 ```
@@ -250,7 +246,7 @@ from crackerjack.skills.metrics_migrations import MigrationRunner
 
 runner = MigrationRunner(
     db_path=".session-buddy/skill_metrics.db",
-    migrations_dir=Path("crackerjack/skills/schemas/migrations")
+    migrations_dir=Path("crackerjack/skills/schemas/migrations"),
 )
 
 # Run pending migrations
@@ -268,10 +264,10 @@ ______________________________________________________________________
 
 ```python
 conn = sqlite3.connect(db_path)
-conn.execute('PRAGMA journal_mode=WAL')  # Better concurrency
-conn.execute('PRAGMA synchronous=NORMAL')  # Balance safety/performance
-conn.execute('PRAGMA busy_timeout=5000')  # Wait 5s on lock
-conn.execute('PRAGMA temp_store=MEMORY')  # Use RAM for temp tables
+conn.execute("PRAGMA journal_mode=WAL")  # Better concurrency
+conn.execute("PRAGMA synchronous=NORMAL")  # Balance safety/performance
+conn.execute("PRAGMA busy_timeout=5000")  # Wait 5s on lock
+conn.execute("PRAGMA temp_store=MEMORY")  # Use RAM for temp tables
 ```
 
 ### Query Optimization
@@ -311,8 +307,8 @@ def test_track_invocation(temp_db):
     result.completer(completed=True)
 
     metrics = temp_db.get_skill_metrics("test-skill")
-    assert metrics['total_invocations'] == 1
-    assert metrics['completion_rate'] == 100.0
+    assert metrics["total_invocations"] == 1
+    assert metrics["completion_rate"] == 100.0
 ```
 
 ### Integration Tests
@@ -332,7 +328,7 @@ def test_concurrent_access(temp_db):
         t.join()
 
     metrics = temp_db.get_skill_metrics("test-skill")
-    assert metrics['total_invocations'] == 10
+    assert metrics["total_invocations"] == 10
 ```
 
 ### Migration Tests
@@ -342,8 +338,8 @@ def test_migration_from_json(temp_db, json_tracker):
     migrator = DataMigrator(json_path, temp_db)
     stats = migrator.migrate_all_data()
 
-    assert stats['validation_errors'] == 0
-    assert stats['invocations_migrated'] > 0
+    assert stats["validation_errors"] == 0
+    assert stats["invocations_migrated"] > 0
 ```
 
 ______________________________________________________________________
@@ -356,14 +352,14 @@ ______________________________________________________________________
 def check_database_health(store: SkillMetricsStore) -> dict:
     """Check database health and performance."""
     return {
-        'database_size_mb': store.db_path.stat().st_size / (1024 * 1024),
-        'total_invocations': store.conn.execute(
+        "database_size_mb": store.db_path.stat().st_size / (1024 * 1024),
+        "total_invocations": store.conn.execute(
             "SELECT COUNT(*) FROM skill_invocation"
         ).fetchone()[0],
-        'total_skills': store.conn.execute(
+        "total_skills": store.conn.execute(
             "SELECT COUNT(*) FROM skill_metrics"
         ).fetchone()[0],
-        'schema_version': store.conn.execute(
+        "schema_version": store.conn.execute(
             "SELECT MAX(version) FROM schema_migrations"
         ).fetchone()[0],
     }

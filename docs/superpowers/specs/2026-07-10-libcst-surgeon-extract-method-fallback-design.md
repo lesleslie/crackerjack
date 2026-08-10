@@ -4,7 +4,7 @@ role: implementation
 topic: lifecycle
 date: 2026-07-17
 last_reviewed: 2026-07-17
-superseded_by: null
+superseded_by: 2026-08-06-ai-fix-removal-external-loop-design.md
 blocks_on: []
 ---
 
@@ -95,19 +95,26 @@ transformed_lines_joined: str | None = None
 
 if match_info.get("type") == "lift_nested_helpers":
     transformed_lines_joined = self._lift_nested_helpers_to_module(
-        code, func_node, helper_name,
+        code,
+        func_node,
+        helper_name,
     )
 elif match_info.get("registration_wrapper"):
     transformed_lines_joined = self._lift_registration_wrapper_to_module(
-        code, func_node,
+        code,
+        func_node,
     )
 elif match_info.get("type") == "split_sections":
     transformed_lines_joined = self._apply_split_sections(
-        code, func_node, match_info,
+        code,
+        func_node,
+        match_info,
     )
 elif match_info.get("lift_to_module"):
     transformed_lines_joined = self._lift_method_to_module(
-        code, func_node, helper_name,
+        code,
+        func_node,
+        helper_name,
     )
 elif match_info.get("type") == "extract_method":
     # existing else-block body, retained verbatim.

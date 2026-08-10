@@ -219,6 +219,7 @@ Reduction: 85.0%
 ```python
 import pytest
 
+
 @pytest.mark.fast
 def test_quick_validation():
     """Fast test for rapid feedback."""
@@ -340,9 +341,7 @@ selector = TestSelector(
 )
 
 # Detect changes since specific commit
-changed_files = selector.detect_changed_files(
-    since_commit="abc123def"
-)
+changed_files = selector.detect_changed_files(since_commit="abc123def")
 
 print(f"Files changed since abc123def: {changed_files}")
 ```
@@ -658,10 +657,10 @@ Available selection strategies.
 
 ```python
 class TestSelectionStrategy(str, Enum):
-    ALL = "all"           # Run all tests
-    CHANGED = "changed"   # Only affected tests
-    RELATED = "related"   # Affected + related tests
-    FAST = "fast"         # Only fast tests
+    ALL = "all"  # Run all tests
+    CHANGED = "changed"  # Only affected tests
+    RELATED = "related"  # Affected + related tests
+    FAST = "fast"  # Only fast tests
 ```
 
 ### Functions

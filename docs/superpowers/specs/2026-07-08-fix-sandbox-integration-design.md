@@ -4,7 +4,7 @@ role: implementation
 topic: lifecycle
 date: 2026-07-17
 last_reviewed: 2026-07-17
-superseded_by: null
+superseded_by: 2026-08-06-ai-fix-removal-external-loop-design.md
 blocks_on: []
 ---
 
@@ -224,6 +224,7 @@ def _get_ai_fix_use_sandbox() -> bool:
     if raw is None:
         return settings.ai.ai_fix_use_sandbox
     return raw.lower() in ("1", "true", "yes", "on")
+
 
 @staticmethod
 def _get_ai_fix_sandbox_fallback() -> bool:

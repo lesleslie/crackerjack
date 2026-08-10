@@ -114,6 +114,7 @@ ______________________________________________________________________
        def __init__(self, pkg_path: Path) -> None:
            self._pkg_path = pkg_path
            self._baseline: dict[Path, float] | None = None
+
        def capture(self) -> None: ...
        def delta(self) -> int: ...
    ```
@@ -195,9 +196,7 @@ ______________________________________________________________________
 1. New helper `_check_command_output_signature(tool, files_modified) -> str`:
 
    ```python
-   def _check_command_output_signature(
-       self, tool: str, files_modified: list[Path]
-   ) -> str:
+   def _check_command_output_signature(self, tool: str, files_modified: list[Path]) -> str:
        file_hash = hashlib.sha256(
            b"".join(
                f"{p}:{p.stat().st_mtime}:{p.stat().st_size}".encode()
@@ -210,7 +209,9 @@ ______________________________________________________________________
 1. Per-tool cache `self._stdout_hash_cache: dict[str, str] = {}`. In `_execute_check_commands`:
 
    ```python
-   sig = self._check_command_output_signature(hook_name, list(self._active_ai_fix_scope_files))
+   sig = self._check_command_output_signature(
+       hook_name, list(self._active_ai_fix_scope_files)
+   )
    if self._stdout_hash_cache.get(hook_name) == sig:
        self.logger.debug(f"Skip {hook_name}: no file changes since last run")
        return [], 0
@@ -451,6 +452,7 @@ ______________________________________________________________________
 ```python
 # If degenerate:
 self._should_compare_validation_to_original = lambda _plan: True  # at __init__
+
 
 # Or:
 def _should_compare_validation_to_original(self, plan: FixPlan) -> bool:

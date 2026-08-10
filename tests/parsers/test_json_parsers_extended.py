@@ -16,7 +16,7 @@ from crackerjack.parsers.json_parsers import (
     PytestJSONParser,
     register_json_parsers,
 )
-from crackerjack.agents.base import Issue, IssueType, Priority
+from crackerjack.models.issues import Issue, IssueType, Priority
 
 
 # Mirrors the union ``dict[str, object] | list[object]`` accepted by the

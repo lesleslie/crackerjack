@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import re
 
-from crackerjack.agents.base import Issue, IssueType, Priority
+from crackerjack.models.issues import Issue, IssueType, Priority
 from crackerjack.parsers.base import RegexParser
 
 logger = logging.getLogger(__name__)

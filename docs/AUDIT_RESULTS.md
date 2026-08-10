@@ -239,6 +239,7 @@ from crackerjack.models.protocols import (
     CoordinatorProtocol,
 )
 
+
 def __init__(
     self,
     cache: CacheProtocol,  # Constructor injection

@@ -97,6 +97,7 @@ The adapter bridges ``publisher.publish(envelope)`` (the API the
 publisher module expects) and ``EventBridge.emit(topic, payload, headers)``
 (the API Oneiric's EventBridge exposes).
 """
+
 from __future__ import annotations
 
 from unittest.mock import AsyncMock, MagicMock
@@ -120,6 +121,7 @@ def test_adaptor_publish_calls_emit_with_envelope_fields() -> None:
 
     # Async -- run via asyncio
     import asyncio
+
     asyncio.run(adapter.publish(envelope))
 
     bridge.emit.assert_awaited_once_with(
@@ -160,6 +162,7 @@ have no production-compatible publisher to wire into. Tests use a
 duck-typed AsyncMock; production wires an ``EventBridgePublisher``
 constructed against the running ``EventBridge``.
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -238,6 +241,7 @@ Mirrors the test pattern from
 ``mahavishnu/tests/unit/test_mahavishnu_publisher.py`` — same shape,
 same envelope-shape assertions, same never-raises guarantee.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -371,6 +375,7 @@ typed against a Pydantic envelope, not Oneiric's msgspec envelope.
 Duck-typing is intentional; AsyncMock and the Oneiric EventBridge
 publisher both satisfy ``publisher.publish(envelope)``.
 """
+
 from __future__ import annotations
 
 from datetime import UTC, datetime
@@ -479,8 +484,7 @@ async def publish_test_started(
         await _publish(envelope, publisher)
     except Exception:
         logger.exception(
-            "crackerjack.publisher: failed to publish test.started event "
-            "run_id=%s",
+            "crackerjack.publisher: failed to publish test.started event run_id=%s",
             run_id,
         )
 
@@ -518,8 +522,7 @@ async def publish_test_completed(
         await _publish(envelope, publisher)
     except Exception:
         logger.exception(
-            "crackerjack.publisher: failed to publish test.completed event "
-            "run_id=%s",
+            "crackerjack.publisher: failed to publish test.completed event run_id=%s",
             run_id,
         )
 
@@ -588,9 +591,7 @@ async def test_publish_test_started_invokes_injected_publisher() -> None:
     publisher = AsyncMock()
     publisher.publish.return_value = None
 
-    await publish_test_started(
-        "run_xyz", "tests/unit", 42, publisher=publisher
-    )
+    await publish_test_started("run_xyz", "tests/unit", 42, publisher=publisher)
 
     publisher.publish.assert_awaited_once()
     envelope = publisher.publish.await_args.args[0]
@@ -610,7 +611,10 @@ async def test_publish_test_completed_builds_canonical_envelope() -> None:
     publisher.publish.return_value = None
 
     await publish_test_completed(
-        "run_done", tests_completed=42, tests_failed=0, duration_seconds=12.5,
+        "run_done",
+        tests_completed=42,
+        tests_failed=0,
+        duration_seconds=12.5,
         publisher=publisher,
     )
 
@@ -633,7 +637,10 @@ async def test_publish_test_failed_builds_canonical_envelope() -> None:
     publisher.publish.return_value = None
 
     await publish_test_failed(
-        "run_boom", "test_async_patterns", "AssertionError", "Traceback...",
+        "run_boom",
+        "test_async_patterns",
+        "AssertionError",
+        "Traceback...",
         publisher=publisher,
     )
 
@@ -684,14 +691,13 @@ async def test_publisher_swallows_exception_types(
         logging.WARNING, logger="crackerjack.core.eventbridge_publisher"
     ):
         # Must NOT raise out of publish_test_started
-        await publish_test_started(
-            "run_x", "tests/unit", 10, publisher=publisher
-        )
+        await publish_test_started("run_x", "tests/unit", 10, publisher=publisher)
 
     # Exactly one log per call (not aggregate count -- aggregate allows
     # silent bugs where one call logs 3 times and another logs 0).
     error_logs = [
-        rec for rec in caplog.records
+        rec
+        for rec in caplog.records
         if rec.levelno >= logging.WARNING
         and rec.name == "crackerjack.core.eventbridge_publisher"
     ]
@@ -713,9 +719,7 @@ async def test_publisher_does_not_swallow_cancelled_error() -> None:
     publisher.publish.side_effect = asyncio.CancelledError()
 
     with pytest.raises(asyncio.CancelledError):
-        await publish_test_started(
-            "run_x", "tests/unit", 10, publisher=publisher
-        )
+        await publish_test_started("run_x", "tests/unit", 10, publisher=publisher)
 
 
 @pytest.mark.asyncio
@@ -730,9 +734,7 @@ async def test_publisher_supports_sync_publish_returning_none() -> None:
     sync_publisher = Mock()  # noqa: S3776  -- deliberately Mock, not AsyncMock
     sync_publisher.publish.return_value = None
 
-    await publish_test_started(
-        "run_sync", "tests/unit", 5, publisher=sync_publisher
-    )
+    await publish_test_started("run_sync", "tests/unit", 5, publisher=sync_publisher)
     sync_publisher.publish.assert_called_once()
 
 
@@ -747,9 +749,7 @@ async def test_publisher_swallows_coroutine_raising_after_await() -> None:
     publisher.publish.return_value = boom()
 
     # Must NOT raise out of publish_test_started
-    await publish_test_started(
-        "run_x", "tests/unit", 10, publisher=publisher
-    )
+    await publish_test_started("run_x", "tests/unit", 10, publisher=publisher)
 
 
 @pytest.mark.parametrize(
@@ -925,26 +925,29 @@ Find the `__init__` method (around line 100-150). Add `event_publisher: Any | No
 Replace the body of `run_hooks_phase` with:
 
 ```python
-    @handle_errors
-    async def run_hooks_phase(self, options: OptionsProtocol) -> bool:
-        if options.skip_hooks:
-            return True
+@handle_errors
+async def run_hooks_phase(self, options: OptionsProtocol) -> bool:
+    if options.skip_hooks:
+        return True
 
-        run_id = getattr(options, "run_id", "unknown")
-        await publish_test_started(
-            run_id, "hooks", total_tests=0, publisher=self._event_publisher
+    run_id = getattr(options, "run_id", "unknown")
+    await publish_test_started(
+        run_id, "hooks", total_tests=0, publisher=self._event_publisher
+    )
+
+    if not await self.run_fast_hooks_only(options):
+        return False
+
+    result = await self.run_comprehensive_hooks_only(options)
+    if result:
+        await publish_test_completed(
+            run_id,
+            tests_completed=0,
+            tests_failed=0,
+            duration_seconds=0.0,
+            publisher=self._event_publisher,
         )
-
-        if not await self.run_fast_hooks_only(options):
-            return False
-
-        result = await self.run_comprehensive_hooks_only(options)
-        if result:
-            await publish_test_completed(
-                run_id, tests_completed=0, tests_failed=0, duration_seconds=0.0,
-                publisher=self._event_publisher,
-            )
-        return result
+    return result
 ```
 
 (The exact `total_tests` value is `0` because the hooks phase doesn't count tests; downstream consumers should not interpret this as "zero tests run.")
@@ -954,38 +957,43 @@ Replace the body of `run_hooks_phase` with:
 Replace the body of `run_fast_hooks_only` with:
 
 ```python
-    async def run_fast_hooks_only(self, options: OptionsProtocol) -> bool:
-        if options.skip_hooks:
-            self.console.print("[yellow]⚠️[/yellow] Skipping fast hooks (--skip-hooks)")
-            return True
+async def run_fast_hooks_only(self, options: OptionsProtocol) -> bool:
+    if options.skip_hooks:
+        self.console.print("[yellow]⚠️[/yellow] Skipping fast hooks (--skip-hooks)")
+        return True
 
-        if getattr(self, "_fast_hooks_started", False):
-            self.logger.debug("Duplicate fast hooks invocation detected; skipping")
-            return True
+    if getattr(self, "_fast_hooks_started", False):
+        self.logger.debug("Duplicate fast hooks invocation detected; skipping")
+        return True
 
-        self._fast_hooks_started = True
-        self.session.track_task("hooks_fast", "Fast quality checks")
+    self._fast_hooks_started = True
+    self.session.track_task("hooks_fast", "Fast quality checks")
 
-        run_id = getattr(options, "run_id", "unknown")
-        await publish_test_started(
-            run_id, "fast_hooks", total_tests=0,
+    run_id = getattr(options, "run_id", "unknown")
+    await publish_test_started(
+        run_id,
+        "fast_hooks",
+        total_tests=0,
+        publisher=self._event_publisher,
+    )
+
+    success = self._run_fast_hooks_with_retry(options)
+
+    if not success and getattr(options, "ai_fix", False):
+        success = await self._apply_ai_fix_for_fast_hooks(options, success)
+
+    self._complete_fast_hooks_task(success)
+
+    if success:
+        await publish_test_completed(
+            run_id,
+            tests_completed=0,
+            tests_failed=0,
+            duration_seconds=0.0,
             publisher=self._event_publisher,
         )
 
-        success = self._run_fast_hooks_with_retry(options)
-
-        if not success and getattr(options, "ai_fix", False):
-            success = await self._apply_ai_fix_for_fast_hooks(options, success)
-
-        self._complete_fast_hooks_task(success)
-
-        if success:
-            await publish_test_completed(
-                run_id, tests_completed=0, tests_failed=0, duration_seconds=0.0,
-                publisher=self._event_publisher,
-            )
-
-        return success
+    return success
 ```
 
 - [x] **Step 6: Wire `run_snob_tests_phase` (line 808)**
@@ -993,51 +1001,54 @@ Replace the body of `run_fast_hooks_only` with:
 Replace the body of `run_snob_tests_phase` with (preserving the existing return logic):
 
 ```python
-    async def run_snob_tests_phase(self, options: OptionsProtocol) -> bool:
-        if getattr(options, "no_snob", False):
-            return True
+async def run_snob_tests_phase(self, options: OptionsProtocol) -> bool:
+    if getattr(options, "no_snob", False):
+        return True
 
-        affected = self._get_snob_affected_tests()
-        if not affected:
-            return True
+    affected = self._get_snob_affected_tests()
+    if not affected:
+        return True
 
-        self.console.print(
-            f"[cyan]🔍 SNOB[/cyan] Running {len(affected)} affected test(s)"
-        )
+    self.console.print(f"[cyan]🔍 SNOB[/cyan] Running {len(affected)} affected test(s)")
 
-        run_id = getattr(options, "run_id", "unknown")
-        await publish_test_started(
-            run_id, "snob_tests", total_tests=len(affected),
+    run_id = getattr(options, "run_id", "unknown")
+    await publish_test_started(
+        run_id,
+        "snob_tests",
+        total_tests=len(affected),
+        publisher=self._event_publisher,
+    )
+
+    passed = self._run_pytest_subset(affected)
+
+    if passed:
+        await publish_test_completed(
+            run_id,
+            tests_completed=len(affected),
+            tests_failed=0,
+            duration_seconds=0.0,
             publisher=self._event_publisher,
         )
+        return True
 
-        passed = self._run_pytest_subset(affected)
+    # ... existing failure-handling logic below, unchanged ...
+    failures = (
+        self.test_manager.get_test_failures() if hasattr(self, "test_manager") else []
+    )
+    safe = self._classify_safe_test_failures(failures)
 
-        if passed:
-            await publish_test_completed(
-                run_id, tests_completed=len(affected), tests_failed=0,
-                duration_seconds=0.0,
-                publisher=self._event_publisher,
-            )
-            return True
-
-        # ... existing failure-handling logic below, unchanged ...
-        failures = (
-            self.test_manager.get_test_failures()
-            if hasattr(self, "test_manager")
-            else []
+    if not safe:
+        self.console.print("[yellow]⚠️[/yellow] Snob failures require manual review")
+        await publish_test_failed(
+            run_id,
+            "snob_tests",
+            "snob test failures detected",
+            "",
+            publisher=self._event_publisher,
         )
-        safe = self._classify_safe_test_failures(failures)
+        return False
 
-        if not safe:
-            self.console.print("[yellow]⚠️[/yellow] Snob failures require manual review")
-            await publish_test_failed(
-                run_id, "snob_tests", "snob test failures detected", "",
-                publisher=self._event_publisher,
-            )
-            return False
-
-        # ... rest unchanged
+    # ... rest unchanged
 ```
 
 (Adjust: read the rest of the method first — the plan preserves any additional return logic the existing code has after the `safe` check. Do not delete logic.)
@@ -1047,26 +1058,31 @@ Replace the body of `run_snob_tests_phase` with (preserving the existing return 
 Replace the entry of `run_comprehensive_hooks_only` with (preserving the rest):
 
 ```python
-    async def run_comprehensive_hooks_only(self, options: OptionsProtocol) -> bool:
-        if options.skip_hooks:
-            return True
+async def run_comprehensive_hooks_only(self, options: OptionsProtocol) -> bool:
+    if options.skip_hooks:
+        return True
 
-        run_id = getattr(options, "run_id", "unknown")
-        await publish_test_started(
-            run_id, "comprehensive_hooks", total_tests=0,
-            publisher=self._event_publisher,
-        )
+    run_id = getattr(options, "run_id", "unknown")
+    await publish_test_started(
+        run_id,
+        "comprehensive_hooks",
+        total_tests=0,
+        publisher=self._event_publisher,
+    )
 
-        # ... rest of method unchanged ...
+    # ... rest of method unchanged ...
 ```
 
 At the success path (before any `return True` at the end of the method), add:
 
 ```python
-        await publish_test_completed(
-            run_id, tests_completed=0, tests_failed=0, duration_seconds=0.0,
-            publisher=self._event_publisher,
-        )
+await publish_test_completed(
+    run_id,
+    tests_completed=0,
+    tests_failed=0,
+    duration_seconds=0.0,
+    publisher=self._event_publisher,
+)
 ```
 
 - [x] **Step 8: Run the existing tests**
@@ -1128,6 +1144,7 @@ Mirrors the dispatch_to_pool pattern from
 ``mahavishnu/mcp/tools/pool_tools.py``: optional ``async_callback`` flag
 returns a workflow_id immediately and runs the publish in the background.
 """
+
 from __future__ import annotations
 
 import logging
@@ -1285,6 +1302,7 @@ Find the `create_mcp_server` function (around line 157) and the block where tool
 def create_mcp_server(config):
     # ...existing registrations...
     from crackerjack.config import CrackerjackSettings
+
     settings = CrackerjackSettings()
     register_eventbridge_tools(
         mcp_app,
@@ -1344,6 +1362,7 @@ the Mahavishnu Bodai subscriber consumes (topic, payload, headers.source,
 headers.event_id, headers.timestamp). Uses an in-memory recording
 transport (no Redis required) to simulate the round trip.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -1438,14 +1457,17 @@ async def test_publish_test_failed_round_trips_through_transport() -> None:
 async def test_three_sequential_publishes_preserve_order_and_uniqueness() -> None:
     """Three publishes produce three distinct event_ids with payload order preserved."""
     transport = RecordingTransport()
-    await publish_test_started("run_seq", "fast_hooks", total_tests=10, publisher=transport)
+    await publish_test_started(
+        "run_seq", "fast_hooks", total_tests=10, publisher=transport
+    )
     await publish_test_completed(
-        "run_seq", tests_completed=10, tests_failed=0, duration_seconds=1.0,
+        "run_seq",
+        tests_completed=10,
+        tests_failed=0,
+        duration_seconds=1.0,
         publisher=transport,
     )
-    await publish_test_failed(
-        "run_seq", "test_x", "boom", "tb", publisher=transport
-    )
+    await publish_test_failed("run_seq", "test_x", "boom", "tb", publisher=transport)
 
     assert [r["topic"] for r in transport.published] == [
         "test.started",

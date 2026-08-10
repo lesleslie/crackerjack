@@ -181,7 +181,10 @@ def _parse_via_adapter_fallback(self, hook_name: str) -> list[Issue]:
     try:
         # Map hook names to adapter classes
         adapter_classes = {
-            "complexipy": ("crackerjack.adapters.complexity.complexipy", "ComplexipyAdapter"),
+            "complexipy": (
+                "crackerjack.adapters.complexity.complexipy",
+                "ComplexipyAdapter",
+            ),
             "skylos": ("crackerjack.adapters.refactor.skylos", "SkylosAdapter"),
         }
 
@@ -258,7 +261,10 @@ def _parse_via_adapter_fallback(self, hook_name: str) -> list[Issue]:
     try:
         # Map hook names to adapter classes (same as Option 1)
         adapter_classes = {
-            "complexipy": ("crackerjack.adapters.complexity.complexipy", "ComplexipyAdapter"),
+            "complexipy": (
+                "crackerjack.adapters.complexity.complexipy",
+                "ComplexipyAdapter",
+            ),
             "skylos": ("crackerjack.adapters.refactor.skylos", "SkylosAdapter"),
         }
 
@@ -299,7 +305,9 @@ def _parse_via_adapter_fallback(self, hook_name: str) -> list[Issue]:
                     type=self._map_tool_issue_type(tool_issue),
                     severity=self._map_tool_severity(tool_issue),
                     message=tool_issue.message or f"{hook_name} issue",
-                    file_path=str(tool_issue.file_path) if tool_issue.file_path else None,
+                    file_path=str(tool_issue.file_path)
+                    if tool_issue.file_path
+                    else None,
                     line_number=tool_issue.line_number,
                     details=tool_issue.details or [],
                     stage=hook_name,
@@ -343,7 +351,10 @@ def _parse_via_adapter_fallback(self, hook_name: str) -> list[Issue]:
     try:
         # Adapter class mapping (same as above)
         adapter_classes = {
-            "complexipy": ("crackerjack.adapters.complexity.complexipy", "ComplexipyAdapter"),
+            "complexipy": (
+                "crackerjack.adapters.complexity.complexipy",
+                "ComplexipyAdapter",
+            ),
             "skylos": ("crackerjack.adapters.refactor.skylos", "SkylosAdapter"),
         }
 
@@ -391,7 +402,9 @@ def _parse_via_adapter_fallback(self, hook_name: str) -> list[Issue]:
                     type=self._map_tool_issue_type(tool_issue),
                     severity=self._map_tool_severity(tool_issue),
                     message=tool_issue.message or f"{hook_name} issue",
-                    file_path=str(tool_issue.file_path) if tool_issue.file_path else None,
+                    file_path=str(tool_issue.file_path)
+                    if tool_issue.file_path
+                    else None,
                     line_number=tool_issue.line_number,
                     details=tool_issue.details or [],
                     stage=hook_name,

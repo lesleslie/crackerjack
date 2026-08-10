@@ -58,6 +58,7 @@ class SwarmClientProtocol(Protocol):
 @dataclass(frozen=True)
 class SwarmTask:
     """A task to be executed by a swarm worker."""
+
     task_id: str
     issue_type: str  # typing, refurb, complexity, etc.
     file_paths: list[str]
@@ -68,6 +69,7 @@ class SwarmTask:
 @dataclass
 class SwarmResult:
     """Result from a swarm worker execution."""
+
     task_id: str
     worker_id: str
     success: bool
@@ -123,6 +125,7 @@ logger = logging.getLogger(__name__)
 @dataclass(frozen=True)
 class SwarmTask:
     """A task to be executed by a swarm worker."""
+
     task_id: str
     issue_type: str
     file_paths: list[str]
@@ -133,6 +136,7 @@ class SwarmTask:
 @dataclass
 class SwarmResult:
     """Result from a swarm worker execution."""
+
     task_id: str
     worker_id: str
     success: bool
@@ -188,9 +192,10 @@ class MahavishnuSwarmClient:
             # Try to spawn a minimal test pool
             # This will fail fast if MCP is not available
             import socket
+
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.settimeout(1.0)
-            result = sock.connect_ex(('localhost', 8680))
+            result = sock.connect_ex(("localhost", 8680))
             sock.close()
             self._available = result == 0
             return self._available
@@ -347,7 +352,9 @@ class SwarmManager:
                 logger.info("Using Mahavishnu MCP for parallel agent execution")
                 self._active_client = self._mahavishnu_client
             else:
-                logger.info("Mahavishnu MCP unavailable, falling back to sequential execution")
+                logger.info(
+                    "Mahavishnu MCP unavailable, falling back to sequential execution"
+                )
                 self._active_client = self._local_client
         else:
             self._active_client = self._local_client

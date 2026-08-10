@@ -576,22 +576,27 @@ crackerjack/mahavishnu/mcp/tools/git_analytics.py
 @dataclass
 class PortfolioVelocityDashboard:
     """Cross-project velocity aggregation."""
+
     repos: list[str]
     total_commits: int
     active_branches: dict[str, int]
     velocity_distribution: dict[str, str]  # high/healthy/needs-attention/critical
 
+
 @dataclass
 class MergePatternAnalysis:
     """Rebase vs. merge bias detection."""
+
     rebase_percentage: float
     merge_percentage: float
     bias_score: float  # Positive = rebase bias, Negative = merge bias
     most_conflicted_files: list[tuple[str, int]]
 
+
 @dataclass
 class BestPracticePropagation:
     """Extract and propagate successful patterns."""
+
     practices: list[dict]
     top_performer_repos: list[str]
     recommended_adoption_rate: float
@@ -614,11 +619,12 @@ class BestPracticePropagation:
 @dataclass
 class MahavishnuSettings:
     """Mahavishnu integration configuration."""
+
     enabled: bool = True
     git_metrics_enabled: bool = True
     portfolio_repos: list[str] = field(default_factory=list)
-    velocity_threshold_low: float = 0.5   # commits/day
-    velocity_threshold_high: float = 5.0   # commits/day
+    velocity_threshold_low: float = 0.5  # commits/day
+    velocity_threshold_high: float = 5.0  # commits/day
     conflict_rate_threshold: float = 10.0  # percentage
     websocket_port: int = 8680
 ```

@@ -32,12 +32,10 @@ ______________________________________________________________________
 ```python
 class Agent(ABC):
     @abstractmethod
-    def can_handle(self, issue: Issue) -> bool:
-        ...
+    def can_handle(self, issue: Issue) -> bool: ...
 
     @abstractmethod
-    def handle(self, issue: Issue) -> Issue | None:
-        ...
+    def handle(self, issue: Issue) -> Issue | None: ...
 ```
 
 **AgentCoordinator** (`agents/coordinator.py`, lines 55-649):

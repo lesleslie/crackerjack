@@ -106,9 +106,7 @@ def _parse_ty_ratchet(self, output: str) -> tuple[int, list[str]]:
         return 0, []
 
     advisories = [
-        raw.strip()
-        for raw in output.splitlines()
-        if concise_diag_re.match(raw.strip())
+        raw.strip() for raw in output.splitlines() if concise_diag_re.match(raw.strip())
     ]
     return 0, advisories
 ```
@@ -123,9 +121,7 @@ return self._create_parse_result(files_processed, result.returncode, output)
 
 # after:
 files_processed, advisory_issues = self._parse_ty_ratchet(output)
-parse_result = self._create_parse_result(
-    files_processed, result.returncode, output
-)
+parse_result = self._create_parse_result(files_processed, result.returncode, output)
 parse_result["advisory_issues"] = advisory_issues
 return parse_result
 ```
@@ -148,7 +144,7 @@ def _create_parse_result(
         "hook_id": None,
         "exit_code": exit_code,
         "files_processed": files_processed,
-        "advisory_issues": [],   # populated by caller for ty hook
+        "advisory_issues": [],  # populated by caller for ty hook
         "issues": [],
         "raw_output": output,
     }
@@ -174,11 +170,7 @@ return HookResult(
 
 ```python
 # before:
-if (
-    result.name == "ty"
-    and result.status == "passed"
-    and result.files_processed < 0
-):
+if result.name == "ty" and result.status == "passed" and result.files_processed < 0:
     test_count = -result.files_processed
     self.console.print(
         f"⚠️  ty test ratchet FAIL: {test_count} diagnostic(s) in tests/ "
@@ -186,11 +178,7 @@ if (
     )
 
 # after:
-if (
-    result.name == "ty"
-    and result.status == "passed"
-    and result.advisory_issues
-):
+if result.name == "ty" and result.status == "passed" and result.advisory_issues:
     self.console.print(
         f"⚠️  ty test ratchet FAIL: {len(result.advisory_issues)} diagnostic(s) "
         f"in tests/ (advisory only; prod gate controls stage)"
@@ -299,8 +287,7 @@ def test_parse_ty_ratchet_returns_negative_on_test_fail(
     self, executor: HookExecutor
 ) -> None:
     output = (
-        "ty ratchet [split] prod: PASS (0/50)\n"
-        "ty ratchet [split] test: FAIL (5/30)\n"
+        "ty ratchet [split] prod: PASS (0/50)\nty ratchet [split] test: FAIL (5/30)\n"
     )
     assert executor._parse_ty_ratchet(output) == -5
 ```
@@ -321,9 +308,8 @@ def test_parse_ty_ratchet_returns_advisories_on_test_fail(
     assert len(advisories) == 1
     assert "crackerjack/foo.py:10:5" in advisories[0]
 
-def test_parse_ty_ratchet_returns_zero_on_clean(
-    self, executor: HookExecutor
-) -> None:
+
+def test_parse_ty_ratchet_returns_zero_on_clean(self, executor: HookExecutor) -> None:
     output = "ty ratchet [split] test: PASS (0/30)\n"
     files_processed, advisories = executor._parse_ty_ratchet(output)
     assert files_processed == 0

@@ -108,6 +108,7 @@ async def _call_provider_api(self, client, prompt):
         messages=[{"role": "user", "content": prompt}],
     )
 
+
 def _extract_content_from_response(self, response):
     return response.content[0].text
 ```
@@ -134,6 +135,7 @@ async def _call_provider_api(self, client, prompt):
         temperature=self._settings.temperature,
         messages=[{"role": "user", "content": prompt}],
     )
+
 
 def _extract_content_from_response(self, response):
     return response.choices[0].message.content
@@ -311,6 +313,7 @@ logger = logging.getLogger(__name__)
 
 class OpenAICodeFixerSettings(BaseCodeFixerSettings):
     """OpenAI-specific settings."""
+
     openai_api_key: SecretStr = Field(
         ...,
         description="OpenAI API key from environment variable OPENAI_API_KEY",
@@ -571,6 +574,7 @@ for provider_id in providers:
 ```python
 from crackerjack.adapters.ai.base import BaseCodeFixer
 
+
 def use_provider(fixer: BaseCodeFixer) -> None:
     """Works with any provider instance."""
     # Type-safe
@@ -644,6 +648,7 @@ def test_base_security_validation():
     is_valid, msg = provider._check_dangerous_patterns("eval(x)")
     assert not is_valid  # Should reject
 
+
 # Test provider factory
 def test_provider_factory():
     from crackerjack.adapters.ai.registry import ProviderFactory, ProviderID
@@ -667,7 +672,7 @@ async def test_all_providers():
             file_path="test.py",
             issue_description="Fix division by zero",
             code_context=code,
-            fix_type="runtime"
+            fix_type="runtime",
         )
         assert result["success"] is True
 ```

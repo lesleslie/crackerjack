@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 from crackerjack.config.settings import CrackerjackSettings
 
 if t.TYPE_CHECKING:
-    from crackerjack.agents.base import AgentContext, FixResult, Issue
+    from crackerjack.models.issues import Issue
     from crackerjack.models.qa_config import QACheckConfig
     from crackerjack.models.qa_results import QAResult
 
@@ -711,35 +711,6 @@ class DebuggerProtocol(t.Protocol):
 
 
 @t.runtime_checkable
-class AgentTrackerProtocol(t.Protocol):
-    def register_agents(self, agent_types: list[str]) -> None: ...
-
-    def track_agent_processing(
-        self,
-        agent_type: str,
-        issue: Issue,
-        confidence: float,
-    ) -> None: ...
-
-    def track_agent_complete(
-        self,
-        agent_type: str,
-        result: FixResult,
-    ) -> None: ...
-
-    def set_coordinator_status(self, status: str) -> None: ...
-
-    def reset(self) -> None: ...
-
-
-@t.runtime_checkable
-class AgentCoordinatorProtocol(t.Protocol):
-    async def handle_issues(self, issues: list[Issue]) -> FixResult: ...
-
-    def initialize_agents(self) -> None: ...
-
-
-@t.runtime_checkable
 class MemoryOptimizerProtocol(t.Protocol):
     def optimize_memory(self) -> None: ...
 
@@ -770,21 +741,6 @@ class PluginRegistryProtocol(t.Protocol):
     def deactivate_all(self) -> dict[str, bool]: ...
 
     def get_stats(self) -> dict[str, t.Any]: ...
-
-
-@t.runtime_checkable
-class AgentRegistryProtocol(t.Protocol):
-    async def register_agent(
-        self,
-        agent_name: str,
-        agent_class: type[t.Any],
-    ) -> None: ...
-
-    def get_agent(self, agent_name: str) -> t.Any | None: ...
-
-    def list_agents(self) -> list[str]: ...
-
-    async def create_agent(self, agent_name: str, context: t.Any) -> t.Any: ...
 
 
 @t.runtime_checkable
