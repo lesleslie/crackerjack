@@ -63,12 +63,14 @@ This plan depends only on `crackerjack run -v` producing informative output — 
 - [ ] **Step 1: Confirm `run -v` produces informative output on both a dirty and a clean repo state**
 
 Run: `uv run python -m crackerjack run -v 2>&1 | tail -40`
-Expected: either a clean pass, or a per-hook results section similar to:
+Expected: a per-hook results section similar to:
 ```
 Fast Hook Results:
  - codespell        :: FAILED | issues=1
- - ruff-check       :: FAILED | issues=1250
+ - ruff-check       :: FAILED | issues=999
 ```
+
+**Definition of "clean" (clarified 2026-08-10 from Task 1 verification):** A "clean repo state" means a **clean working tree** — no uncommitted modifications, no untracked files — NOT "zero issues in committed code". At the time of Task 1 verification, the crackerjack HEAD had a clean working tree but still exhibited 1014 baseline issues across 5 hooks (codespell=1, ruff-check=999, check-local-links=10, skill-coverage=2, pip-audit=2). The fix loop must therefore handle `initialIssueCount > 0` even on a "clean" working tree — this is exactly what the `INITIAL_ISSUE_GUARD` constant (Task 2) protects against.
 Record the actual current output shape (hook names, status markers, issue counts) — this is what Task 3's `agent()` prompt will describe to the verify-agent as the expected shape to interpret. If `run -v` produces no usable per-hook detail at all (e.g., only a bare pass/fail with zero information about what failed), stop and report back — the whole Verify-phase design depends on there being *something* informative to interpret, even if it isn't JSON.
 
 **Output normalization note for Task 3's agent prompt:** The `-v` output uses Rich-formatted markup — ANSI escape codes (colors, bold), UTF-8 emoji (`✅`, `❌`, `⏳`, `🔍`), and Unicode box-drawing characters (`─`, `│`, `╭`, `╰`) — plus alignment whitespace (`name............... ❌`). When describing the expected shape to the verify-agent in Task 3, explicitly call out these markers (the agent reads the raw bytes; do not assume it strips them) and tell it to look for the structured `name :: FAILED | duration | issues=N` summary lines and the Ruff-style `path:line: CODE message` per-issue lines. The Task 3 agent prompt below includes this guidance.
@@ -76,6 +78,8 @@ Record the actual current output shape (hook names, status markers, issue counts
 - [ ] **Step 2: Confirm the command's exit code is a reliable clean/dirty signal**
 
 Run: `uv run python -m crackerjack run -v; echo "exit=$?"` on the current (post-extraction-work) repo state, and separately reason about what the exit code would be on a genuinely clean run (0) vs. any failure (non-zero). The Verify agent will use both the exit code and the printed hook summary together, not exit code alone, since a non-zero exit could mean either "hooks found issues" or "the command itself crashed" (per the sibling plan's Task 1 finding that `--skip-hooks --run-tests` has a pre-existing crash bug unrelated to hook findings) — note in your report which failure mode is distinguishable from the output alone and which isn't.
+
+**Exit-code semantics verified 2026-08-10:** Both the dirty-tree and clean-tree runs exited with code 1 (failure with informative `Fast Hook Results` summary present). The crash-mode test (`crackerjack run --skip-hooks --run-tests`) also exited 1 but with **no `Fast Hook Results` header** — instead it printed `💥 Test execution error after 0.3s: 'PosixPath' object has no attribute 'startswith'`. Distinguishing rule: presence of a `Fast Hook Results` summary line = "issues found" (informative failure); absence of that summary + presence of a `💥` or `Workflow failed: Task tests failed` marker = "crashed". The verify-agent prompt in Task 3 must encode this rule.
 
 ---
 
@@ -191,6 +195,19 @@ Use the actual output shape recorded in Task 1's Step 1 report in place of the i
     { label: `verify-iter-${iteration}`, phase: 'Verify' }
   )
   // Parse the agent's text response loosely.
+
+  // Per-hook count delta (verified 2026-08-10): crackerjack's reported
+  // `issues=N` for ruff-check was 999 in the clean-tree run, but
+  // independent `ruff check --output-format=json .` reported 1093 issues
+  // — a delta of ~9%. The likely causes are: (a) crackerjack filters or
+  // caps reported counts, (b) different --select/--ignore sets,
+  // (c) per-file-ignores applied differently. The verify-agent sums
+  // crackerjack's per-hook counts as-is and reports that as the loop's
+  // baseline; do NOT have it reconcile against `ruff check` directly —
+  // that would create two competing sources of truth. The 9% delta is
+  // acceptable because the loop's convergence check is on delta-relative-
+  // to-previous-iteration, not on absolute count parity with `ruff`.
+
   const verify = parseVerifyText(verifyText)
   // Defensive validation: NaN/null/-1 etc. must abort, not silently loop.
   if (!verify || !Number.isFinite(verify.issueCount) || verify.issueCount < -1) {
