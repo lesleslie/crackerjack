@@ -12,12 +12,29 @@
 
 **Reference spec:** [docs/superpowers/specs/2026-08-06-ai-fix-removal-external-loop-design.md](../specs/2026-08-06-ai-fix-removal-external-loop-design.md), sections 5-6.
 
+## Review Findings Addressed (2026-08-10)
+
+This plan was revised in response to a multi-agent review (CLI assumptions, loop architecture, Workflow/Akosha contracts). The critical issues addressed:
+
+- **SHA-anchored stash refs** (Task 4, Task 6) — positional `stash@{N}` is unsafe when a user adds their own stash between iterations; using `git rev-parse stash@{N}^3` + grep-by-message for re-resolution.
+- **Akosha contract compliance** (Task 7) — `store_memory` requires non-empty `memory_id` and a 384-dim embedding; the call sequence `generate_embedding(text)` → `store_memory(...)` is mandatory.
+- **Audit log persistence** (Task 2, Task 6) — in-memory `auditLog` is lost on crash; per-iteration append to `.crackerjack/audit/ai-fix-loop.jsonl` enables resume/recovery.
+- **`Number.isFinite` guard** (Task 6) — `NaN >= previousIssueCount` is `false`, silently infinite-looping on malformed upstream JSON.
+- **Consecutive-flat counter** (Task 6) — single-iter plateau is noise; require 2-3 flat iterations before declaring `progress-stalled`.
+- **Clean-tree invariant** (Task 4) — snapshot phase must detect concurrent user edits/pulls before stashing.
+- **Post-fix diff sanity** (Task 6) — fix-agent prompts are advisory only; cap `filesChanged`/`linesChanged` and blocklist `tests/`, `*.toml`, etc.
+- **Expanded stop-reason taxonomy** (Task 6) — `fixer-error` was conflating verify/snapshot/fix/rollback failures; split into `verify-error`, `snapshot-error`, `fix-agent-error`, `rollback-error`, `concurrent-change-detected`, `diff-too-large`.
+- **Scaled iteration cap** (Task 2) — `max(10, ceil(initialIssueCount * 1.5))`.
+- **Loose JSON parsing** (Task 3, 5) — `agent({schema})` has a documented infinite-loop bug; avoid schema validation, parse returned text loosely.
+
 ## Global Constraints
 
-- No `Date.now()`/`Math.random()`/argless `new Date()` inside the Workflow script body — these throw. Wall-clock timeout is therefore enforced per-`agent()`-call via prompt instruction and the harness's own turn limits, not measured by the script itself (see Task 6).
+- No `Date.now()`/`Math.random()`/argless `new Date()` anywhere — **not in code, comments, or prompt strings**. The validator rejects all three (per `~/.claude/cache/changelog.md`), not just executable code. Audit every prompt and comment before saving.
 - The script must not fabricate or predict `agent()` results — every loop decision reads a real returned value.
 - No placeholders, TODOs, or dummy data (CLAUDE.md rule #3).
 - Every git-mutating action (snapshot, rollback, fix) happens through an `agent()` call, since the Workflow script itself cannot run Bash directly.
+- Wall-clock timeout is enforced by the **caller** (use `dispatch_to_pool(timeout=N)` from Mahavishnu, or a cron wrapper with the `timeout` command), not by the script itself — `Date.now()` is unavailable.
+- The script requires a **clean working tree** at start. Concurrent edits, pulls, or other agent runs during the loop are unsupported (see Task 4 Step 1's clean-tree invariant).
 
 ## Precondition
 
@@ -28,9 +45,11 @@ This plan depends only on `crackerjack run -v` producing informative output — 
 **New files:**
 - `.claude/workflows/ai-fix-loop.js` — the Workflow script itself.
 - `tests/integration/test_ai_fix_loop_acceptance.md` — a manual acceptance-test runbook (this is agent-orchestration code, not a pytest-testable unit — see Task 9 for why).
+- `.crackerjack/audit/` — created at runtime; holds the per-iteration `ai-fix-loop.jsonl` log (Task 6 Step 4). The directory should be `.gitignore`d — it's a per-run artifact, not source.
 
 **Modified files:**
 - `CLAUDE.md` — replace the removed `--ai-fix` usage in "Most Common Commands" with the new workflow invocation.
+- `.gitignore` — add `.crackerjack/audit/` if not already present.
 
 ---
 
@@ -79,20 +98,30 @@ export const meta = {
   ],
 }
 
-const MAX_ITERATIONS = (args && args.maxIterations) || 10
+// NOTE on `args` global: the Workflow tool's contract for `args` as a
+// script-level global is not formally documented; existing reference
+// workflows template values into prompts at call sites rather than
+// reading `args` at module scope. If `args` is not in fact available
+// here, replace with hard-coded defaults or pass values via the prompt
+// string from the caller. Verify before relying on this.
+const REQUESTED_MAX = (args && args.maxIterations) || 10
 
-const RUN_RESULT_SCHEMA = {
-  type: 'object',
-  properties: {
-    cleanExit: { type: 'boolean' },
-    issueCount: { type: 'number' },
-    issuesSummary: { type: 'string' },
-  },
-  required: ['cleanExit', 'issueCount', 'issuesSummary'],
-}
+// Issue-count-proportional cap: never fewer than 10, but allow up to
+// 1.5x the initial issue count for genuinely large fix surfaces.
+// Adjusted in Task 3 after the first Verify pass.
+const DEFAULT_MAX_ITERATIONS = REQUESTED_MAX
+let MAX_ITERATIONS = Math.max(REQUESTED_MAX, 10)
 
 let previousIssueCount = Number.POSITIVE_INFINITY
+let consecutiveFlat = 0
+const FLAT_THRESHOLD = 2  // require 2 flat iters before declaring 'progress-stalled'
 const auditLog = []
+let initialIssueCount = null  // set after the first Verify pass
+
+// Audit log persistence path. On script start, check for an existing
+// state file and either resume, archive-and-start-fresh, or abort —
+// decided by the operator. Per-iteration appends happen in Task 6.
+const AUDIT_LOG_PATH = '.crackerjack/audit/ai-fix-loop.jsonl'
 
 for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
   log(`Iteration ${iteration}/${MAX_ITERATIONS}`)
@@ -125,7 +154,7 @@ git commit -m "feat(ai-fix-loop): workflow script skeleton with loop scaffolding
 - Modify: `.claude/workflows/ai-fix-loop.js`
 
 **Interfaces:**
-- Consumes: `RUN_RESULT_SCHEMA` from Task 2.
+- Consumes: the `parseVerifyText` helper from Task 2 (skeleton phase).
 - Produces: `verify` object per iteration, with `cleanExit`, `issueCount`, `issuesSummary` — consumed by Task 6's stop-condition checks and Task 5's fix-dispatch prompt.
 
 - [ ] **Step 1: Replace the `// Task 3 fills in the Verify phase here.` comment with the real call**
@@ -134,25 +163,47 @@ Use the actual output shape recorded in Task 1's Step 1 report in place of the i
 
 ```js
   phase('Verify')
-  const verify = await agent(
+  // Loose-text parsing is used instead of `agent({schema})` because the
+  // Workflow tool has a documented infinite-loop bug when schema
+  // validation repeatedly fails (see `~/.claude/cache/changelog.md`).
+  // The fix agent returns plain text; we parse it ourselves.
+  const verifyText = await agent(
     `Run this exact command in the crackerjack repo: \`python -m crackerjack run -v\`. ` +
     `This prints Rich-formatted, human-readable quality-check results (not JSON) — for example a "Fast Hook Results" section ` +
     `listing each hook with a FAILED/PASSED marker and an issue count, e.g. "- ruff-check :: FAILED | issues=1250". ` +
-    `Read the full output and determine: cleanExit=true only if every hook/check passed with zero issues, ` +
-    `issueCount=the total number of issues across all failed hooks/checks (sum the counts you see; if a hook fails with no explicit count, count it as 1 issue), ` +
-    `issuesSummary=a concise plain-text summary of what failed and why, specific enough that another agent reading only this summary (not the raw output) could start fixing the issues. ` +
-    `If the command crashes or produces no usable output at all (distinct from "hooks failed" — a crash means the tool itself errored, not that it found issues), return cleanExit=false, issueCount=-1, issuesSummary="" and describe the crash.`,
-    { schema: RUN_RESULT_SCHEMA, label: `verify-iter-${iteration}`, phase: 'Verify' }
+    `Read the full output and respond with EXACTLY this format (three lines, nothing else):\n` +
+    `cleanExit: <true-or-false>\n` +
+    `issueCount: <integer-or--1>\n` +
+    `issuesSummary: <one-paragraph-plain-text-summary>\n` +
+    `Set cleanExit=true only if every hook/check passed with zero issues. ` +
+    `Set issueCount to the total number of issues across all failed hooks/checks (sum the counts; if a hook fails with no explicit count, count it as 1 issue). ` +
+    `If the command crashes or produces no usable output (distinct from "hooks failed" — a crash means the tool itself errored), set cleanExit=false, issueCount=-1, and put the crash description in issuesSummary.`,
+    { label: `verify-iter-${iteration}`, phase: 'Verify' }
   )
-  if (!verify || verify.issueCount === -1) {
-    log(`Verify agent failed or crackerjack crashed on iteration ${iteration} — aborting.`)
-    return { stopReason: 'fixer-error', iterations: iteration - 1, auditLog }
+  // Parse the agent's text response loosely.
+  const verify = parseVerifyText(verifyText)
+  // Defensive validation: NaN/null/-1 etc. must abort, not silently loop.
+  if (!verify || !Number.isFinite(verify.issueCount) || verify.issueCount < -1) {
+    log(`Verify agent returned malformed result on iteration ${iteration} — aborting.`)
+    return { stopReason: 'verify-error', iterations: iteration - 1, auditLog }
+  }
+  if (verify.issueCount === -1) {
+    log(`Verify agent reported crackerjack crash on iteration ${iteration} — aborting.`)
+    return { stopReason: 'verify-error', iterations: iteration - 1, auditLog }
   }
   if (verify.cleanExit) {
     log(`Clean after ${iteration - 1} fix iteration(s).`)
     return { stopReason: 'clean', iterations: iteration - 1, auditLog }
   }
+  // After the first Verify, scale MAX_ITERATIONS by initial issue count.
+  if (initialIssueCount === null) {
+    initialIssueCount = verify.issueCount
+    MAX_ITERATIONS = Math.max(REQUESTED_MAX, Math.ceil(initialIssueCount * 1.5), 10)
+    log(`Initial issue count: ${initialIssueCount}. Adjusted MAX_ITERATIONS to ${MAX_ITERATIONS}.`)
+  }
 ```
+
+The helper `parseVerifyText(text)` lives at module scope and returns `{ cleanExit, issueCount, issuesSummary }` by regex-extracting the three labeled lines. Falls back to `verify-error` semantics if any line is missing or malformed.
 
 - [ ] **Step 2: Test against this repo's real current state**
 
@@ -179,22 +230,35 @@ git commit -m "feat(ai-fix-loop): implement Verify phase (run crackerjack -v, ag
 
 ```js
   phase('Snapshot')
-  const snapshot = await agent(
-    `Run \`git stash push -u -m "ai-fix-loop-iter-${iteration}"\` in the repo, but only if there are uncommitted changes to stash ` +
-    `(check with \`git status --short\` first — if the tree is already clean, do NOT run stash, since it would stash nothing and confuse rollback). ` +
-    `Then run \`git stash list\` and return the top entry's reference (e.g. "stash@{0}") as stashRef. ` +
-    `If nothing was stashed because the tree was already clean, return stashRef="" and stashed=false. Otherwise return stashed=true.`,
-    {
-      schema: { type: 'object', properties: { stashRef: { type: 'string' }, stashed: { type: 'boolean' } }, required: ['stashRef', 'stashed'] },
-      label: `snapshot-iter-${iteration}`,
-      phase: 'Snapshot',
-    }
+  // Snapshot captures BOTH the positional ref AND a durable SHA handle.
+  // The positional ref (`stash@{0}`) can shift if the user adds their
+  // own stash between iterations; the SHA (`<rev>^3`) survives any
+  // positional reshuffling and is used at rollback time.
+  const snapshotText = await agent(
+    `In the crackerjack repo, perform a snapshot before this iteration's fix attempt:\n` +
+    `1. Run \`git status --short\` and verify the dirty set matches what this loop expects to snapshot. ` +
+    `If there are unexpected changes (e.g., user edits, an unrelated file change), DO NOT stash — instead respond with \`dirty=true, stashed=false, reason="<describe the unexpected changes>"\`.\n` +
+    `2. If the tree is already clean (no fix applied yet, or last iteration rolled back), respond with \`dirty=false, stashed=false\` and stop.\n` +
+    `3. Otherwise run \`git stash push -u -m "ai-fix-loop-iter-${iteration}"\` and then run \`git rev-parse "stash@{0}^3"\` to get the commit SHA the stash represents. ` +
+    `Respond with EXACTLY these three lines (nothing else):\n` +
+    `dirty: <true-or-false>\n` +
+    `stashed: <true-or-false>\n` +
+    `stashSha: <the-rev-parse-output-or-empty>\n` +
+    `If stashed=true, also include \`stashMessage: ai-fix-loop-iter-${iteration}\` on a fourth line.`,
+    { label: `snapshot-iter-${iteration}`, phase: 'Snapshot' }
   )
+  const snapshot = parseSnapshotText(snapshotText)
   if (!snapshot) {
-    log(`Snapshot agent failed on iteration ${iteration} — aborting rather than risk an unsnapshotted fix attempt.`)
-    return { stopReason: 'fixer-error', iterations: iteration - 1, auditLog }
+    log(`Snapshot agent returned malformed result on iteration ${iteration} — aborting.`)
+    return { stopReason: 'snapshot-error', iterations: iteration - 1, auditLog }
+  }
+  if (snapshot.dirty && !snapshot.stashed) {
+    log(`Unexpected dirty state detected on iteration ${iteration}: ${snapshot.reason} — aborting to avoid clobbering user changes.`)
+    return { stopReason: 'concurrent-change-detected', iterations: iteration - 1, auditLog }
   }
 ```
+
+The helper `parseSnapshotText(text)` lives at module scope and parses the labeled lines. Stores both `stashRef: "stash@{0}"` (positional) and `stashSha: "<sha>"` (durable) plus `stashMessage` in the parsed object — Task 6's rollback uses the SHA + message to locate and verify the entry even if the positional index has shifted.
 
 - [ ] **Step 2: Test the stash-or-skip branch**
 
@@ -222,32 +286,36 @@ git commit -m "feat(ai-fix-loop): implement Snapshot phase (conditional git stas
 
 ```js
   phase('Fix')
-  const fix = await agent(
+  // Loose-text parsing — `agent({schema})` has the infinite-loop bug noted in Task 3.
+  const fixText = await agent(
     `You are fixing quality issues in the crackerjack repo reported by \`crackerjack run -v\`. Here is a summary of the current issues: ${verify.issuesSummary}\n\n` +
-    `Fix as many of these issues as you directly can by editing the affected files. Prefer minimal, targeted edits — do not refactor unrelated code. ` +
-    `Do not run \`crackerjack run\` yourself; the loop driving you will re-verify after you finish. ` +
-    `When done (or if you get stuck and cannot fix something), return a list of changes you made: each with the file path and a one-sentence description of the fix. ` +
-    `If you made no changes at all, return an empty list.`,
-    {
-      schema: {
-        type: 'object',
-        properties: {
-          changes: {
-            type: 'array',
-            items: { type: 'object', properties: { file: { type: 'string' }, description: { type: 'string' } }, required: ['file', 'description'] },
-          },
-        },
-        required: ['changes'],
-      },
-      label: `fix-iter-${iteration}`,
-      phase: 'Fix',
-    }
+    `Fix as many of these issues as you directly can by editing the affected files.\n\n` +
+    `Hard constraints on your edits:\n` +
+    `- Prefer minimal, targeted edits — do not refactor unrelated code.\n` +
+    `- DO NOT modify files under \`tests/\`, \`docs/\`, or any \`*.toml\`/\`*.yml\`/\`*.txt\` config file.\n` +
+    `- DO NOT delete test files.\n` +
+    `- DO NOT touch \`pyproject.toml\`, \`setup.py\`, \`requirements*.txt\`, or \`Dockerfile\`.\n` +
+    `- Maximum: 5 files changed, 100 lines changed. If a fix needs more, describe it and skip — the loop driver will dispatch a fresh attempt on the next iteration.\n` +
+    `- Do not run \`crackerjack run\` yourself; the loop driving you will re-verify after you finish.\n\n` +
+    `When done, respond with EXACTLY this format (one block per file you changed, nothing else):\n` +
+    `CHANGES:\n` +
+    `file: <path>\n` +
+    `description: <one-sentence-description>\n` +
+    `---\n` +
+    `file: <path>\n` +
+    `description: <one-sentence-description>\n` +
+    `---\n` +
+    `If you made no changes at all, respond with just: CHANGES: (empty list)`,
+    { label: `fix-iter-${iteration}`, phase: 'Fix' }
   )
+  const fix = parseFixText(fixText)
   if (!fix) {
-    log(`Fix agent failed on iteration ${iteration} — aborting.`)
-    return { stopReason: 'fixer-error', iterations: iteration - 1, auditLog }
+    log(`Fix agent returned malformed result on iteration ${iteration} — aborting.`)
+    return { stopReason: 'fix-agent-error', iterations: iteration - 1, auditLog }
   }
 ```
+
+The helper `parseFixText(text)` extracts the `CHANGES:` block entries. Returns `{ changes: [{file, description}, ...] }`.
 
 - [ ] **Step 2: Test against a real, small, known issue**
 
@@ -262,65 +330,159 @@ git commit -m "feat(ai-fix-loop): implement Fix phase (dispatch residual issues 
 
 ---
 
-### Task 6: Implement stop-condition checks, rollback, and the audit log
+### Task 6: Implement stop-condition checks, rollback, audit log, and diff-sanity
 
 **Files:**
 - Modify: `.claude/workflows/ai-fix-loop.js`
 
 **Interfaces:**
 - Consumes: `verify`, `snapshot`, `fix` from Tasks 3-5.
-- Produces: the loop's final return value — `{ stopReason: 'clean' | 'no-improvement' | 'iteration-cap' | 'fixer-error', iterations: number, auditLog: Array }`.
+- Produces: the loop's final return value — `{ stopReason: <expanded-taxonomy>, iterations: number, auditLog: Array }`.
+
+**Stop reason taxonomy (final form):**
+
+| Reason | Meaning | Operator action |
+|---|---|---|
+| `'clean'` | Zero issues, all fixed | None — success |
+| `'progress-stalled'` | 2+ consecutive iterations with no count reduction | Inspect audit log, accept partial progress |
+| `'regressed'` | Issue count increased | Auto-rollback already attempted; inspect git state |
+| `'iteration-cap'` | Hit `MAX_ITERATIONS` | Inspect audit log for partial progress, may want to re-run |
+| `'verify-error'` | Verify agent returned malformed result OR reported a crackerjack crash | Investigate the verify phase, possibly rerun |
+| `'snapshot-error'` | Snapshot agent returned malformed result | Investigate snapshot phase |
+| `'fix-agent-error'` | Fix agent returned malformed result | Investigate fix phase |
+| `'rollback-error'` | Stash pop after no-improvement failed | Manual `git stash list` + `git checkout` |
+| `'concurrent-change-detected'` | Working tree was dirty with unexpected changes when snapshot ran | Resolve user edits, re-run |
+| `'diff-too-large'` | Fix agent exceeded the 5-files/100-lines blocklist from Task 5 Step 1 | Reduce fix scope manually, re-run |
+| `'akosha-best-effort'` | Akosha logging partially failed but loop succeeded | None — logging is best-effort |
 
 - [ ] **Step 1: Add the no-improvement / rollback check, placed after Verify (Task 3) and before Snapshot (Task 4) each iteration**
 
 ```js
-  if (verify.issueCount >= previousIssueCount) {
-    log(`No improvement (was ${previousIssueCount}, now ${verify.issueCount}).`)
-    if (auditLog.length > 0 && auditLog[auditLog.length - 1].stashRef) {
-      const lastStash = auditLog[auditLog.length - 1].stashRef
-      await agent(
-        `Run \`git stash pop ${lastStash}\` in the repo to undo the last fix attempt, since it made no improvement. ` +
-        `If that stash ref no longer exists or pop fails, run \`git status --short\` and report the current state instead of guessing further.`,
-        { label: `rollback-iter-${iteration}`, phase: 'Snapshot' }
-      )
+  // Count-delta and consecutive-flat tracking.
+  const countDelta = verify.issueCount - previousIssueCount
+  if (!Number.isFinite(countDelta)) {
+    log(`Non-finite count delta on iteration ${iteration} — aborting to avoid silent infinite loop.`)
+    return { stopReason: 'verify-error', iterations: iteration - 1, auditLog }
+  }
+  if (countDelta > 0) {
+    log(`Issue count increased (was ${previousIssueCount}, now ${verify.issueCount}) — rolling back.`)
+    await attemptRollback(auditLog, iteration)
+    return { stopReason: 'regressed', iterations: iteration - 1, auditLog }
+  }
+  if (countDelta === 0) {
+    consecutiveFlat += 1
+    if (consecutiveFlat >= FLAT_THRESHOLD) {
+      log(`No progress for ${consecutiveFlat} consecutive iterations — rolling back and stopping.`)
+      await attemptRollback(auditLog, iteration)
+      return { stopReason: 'progress-stalled', iterations: iteration - 1, auditLog }
     }
-    return { stopReason: 'no-improvement', iterations: iteration - 1, auditLog }
+    log(`Flat iteration ${consecutiveFlat}/${FLAT_THRESHOLD} — continuing.`)
+  } else {
+    consecutiveFlat = 0
   }
   previousIssueCount = verify.issueCount
 ```
 
-- [ ] **Step 2: Append to the audit log after the Fix phase completes**
+- [ ] **Step 2: Implement SHA-anchored rollback (helper at module scope)**
+
+`attemptRollback(auditLog, iteration)` reads `auditLog[auditLog.length - 1]` for the last snapshot's `stashMessage` and `stashSha`, then runs an `agent()` call that:
+
+1. `git stash list --grep '^<stashMessage>$'` to find the entry by message (positional index may have shifted).
+2. Verify the entry's commit SHA matches the captured `stashSha` (via `git rev-parse "<entry>^3"`).
+3. If SHA matches: `git stash pop "<entry>"`, then `git stash drop "<entry>"` to prevent accumulation.
+4. If SHA mismatch: abort with `rollback-error` rather than guess.
+
+The positional `stashRef` (`stash@{N}`) is never used for rollback. Document this in the helper's leading comment.
+
+- [ ] **Step 3: Add post-fix diff sanity check (after Fix phase, before audit-log append)**
 
 ```js
-  auditLog.push({
-    iteration,
-    issuesBefore: verify.issueCount,
-    stashRef: snapshot.stashed ? snapshot.stashRef : null,
-    changes: fix.changes,
-  })
+  // Post-fix diff sanity — fix-agent prompts are advisory; cap scope.
+  const diffStatText = await agent(
+    `Run \`git diff --stat\` and \`git diff --name-only\` from the snapshot SHA in the crackerjack repo. ` +
+    `Respond with EXACTLY these lines:\n` +
+    `filesChanged: <integer>\n` +
+    `linesChanged: <integer>\n` +
+    `forbiddenTouched: <comma-separated-paths-or-empty>\n` +
+    `Forbidden paths are: anything under \`tests/\`, \`docs/\`, or matching \`*.toml\`, \`*.yml\`, \`*.txt\`, \`pyproject.toml\`, \`setup.py\`, \`requirements*.txt\`, \`Dockerfile\`.`,
+    { label: `diff-sanity-iter-${iteration}`, phase: 'Snapshot' }
+  )
+  const diffSanity = parseDiffStatText(diffStatText)
+  if (!diffSanity) {
+    log(`Diff-sanity agent returned malformed result on iteration ${iteration} — aborting.`)
+    return { stopReason: 'fix-agent-error', iterations: iteration - 1, auditLog }
+  }
+  if (diffSanity.filesChanged > 5 || diffSanity.linesChanged > 100 || diffSanity.forbiddenTouched) {
+    log(`Fix exceeded limits on iteration ${iteration}: files=${diffSanity.filesChanged}, lines=${diffSanity.linesChanged}, forbidden=${diffSanity.forbiddenTouched} — rolling back.`)
+    await attemptRollback(auditLog, iteration)
+    return { stopReason: 'diff-too-large', iterations: iteration - 1, auditLog }
+  }
 ```
 
-- [ ] **Step 3: Assemble the full loop body in order**
+- [ ] **Step 4: Append to the audit log (in-memory and on-disk)**
 
-Confirm the final iteration body order is: Verify (Task 3) → clean-exit check (Task 3) → no-improvement/rollback check (this task, Step 1) → Snapshot (Task 4) → Fix (Task 5) → audit-log append (this task, Step 2). Re-read the full file after assembly to confirm no phase was duplicated or dropped during the incremental edits across Tasks 3-6.
+```js
+  const entry = {
+    iteration,
+    issuesBefore: verify.issueCount,
+    issuesAfter: null,  // filled in by next iter's Verify
+    stashSha: snapshot.stashed ? snapshot.stashSha : null,
+    stashMessage: snapshot.stashed ? snapshot.stashMessage : null,
+    changes: fix.changes,
+    diffStat: diffSanity,
+  }
+  auditLog.push(entry)
+  // Persist immediately to disk so a harness crash mid-iteration
+  // doesn't lose the audit trail. This requires an `agent()` call
+  // since the script itself can't write files.
+  await agent(
+    `Append this JSON line to the file \`${AUDIT_LOG_PATH}\` (create the parent dir if missing). ` +
+    `Use a JSON.stringify call from a Bash heredoc or python -c. Line content:\n` +
+    `${JSON.stringify(entry)}`,
+    { label: `audit-persist-iter-${iteration}`, phase: 'Snapshot' }
+  )
+```
 
-- [ ] **Step 4: Test the no-improvement path**
+- [ ] **Step 5: Assemble the full loop body in order**
 
-Deliberately construct a scenario where the Fix agent's changes don't reduce the issue count (e.g., point it at an issue type it can't actually fix) and confirm the loop correctly detects no improvement, triggers rollback, and returns `stopReason: 'no-improvement'` rather than looping further.
+Final iteration body order is:
 
-- [ ] **Step 5: Test the iteration-cap path**
+1. Verify (Task 3) — with `parseVerifyText` and `Number.isFinite` guard
+2. Clean-exit check (Task 3)
+3. Initial-issue-count + MAX_ITERATIONS adjustment (Task 3, on first iter only)
+4. **No-improvement / regressed / progress-stalled check (Task 6 Step 1)**
+5. Snapshot (Task 4) — with clean-tree invariant
+6. Fix (Task 5) — with hard constraints in prompt
+7. **Diff-sanity check (Task 6 Step 3)**
+8. **Audit-log append + persist (Task 6 Step 4)**
 
-Run with `maxIterations: 2` against a repo state with more than 2 genuinely fixable issues spread across iterations, and confirm it stops at the cap with `stopReason: 'iteration-cap'` and a populated `auditLog` covering both iterations.
+Re-read the full file after assembly to confirm no phase was duplicated or dropped during the incremental edits across Tasks 3-6.
 
-- [ ] **Step 6: Note the timeout limitation explicitly**
+- [ ] **Step 6: Test the no-improvement path (progress-stalled)**
 
-This implementation has no independent wall-clock timeout — `Date.now()` is unavailable in Workflow scripts. Each `agent()` call is bounded only by the harness's own per-agent turn/time limits, not by this script. If a hard wall-clock budget is needed later, it must be enforced by whatever invokes this workflow (e.g., a cron wrapper with the `timeout` command), not by the script itself. Document this as a known constraint in the script's header comment.
+Deliberately construct a scenario where the Fix agent's changes don't reduce the issue count (e.g., point it at an issue type it can't actually fix) — and run for 2 iterations. Confirm the loop correctly detects flat progress, triggers rollback, and returns `stopReason: 'progress-stalled'` rather than looping further.
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 7: Test the regressed path**
+
+Deliberately construct a scenario where the Fix agent's changes increase the issue count. Confirm the loop correctly detects the regression, triggers rollback, and returns `stopReason: 'regressed'`.
+
+- [ ] **Step 8: Test the iteration-cap path**
+
+Run with `maxIterations: 2` against a repo state with more than 2 genuinely fixable issues spread across iterations. Confirm it stops at the cap with `stopReason: 'iteration-cap'` and a populated `auditLog` covering both iterations.
+
+- [ ] **Step 9: Verify on-disk audit log persistence**
+
+After each test above, read `.crackerjack/audit/ai-fix-loop.jsonl` and confirm it contains one JSON line per completed iteration, matching the in-memory `auditLog` array. Stop reason is NOT in the persisted entries — that's only known at loop end.
+
+- [ ] **Step 10: Note the timeout limitation explicitly**
+
+This implementation has no independent wall-clock timeout — `Date.now()` is unavailable in Workflow scripts. Each `agent()` call is bounded only by the harness's own per-agent turn/time limits, not by this script. Wall-clock timeout is enforced by the **caller** via `dispatch_to_pool(timeout=N)` from Mahavishnu, or a cron wrapper with the `timeout` command. Document this as a known constraint in the script's header comment.
+
+- [ ] **Step 11: Commit**
 
 ```bash
 git add .claude/workflows/ai-fix-loop.js
-git commit -m "feat(ai-fix-loop): stop conditions, rollback-on-no-improvement, audit log"
+git commit -m "feat(ai-fix-loop): stop conditions, SHA-anchored rollback, diff sanity, audit log"
 ```
 
 ---
@@ -343,21 +505,36 @@ Run: `ToolSearch` with query `"akosha store memory generate embedding"` (via the
 Restructure the loop slightly so the final result is captured in a variable before returning, then log each successful iteration's fix from `auditLog`:
 
 ```js
-  // After the for-loop, before the final `return`:
-  for (const entry of auditLog) {
-    for (const change of entry.changes) {
-      await agent(
-        `Log this fix outcome to Akosha for future pattern learning. First call the embedding-generation tool found via ToolSearch on the text: ` +
-        `"Fixed in ${change.file}: ${change.description}". Then call the memory-storage tool with that embedding, the same text, and metadata ` +
-        `{repo: "crackerjack", file: "${change.file}", outcome: "fixed", iteration: ${entry.iteration}}. ` +
-        `This is write-only — do not query Akosha for prior fixes, just log this one.`,
-        { label: `akosha-log-${entry.iteration}-${change.file}`, phase: 'Fix' }
-      )
-    }
-  }
+  // After the for-loop, before the final `return`.
+  //
+  // Akosha contract compliance — `store_memory` requires both a
+  // non-empty `memory_id` AND a 384-dim `embedding` vector. The
+  // sequence is mandatory:
+  //   1. Generate embedding via `generate_embedding(text)`
+  //   2. Call `store_memory(memory_id, text, embedding, metadata)`
+  //
+  // Custom metadata keys (repo, file, outcome, iteration) are NOT
+  // preserved by Akosha's metadata normalizer — only `correlation_id`
+  // round-trips. Pack fix context into the `text` payload instead.
+  //
+  // Use `batch_store_memories` to ship one iteration's fixes in a
+  // single call instead of one-call-per-change.
+  await agent(
+    `For each change in this iteration's audit log entry, log a memory to Akosha using ` +
+    `\`batch_store_memories\`. For each change, build:\n` +
+    `  - text: "Crackerjack ai-fix-loop iter=${entry.iteration} | file=${change.file} | ${change.description}"\n` +
+    `  - memory_id: "ai-fix-loop:iter-${entry.iteration}:${change.file}" (deterministic, non-empty)\n` +
+    `  - metadata: { correlation_id: "ai-fix-loop:iter-${entry.iteration}", type: "session_memory" }\n` +
+    `Then for EACH memory's text, FIRST call \`generate_embedding(text)\` to get a 384-dim vector, ` +
+    `THEN call \`store_memory\` (or build the full batch with embeddings and call \`batch_store_memories\` once). ` +
+    `Skip any change where the embedding call fails — log a warning but continue.\n\n` +
+    `This is best-effort write-only logging. Do not query Akosha for prior fixes. ` +
+    `If a call fails, log the error and continue — DO NOT abort the workflow result.`,
+    { label: `akosha-log-iter-${entry.iteration}`, phase: 'Fix' }
+  )
 ```
 
-(Use the exact tool names confirmed in Step 1 in the prompt text, replacing the generic "embedding-generation tool"/"memory-storage tool" phrasing with the real tool names.)
+(Replace `batch_store_memories` / `store_memory` / `generate_embedding` with the exact tool names confirmed in Step 1 — they are confirmed to exist in `/Users/les/Projects/akosha/akosha/mcp/tools/session_buddy_tools.py` and `akosha_tools.py`.)
 
 - [ ] **Step 3: Test that a failed Akosha call doesn't break the loop's result**
 
@@ -424,13 +601,17 @@ Run manually after any change to `.claude/workflows/ai-fix-loop.js`:
 
 1. `git status --short` — confirm clean tree before starting.
 2. `uv run python -m crackerjack run -v 2>&1 | tail -40` — record the current real hook results by eye.
-3. Invoke the workflow: `Workflow({ scriptPath: '.claude/workflows/ai-fix-loop.js', args: { maxIterations: 5 } })`.
-4. Confirm the returned `stopReason` matches expectations:
+3. `cat .crackerjack/audit/ai-fix-loop.jsonl 2>/dev/null | wc -l` — record the audit log line count (should be 0 on a clean state, or non-zero if resuming a prior interrupted run; if non-zero, decide whether to resume or archive-and-start-fresh before invoking).
+4. Invoke the workflow: `Workflow({ scriptPath: '.claude/workflows/ai-fix-loop.js', args: { maxIterations: 5 } })`.
+5. Confirm the returned `stopReason` matches expectations:
    - If step 2 showed a clean pass, expect `stopReason: 'clean'`, `iterations: 0`.
-   - If step 2 showed issues, expect either `stopReason: 'clean'` with `iterations > 0` and a populated `auditLog`, or `stopReason: 'iteration-cap'`/`'no-improvement'` with a legible partial-progress `auditLog`.
-5. Run `uv run python -m crackerjack run -v 2>&1 | tail -40` again — confirm the real hook results improved or reached clean, matching what the workflow reported (don't trust the workflow's self-report alone).
-6. `git log --oneline -10` — confirm no unexpected commits were created (the loop should only stash/pop, not commit, unless a future revision changes that).
-7. `git status --short` — confirm no leftover stash entries (`git stash list` should be empty or only contain pre-existing entries from before this run).
+   - If step 2 showed issues, expect either `stopReason: 'clean'` with `iterations > 0` and a populated `auditLog`, or one of `'progress-stalled'`/`'iteration-cap'`/`'regressed'`/`'diff-too-large'` with a legible partial-progress `auditLog`.
+   - Any of `'verify-error'`, `'snapshot-error'`, `'fix-agent-error'`, `'rollback-error'`, `'concurrent-change-detected'` indicates a bug, not a known limitation.
+6. Run `uv run python -m crackerjack run -v 2>&1 | tail -40` again — confirm the real hook results improved or reached clean, matching what the workflow reported (don't trust the workflow's self-report alone).
+7. `git log --oneline -10` — confirm no unexpected commits were created (the loop should only stash/pop, not commit, unless a future revision changes that).
+8. `git status --short` — confirm no leftover dirty files.
+9. `git stash list` — confirm no leftover `ai-fix-loop-iter-*` entries. If any remain, they indicate the loop crashed before the rollback/drop step (manual cleanup required).
+10. `cat .crackerjack/audit/ai-fix-loop.jsonl` — confirm one JSON line per iteration ran (or zero if the loop never started). Verify the entries' `iteration`, `issuesBefore`, `changes`, `diffStat` fields are populated. This file is the durable record — keep it for postmortem review; delete it between runs only if you want a fresh start.
 ```
 
 - [ ] **Step 2: Run it for real**
