@@ -1,10 +1,13 @@
 from __future__ import annotations
+import json
 import re
 import shutil
 import subprocess
 import sys
 import time
 import typing as t
+from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 
 from rich import box
@@ -35,6 +38,13 @@ if t.TYPE_CHECKING:
 
 ANSI_ESCAPE_RE = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
 root_path = Path.cwd()
+
+
+@dataclass
+class RatchetResult:
+    exit_code: int
+    message: str
+
 
 class TestManager:
     __test__ = False
@@ -111,6 +121,81 @@ class TestManager:
         self._error_count = 0
         self._custom_metrics: dict[str, t.Any] = {}
         self._resources: list[t.Any] = []
+
+    def run_with_ratchet_check(self) -> RatchetResult:
+        """Post-test ratchet gate. Reads coverage.json, compares to ratchet.
+
+        Returns:
+            RatchetResult with exit_code 0 on pass and exit_code 1 on drop or
+            missing data. Bumps the ratchet up when coverage rose beyond
+            tolerance, and mirrors the new value into pyproject.toml.
+        """
+        if self.coverage_ratchet is None:
+            return RatchetResult(
+                exit_code=1,
+                message="Coverage ratchet not configured.",
+            )
+
+        coverage_file = self.pkg_path / "coverage.json"
+        if not coverage_file.exists():
+            return RatchetResult(
+                exit_code=1,
+                message="coverage.json not found; run pytest with coverage first",
+            )
+
+        try:
+            data = json.loads(coverage_file.read_text())
+        except (json.JSONDecodeError, OSError) as exc:
+            return RatchetResult(
+                exit_code=1,
+                message=f"Failed to read coverage.json: {exc}",
+            )
+
+        current_pct = float(
+            data.get("totals", {}).get("percent_covered", 0.0)
+        )
+
+        if not self.coverage_ratchet.ratchet_file.exists():
+            return RatchetResult(
+                exit_code=1,
+                message=(
+                    "Ratchet not initialized. Run "
+                    "`crackerjack coverage-ratchet init`."
+                ),
+            )
+
+        ratchet_data = self.coverage_ratchet.get_ratchet_data()
+        baseline = float(ratchet_data.get("current_minimum", 0.0))
+        tolerance = float(self.coverage_ratchet.TOLERANCE_MARGIN)
+        drop = baseline - current_pct
+
+        if drop > tolerance:
+            msg = (
+                f"📉 Coverage regression detected\n"
+                f"   Current: {current_pct:.2f}%\n"
+                f"   Ratchet: {baseline:.2f}% "
+                f"(TOLERANCE_MARGIN: {tolerance:.1f})\n"
+                f"   Drop: {drop:.2f}% (exceeds tolerance)\n\n"
+                f"   To recover:\n"
+                f"     • Add tests to bring coverage back above "
+                f"{baseline:.2f}%\n"
+                f"     • OR acknowledge the regression:\n"
+                f"         crackerjack coverage-ratchet lower "
+                f"--to {current_pct:.2f} --reason \"<text>\""
+            )
+            return RatchetResult(exit_code=1, message=msg)
+
+        if current_pct > baseline + tolerance:
+            self.coverage_ratchet.mirror_to_pyproject(current_pct)
+            ratchet_data["current_minimum"] = current_pct
+            ratchet_data["last_updated"] = datetime.now().isoformat()
+            self.coverage_ratchet.ratchet_file.write_text(
+                json.dumps(ratchet_data, indent=2)
+            )
+
+        return RatchetResult(
+            exit_code=0, message=f"Coverage: {current_pct:.2f}%"
+        )
 
     def set_progress_callback(
         self,
