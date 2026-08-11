@@ -1,11 +1,20 @@
 from __future__ import annotations
 
+import asyncio
+import json
 import subprocess
 import sys
 from pathlib import Path
 
 import typer
 from rich.console import Console
+
+from crackerjack.skills.health import (
+    DEFAULT_SESSION_BUDDY_URL,
+    DEFAULT_THRESHOLD_DAYS,
+    SkillHealthReport,
+    fetch_skill_health,
+)
 
 app = typer.Typer(
     name="audit",
@@ -123,6 +132,76 @@ def locate(
         raise typer.Exit(2)
     sys.stdout.write(str(audit_script))
     sys.stdout.write("\n")
+
+
+@app.command()
+def skills(
+    threshold_days: int = typer.Option(
+        DEFAULT_THRESHOLD_DAYS,
+        "--threshold-days",
+        help="Days of inactivity before a skill is considered stale.",
+    ),
+    session_buddy_url: str | None = typer.Option(
+        None,
+        "--session-buddy-url",
+        help="Override Session-Buddy MCP URL (default: $SESSION_BUDDY_MCP_URL or localhost:8678/mcp).",
+    ),
+    json_output: bool = typer.Option(
+        False, "--json", help="Emit a single-line JSON record instead of the Markdown report."
+    ),
+    fail: bool = typer.Option(
+        False,
+        "--fail",
+        help="Exit 1 when stale_count > 0. Use in CI to gate.",
+    ),
+) -> None:
+    """Show the Session-Buddy distilled-skill freshness report.
+
+    Exit codes:
+      0  fresh / unavailable (warn-only preserved)
+      1  stale AND --fail passed
+      2  invalid args
+    """
+    report: SkillHealthReport
+    result = fetch_skill_health(
+        session_buddy_url=session_buddy_url,
+        threshold_days=threshold_days,
+    )
+    if asyncio.iscoroutine(result):
+        report = asyncio.run(result)
+    else:
+        report = result
+    if json_output:
+        console.print(
+            json.dumps(
+                {
+                    "status": report.status,
+                    "stale_count": report.stale_count,
+                    "raw_rows": report.raw_rows,
+                }
+            )
+        )
+    else:
+        if report.status == "unavailable":
+            console.print(
+                "[yellow][skill-coverage] WARN: Session-Buddy unreachable.[/yellow]\n"
+                f"[dim]URL: {session_buddy_url or DEFAULT_SESSION_BUDDY_URL}[/dim]"
+            )
+        elif report.status == "stale":
+            console.print(
+                f"[red][skill-coverage] STALE: {report.stale_count} skill(s) "
+                "need refreshing.[/red]\n"
+                "[dim]Run: crackerjack skills refresh[/dim]"
+            )
+            if report.raw_rows:
+                console.print("[dim]" + json.dumps(report.raw_rows) + "[/dim]")
+        else:
+            console.print(
+                "[green][skill-coverage] OK: fresh — 0 stale skills.[/green]"
+            )
+
+    if report.status == "stale" and fail:
+        raise typer.Exit(1)
 
 
 def _self_test() -> None:

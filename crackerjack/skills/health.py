@@ -10,6 +10,7 @@ import httpx
 
 DEFAULT_SESSION_BUDDY_URL: str = "http://localhost:8678/mcp"
 DEFAULT_TIMEOUT_SECONDS: float = 5.0
+DEFAULT_THRESHOLD_DAYS: int = 90
 
 HttpClientFactory = Callable[[float], httpx.AsyncClient]
 
@@ -97,6 +98,7 @@ async def fetch_skill_health(
 
 __all__ = [
     "DEFAULT_SESSION_BUDDY_URL",
+    "DEFAULT_THRESHOLD_DAYS",
     "DEFAULT_TIMEOUT_SECONDS",
     "HttpClientFactory",
     "SkillHealthReport",
