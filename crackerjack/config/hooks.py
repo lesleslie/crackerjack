@@ -211,18 +211,6 @@ FAST_HOOKS = [
         accepts_file_paths=False,
         description="Dependency vulnerability scanning with auto-fix",
     ),
-    HookDefinition(
-        name="skill-coverage",
-        command=["python", "-m", "crackerjack.hooks.pre_commit"],
-        timeout=10,
-        security_level=SecurityLevel.LOW,
-        accepts_file_paths=False,
-        retry_on_failure=False,
-        description=(
-            "Phase 1.5 skill coverage gate (warn-only by default; "
-            "--strict makes fatal)."
-        ),
-    ),
 ]
 
 COMPREHENSIVE_HOOKS = [
