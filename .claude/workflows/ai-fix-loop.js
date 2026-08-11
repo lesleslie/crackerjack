@@ -1,13 +1,14 @@
-// AI-Fix External Loop — Workflow script (Task 3: Verify phase).
+// AI-Fix External Loop — Workflow script (Task 7: Akosha passive logging).
 //
 // Runs `crackerjack run -v` to surface residual quality issues,
 // dispatches them to a fix agent, re-verifies, repeats until clean
-// or capped. Full design: docs/superpowers/plans/2026-08-06-ai-fix-external-loop.md
+// or capped. After each successful fix iteration, ships the fix
+// outcome to Akosha via generate_embedding → store_memory. Full
+// design: docs/superpowers/plans/2026-08-06-ai-fix-external-loop.md
 //
-// Status: Task 3 complete (Verify phase implemented). Tasks 4-6 still pending:
-//   - Task 4: Snapshot phase (git stash/clean-tree invariant)
-//   - Task 5: Fix phase (dispatch issues to fix agent)
-//   - Task 6: Stop-condition checks, rollback, audit log persistence
+// Status: Task 7 complete. Tasks 8-9 still pending:
+//   - Task 8: Update CLAUDE.md usage docs (replaces removed --ai-fix section)
+//   - Task 9: End-to-end acceptance runbook against real repo state
 
 export const meta = {
   name: 'ai-fix-loop',
@@ -309,6 +310,58 @@ function parsePersistText(text) {
   return { success: successMatch[1] === 'true', error }
 }
 
+// logAkoshaFixes helper (Task 7, module scope, async).
+// Best-effort write-only logging of one successful iteration's fixes
+// to Akosha. Per Akosha contract compliance:
+//   1. generate_embedding(text) → 384-dim vector
+//   2. store_memory(memory_id, text, embedding, metadata)
+// Custom metadata keys (repo, file, outcome, iteration) are NOT
+// preserved by Akosha's metadata normalizer — only `correlation_id`
+// round-trips. Fix context is packed into the `text` payload instead.
+//
+// Deterministic, non-empty memory_id: "ai-fix-loop:iter-<N>:<file>"
+// (or ":1"/":2" disambiguator if the same file appears twice in the
+// same iteration's changes list).
+//
+// No-op when entry.changes is empty — the empty-CHANGES case from
+// parseFixText represents "agent touched nothing this iteration",
+// and there's nothing fix-related to log.
+//
+// The Workflow script cannot call Akosha MCP tools directly, so the
+// actual MCP dispatch happens inside an agent() call. The agent
+// iterates over entry.changes, building text/memory_id/metadata for
+// each, then issues generate_embedding → store_memory sequentially
+// per change. Per-change failures are logged and skipped; the agent
+// never aborts the whole operation.
+//
+// The caller wraps this in try/catch so any thrown error (agent
+// failure, MCP timeout, etc.) does not propagate to the loop. This
+// helper is observability infrastructure, not control flow.
+async function logAkoshaFixes(entry) {
+  if (!entry || !entry.changes || entry.changes.length === 0) {
+    return  // nothing to log; intentional no-op
+  }
+  await agent(
+    `In the crackerjack repo, log a memory to Akosha for each fix in this iteration's audit entry. ` +
+    `The audit entry's iteration is ${entry.iteration} and the changes array has ${entry.changes.length} item(s):\n\n` +
+    `  ${JSON.stringify(entry.changes)}\n\n` +
+    `For EACH change, perform the following sequence (Akosha contract — store_memory requires both a non-empty memory_id and a 384-dim embedding):\n` +
+    `1. Build the text payload. Pack fix context into text because custom metadata keys don't round-trip:\n` +
+    `   text = "Crackerjack ai-fix-loop iter=${entry.iteration} | file=<change.file> | <change.description>"\n` +
+    `2. Build a deterministic, non-empty memory_id:\n` +
+    `   memory_id = "ai-fix-loop:iter-${entry.iteration}:<change.file>"\n` +
+    `   (If two changes share the same file path, append an index like ":1", ":2" to disambiguate.)\n` +
+    `3. Build metadata (only correlation_id and type are preserved by Akosha's normalizer):\n` +
+    `   metadata = { correlation_id: "ai-fix-loop:iter-${entry.iteration}", type: "session_memory" }\n` +
+    `4. Call the MCP tool \`mcp__akosha__generate_embedding\` with the text. It expects a single text string and returns a list of floats (the 384-dim vector).\n` +
+    `5. Call \`mcp__akosha__store_memory\` with memory_id, text, embedding, and metadata. Pass them as named arguments matching the tool's schema.\n` +
+    `6. If the embedding call returns an error or store_memory returns an error for a specific change, log a warning but CONTINUE with the next change. Do NOT abort the whole operation.\n\n` +
+    `This is best-effort write-only observability. Do NOT query Akosha for prior fixes. ` +
+    `Do NOT abort the workflow on any failure — log and continue.`,
+    { label: `akosha-log-iter-${entry.iteration}`, phase: 'Fix' }
+  )
+}
+
 for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
   log(`Iteration ${iteration}/${MAX_ITERATIONS}`)
 
@@ -573,7 +626,18 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
       auditLog,
     }
   }
-  // Task 6 fills in the stop-condition checks here.
+
+  // === Task 7: Akosha passive fix-outcome logging (best-effort) ===
+  // Per Akosha contract: generate_embedding(text) → store_memory(...).
+  // Custom metadata keys don't round-trip; fix context is packed into
+  // text. Best-effort: a failure here MUST NOT abort the loop. The
+  // outer try/catch absorbs any thrown error from the agent call; the
+  // agent prompt itself also instructs per-change skip-and-continue.
+  try {
+    await logAkoshaFixes(entry)
+  } catch (err) {
+    log(`Akosha logging failed for iteration ${iteration}: ${err} — continuing.`)
+  }
 }
 
 log(`Iteration cap (${MAX_ITERATIONS}) reached with issues still remaining.`)
