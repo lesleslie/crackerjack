@@ -45,9 +45,12 @@ Run it after:
    before proceeding.
 4. **Invoke the workflow**:
    ```
-   Workflow({ scriptPath: '.claude/workflows/ai-fix-loop.js', args: { maxIterations: 5 } })
+   Workflow({ scriptPath: '.claude/workflows/ai-fix-loop.js', args: { maxIterations: 10 } })
    ```
    Capture the returned object — `{ stopReason, iterations, auditLog, ... }`.
+   Note: `args.maxIterations` is silently clamped to a minimum of 10 by
+   the script (`Math.max(REQUESTED_MAX, 10)`); passing 5 produces the
+   same behavior as passing 10.
 5. **Confirm `stopReason` matches expectations**:
    - If step 2 showed a clean pass, expect `stopReason: 'clean'`,
      `iterations: 0`.
@@ -83,13 +86,7 @@ Run it after:
    git stash drop "stash@{<N>}"
    ```
    where `<N>` is the leftover entry's positional index.
-10. **`cat .crackerjack/audit/ai-fix-loop.jsonl`** — confirm one JSON
-    line per completed iteration (or zero if the loop never started,
-    e.g., `initial-issue-count-too-high` aborted before any iter
-    ran). Each line's `iteration`, `issuesBefore`, `changes`,
-    `diffStat` fields should be populated. This file is the durable
-    record — keep it for postmortem review; delete it between runs
-    only if you want a fresh start.
+10. **`test -f .crackerjack/audit/ai-fix-loop.jsonl && cat .crackerjack/audit/ai-fix-loop.jsonl || echo "(file does not exist — fresh state, expected)"`** — the file is created lazily by the first successful `persistAuditLog` call. On a fresh state or when the loop aborted before any iter completed (e.g., `initial-issue-count-too-high`), the file does not exist. When it does exist, confirm one JSON line per completed iteration. Each line's full field set is: `iteration`, `issuesBefore`, `issuesAfter` (back-patched on the next iter's Verify pass; the last entry may legitimately have `null`), `outcome` (always `'fixed'` for entries that completed — rolled-back entries are flagged via the separate `rolledBack: true` field, not via `outcome`), `stashSha`, `stashMessage`, `changes`, `diffStat`. This file is the durable record — keep it for postmortem review; delete it between runs only if you want a fresh start.
 
 ## Expected Outcome for This Repo (2026-08-10 baseline)
 
@@ -123,10 +120,10 @@ scope, default 200), or (b) triage the largest-bucket hook (currently
 |---|---|---|
 | `stopReason: 'verify-error'` repeatedly | Three distinct emit paths in the script: (1) malformed verify text (missing `cleanExit:`/`issueCount:`/`issuesSummary:`), (2) `issueCount === -1` indicating the upstream `crackerjack run -v` crashed (look for "💥" or "Workflow failed" markers), (3) non-finite `countDelta` slipped through the guard. | Read the latest `verify-iter-N` agent output by hand to distinguish. The script's three emit paths each correspond to different upstream causes. |
 | `stopReason: 'snapshot-error'` after first iter | Snapshot agent's stash step failed; usually permissions or `.git` corruption. Also fires on `dirty=true && stashed=true` (the parser rejects this hybrid as malformed). | `git stash list` and `git status`; verify the repo is a real git repo, not a worktree-shallow clone. |
-| `stopReason: 'fix-agent-error'` | Two distinct emit paths in the script: (1) `parseFixText` returned null — the fix agent's response was missing the `CHANGES:` block, (2) `parseDiffStatText` returned null — the **diff-sanity** agent's response was malformed (filesChanged/linesChanged/forbiddenTouched lines missing). Note: post-review fixes the diff-sanity case now emits the dedicated `diff-sanity-error` stop reason instead — but if you see `fix-agent-error` it's the parseFixText path. | Inspect BOTH `fix-iter-N` (for missing CHANGES:) AND `diff-sanity-iter-N` (for malformed filesChanged/linesChanged/forbiddenTouched) outputs. |
+| `stopReason: 'fix-agent-error'` | Indicates a problem with one of the loop's dispatched agents or their response parsers (the script itself, or a downstream agent prompt-format issue). Two possible causes: (1) the fix agent's response was missing the `CHANGES:` block (parseFixText returned null), (2) the **diff-sanity** agent's response was malformed (parseDiffStatText returned null). Note: post-review fixes changed (2) to emit the dedicated `diff-sanity-error` stop reason instead — so in current code, `fix-agent-error` is always (1). | Inspect BOTH `fix-iter-N` (for missing CHANGES:) AND `diff-sanity-iter-N` (for malformed filesChanged/linesChanged/forbiddenTouched) outputs. The fix may be a script bug, an agent-prompt issue, or an upstream agent runtime problem. |
 | `stopReason: 'rollback-error'` with `rollbackReason: 'sha-mismatch'` | Stash list message-collision (very rare) or git corruption | `git stash list`; manually resolve the rollback with `git stash pop "stash@{N}"` after verifying the SHA matches the `auditLog[N].stashSha` |
-| `stopReason: 'rollback-error'` with `rollbackReason: 'pop-failed'` | Stash pop hit a merge conflict | Manual `git status` + `git stash pop`; resolve conflicts, `git stash drop` |
-| `stopReason: 'diff-too-large'` | Fix agent exceeded 5-file/100-line cap, or touched `tests/`/`docs/`/`*.toml`/`*.yml`/`*.txt`/`pyproject.toml`/`setup.py`/`requirements*.txt`/`Dockerfile` | Read the `diffSanity` block in the last `auditLog` entry; the fix was rolled back automatically |
+| `stopReason: 'rollback-error'` with `rollbackReason: 'pop-failed'` | Stash pop hit a merge conflict. The script's rollback agent attempts the pop+drop atomically; if it fails, the stash is still on disk. | After confirming `git status` shows the conflict, recover the stash via `git stash list --grep '<auditLog[length-1].stashMessage>'` and apply (not pop) with `git stash apply "<entry>"`, then resolve and `git stash drop` manually. The auditLog's `stashSha` field is the durable identifier. |
+| `stopReason: 'diff-too-large'` | Fix agent triggered ANY of three caps: 5 files changed, 100 lines changed, OR touched forbidden path (`tests/`, `docs/`, `*.toml`, `*.yml`, `*.txt`, `pyproject.toml`, `setup.py`, `requirements*.txt`, `Dockerfile`). The rollback is automatic. | Read the `diffSanity` block in the last `auditLog` entry — `filesChanged`, `linesChanged`, and `forbiddenTouched` identify which condition fired. The fix was rolled back automatically. |
 | `stopReason: 'audit-log-error'` | `.crackerjack/audit/` is not writable, or disk is full | `ls -la .crackerjack/`; `df -h .`; resolve the disk/permissions issue, restore the partial audit log from in-memory `auditLog` in the workflow return value |
 | `stopReason: 'concurrent-change-detected'` | Working tree was dirty with non-fix files at Snapshot time | Resolve the user's pending edits/pulls, re-invoke |
 | Loop never starts (errors before step 4) | Workflow tool refused to load the script | `node --check .claude/workflows/ai-fix-loop.js`; check for syntax errors or forbidden constructs (`Date.now`, `Math.random`, argless `new Date()`) |

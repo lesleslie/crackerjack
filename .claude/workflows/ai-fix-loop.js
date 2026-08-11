@@ -189,7 +189,11 @@ function parseFixText(text) {
   const inlineSlice = text.slice(markerEnd)
   const inlineMatch = inlineSlice.match(/^(.*?)(?:\n|$)/)
   const inline = inlineMatch ? inlineMatch[1].trim() : ''
-  if (/^\(?empty\s+list\)?$/i.test(inline)) {
+  // Post-review fix LOW 1.2: accept "(none)", "no changes", or "(empty list)"
+  // as empty-list markers. The original regex required the literal phrase
+  // "empty list"; permissive parsing reduces false-positives when the
+  // agent uses other natural-language variants.
+  if (/^\(?(empty\s+list|none|no\s+changes)\)?$/i.test(inline)) {
     return { changes: [] }
   }
   // Split remainder on `---` separator and extract file/description pairs.
@@ -197,11 +201,23 @@ function parseFixText(text) {
   const changes = []
   for (const block of blocks) {
     const fileMatch = block.match(/^\s*file:\s*(.+?)\s*$/m)
-    const descMatch = block.match(/^\s*description:\s*(.+?)\s*$/m)
+    // Post-review fix LOW 1.3: multi-line descriptions. The agent prompt
+    // tells the agent "one-sentence-description", but LLMs occasionally
+    // wrap long descriptions. The original regex required .+?$ on a
+    // single line; this now captures everything up to the next block
+    // boundary (the next `---` or end of text). Tolerates wrapping.
+    const descMatch = block.match(/^\s*description:([\s\S]*?)(?=\n\s*---|$(?![\s\S]))/m)
     if (fileMatch && descMatch) {
+      const file = fileMatch[1].trim()
+      const description = descMatch[1].replace(/\s+/g, ' ').trim()
+      // Post-review fix LOW mcp#3: drop empty-description changes. A
+      // description that trims to "" would log a semantically empty
+      // Akosha text payload. Better to skip silently than ship a
+      // useless memory.
+      if (!description) continue
       changes.push({
-        file: fileMatch[1].trim(),
-        description: descMatch[1].trim(),
+        file,
+        description,
       })
     }
   }
@@ -515,6 +531,12 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
             auditLog,
           }
         }
+        // Post-review fix LOW 5.5: mark the previous iteration's entry
+        // as rolled-back so operators reading the JSONL can tell which
+        // fixes survived vs which were undone. (Diff-too-large rollback
+        // doesn't set this because the current iter's entry hasn't been
+        // pushed yet at the time of the rollback.)
+        prevEntry.rolledBack = true
       } else {
         log(`Regression detected on iteration ${iteration} but no previous snapshot to roll back to.`)
       }
@@ -541,6 +563,8 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
               auditLog,
             }
           }
+          // Post-review fix LOW 5.5: see regressed branch above.
+          prevEntry.rolledBack = true
         } else {
           log(`Progress-stalled on iteration ${iteration} but no previous snapshot to roll back to.`)
         }

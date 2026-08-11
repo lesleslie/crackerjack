@@ -48,10 +48,6 @@ For a shorter, tool-neutral bootstrap document, start with `AGENTS.md`.
 # Daily development (quality + tests) - RECOMMENDED
 python -m crackerjack run --run-tests
 
-# AI-assisted auto-fix (external loop, runs outside crackerjack itself)
-# Invoke the ai-fix-loop workflow:
-# Workflow({ scriptPath: '.claude/workflows/ai-fix-loop.js' })
-
 # Quality checks only
 python -m crackerjack run
 
@@ -67,6 +63,33 @@ python -m crackerjack start|stop|restart|status|health
 # Full release
 python -m crackerjack run --all patch
 ```
+
+### AI-Assisted Auto-Fix (Workflow Tool — not a shell command)
+
+The ai-fix-loop is invoked through Claude Code's `Workflow` tool, not
+the shell. The script lives at `.claude/workflows/ai-fix-loop.js` and
+runs `crackerjack run -v` itself, so there's no separate `crackerjack
+--ai-fix` flag.
+
+Supported knobs (forwarded via `args`):
+
+- `args.maxIterations` — cap on iterations (default 10; clamped to
+  a minimum of 10 by the script)
+- `args.initialIssueGuard` — abort if baseline issues exceed this
+  (default 200)
+- `args.auditLogPath` — JSONL output path (default
+  `.crackerjack/audit/ai-fix-loop.jsonl`)
+
+```js
+// Example invocation (Workflow tool, NOT bash):
+Workflow({
+  scriptPath: '.claude/workflows/ai-fix-loop.js',
+  args: { maxIterations: 10, initialIssueGuard: 200 }
+})
+```
+
+For the design rationale and contract details, see the **AI Agent
+System** section below.
 
 ## Critical Architectural Pattern: Protocol-Based Design
 
