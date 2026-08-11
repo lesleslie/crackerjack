@@ -1,0 +1,4 @@
+# Refresh Session-Buddy's distilled skills weekly. Adjust the day/hour to
+# suit your environment; the slot chosen here is Mon 03:17 (off-the-hour
+# to avoid sync spikes across the fleet).
+17 3 * * 1  cd /path/to/crackerjack && /usr/bin/env -i PATH=/usr/local/bin:/usr/bin SESSION_BUDDY_MCP_URL=http://localhost:8678/mcp ./venv/bin/python -m crackerjack skills refresh >> /var/log/crackerjack-skills-refresh.log 2>&1

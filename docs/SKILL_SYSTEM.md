@@ -407,6 +407,18 @@ registries = register_all_skills(
 )
 ```
 
+## Freshness cadence
+
+Distilled skills are refreshed on a *weekly schedule*, not per-commit.
+
+- Manual / CI check: `crackerjack audit skills [--json] [--fail]`
+  Exit codes — `0` fresh or unavailable (warn-only), `1` stale when `--fail`.
+- Cron: `crackerjack skills refresh` (see `ops/crontab.example`).
+- The pre-commit `skill-coverage` fast hook was removed in 2026-08 because
+  it produced a 5–10s HTTP round trip on every commit for data the commit
+  could not invalidate. See
+  `docs/superpowers/plans/2026-08-11-skill-coverage-out-of-fast-hooks.md`.
+
 ## Testing
 
 ### Running Tests
