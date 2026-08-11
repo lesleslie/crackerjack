@@ -45,8 +45,12 @@ For a shorter, tool-neutral bootstrap document, start with `AGENTS.md`.
 ## Most Common Commands
 
 ```bash
-# Daily development (quality + tests + AI fixes) - RECOMMENDED
-python -m crackerjack run --ai-fix --run-tests
+# Daily development (quality + tests) - RECOMMENDED
+python -m crackerjack run --run-tests
+
+# AI-assisted auto-fix (external loop, runs outside crackerjack itself)
+# Invoke the ai-fix-loop workflow:
+# Workflow({ scriptPath: '.claude/workflows/ai-fix-loop.js' })
 
 # Quality checks only
 python -m crackerjack run
@@ -184,22 +188,19 @@ python -m crackerjack run --enable-parallel-phases --run-tests -c
 
 ## AI Agent System
 
-**12 Specialized Agents** for auto-fixing quality issues:
+The internal 12-agent auto-fix system (`--ai-fix`) and its session-buddy
+skill-tracking integration have been removed. The replacement is an
+external `Workflow`-tool loop (`.claude/workflows/ai-fix-loop.js`) that
+runs `crackerjack run -v`, dispatches residual issues to a fix agent,
+re-verifies, and repeats with SHA-anchored stash snapshots, rollback on
+regression, a JSONL audit trail, and best-effort Akosha logging.
 
-- **RefactoringAgent** (0.9): Complexity ≤15, dead code removal
-- **PerformanceAgent** (0.85): O(n²) detection, optimization
-- **SecurityAgent** (0.8): Hardcoded paths, unsafe operations
-- **DocumentationAgent** (0.8): Changelog, .md consistency
-- **TestCreationAgent** (0.8): Test failures, fixtures
-- **DRYAgent** (0.8): Code duplication
-- **FormattingAgent** (0.8): Style violations, imports
-- **ImportOptimizationAgent**: Import cleanup
-- **TestSpecialistAgent** (0.8): Advanced testing
-- **SemanticAgent** (0.85): Semantic analysis, intelligent refactoring
-- **ArchitectAgent** (0.85): Architecture patterns, design recommendations
-- **EnhancedProactiveAgent** (0.9): Proactive prevention, predictive monitoring
+For the design rationale and contract details, see:
 
-**Usage**: `--ai-fix` enables batch fixing; confidence ≥0.7 for specific agents
+- `docs/superpowers/specs/2026-08-06-ai-fix-removal-external-loop-design.md`
+  (removal rationale + external-loop design)
+- `docs/superpowers/plans/2026-08-06-ai-fix-external-loop.md` (the
+  implementation plan; 9 tasks, all completed)
 
 ## High-Performance Rust Integration
 
@@ -213,15 +214,12 @@ Ultra-fast static analysis with seamless Python integration:
 
 ## Skills Tracking Integration
 
-Crackerjack integrates with **session-buddy** for comprehensive metrics tracking and intelligent agent recommendations.
-
-**What it tracks**:
-
-- Agent selection (and why)
-- User queries triggering selection
-- Alternative agents considered
-- Success/failure rates
-- Performance metrics by workflow phase
+Session-buddy skill-tracking for the removed 12-agent system is no
+longer active. The replacement external loop ships best-effort
+fix-outcome memory to Akosha via `generate_embedding` → `store_memory`
+on each successful iteration; see
+`docs/superpowers/plans/2026-08-06-ai-fix-external-loop.md` (Task 7)
+for the contract and the deterministic `memory_id` scheme.
 
 ## MCP Server Integration
 
