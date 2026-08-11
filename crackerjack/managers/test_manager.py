@@ -669,7 +669,19 @@ class TestManager:
         )
 
     def _process_coverage_ratchet(self) -> bool:
-        return self.coverage_manager.process_coverage_ratchet()
+        coverage_ok = self.coverage_manager.process_coverage_ratchet()
+        # Fire the ratchet gate (drop/bump) after the legacy path. Skipped when
+        # the ratchet is unconfigured or coverage.json is missing (e.g. in tests
+        # that don't populate the file); both paths must agree on drop vs. bump.
+        if (
+            self.coverage_ratchet is not None
+            and (self.pkg_path / "coverage.json").exists()
+        ):
+            ratchet_result = self.run_with_ratchet_check()
+            if ratchet_result.exit_code != 0:
+                self.console.print(ratchet_result.message)
+            return coverage_ok and ratchet_result.exit_code == 0
+        return coverage_ok
 
     def _extract_failure_lines(self, output: str) -> list[str]:
         import re
