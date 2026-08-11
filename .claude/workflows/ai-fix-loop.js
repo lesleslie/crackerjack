@@ -47,10 +47,14 @@ const FLAT_THRESHOLD = 2  // require 2 flat iters before declaring 'progress-sta
 const auditLog = []
 let initialIssueCount = null  // set after the first Verify pass
 
-// Audit log persistence path. On script start, check for an existing
-// state file and either resume, archive-and-start-fresh, or abort —
-// decided by the operator. Per-iteration appends happen in Task 6.
-const AUDIT_LOG_PATH = '.crackerjack/audit/ai-fix-loop.jsonl'
+// Audit log persistence path. Override via `args.auditLogPath` from the
+// Workflow tool caller. The default is hardcoded here for the standalone
+// case; the operator-facing knob lives in crackerjack's Oneiric settings
+// (`ai_fix_loop.audit_log_path`) which the Mahavishnu dispatch layer reads
+// and forwards as `args.auditLogPath`. Followup work: add the field to
+// `crackerjack.config.settings.CrackerjackSettings` and the corresponding
+// `settings/crackerjack.yaml` entry.
+const AUDIT_LOG_PATH = (args && args.auditLogPath) || '.crackerjack/audit/ai-fix-loop.jsonl'
 
 // parseVerifyText helper (Task 3, module scope).
 // Parses the agent's text response into { cleanExit, issueCount, issuesSummary }.
@@ -68,10 +72,12 @@ const AUDIT_LOG_PATH = '.crackerjack/audit/ai-fix-loop.jsonl'
 function parseVerifyText(text) {
   if (typeof text !== 'string' || !text.trim()) return null
   // Tolerate leading whitespace on each line — LLM agents sometimes
-  // indent their responses with spaces or tabs.
+  // indent their responses with spaces or tabs. Inline whitespace uses
+  // [ \t]* (not \s*) to prevent capturing content from subsequent lines
+  // when the field is empty.
   const cleanMatch = text.match(/^\s*cleanExit:\s*(true|false)\s*$/m)
   const countMatch = text.match(/^\s*issueCount:\s*(-?\d+)\s*$/m)
-  const summaryMatch = text.match(/^\s*issuesSummary:\s*(.+?)\s*$/m)
+  const summaryMatch = text.match(/^\s*issuesSummary:[ \t]*([^\n]*?)[ \t]*$/m)
   if (!cleanMatch || !countMatch || !summaryMatch) return null
   const issueCount = parseInt(countMatch[1], 10)
   if (!Number.isFinite(issueCount)) return null
@@ -118,10 +124,10 @@ function parseSnapshotText(text) {
     const shaMatch = text.match(/^\s*stashSha:\s*(\S+)\s*$/m)
     if (!shaMatch) return null
     stashSha = shaMatch[1].trim()
-    const messageMatch = text.match(/^\s*stashMessage:\s*(.+?)\s*$/m)
+    const messageMatch = text.match(/^\s*stashMessage:[ \t]*([^\n]*?)[ \t]*$/m)
     if (messageMatch) stashMessage = messageMatch[1].trim()
   }
-  const reasonMatch = text.match(/^\s*reason:\s*(.+?)\s*$/m)
+  const reasonMatch = text.match(/^\s*reason:[ \t]*([^\n]*?)[ \t]*$/m)
   const reason = reasonMatch ? reasonMatch[1].trim() : null
   // stashRef is hardcoded to the most-recent positional ref; the durable
   // SHA-anchored ref (stashSha) handles the shift case at rollback time.
@@ -188,6 +194,119 @@ function parseFixText(text) {
     }
   }
   return { changes }
+}
+
+// parseDiffStatText helper (Task 6, module scope).
+// Parses the diff-sanity agent's text response into a diff-sanity object:
+//   { filesChanged: int, linesChanged: int, forbiddenTouched: string[] }
+// Returns null if any required field is missing or non-integer.
+//
+// Expected agent response shape:
+//   filesChanged: <integer>
+//   linesChanged: <integer>
+//   forbiddenTouched: <comma-separated-paths-or-empty>
+//
+// The forbiddenTouched value may be empty (means "no forbidden paths were
+// touched") — returns an empty array in that case. Otherwise splits on
+// comma and trims each entry.
+function parseDiffStatText(text) {
+  if (typeof text !== 'string' || !text.trim()) return null
+  const filesMatch = text.match(/^\s*filesChanged:\s*(\d+)\s*$/m)
+  const linesMatch = text.match(/^\s*linesChanged:\s*(\d+)\s*$/m)
+  const forbiddenMatch = text.match(/^\s*forbiddenTouched:[ \t]*([^\n]*?)[ \t]*$/m)
+  if (!filesMatch || !linesMatch || !forbiddenMatch) return null
+  const filesChanged = parseInt(filesMatch[1], 10)
+  const linesChanged = parseInt(linesMatch[1], 10)
+  if (!Number.isFinite(filesChanged) || !Number.isFinite(linesChanged)) return null
+  const forbiddenRaw = forbiddenMatch[1]
+  const forbiddenTouched = forbiddenRaw === ''
+    ? []
+    : forbiddenRaw.split(',').map(s => s.trim()).filter(Boolean)
+  return { filesChanged, linesChanged, forbiddenTouched }
+}
+
+// attemptRollback helper (Task 6, module scope, async).
+// Looks up the previous iteration's stash by message, verifies the SHA,
+// pops it, and drops it. Returns { success, reason, details } parsed
+// from the agent's response, or null if the response is malformed.
+//
+// The plan documents that the positional `stash@{N}` ref MUST NOT be
+// used — only message-based lookup + SHA verification. This handles the
+// case where the user adds their own stash between iterations and the
+// positional index shifts.
+//
+// Pre-condition: auditLog has at least one entry with stashSha and
+// stashMessage. Caller (Step 1 in the loop body) reads
+// auditLog[auditLog.length - 1] for the most recent snapshot.
+async function attemptRollback(auditLog, iteration) {
+  const lastEntry = auditLog[auditLog.length - 1]
+  if (!lastEntry || !lastEntry.stashSha || !lastEntry.stashMessage) {
+    log(`No snapshot to roll back to on iteration ${iteration}.`)
+    return { success: false, reason: 'no-snapshot' }
+  }
+  const result = await agent(
+    `In the crackerjack repo, perform a SHA-anchored stash rollback:\n` +
+    `1. Run \`git stash list --grep '^${lastEntry.stashMessage}$'\` to find the stash entry by message.\n` +
+    `   If multiple entries match, pick the one whose commit SHA matches the captured SHA below.\n` +
+    `2. Run \`git rev-parse "<entry>^3"\` and verify the result matches this expected SHA: ${lastEntry.stashSha}\n` +
+    `3. If SHA matches: run \`git stash pop "<entry>"\` then \`git stash drop "<entry>"\` to remove the entry.\n` +
+    `4. If SHA does NOT match: do NOT pop. Return success=false with reason "sha-mismatch".\n` +
+    `5. If pop fails (merge conflict, etc.): return success=false with reason "pop-failed".\n\n` +
+    `Respond with EXACTLY these lines:\n` +
+    `success: <true-or-false>\n` +
+    `reason: <"sha-mismatch"|"pop-failed"|empty-when-success>\n` +
+    `details: <mismatch-or-conflict-details-or-empty>\n` +
+    `The positional \`stash@{N}\` ref MUST NOT be used.`,
+    { label: `rollback-iter-${iteration}`, phase: 'Snapshot' }
+  )
+  return parseRollbackText(result)
+}
+
+// parseRollbackText helper (Task 6, module scope).
+// Parses the rollback agent's text response.
+// Returns null if the success field is missing or invalid.
+function parseRollbackText(text) {
+  if (typeof text !== 'string' || !text.trim()) return null
+  const successMatch = text.match(/^\s*success:\s*(true|false)\s*$/m)
+  if (!successMatch) return null
+  const reasonMatch = text.match(/^\s*reason:[ \t]*([^\n]*?)[ \t]*$/m)
+  const detailsMatch = text.match(/^\s*details:[ \t]*([^\n]*?)[ \t]*$/m)
+  const reason = reasonMatch ? reasonMatch[1] : null
+  const details = detailsMatch ? detailsMatch[1] : null
+  return { success: successMatch[1] === 'true', reason, details }
+}
+
+// persistAuditLog helper (Task 6, module scope, async).
+// Appends a single JSONL entry to AUDIT_LOG_PATH via agent(). Returns
+// { success, error } or null if the response is malformed.
+//
+// Failure triggers the `audit-log-error` stop reason — the loop can't
+// continue without an audit trail. The agent MUST NOT overwrite or read
+// existing content; it must atomically append a single line.
+async function persistAuditLog(entry) {
+  const line = JSON.stringify(entry)
+  const result = await agent(
+    `Append a single JSON line to the file \`${AUDIT_LOG_PATH}\` in the crackerjack repo. ` +
+    `Create the parent directory \`.crackerjack/audit/\` if missing. ` +
+    `Do NOT overwrite or read existing content — just append atomically.\n` +
+    `If the append fails (disk full, permission denied, etc.), return success=false with the error description.\n\n` +
+    `Line content (write exactly this, escaped as a JSON string):\n` +
+    `${JSON.stringify(line)}`,
+    { label: `audit-persist-iter-${entry.iteration}`, phase: 'Snapshot' }
+  )
+  return parsePersistText(result)
+}
+
+// parsePersistText helper (Task 6, module scope).
+// Parses the audit-persist agent's text response.
+// Returns null if the success field is missing or invalid.
+function parsePersistText(text) {
+  if (typeof text !== 'string' || !text.trim()) return null
+  const successMatch = text.match(/^\s*success:\s*(true|false)\s*$/m)
+  if (!successMatch) return null
+  const errorMatch = text.match(/^\s*error:[ \t]*([^\n]*?)[ \t]*$/m)
+  const error = errorMatch ? errorMatch[1] : null
+  return { success: successMatch[1] === 'true', error }
 }
 
 for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
@@ -263,6 +382,57 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
     log(`Initial issue count: ${initialIssueCount}. Adjusted MAX_ITERATIONS to ${MAX_ITERATIONS}.`)
   }
 
+  // === Task 6 Step 1: No-improvement / regressed / progress-stalled check ===
+  // Evaluates whether the PREVIOUS iteration's fix was effective. Runs after
+  // Verify and before Snapshot so a regressed/stalled loop can roll back
+  // the previous iteration's stash BEFORE taking a new snapshot.
+  const countDelta = verify.issueCount - previousIssueCount
+  if (!Number.isFinite(countDelta)) {
+    log(`Non-finite count delta on iteration ${iteration} — aborting to avoid silent infinite loop.`)
+    return { stopReason: 'verify-error', iterations: iteration - 1, auditLog }
+  }
+  if (countDelta > 0) {
+    log(`Issue count increased (was ${previousIssueCount}, now ${verify.issueCount}) — rolling back.`)
+    const rollbackResult = await attemptRollback(auditLog, iteration)
+    if (!rollbackResult || !rollbackResult.success) {
+      const reason = (rollbackResult && rollbackResult.reason) || 'unknown'
+      const details = (rollbackResult && rollbackResult.details) || null
+      log(`Rollback failed after regression on iteration ${iteration}: reason=${reason}`)
+      return {
+        stopReason: 'rollback-error',
+        iterations: iteration - 1,
+        rollbackReason: reason,
+        rollbackDetails: details,
+        auditLog,
+      }
+    }
+    return { stopReason: 'regressed', iterations: iteration - 1, auditLog }
+  }
+  if (countDelta === 0) {
+    consecutiveFlat += 1
+    if (consecutiveFlat >= FLAT_THRESHOLD) {
+      log(`No progress for ${consecutiveFlat} consecutive iterations — rolling back and stopping.`)
+      const rollbackResult = await attemptRollback(auditLog, iteration)
+      if (!rollbackResult || !rollbackResult.success) {
+        const reason = (rollbackResult && rollbackResult.reason) || 'unknown'
+        const details = (rollbackResult && rollbackResult.details) || null
+        log(`Rollback failed after progress-stalled on iteration ${iteration}: reason=${reason}`)
+        return {
+          stopReason: 'rollback-error',
+          iterations: iteration - 1,
+          rollbackReason: reason,
+          rollbackDetails: details,
+          auditLog,
+        }
+      }
+      return { stopReason: 'progress-stalled', iterations: iteration - 1, auditLog }
+    }
+    log(`Flat iteration ${consecutiveFlat}/${FLAT_THRESHOLD} — continuing.`)
+  } else {
+    consecutiveFlat = 0
+  }
+  previousIssueCount = verify.issueCount
+
   // === Task 4: Snapshot phase ===
   phase('Snapshot')
   // Snapshot captures BOTH the positional ref AND a durable SHA handle.
@@ -335,13 +505,74 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
     log(`Fix agent returned malformed result on iteration ${iteration} — aborting.`)
     return { stopReason: 'fix-agent-error', iterations: iteration - 1, auditLog }
   }
-  // Track the fix result in auditLog for post-loop inspection (Task 6
-  // formalizes on-disk persistence to .crackerjack/audit/ai-fix-loop.jsonl).
-  auditLog.push({
+
+  // === Task 6 Step 3: Post-fix diff sanity check ===
+  // The fix agent's hard constraints in the prompt are advisory; this
+  // enforcement is the actual guardrail. Cap scope at 5 files / 100 lines
+  // and blocklist `tests/`, `docs/`, `*.toml/*.yml/*.txt`, build configs.
+  // Reference point: snapshot SHA when available (so the diff shows only
+  // the fix's net effect against the pre-fix dirty tree), else HEAD.
+  const diffRef = (snapshot && snapshot.stashed && snapshot.stashSha) ? snapshot.stashSha : 'HEAD'
+  const diffStatText = await agent(
+    `Run \`git diff --stat ${diffRef}\` and \`git diff --name-only ${diffRef}\` in the crackerjack repo. ` +
+    `Respond with EXACTLY these lines:\n` +
+    `filesChanged: <integer>\n` +
+    `linesChanged: <integer>\n` +
+    `forbiddenTouched: <comma-separated-paths-or-empty>\n` +
+    `Forbidden paths are: anything under \`tests/\`, \`docs/\`, or matching \`*.toml\`, \`*.yml\`, \`*.txt\`, \`pyproject.toml\`, \`setup.py\`, \`requirements*.txt\`, \`Dockerfile\`.`,
+    { label: `diff-sanity-iter-${iteration}`, phase: 'Snapshot' }
+  )
+  const diffSanity = parseDiffStatText(diffStatText)
+  if (!diffSanity) {
+    log(`Diff-sanity agent returned malformed result on iteration ${iteration} — aborting.`)
+    return { stopReason: 'fix-agent-error', iterations: iteration - 1, auditLog }
+  }
+  if (diffSanity.filesChanged > 5 || diffSanity.linesChanged > 100 || diffSanity.forbiddenTouched.length > 0) {
+    log(`Fix exceeded limits on iteration ${iteration}: files=${diffSanity.filesChanged}, lines=${diffSanity.linesChanged}, forbidden=${diffSanity.forbiddenTouched.join(',')} — rolling back.`)
+    const rollbackResult = await attemptRollback(auditLog, iteration)
+    if (!rollbackResult || !rollbackResult.success) {
+      const reason = (rollbackResult && rollbackResult.reason) || 'unknown'
+      const details = (rollbackResult && rollbackResult.details) || null
+      log(`Rollback failed after diff-too-large on iteration ${iteration}: reason=${reason}`)
+      return {
+        stopReason: 'rollback-error',
+        iterations: iteration - 1,
+        rollbackReason: reason,
+        rollbackDetails: details,
+        auditLog,
+      }
+    }
+    return { stopReason: 'diff-too-large', iterations: iteration - 1, auditLog }
+  }
+
+  // === Task 6 Step 4: Audit log entry (in-memory + on-disk) ===
+  // Persist immediately so a harness crash mid-iteration doesn't lose
+  // the audit trail. The script can't write files directly; the agent()
+  // call below writes via Bash.
+  const entry = {
     iteration,
-    phase: 'Fix',
+    issuesBefore: verify.issueCount,
+    issuesAfter: null,  // filled in by next iter's Verify pass
+    stashSha: (snapshot && snapshot.stashed) ? snapshot.stashSha : null,
+    stashMessage: (snapshot && snapshot.stashed) ? snapshot.stashMessage : null,
     changes: fix.changes,
-  })
+    diffStat: diffSanity,
+    // Note: no explicit timestamp field here. The persistAuditLog agent
+    // captures the file mtime via the OS at write time, which is the
+    // canonical timestamp. Workflow scripts cannot call wall-clock APIs.
+  }
+  auditLog.push(entry)
+  const persistResult = await persistAuditLog(entry)
+  if (!persistResult || !persistResult.success) {
+    const error = (persistResult && persistResult.error) || 'unknown'
+    log(`Audit log persistence failed on iteration ${iteration}: ${error}`)
+    return {
+      stopReason: 'audit-log-error',
+      iterations: iteration - 1,
+      auditLogError: error,
+      auditLog,
+    }
+  }
   // Task 6 fills in the stop-condition checks here.
 }
 

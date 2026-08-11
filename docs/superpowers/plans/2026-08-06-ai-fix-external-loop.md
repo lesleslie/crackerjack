@@ -135,10 +135,14 @@ const FLAT_THRESHOLD = 2  // require 2 flat iters before declaring 'progress-sta
 const auditLog = []
 let initialIssueCount = null  // set after the first Verify pass
 
-// Audit log persistence path. On script start, check for an existing
-// state file and either resume, archive-and-start-fresh, or abort —
-// decided by the operator. Per-iteration appends happen in Task 6.
-const AUDIT_LOG_PATH = '.crackerjack/audit/ai-fix-loop.jsonl'
+// Audit log persistence path. Override via `args.auditLogPath` from the
+// Workflow tool caller. The default is hardcoded here for the standalone
+// case; the operator-facing knob lives in crackerjack's Oneiric settings
+// (`ai_fix_loop.audit_log_path`) which the Mahavishnu dispatch layer reads
+// and forwards as `args.auditLogPath`. Followup work: add the field to
+// `crackerjack.config.settings.CrackerjackSettings` and the corresponding
+// `settings/crackerjack.yaml` entry.
+const AUDIT_LOG_PATH = (args && args.auditLogPath) || '.crackerjack/audit/ai-fix-loop.jsonl'
 
 for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
   log(`Iteration ${iteration}/${MAX_ITERATIONS}`)
@@ -400,6 +404,7 @@ git commit -m "feat(ai-fix-loop): implement Fix phase (dispatch residual issues 
 | `'rollback-error'` | Stash pop after no-improvement failed | Manual `git stash list` + `git checkout` |
 | `'concurrent-change-detected'` | Working tree was dirty with unexpected changes when snapshot ran | Resolve user edits, re-run |
 | `'diff-too-large'` | Fix agent exceeded the 5-files/100-lines blocklist from Task 5 Step 1 | Reduce fix scope manually, re-run |
+| `'audit-log-error'` | On-disk audit log persistence failed (disk full, permission denied, etc.) — cannot continue without audit trail | Resolve disk issue, restore audit log if needed, re-run |
 | `'akosha-best-effort'` | Akosha logging partially failed but loop succeeded | None — logging is best-effort |
 
 - [ ] **Step 1: Add the no-improvement / rollback check, placed after Verify (Task 3) and before Snapshot (Task 4) each iteration**
@@ -445,8 +450,14 @@ The positional `stashRef` (`stash@{N}`) is never used for rollback. Document thi
 
 ```js
   // Post-fix diff sanity — fix-agent prompts are advisory; cap scope.
+  // Use snapshot SHA when available (when snapshot.stashed=true and the
+  // SHA was captured). The stash SHA represents the pre-fix dirty tree
+  // state, so `git diff <stashSha>` shows only the fix's net effect. Fall
+  // back to HEAD on the first iteration (no snapshot yet) or when the tree
+  // was clean and no stash was needed.
+  const diffRef = (snapshot && snapshot.stashed && snapshot.stashSha) ? snapshot.stashSha : 'HEAD'
   const diffStatText = await agent(
-    `Run \`git diff --stat\` and \`git diff --name-only\` from the snapshot SHA in the crackerjack repo. ` +
+    `Run \`git diff --stat ${diffRef}\` and \`git diff --name-only ${diffRef}\` in the crackerjack repo. ` +
     `Respond with EXACTLY these lines:\n` +
     `filesChanged: <integer>\n` +
     `linesChanged: <integer>\n` +
