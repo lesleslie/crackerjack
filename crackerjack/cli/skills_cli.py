@@ -25,9 +25,9 @@ def _skills_callback() -> None:
     """Skills subcommand group: makes `refresh` invocable by name on its own."""
 
 
-async def _post_json(url: str, payload: dict, timeout: float) -> httpx.Response:
+async def _post_json(url: str, *, json: dict, timeout: float) -> httpx.Response:
     async with httpx.AsyncClient(timeout=timeout) as client:
-        return await client.post(url, json=payload)
+        return await client.post(url, json=json)
 
 
 def _distill_payload() -> dict[str, object]:

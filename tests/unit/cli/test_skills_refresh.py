@@ -52,3 +52,18 @@ def test_skills_refresh_exits_1_when_unreachable(
     )
     result = runner.invoke(app, ["refresh"])
     assert result.exit_code == 1
+
+
+@pytest.mark.unit
+def test_post_json_signature_accepts_json_kwarg() -> None:
+    """Regression: production `_post_json` must accept `json=` kwarg;
+    otherwise the cron call site at line 65 raises TypeError."""
+    import inspect
+
+    from crackerjack.cli import skills_cli
+
+    sig = inspect.signature(skills_cli._post_json)
+    assert "json" in sig.parameters, (
+        "Production _post_json must accept `json=` keyword; "
+        "otherwise the cron call site at line 65 raises TypeError."
+    )
