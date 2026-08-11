@@ -132,6 +132,7 @@ _safe_add_typer(app, "crackerjack.cli.docs_cli", "app", "docs")
 _safe_add_typer(app, "crackerjack.cli.mcp_cli", "app", "mcp")
 _safe_add_typer(app, "crackerjack.cli.hypothesis_lock_cli", "app", "hypothesis-lock")
 _safe_add_typer(app, "crackerjack.cli.audit_cli", "app", "audit")
+_safe_add_typer(app, "crackerjack.cli.skills_cli", "app", "skills")
 
 
 @app.callback(invoke_without_command=True)
