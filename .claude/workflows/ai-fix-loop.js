@@ -82,6 +82,60 @@ function parseVerifyText(text) {
   }
 }
 
+// parseSnapshotText helper (Task 4, module scope).
+// Parses the snapshot agent's text response into a snapshot object:
+//   { dirty, stashed, stashRef, stashSha, stashMessage, reason }
+// Returns null if required fields (dirty, stashed) are missing or malformed.
+//
+// Expected agent response shape:
+//   dirty: <true-or-false>                         [required]
+//   stashed: <true-or-false>                       [required]
+//   stashSha: <sha-string>                         [required when stashed=true]
+//   [stashMessage: <message>]                      [optional, only when stashed=true]
+//   [reason: <description>]                        [optional, only when dirty=true, stashed=false]
+//
+// stashRef is derived from stashed: when stashed=true the positional ref
+// is `stash@{0}`; when stashed=false it's null. The durable handle is
+// stashSha (the git rev-parse output), which Task 6's rollback uses to
+// re-resolve the stash even if its positional index has shifted.
+//
+// Loose parsing — multiline regex tolerates leading whitespace, surrounding
+// prose, and missing optional fields. Required: dirty and stashed. When
+// stashed=true the SHA and message are also required; when stashed=false
+// they may be absent (the agent omits them in the "no-op" and "concurrent
+// change" branches of the prompt).
+function parseSnapshotText(text) {
+  if (typeof text !== 'string' || !text.trim()) return null
+  const dirtyMatch = text.match(/^\s*dirty:\s*(true|false)\s*$/m)
+  const stashedMatch = text.match(/^\s*stashed:\s*(true|false)\s*$/m)
+  if (!dirtyMatch || !stashedMatch) return null
+  const dirty = dirtyMatch[1] === 'true'
+  const stashed = stashedMatch[1] === 'true'
+  // SHA is only meaningful when stashed=true; required in that case.
+  let stashSha = null
+  let stashMessage = null
+  if (stashed) {
+    const shaMatch = text.match(/^\s*stashSha:\s*(\S+)\s*$/m)
+    if (!shaMatch) return null
+    stashSha = shaMatch[1].trim()
+    const messageMatch = text.match(/^\s*stashMessage:\s*(.+?)\s*$/m)
+    if (messageMatch) stashMessage = messageMatch[1].trim()
+  }
+  const reasonMatch = text.match(/^\s*reason:\s*(.+?)\s*$/m)
+  const reason = reasonMatch ? reasonMatch[1].trim() : null
+  // stashRef is hardcoded to the most-recent positional ref; the durable
+  // SHA-anchored ref (stashSha) handles the shift case at rollback time.
+  const stashRef = stashed ? 'stash@{0}' : null
+  return {
+    dirty,
+    stashed,
+    stashRef,
+    stashSha,
+    stashMessage,
+    reason,
+  }
+}
+
 for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
   log(`Iteration ${iteration}/${MAX_ITERATIONS}`)
 
@@ -155,7 +209,46 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
     log(`Initial issue count: ${initialIssueCount}. Adjusted MAX_ITERATIONS to ${MAX_ITERATIONS}.`)
   }
 
-  // Task 4 fills in the Snapshot phase here.
+  // === Task 4: Snapshot phase ===
+  phase('Snapshot')
+  // Snapshot captures BOTH the positional ref AND a durable SHA handle.
+  // The positional ref (`stash@{0}`) can shift if the user adds their
+  // own stash between iterations; the SHA (`<rev>^3`) survives any
+  // positional reshuffling and is used at rollback time.
+  const snapshotText = await agent(
+    `In the crackerjack repo, perform a snapshot before this iteration's fix attempt:\n` +
+    `1. Run \`git status --short\` and verify the dirty set matches what this loop expects to snapshot.\n` +
+    `   If there are unexpected changes (e.g., user edits, an unrelated file change), DO NOT stash — instead respond with these three lines:\n` +
+    `   dirty: true\n` +
+    `   stashed: false\n` +
+    `   reason: <describe the unexpected changes>\n` +
+    `2. If the tree is already clean (no fix applied yet, or last iteration rolled back), respond with:\n` +
+    `   dirty: false\n` +
+    `   stashed: false\n` +
+    `3. Otherwise run \`git stash push -u -m "ai-fix-loop-iter-${iteration}"\` and then run \`git rev-parse "stash@{0}^3"\` to get the commit SHA the stash represents.\n` +
+    `   Respond with EXACTLY these lines (nothing else):\n` +
+    `   dirty: false\n` +
+    `   stashed: true\n` +
+    `   stashSha: <the-rev-parse-output>\n` +
+    `   stashMessage: ai-fix-loop-iter-${iteration}\n` +
+    `The stashSha value MUST be the full SHA printed by \`git rev-parse "stash@{0}^3"\` — do not abbreviate. The stashMessage MUST exactly match the \`-m\` argument used in the git stash push command.`,
+    { label: `snapshot-iter-${iteration}`, phase: 'Snapshot' }
+  )
+  const snapshot = parseSnapshotText(snapshotText)
+  if (!snapshot) {
+    log(`Snapshot agent returned malformed result on iteration ${iteration} — aborting.`)
+    return { stopReason: 'snapshot-error', iterations: iteration - 1, auditLog }
+  }
+  if (snapshot.dirty && !snapshot.stashed) {
+    const reason = snapshot.reason || 'unspecified'
+    log(`Unexpected dirty state detected on iteration ${iteration}: ${reason} — aborting to avoid clobbering user changes.`)
+    return {
+      stopReason: 'concurrent-change-detected',
+      iterations: iteration - 1,
+      reason,
+      auditLog,
+    }
+  }
   // Task 5 fills in the Fix phase here.
   // Task 6 fills in the stop-condition checks here.
 }
