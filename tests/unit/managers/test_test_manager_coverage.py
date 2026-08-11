@@ -479,33 +479,6 @@ class TestTestManagerCoverageHandling:
 
         assert result is False
 
-    @pytest.mark.skip(reason="_handle_coverage_improvement method does not exist on TestManager")
-    def test_handle_coverage_improvement(self, manager) -> None:
-        """Test handling coverage improvement."""
-        ratchet_result = {
-            "improved": True,
-            "improvement": 5.0,
-            "current_coverage": 75.0,
-        }
-
-        # Should not raise
-        manager._handle_coverage_improvement(ratchet_result)
-
-        # Verify console was called
-        assert manager.console.print.called
-
-    @pytest.mark.skip(reason="_handle_ratchet_result method does not exist on TestManager")
-    def test_handle_ratchet_result_message(self, manager) -> None:
-        """Test handling ratchet result with message."""
-        ratchet_result = {
-            "success": False,
-            "message": "Coverage regression detected",
-        }
-
-        result = manager._handle_ratchet_result(ratchet_result)
-
-        assert result is False
-
 
 @pytest.mark.unit
 class TestTestManagerGetCoverage:

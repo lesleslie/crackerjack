@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import os
 import subprocess
+import uuid
 from pathlib import Path
 
 import pytest
@@ -23,9 +24,30 @@ def test_sandboxed_fix_in_worktree(tmp_path: Path) -> None:
     worktree = tmp_path / "crackerjack-e2e"
     repo = Path(__file__).resolve().parents[2]
 
+    # Skip when this test itself runs inside a linked worktree — git refuses
+    # to create a nested worktree from another worktree's mount point
+    # (exit 255). The proper sandbox fixture is the main checkout.
+    _git_dir = subprocess.run(
+        ["git", "rev-parse", "--git-dir"],
+        cwd=repo, check=True, capture_output=True, text=True,
+    ).stdout.strip()
+    _git_common = subprocess.run(
+        ["git", "rev-parse", "--git-common-dir"],
+        cwd=repo, check=True, capture_output=True, text=True,
+    ).stdout.strip()
+    if _git_dir != _git_common:
+        pytest.skip(
+            "test_sandboxed_fix_in_worktree requires a non-linked-worktree "
+            "checkout; running from inside another worktree"
+        )
+
+    # Use a unique branch per run so prior failed runs do not block this one
+    # via "branch already checked out at another worktree" (exit 255).
+    _branch = f"test-sandbox-e2e-{uuid.uuid4().hex[:8]}"
+
     # Create a worktree.
     subprocess.run(
-        ["git", "worktree", "add", str(worktree), "-b", "test-sandbox-e2e"],
+        ["git", "worktree", "add", str(worktree), "-b", _branch],
         cwd=repo, check=True, capture_output=True,
     )
     try:
@@ -71,6 +93,6 @@ def test_sandboxed_fix_in_worktree(tmp_path: Path) -> None:
             cwd=repo, check=False, capture_output=True,
         )
         subprocess.run(
-            ["git", "branch", "-D", "test-sandbox-e2e"],
+            ["git", "branch", "-D", _branch],
             cwd=repo, check=False, capture_output=True,
         )

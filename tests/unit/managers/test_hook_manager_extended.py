@@ -477,7 +477,6 @@ class TestHookManagerToolProxyConfiguration:
                 manager.lsp_optimization_enabled = False  # Not using LSP
                 return manager
 
-    @pytest.mark.xfail(reason="Bug in code: LSPAwareHookExecutor only imported in TYPE_CHECKING block but used at runtime")
     def test_configure_tool_proxy_enable(self, manager) -> None:
         """Test enabling tool proxy."""
         manager.tool_proxy_enabled = False
@@ -499,7 +498,6 @@ class TestHookManagerToolProxyConfiguration:
         # Should not recreate executor
         # Just verify no exception raised
 
-    @pytest.mark.xfail(reason="Bug in code: LSPAwareHookExecutor only imported in TYPE_CHECKING block but used at runtime")
     def test_configure_tool_proxy_non_lsp_executor(self, manager) -> None:
         """Test tool proxy configuration with non-LSP executor."""
         manager.tool_proxy_enabled = False

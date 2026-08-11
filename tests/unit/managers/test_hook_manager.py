@@ -107,7 +107,6 @@ class TestHookManagerConfiguration:
 
         assert manager._config_path == config_path
 
-    @pytest.mark.xfail(reason="Bug in code: LSPAwareHookExecutor only imported in TYPE_CHECKING block but used at runtime")
     def test_configure_lsp_optimization_enable(self, manager) -> None:
         """Test enabling LSP optimization."""
         manager.console = Mock()
@@ -118,7 +117,6 @@ class TestHookManagerConfiguration:
 
             assert manager.lsp_optimization_enabled is True
 
-    @pytest.mark.xfail(reason="Bug in code: LSPAwareHookExecutor only imported in TYPE_CHECKING block but used at runtime")
     def test_configure_lsp_optimization_disable(self, manager) -> None:
         """Test disabling LSP optimization."""
         manager.console = Mock()
@@ -137,7 +135,6 @@ class TestHookManagerConfiguration:
 
             # Should not recreate executor - no exception raised
 
-    @pytest.mark.xfail(reason="Bug in code: LSPAwareHookExecutor only imported in TYPE_CHECKING block but used at runtime")
     def test_configure_tool_proxy_enable(self, manager) -> None:
         """Test enabling tool proxy."""
         manager.console = Mock()
