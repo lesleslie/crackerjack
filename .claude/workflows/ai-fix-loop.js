@@ -68,6 +68,13 @@ let initialIssueCount = null  // set after the first Verify pass
 // `settings/crackerjack.yaml` entry.
 const AUDIT_LOG_PATH = (args && args.auditLogPath) || '.crackerjack/audit/ai-fix-loop.jsonl'
 
+// Repo identifier for cross-repo memory_id disambiguation (post-review
+// fix mcp#5). Override via `args.repo` from the Workflow tool caller.
+// Default "crackerjack" assumes this script is only run against the
+// crackerjack repo. The repo name is folded into the Akosha memory_id
+// and the per-iteration `correlation_id`.
+const REPO_NAME = (args && args.repo) || 'crackerjack'
+
 // parseVerifyText helper (Task 3, module scope).
 // Parses the agent's text response into { cleanExit, issueCount, issuesSummary }.
 // Returns null if any of the three labeled lines is missing or malformed — the
@@ -278,14 +285,21 @@ async function attemptRollback(stashSha, stashMessage, iteration, phase) {
     return { success: false, reason: 'no-snapshot' }
   }
   const activePhase = phase || 'Snapshot'
+  // Post-review fix code#5.3: escape the stashMessage before interpolating
+  // it into the agent prompt, so any future message containing regex
+  // metacharacters (e.g., `branch[3]`) doesn't get treated as a regex
+  // pattern by `git stash list --grep`. The agent prompt instructs the
+  // agent to configure `grep.patternType=fixed` defensively.
+  const escapedMessage = stashMessage.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
   const result = await agent(
     `In the crackerjack repo, perform a SHA-anchored stash rollback:\n` +
-    `1. Run \`git stash list --grep '^${stashMessage}$'\` to find the stash entry by message.\n` +
+    `1. Configure fixed-string grep (idempotent): \`git config --global grep.patternType fixed\`\n` +
+    `2. Run \`git stash list --grep '^${escapedMessage}$'\` to find the stash entry by message. The message is pre-escaped to neutralize regex metacharacters.\n` +
     `   If multiple entries match, pick the one whose commit SHA matches the captured SHA below.\n` +
-    `2. Run \`git rev-parse "<entry>^3"\` and verify the result matches this expected SHA: ${stashSha}\n` +
-    `3. If SHA matches: run \`git stash pop "<entry>"\` then \`git stash drop "<entry>"\` to remove the entry.\n` +
-    `4. If SHA does NOT match: do NOT pop. Return success=false with reason "sha-mismatch".\n` +
-    `5. If pop fails (merge conflict, etc.): return success=false with reason "pop-failed".\n\n` +
+    `3. Run \`git rev-parse "<entry>^3"\` and verify the result matches this expected SHA: ${stashSha}\n` +
+    `4. If SHA matches: run \`git stash pop "<entry>"\` then \`git stash drop "<entry>"\` to remove the entry.\n` +
+    `5. If SHA does NOT match: do NOT pop. Return success=false with reason "sha-mismatch".\n` +
+    `6. If pop fails (merge conflict, etc.): return success=false with reason "pop-failed".\n\n` +
     `Respond with EXACTLY these lines:\n` +
     `success: <true-or-false>\n` +
     `reason: <"sha-mismatch"|"pop-failed"|empty-when-success>\n` +
@@ -360,10 +374,18 @@ function parsePersistText(text) {
 // preserved by Akosha's metadata normalizer — only `correlation_id`
 // round-trips. Fix context is packed into the `text` payload instead.
 //
-// Deterministic, non-empty memory_id: "ai-fix-loop:iter-<N>:change-<i>:<file>"
+// Deterministic, non-empty memory_id: "ai-fix-loop:<repo>:iter-<N>:change-<i>:<file>"
 // (index `<i>` is the 0-based position in entry.changes; ensures
 // memory_id is unique even when the same file appears twice in one
 // iteration's changes list. Post-review fix mcp#1.)
+//
+// Post-review fix mcp#5: `<repo>` is the basename of the repo (e.g.,
+// "crackerjack"). Including it in memory_id prevents cross-repo
+// collisions when two repos happen to land on the same
+// `iter-N:change-i:foo.py`. The agent derives `repo` via
+// `basename $(git rev-parse --show-toplevel)` in the prompt.
+// Override via `args.repo` from the Workflow tool caller; default is
+// "crackerjack" (the only repo this script is run against today).
 //
 // The text payload includes the iteration's `outcome` (fixed, regressed,
 // etc.) so downstream queries can distinguish clean fixes from rolled-
@@ -397,22 +419,23 @@ async function logAkoshaFixes(entry) {
   const outcome = entry.outcome || 'fixed'
   const changesJson = JSON.stringify(entry.changes)
   await agent(
-    `In the crackerjack repo, log a memory to Akosha for each fix in this iteration's audit entry. ` +
+    `In the crackerjack repo (repo identifier for cross-repo disambiguation: "${REPO_NAME}"), log a memory to Akosha for each fix in this iteration's audit entry. ` +
     `The audit entry's iteration is ${entry.iteration}, the outcome is ${outcome}, and the changes array has ${entry.changes.length} item(s):\n\n` +
     `  ${changesJson}\n\n` +
-    `For EACH change (index 0-based, position in the array above), perform the following sequence (Akosha contract — store_memory requires both a non-empty memory_id and a 384-dim embedding):\n` +
+    `For EACH change (index 0-based, position in the array above), perform the following sequence (A kosha contract — store_memory requires both a non-empty memory_id and a 384-dim embedding):\n` +
     `1. Build the text payload. Pack fix context into text because custom metadata keys don't round-trip:\n` +
     `   text = "Crackerjack ai-fix-loop iter=${entry.iteration} | outcome=${outcome} | file=<change.file> | <change.description>"\n` +
-    `2. Build a deterministic, non-empty memory_id. The `<i>` index ensures uniqueness even if the same file appears twice:\n` +
-    `   memory_id = "ai-fix-loop:iter-${entry.iteration}:change-<i>:<change.file>"\n` +
+    `2. Build a deterministic, non-empty memory_id. The `<i>` index ensures uniqueness even if the same file appears twice. The repo prefix prevents cross-repo collisions:\n` +
+    `   memory_id = "ai-fix-loop:${REPO_NAME}:iter-${entry.iteration}:change-<i>:<change.file>"\n` +
     `   If `<change.file>` is empty, use a placeholder like "(no-file)" so memory_id remains non-empty.\n` +
     `3. Build metadata. CRITICAL: only `correlation_id` and `type` are preserved by Akosha's metadata normalizer — do NOT add repo/file/outcome/iteration keys; those go in text only. Any other key is silently dropped:\n` +
-    `   metadata = { correlation_id: "ai-fix-loop:iter-${entry.iteration}", type: "session_memory" }\n` +
+    `   metadata = { correlation_id: "ai-fix-loop:${REPO_NAME}:iter-${entry.iteration}", type: "session_memory" }\n` +
     `4. Call the MCP tool \`mcp__akosha__generate_embedding\` with the text. The result is a dict with an "embedding" key whose value is the 384-dim float vector — extract result["embedding"] before passing to store_memory.\n` +
-    `5. If the embedding succeeded, call \`mcp__akosha__store_memory\` with memory_id, text, embedding, and metadata. Pass them as named arguments matching the tool's schema.\n` +
-    `6. If the embedding call returns an error OR store_memory returns an error for a specific change, log a warning but CONTINUE with the next change. Do NOT abort the whole operation. Skip the change silently — do not retry.\n` +
+    `5. STRICT ORDERING: only call \`mcp__akosha__store_memory\` if step 4 SUCCEEDED. Do NOT call store_memory with a missing, zero-vector, or wrong-dimension embedding — Akosha rejects these with "Embedding is required: must be a 384-dimensional vector". If step 4 failed or returned an error for this change, SKIP step 5 entirely for this change, count it as FAILED, and CONTINUE to the next change.\n` +
+    `6. If step 5 (store_memory) returns an error for a specific change, log a warning but CONTINUE with the next change. Do NOT abort the whole operation. Skip the change silently — do not retry.\n` +
     `7. After processing all ${entry.changes.length} changes, respond with EXACTLY this one summary line (the workflow script reads this for observability):\n` +
     `   STORED: <successful-count>/${entry.changes.length} | FAILED: <failed-count>\n\n` +
+    `Note on re-run idempotency (post-review fix mcp#10): memory_id is deterministic, so a re-run of the workflow against the same state will overwrite the previous iteration's memories with identical content. This is accepted behavior — net effect is identical, downstream queries see the latest run's data.\n\n` +
     `This is best-effort write-only observability. Do NOT query Akosha for prior fixes. ` +
     `Do NOT abort the workflow on any failure — log and continue.`,
     { label: `akosha-log-iter-${entry.iteration}`, phase: 'Fix' }
@@ -582,6 +605,12 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
   if (auditLog.length > 0) {
     auditLog[auditLog.length - 1].issuesAfter = verify.issueCount
   }
+  // Post-review fix code#3.4: defensive reset. The regressed branch
+  // returns immediately, so this reset is currently unreachable, but
+  // if a future revision ever converts regressed into a `continue`
+  // instead of a `return`, the counter would need to be cleared here
+  // to avoid accumulating across iterations.
+  consecutiveFlat = 0
   previousIssueCount = verify.issueCount
 
   // === Task 4: Snapshot phase ===
