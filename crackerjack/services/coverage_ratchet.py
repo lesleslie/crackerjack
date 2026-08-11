@@ -389,3 +389,60 @@ class CoverageRatchetService(CoverageRatchetProtocol):
                 "error": str(e),
                 "message": "Failed to read coverage data",
             }
+
+    def lower_baseline(self, new_coverage: float, reason: str) -> None:
+        if not reason or not reason.strip():
+            msg = "lower_baseline requires a non-empty reason"
+            raise ValueError(msg)
+        data = self.get_ratchet_data()
+        if not data:
+            msg = "Coverage ratchet not initialized"
+            raise ValueError(msg)
+        data["current_minimum"] = new_coverage
+        data["last_updated"] = datetime.now().isoformat()
+        data["history"].append(
+            {
+                "date": datetime.now().isoformat(),
+                "coverage": new_coverage,
+                "commit": "lower",
+                "milestone": False,
+                "reason": reason,
+            }
+        )
+        self.ratchet_file.write_text(json.dumps(data, indent=2))
+
+    def mirror_to_pyproject(self, coverage: float) -> None:
+        """Write --cov-fail-under=<coverage> to pyproject.toml."""
+        import re
+        content = self.pyproject_file.read_text()
+        pattern = r"--cov-fail-under=\d+(?:\.\d+)?"
+        replacement = f"--cov-fail-under={coverage}"
+        if re.search(pattern, content):
+            new_content = re.sub(pattern, replacement, content)
+        else:
+            if "addopts" in content:
+                new_content = re.sub(
+                    r'(addopts\s*=\s*"[^"]*)"',
+                    rf'\1 {replacement}"',
+                    content,
+                    count=1,
+                )
+            else:
+                new_content = f'{content}\n[tool.pytest.ini_options]\naddopts = "{replacement}"\n'
+        self.pyproject_file.write_text(new_content)
+
+    def report_status(self) -> str:
+        data = self.get_ratchet_data()
+        if not data:
+            return "Coverage ratchet not initialized"
+        baseline = data.get("baseline", 0.0)
+        current = data.get("current_minimum", 0.0)
+        next_milestone = data.get("next_milestone")
+        history = data.get("history", [])
+        lines = [
+            f"Baseline: {baseline:.1f}%",
+            f"Current minimum: {current:.1f}%",
+            f"Next milestone: {next_milestone}",
+            f"History entries: {len(history)}",
+        ]
+        return "\n".join(lines)
