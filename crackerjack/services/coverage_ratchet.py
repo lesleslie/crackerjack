@@ -414,21 +414,42 @@ class CoverageRatchetService(CoverageRatchetProtocol):
     def mirror_to_pyproject(self, coverage: float) -> None:
         """Write --cov-fail-under=<coverage> to pyproject.toml."""
         import re
+
         content = self.pyproject_file.read_text()
         pattern = r"--cov-fail-under=\d+(?:\.\d+)?"
         replacement = f"--cov-fail-under={coverage}"
         if re.search(pattern, content):
             new_content = re.sub(pattern, replacement, content)
-        else:
-            if "addopts" in content:
-                new_content = re.sub(
-                    r'(addopts\s*=\s*"[^"]*)"',
-                    rf'\1 {replacement}"',
-                    content,
-                    count=1,
-                )
+        elif re.search(r"addopts\s*=\s*\[", content):
+            # Array-form addopts: insert as a new list element before the closing ]
+            array_match = re.compile(
+                r"(addopts\s*=\s*\[\s*)([^\]]*?)(\s*\])"
+            ).search(content)
+            if array_match is None:
+                msg = "addopts array detected but regex did not match"
+                raise RuntimeError(msg)
+            existing = array_match.group(2).rstrip()
+            prefix = "    "  # match pytest convention of indented list items
+            if existing:
+                new_option = f"{existing.rstrip()},\n{prefix}\"{replacement}\""
             else:
-                new_content = f'{content}\n[tool.pytest.ini_options]\naddopts = "{replacement}"\n'
+                new_option = f"{prefix}\"{replacement}\""
+            new_content = (
+                content[: array_match.start(2)]
+                + new_option
+                + content[array_match.end(2) :]
+            )
+        elif "addopts" in content:
+            new_content = re.sub(
+                r'(addopts\s*=\s*"[^"]*)"',
+                rf'\1 {replacement}"',
+                content,
+                count=1,
+            )
+        else:
+            new_content = (
+                f'{content}\n[tool.pytest.ini_options]\naddopts = "{replacement}"\n'
+            )
         self.pyproject_file.write_text(new_content)
 
     def report_status(self) -> str:
