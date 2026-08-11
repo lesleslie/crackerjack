@@ -136,6 +136,60 @@ function parseSnapshotText(text) {
   }
 }
 
+// parseFixText helper (Task 5, module scope).
+// Parses the fix agent's text response into a fix object:
+//   { changes: Array<{ file, description }> }
+// Returns null if the CHANGES: marker is missing entirely — the caller
+// (Task 5 Step 1) treats null as `fix-agent-error` and aborts.
+//
+// Expected agent response shapes:
+//   (a) Empty list — agent made no changes:
+//       CHANGES: (empty list)
+//   (b) One or more changes — agent lists each with `file:` and
+//       `description:` lines, separated by `---`:
+//       CHANGES:
+//       file: crackerjack/foo.py
+//       description: unused import cleanup
+//       ---
+//       file: crackerjack/bar.py
+//       description: typing fix
+//       ---
+//
+// Loose parsing: leading whitespace, surrounding prose, and tab indents
+// are tolerated. The empty-list marker accepts "(empty list)", "empty list",
+// or just whitespace on the inline portion after `CHANGES:`. Blocks without
+// valid file/description pairs are silently skipped (the agent may emit
+// trailing noise after the last `---` separator).
+function parseFixText(text) {
+  if (typeof text !== 'string' || !text.trim()) return null
+  // Locate the CHANGES: marker; bail out if absent.
+  const markerMatch = text.match(/^\s*CHANGES:/m)
+  if (!markerMatch) return null
+  const markerStart = text.indexOf(markerMatch[0])
+  const markerEnd = markerStart + markerMatch[0].length
+  // Inline portion after CHANGES: (up to next newline) — used for empty-list check.
+  const inlineSlice = text.slice(markerEnd)
+  const inlineMatch = inlineSlice.match(/^(.*?)(?:\n|$)/)
+  const inline = inlineMatch ? inlineMatch[1].trim() : ''
+  if (/^\(?empty\s+list\)?$/i.test(inline)) {
+    return { changes: [] }
+  }
+  // Split remainder on `---` separator and extract file/description pairs.
+  const blocks = inlineSlice.split(/^\s*---\s*$/m)
+  const changes = []
+  for (const block of blocks) {
+    const fileMatch = block.match(/^\s*file:\s*(.+?)\s*$/m)
+    const descMatch = block.match(/^\s*description:\s*(.+?)\s*$/m)
+    if (fileMatch && descMatch) {
+      changes.push({
+        file: fileMatch[1].trim(),
+        description: descMatch[1].trim(),
+      })
+    }
+  }
+  return { changes }
+}
+
 for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
   log(`Iteration ${iteration}/${MAX_ITERATIONS}`)
 
@@ -249,7 +303,45 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
       auditLog,
     }
   }
-  // Task 5 fills in the Fix phase here.
+  // === Task 5: Fix phase ===
+  phase('Fix')
+  // Loose-text parsing — `agent({schema})` has the infinite-loop bug noted in Task 3.
+  // The fix agent returns plain text in the CHANGES:/file:/description: format;
+  // parseFixText (module scope) extracts the structured list.
+  const fixText = await agent(
+    `You are fixing quality issues in the crackerjack repo reported by \`crackerjack run -v\`. ` +
+    `Here is a summary of the current issues: ${verify.issuesSummary}\n\n` +
+    `Fix as many of these issues as you directly can by editing the affected files.\n\n` +
+    `Hard constraints on your edits:\n` +
+    `- Prefer minimal, targeted edits — do not refactor unrelated code.\n` +
+    `- DO NOT modify files under \`tests/\`, \`docs/\`, or any \`*.toml\`/\`*.yml\`/\`*.txt\` config file.\n` +
+    `- DO NOT delete test files.\n` +
+    `- DO NOT touch \`pyproject.toml\`, \`setup.py\`, \`requirements*.txt\`, or \`Dockerfile\`.\n` +
+    `- Maximum: 5 files changed, 100 lines changed. If a fix needs more, describe it and skip — the loop driver will dispatch a fresh attempt on the next iteration.\n` +
+    `- Do not run \`crackerjack run\` yourself; the loop driving you will re-verify after you finish.\n\n` +
+    `When done, respond with EXACTLY this format (one block per file you changed, nothing else):\n` +
+    `CHANGES:\n` +
+    `file: <path>\n` +
+    `description: <one-sentence-description>\n` +
+    `---\n` +
+    `file: <path>\n` +
+    `description: <one-sentence-description>\n` +
+    `---\n` +
+    `If you made no changes at all, respond with just: CHANGES: (empty list)`,
+    { label: `fix-iter-${iteration}`, phase: 'Fix' }
+  )
+  const fix = parseFixText(fixText)
+  if (!fix) {
+    log(`Fix agent returned malformed result on iteration ${iteration} — aborting.`)
+    return { stopReason: 'fix-agent-error', iterations: iteration - 1, auditLog }
+  }
+  // Track the fix result in auditLog for post-loop inspection (Task 6
+  // formalizes on-disk persistence to .crackerjack/audit/ai-fix-loop.jsonl).
+  auditLog.push({
+    iteration,
+    phase: 'Fix',
+    changes: fix.changes,
+  })
   // Task 6 fills in the stop-condition checks here.
 }
 
