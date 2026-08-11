@@ -29,7 +29,7 @@ Run it after:
 | Clean working tree (`git status --short` is empty) | The loop requires a clean tree at start; concurrent edits trigger `concurrent-change-detected` |
 | `uv` installed and project deps synced (`uv sync`) | Needed for `uv run crackerjack run -v` |
 | Mahavishnu pool available (or equivalent Workflow-tool host) | The loop is invoked via `Workflow({ scriptPath: ... })` |
-| Akosha MCP server reachable | Step 9's Akosha logging check requires the MCP server up (otherwise it's a `akosha-best-effort` failure, which the loop tolerates but this runbook flags) |
+| Akosha MCP server reachable (best-effort) | The Akosha logging inside step 4's workflow invocation is best-effort and wrapped in try/catch — a missing MCP server produces a warning, not a stop-reason. The script does NOT emit `stopReason: 'akosha-best-effort'` on Akosha failure (despite the plan's taxonomy table). Inspect the agent's STORED/FAILED summary line in the workflow log to verify Akosha writes succeeded. |
 
 ## Steps
 
@@ -59,12 +59,12 @@ Run it after:
        `'regressed'`, `'diff-too-large'`} with a legible
        partial-progress `auditLog`.
    - If step 2 showed issues with count > `INITIAL_ISSUE_GUARD`
-     (e.g., this repo's ~1014 ruff-check baseline), expect
+     (e.g., this repo's ~1019 baseline across all hooks), expect
      `stopReason: 'initial-issue-count-too-high'`, `iterations: 0`,
      and the documented message about triaging first.
    - Any of `'verify-error'`, `'snapshot-error'`,
-     `'fix-agent-error'`, `'rollback-error'`,
-     `'concurrent-change-detected'` indicates a bug, not a known
+     `'fix-agent-error'`, `'diff-sanity-error'`,
+     `'rollback-error'`, `'concurrent-change-detected'` indicates a bug, not a known
      limitation.
 6. **`uv run python -m crackerjack run -v 2>&1 | tail -40` again** —
    confirm the real hook results improved or reached clean, matching
@@ -93,15 +93,15 @@ Run it after:
 
 ## Expected Outcome for This Repo (2026-08-10 baseline)
 
-This repo currently has ~1014 baseline issues across multiple hooks
+This repo currently has ~1019 baseline issues across multiple hooks
 (ruff-check=999, check-local-links=8, codespell=7, pip-audit=2,
-mdformat=1, skill-coverage=2 — exact counts in
-`docs/superpowers/plans/2026-08-10-ai-fix-loop-task-1-kickoff.md`).
+mdformat=1, skill-coverage=2 — sum is 1019; per-hook counts recorded
+in `docs/superpowers/plans/2026-08-10-ai-fix-loop-task-1-kickoff.md`).
 That's well above `INITIAL_ISSUE_GUARD=200`, so:
 
 | Step | Expected result |
 |---|---|
-| 2 | Crackerjack prints `Fast Hook Results` with multiple FAILED entries; total ~1014 |
+| 2 | Crackerjack prints `Fast Hook Results` with multiple FAILED entries; total ~1019 |
 | 3 | Audit log line count is `0` (fresh state) |
 | 4 | Workflow invoked, returns quickly (single Verify iter + abort) |
 | 5 | `stopReason: 'initial-issue-count-too-high'`, `iterations: 0`, `initialIssueCount` populated, `guard: 200`, `message` populated. **`auditLog` is empty** (no iteration completed before the guard fired) |
@@ -112,18 +112,18 @@ That's well above `INITIAL_ISSUE_GUARD=200`, so:
 | 10 | Empty file — no JSONL lines written (audit log only persists per completed iter, and zero iters completed) |
 
 If you want to exercise the actual fix loop end-to-end, you must
-either (a) temporarily lower `INITIAL_ISSUE_GUARD` via
-`args.initialIssueGuard` to a number above your baseline, or
-(b) triage the largest-bucket hook (currently `ruff-check=999`) down
-below 200 first.
+either (a) pass `args: { initialIssueGuard: <N> }` where `N` is above
+your baseline (the script reads `args.initialIssueGuard` at module
+scope, default 200), or (b) triage the largest-bucket hook (currently
+`ruff-check=999`) down below 200 first.
 
 ## Failure-Mode Triage
 
 | Symptom | Likely cause | First action |
 |---|---|---|
-| `stopReason: 'verify-error'` repeatedly | Verify agent's response is missing/malformed; or upstream `crackerjack run -v` output format changed | Read the latest `verify-iter-N` agent output by hand; confirm `cleanExit:`, `issueCount:`, `issuesSummary:` lines present |
-| `stopReason: 'snapshot-error'` after first iter | Snapshot agent's stash step failed; usually permissions or `.git` corruption | `git stash list` and `git status`; verify the repo is a real git repo, not a worktree-shallow clone |
-| `stopReason: 'fix-agent-error'` | Fix agent returned no `CHANGES:` block | Inspect the `fix-iter-N` output; the agent may have crashed mid-edit or refused to make changes |
+| `stopReason: 'verify-error'` repeatedly | Three distinct emit paths in the script: (1) malformed verify text (missing `cleanExit:`/`issueCount:`/`issuesSummary:`), (2) `issueCount === -1` indicating the upstream `crackerjack run -v` crashed (look for "💥" or "Workflow failed" markers), (3) non-finite `countDelta` slipped through the guard. | Read the latest `verify-iter-N` agent output by hand to distinguish. The script's three emit paths each correspond to different upstream causes. |
+| `stopReason: 'snapshot-error'` after first iter | Snapshot agent's stash step failed; usually permissions or `.git` corruption. Also fires on `dirty=true && stashed=true` (the parser rejects this hybrid as malformed). | `git stash list` and `git status`; verify the repo is a real git repo, not a worktree-shallow clone. |
+| `stopReason: 'fix-agent-error'` | Two distinct emit paths in the script: (1) `parseFixText` returned null — the fix agent's response was missing the `CHANGES:` block, (2) `parseDiffStatText` returned null — the **diff-sanity** agent's response was malformed (filesChanged/linesChanged/forbiddenTouched lines missing). Note: post-review fixes the diff-sanity case now emits the dedicated `diff-sanity-error` stop reason instead — but if you see `fix-agent-error` it's the parseFixText path. | Inspect BOTH `fix-iter-N` (for missing CHANGES:) AND `diff-sanity-iter-N` (for malformed filesChanged/linesChanged/forbiddenTouched) outputs. |
 | `stopReason: 'rollback-error'` with `rollbackReason: 'sha-mismatch'` | Stash list message-collision (very rare) or git corruption | `git stash list`; manually resolve the rollback with `git stash pop "stash@{N}"` after verifying the SHA matches the `auditLog[N].stashSha` |
 | `stopReason: 'rollback-error'` with `rollbackReason: 'pop-failed'` | Stash pop hit a merge conflict | Manual `git status` + `git stash pop`; resolve conflicts, `git stash drop` |
 | `stopReason: 'diff-too-large'` | Fix agent exceeded 5-file/100-line cap, or touched `tests/`/`docs/`/`*.toml`/`*.yml`/`*.txt`/`pyproject.toml`/`setup.py`/`requirements*.txt`/`Dockerfile` | Read the `diffSanity` block in the last `auditLog` entry; the fix was rolled back automatically |

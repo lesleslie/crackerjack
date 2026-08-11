@@ -1,4 +1,4 @@
-// AI-Fix External Loop — Workflow script (Task 7: Akosha passive logging).
+// AI-Fix External Loop — Workflow script (post-review fixes applied).
 //
 // Runs `crackerjack run -v` to surface residual quality issues,
 // dispatches them to a fix agent, re-verifies, repeats until clean
@@ -6,9 +6,14 @@
 // outcome to Akosha via generate_embedding → store_memory. Full
 // design: docs/superpowers/plans/2026-08-06-ai-fix-external-loop.md
 //
-// Status: Task 7 complete. Tasks 8-9 still pending:
-//   - Task 8: Update CLAUDE.md usage docs (replaces removed --ai-fix section)
-//   - Task 9: End-to-end acceptance runbook against real repo state
+// Status: All 9 plan tasks complete. Post-implementation multi-agent
+// review (code, mcp-integration, workflow-contract, documentation)
+// applied: 1 CRITICAL fix (iteration-1 sentinel interaction), 7 HIGH
+// fixes (audit-log JSONL, rollback signature, fix-agent-error stash
+// leak, issuesAfter back-patch, args.initialIssueGuard, runbook
+// baseline correction, Akosha partial-success surfacing), and several
+// MEDIUM fixes (phase labels, diff-sanity-error stop reason, audit-
+// log-error rollback, etc.). See commit message for full list.
 
 export const meta = {
   name: 'ai-fix-loop',
@@ -31,7 +36,6 @@ const REQUESTED_MAX = (args && args.maxIterations) || 10
 // Issue-count-proportional cap: never fewer than 10, but allow up to
 // 1.5x the initial issue count for genuinely large fix surfaces.
 // Adjusted in Task 3 after the first Verify pass.
-const DEFAULT_MAX_ITERATIONS = REQUESTED_MAX
 let MAX_ITERATIONS = Math.max(REQUESTED_MAX, 10)
 
 // Initial-issue-count guard. A repo with >200 baseline issues is not a
@@ -39,10 +43,17 @@ let MAX_ITERATIONS = Math.max(REQUESTED_MAX, 10)
 // `initial-issue-count-too-high` stop reason in Task 3, not silently
 // kicked into a multi-hour loop. Threshold chosen to keep one run
 // under the Mahavishnu pool's default 300s timeout (200 iters × ~1s
-// per iter cap ≈ budget). Tune via `args.initialIssueGuard` if needed.
-const INITIAL_ISSUE_GUARD = 200
+// per iter cap ≈ budget). Override via `args.initialIssueGuard`.
+const INITIAL_ISSUE_GUARD = (args && args.initialIssueGuard) || 200
 
-let previousIssueCount = Number.POSITIVE_INFINITY
+// `previousIssueCount` starts as `null` to signal "no previous value".
+// Earlier revisions used `Number.POSITIVE_INFINITY` as the sentinel,
+// but that interacted badly with the `Number.isFinite(countDelta)`
+// guard added in Task 6 — on iteration 1 the delta was -Infinity and
+// the guard tripped, aborting the loop before any work ran. `null`
+// is the correct sentinel because the countDelta block is gated on
+// `previousIssueCount !== null`.
+let previousIssueCount = null
 let consecutiveFlat = 0
 const FLAT_THRESHOLD = 2  // require 2 flat iters before declaring 'progress-stalled'
 const auditLog = []
@@ -91,26 +102,26 @@ function parseVerifyText(text) {
 
 // parseSnapshotText helper (Task 4, module scope).
 // Parses the snapshot agent's text response into a snapshot object:
-//   { dirty, stashed, stashRef, stashSha, stashMessage, reason }
-// Returns null if required fields (dirty, stashed) are missing or malformed.
+//   { dirty, stashed, stashSha, stashMessage, reason }
+// Returns null if required fields are missing or malformed.
 //
 // Expected agent response shape:
 //   dirty: <true-or-false>                         [required]
 //   stashed: <true-or-false>                       [required]
 //   stashSha: <sha-string>                         [required when stashed=true]
-//   [stashMessage: <message>]                      [optional, only when stashed=true]
+//   stashMessage: <message>                        [required when stashed=true]
 //   [reason: <description>]                        [optional, only when dirty=true, stashed=false]
 //
-// stashRef is derived from stashed: when stashed=true the positional ref
-// is `stash@{0}`; when stashed=false it's null. The durable handle is
-// stashSha (the git rev-parse output), which Task 6's rollback uses to
-// re-resolve the stash even if its positional index has shifted.
+// stashMessage is REQUIRED when stashed=true — attemptRollback uses it
+// for the `git stash list --grep '^<message>$'` lookup. A null message
+// would make the grep anchor to `^$` and match nothing, returning
+// 'sha-mismatch' and failing the rollback. Required: dirty, stashed,
+// and (when stashed=true) stashSha + stashMessage.
 //
 // Loose parsing — multiline regex tolerates leading whitespace, surrounding
-// prose, and missing optional fields. Required: dirty and stashed. When
-// stashed=true the SHA and message are also required; when stashed=false
-// they may be absent (the agent omits them in the "no-op" and "concurrent
-// change" branches of the prompt).
+// prose, and missing optional fields. The hybrid state
+// `dirty=true && stashed=true` is rejected as malformed (the agent
+// prompt forbids it; the parser enforces the invariant).
 function parseSnapshotText(text) {
   if (typeof text !== 'string' || !text.trim()) return null
   const dirtyMatch = text.match(/^\s*dirty:\s*(true|false)\s*$/m)
@@ -118,7 +129,10 @@ function parseSnapshotText(text) {
   if (!dirtyMatch || !stashedMatch) return null
   const dirty = dirtyMatch[1] === 'true'
   const stashed = stashedMatch[1] === 'true'
-  // SHA is only meaningful when stashed=true; required in that case.
+  // Reject the dirty+stashed hybrid: the agent prompt explicitly forbids
+  // it, and accepting it would cause the diff-sanity check to compute
+  // diffs against a baseline that includes pre-existing dirt.
+  if (dirty && stashed) return null
   let stashSha = null
   let stashMessage = null
   if (stashed) {
@@ -126,17 +140,14 @@ function parseSnapshotText(text) {
     if (!shaMatch) return null
     stashSha = shaMatch[1].trim()
     const messageMatch = text.match(/^\s*stashMessage:[ \t]*([^\n]*?)[ \t]*$/m)
-    if (messageMatch) stashMessage = messageMatch[1].trim()
+    if (!messageMatch) return null  // required when stashed=true
+    stashMessage = messageMatch[1].trim()
   }
   const reasonMatch = text.match(/^\s*reason:[ \t]*([^\n]*?)[ \t]*$/m)
   const reason = reasonMatch ? reasonMatch[1].trim() : null
-  // stashRef is hardcoded to the most-recent positional ref; the durable
-  // SHA-anchored ref (stashSha) handles the shift case at rollback time.
-  const stashRef = stashed ? 'stash@{0}' : null
   return {
     dirty,
     stashed,
-    stashRef,
     stashSha,
     stashMessage,
     reason,
@@ -226,8 +237,8 @@ function parseDiffStatText(text) {
   return { filesChanged, linesChanged, forbiddenTouched }
 }
 
-// attemptRollback helper (Task 6, module scope, async).
-// Looks up the previous iteration's stash by message, verifies the SHA,
+// attemptRollback helper (Task 6 + post-review fixes, module scope, async).
+// Looks up the iteration's snapshot stash by message, verifies the SHA,
 // pops it, and drops it. Returns { success, reason, details } parsed
 // from the agent's response, or null if the response is malformed.
 //
@@ -236,20 +247,26 @@ function parseDiffStatText(text) {
 // case where the user adds their own stash between iterations and the
 // positional index shifts.
 //
-// Pre-condition: auditLog has at least one entry with stashSha and
-// stashMessage. Caller (Step 1 in the loop body) reads
-// auditLog[auditLog.length - 1] for the most recent snapshot.
-async function attemptRollback(auditLog, iteration) {
-  const lastEntry = auditLog[auditLog.length - 1]
-  if (!lastEntry || !lastEntry.stashSha || !lastEntry.stashMessage) {
+// Post-review fix: signature is `(stashSha, stashMessage, iteration, phase)`.
+// Earlier revisions took the auditLog and read `auditLog[length-1]`,
+// which by the time the diff-sanity rollback fired was the PREVIOUS
+// iteration's stash (because `auditLog.push(entry)` runs AFTER fix and
+// AFTER diff-sanity, so length-1 was stale). Passing the snapshot
+// directly eliminates the wrong-stash bug. `phase` is the script's
+// currently-active phase label, used for the agent dispatch's `phase:`
+// metadata so logs correlate rollback events to the triggering phase
+// ('Verify' for regressed/progress-stalled, 'Fix' for diff-too-large).
+async function attemptRollback(stashSha, stashMessage, iteration, phase) {
+  if (!stashSha || !stashMessage) {
     log(`No snapshot to roll back to on iteration ${iteration}.`)
     return { success: false, reason: 'no-snapshot' }
   }
+  const activePhase = phase || 'Snapshot'
   const result = await agent(
     `In the crackerjack repo, perform a SHA-anchored stash rollback:\n` +
-    `1. Run \`git stash list --grep '^${lastEntry.stashMessage}$'\` to find the stash entry by message.\n` +
+    `1. Run \`git stash list --grep '^${stashMessage}$'\` to find the stash entry by message.\n` +
     `   If multiple entries match, pick the one whose commit SHA matches the captured SHA below.\n` +
-    `2. Run \`git rev-parse "<entry>^3"\` and verify the result matches this expected SHA: ${lastEntry.stashSha}\n` +
+    `2. Run \`git rev-parse "<entry>^3"\` and verify the result matches this expected SHA: ${stashSha}\n` +
     `3. If SHA matches: run \`git stash pop "<entry>"\` then \`git stash drop "<entry>"\` to remove the entry.\n` +
     `4. If SHA does NOT match: do NOT pop. Return success=false with reason "sha-mismatch".\n` +
     `5. If pop fails (merge conflict, etc.): return success=false with reason "pop-failed".\n\n` +
@@ -258,7 +275,7 @@ async function attemptRollback(auditLog, iteration) {
     `reason: <"sha-mismatch"|"pop-failed"|empty-when-success>\n` +
     `details: <mismatch-or-conflict-details-or-empty>\n` +
     `The positional \`stash@{N}\` ref MUST NOT be used.`,
-    { label: `rollback-iter-${iteration}`, phase: 'Snapshot' }
+    { label: `rollback-iter-${iteration}`, phase: activePhase }
   )
   return parseRollbackText(result)
 }
@@ -277,13 +294,21 @@ function parseRollbackText(text) {
   return { success: successMatch[1] === 'true', reason, details }
 }
 
-// persistAuditLog helper (Task 6, module scope, async).
+// persistAuditLog helper (Task 6 + post-review fixes, module scope, async).
 // Appends a single JSONL entry to AUDIT_LOG_PATH via agent(). Returns
 // { success, error } or null if the response is malformed.
 //
 // Failure triggers the `audit-log-error` stop reason — the loop can't
 // continue without an audit trail. The agent MUST NOT overwrite or read
 // existing content; it must atomically append a single line.
+//
+// Post-review fix: line content passed to the prompt is the already-
+// JSON-stringified entry (a single `JSON.stringify` call). Earlier
+// revisions wrapped the line in a second `JSON.stringify`, producing a
+// JSON-escaped string the agent would write verbatim — that put the
+// JSONL file into an unparseable state where every line was a string
+// instead of an object. The runbook's Step 10 would fail to parse the
+// audit log without this fix.
 async function persistAuditLog(entry) {
   const line = JSON.stringify(entry)
   const result = await agent(
@@ -291,9 +316,9 @@ async function persistAuditLog(entry) {
     `Create the parent directory \`.crackerjack/audit/\` if missing. ` +
     `Do NOT overwrite or read existing content — just append atomically.\n` +
     `If the append fails (disk full, permission denied, etc.), return success=false with the error description.\n\n` +
-    `Line content (write exactly this, escaped as a JSON string):\n` +
-    `${JSON.stringify(line)}`,
-    { label: `audit-persist-iter-${entry.iteration}`, phase: 'Snapshot' }
+    `Line content (write exactly this string as the JSONL record):\n` +
+    `${line}`,
+    { label: `audit-persist-iter-${entry.iteration}`, phase: 'Fix' }
   )
   return parsePersistText(result)
 }
@@ -310,7 +335,7 @@ function parsePersistText(text) {
   return { success: successMatch[1] === 'true', error }
 }
 
-// logAkoshaFixes helper (Task 7, module scope, async).
+// logAkoshaFixes helper (Task 7 + post-review fixes, module scope, async).
 // Best-effort write-only logging of one successful iteration's fixes
 // to Akosha. Per Akosha contract compliance:
 //   1. generate_embedding(text) → 384-dim vector
@@ -319,9 +344,14 @@ function parsePersistText(text) {
 // preserved by Akosha's metadata normalizer — only `correlation_id`
 // round-trips. Fix context is packed into the `text` payload instead.
 //
-// Deterministic, non-empty memory_id: "ai-fix-loop:iter-<N>:<file>"
-// (or ":1"/":2" disambiguator if the same file appears twice in the
-// same iteration's changes list).
+// Deterministic, non-empty memory_id: "ai-fix-loop:iter-<N>:change-<i>:<file>"
+// (index `<i>` is the 0-based position in entry.changes; ensures
+// memory_id is unique even when the same file appears twice in one
+// iteration's changes list. Post-review fix mcp#1.)
+//
+// The text payload includes the iteration's `outcome` (fixed, regressed,
+// etc.) so downstream queries can distinguish clean fixes from rolled-
+// back ones. (Post-review fix mcp#4.)
 //
 // No-op when entry.changes is empty — the empty-CHANGES case from
 // parseFixText represents "agent touched nothing this iteration",
@@ -334,6 +364,13 @@ function parsePersistText(text) {
 // per change. Per-change failures are logged and skipped; the agent
 // never aborts the whole operation.
 //
+// Post-review fix mcp#6: the agent MUST emit a structured summary line
+// at the end (`STORED: <n>/<total> | FAILED: <k>`) so the script can
+// surface partial-failure visibility. `try/catch` only catches sync
+// throws; silent agent failures (zero-vector embeddings, agent that
+// "succeeds" but logs nothing) were invisible before. The summary
+// closes that observability gap.
+//
 // The caller wraps this in try/catch so any thrown error (agent
 // failure, MCP timeout, etc.) does not propagate to the loop. This
 // helper is observability infrastructure, not control flow.
@@ -341,21 +378,25 @@ async function logAkoshaFixes(entry) {
   if (!entry || !entry.changes || entry.changes.length === 0) {
     return  // nothing to log; intentional no-op
   }
+  const outcome = entry.outcome || 'fixed'
+  const changesJson = JSON.stringify(entry.changes)
   await agent(
     `In the crackerjack repo, log a memory to Akosha for each fix in this iteration's audit entry. ` +
-    `The audit entry's iteration is ${entry.iteration} and the changes array has ${entry.changes.length} item(s):\n\n` +
-    `  ${JSON.stringify(entry.changes)}\n\n` +
-    `For EACH change, perform the following sequence (Akosha contract — store_memory requires both a non-empty memory_id and a 384-dim embedding):\n` +
+    `The audit entry's iteration is ${entry.iteration}, the outcome is ${outcome}, and the changes array has ${entry.changes.length} item(s):\n\n` +
+    `  ${changesJson}\n\n` +
+    `For EACH change (index 0-based, position in the array above), perform the following sequence (Akosha contract — store_memory requires both a non-empty memory_id and a 384-dim embedding):\n` +
     `1. Build the text payload. Pack fix context into text because custom metadata keys don't round-trip:\n` +
-    `   text = "Crackerjack ai-fix-loop iter=${entry.iteration} | file=<change.file> | <change.description>"\n` +
-    `2. Build a deterministic, non-empty memory_id:\n` +
-    `   memory_id = "ai-fix-loop:iter-${entry.iteration}:<change.file>"\n` +
-    `   (If two changes share the same file path, append an index like ":1", ":2" to disambiguate.)\n` +
-    `3. Build metadata (only correlation_id and type are preserved by Akosha's normalizer):\n` +
+    `   text = "Crackerjack ai-fix-loop iter=${entry.iteration} | outcome=${outcome} | file=<change.file> | <change.description>"\n` +
+    `2. Build a deterministic, non-empty memory_id. The `<i>` index ensures uniqueness even if the same file appears twice:\n` +
+    `   memory_id = "ai-fix-loop:iter-${entry.iteration}:change-<i>:<change.file>"\n` +
+    `   If `<change.file>` is empty, use a placeholder like "(no-file)" so memory_id remains non-empty.\n` +
+    `3. Build metadata. CRITICAL: only `correlation_id` and `type` are preserved by Akosha's metadata normalizer — do NOT add repo/file/outcome/iteration keys; those go in text only. Any other key is silently dropped:\n` +
     `   metadata = { correlation_id: "ai-fix-loop:iter-${entry.iteration}", type: "session_memory" }\n` +
-    `4. Call the MCP tool \`mcp__akosha__generate_embedding\` with the text. It expects a single text string and returns a list of floats (the 384-dim vector).\n` +
-    `5. Call \`mcp__akosha__store_memory\` with memory_id, text, embedding, and metadata. Pass them as named arguments matching the tool's schema.\n` +
-    `6. If the embedding call returns an error or store_memory returns an error for a specific change, log a warning but CONTINUE with the next change. Do NOT abort the whole operation.\n\n` +
+    `4. Call the MCP tool \`mcp__akosha__generate_embedding\` with the text. The result is a dict with an "embedding" key whose value is the 384-dim float vector — extract result["embedding"] before passing to store_memory.\n` +
+    `5. If the embedding succeeded, call \`mcp__akosha__store_memory\` with memory_id, text, embedding, and metadata. Pass them as named arguments matching the tool's schema.\n` +
+    `6. If the embedding call returns an error OR store_memory returns an error for a specific change, log a warning but CONTINUE with the next change. Do NOT abort the whole operation. Skip the change silently — do not retry.\n` +
+    `7. After processing all ${entry.changes.length} changes, respond with EXACTLY this one summary line (the workflow script reads this for observability):\n` +
+    `   STORED: <successful-count>/${entry.changes.length} | FAILED: <failed-count>\n\n` +
     `This is best-effort write-only observability. Do NOT query Akosha for prior fixes. ` +
     `Do NOT abort the workflow on any failure — log and continue.`,
     { label: `akosha-log-iter-${entry.iteration}`, phase: 'Fix' }
@@ -435,54 +476,87 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
     log(`Initial issue count: ${initialIssueCount}. Adjusted MAX_ITERATIONS to ${MAX_ITERATIONS}.`)
   }
 
-  // === Task 6 Step 1: No-improvement / regressed / progress-stalled check ===
+  // === Task 6 Step 1 + post-review fixes: No-improvement / regressed / progress-stalled check ===
   // Evaluates whether the PREVIOUS iteration's fix was effective. Runs after
   // Verify and before Snapshot so a regressed/stalled loop can roll back
   // the previous iteration's stash BEFORE taking a new snapshot.
-  const countDelta = verify.issueCount - previousIssueCount
-  if (!Number.isFinite(countDelta)) {
-    log(`Non-finite count delta on iteration ${iteration} — aborting to avoid silent infinite loop.`)
-    return { stopReason: 'verify-error', iterations: iteration - 1, auditLog }
-  }
-  if (countDelta > 0) {
-    log(`Issue count increased (was ${previousIssueCount}, now ${verify.issueCount}) — rolling back.`)
-    const rollbackResult = await attemptRollback(auditLog, iteration)
-    if (!rollbackResult || !rollbackResult.success) {
-      const reason = (rollbackResult && rollbackResult.reason) || 'unknown'
-      const details = (rollbackResult && rollbackResult.details) || null
-      log(`Rollback failed after regression on iteration ${iteration}: reason=${reason}`)
-      return {
-        stopReason: 'rollback-error',
-        iterations: iteration - 1,
-        rollbackReason: reason,
-        rollbackDetails: details,
-        auditLog,
-      }
+  //
+  // Post-review fix: gate the countDelta block on `previousIssueCount !== null`.
+  // Iteration 1 has no previous value; computing a delta against null would
+  // yield NaN and trip the `Number.isFinite` guard below, aborting the loop
+  // before any work runs. The null-sentinel handles this correctly.
+  //
+  // Post-review fix: rollback uses the snapshot directly from the previous
+  // iteration's auditLog entry (the regressed/stalled case is rolling back
+  // the PREVIOUS iter's fix), with `phase: 'Verify'` so log correlation
+  // matches the triggering phase.
+  if (previousIssueCount !== null) {
+    const countDelta = verify.issueCount - previousIssueCount
+    if (!Number.isFinite(countDelta)) {
+      log(`Non-finite count delta on iteration ${iteration} — aborting to avoid silent infinite loop.`)
+      return { stopReason: 'verify-error', iterations: iteration - 1, auditLog }
     }
-    return { stopReason: 'regressed', iterations: iteration - 1, auditLog }
-  }
-  if (countDelta === 0) {
-    consecutiveFlat += 1
-    if (consecutiveFlat >= FLAT_THRESHOLD) {
-      log(`No progress for ${consecutiveFlat} consecutive iterations — rolling back and stopping.`)
-      const rollbackResult = await attemptRollback(auditLog, iteration)
-      if (!rollbackResult || !rollbackResult.success) {
-        const reason = (rollbackResult && rollbackResult.reason) || 'unknown'
-        const details = (rollbackResult && rollbackResult.details) || null
-        log(`Rollback failed after progress-stalled on iteration ${iteration}: reason=${reason}`)
-        return {
-          stopReason: 'rollback-error',
-          iterations: iteration - 1,
-          rollbackReason: reason,
-          rollbackDetails: details,
-          auditLog,
+    if (countDelta > 0) {
+      log(`Issue count increased (was ${previousIssueCount}, now ${verify.issueCount}) — rolling back.`)
+      const prevEntry = auditLog[auditLog.length - 1]
+      if (prevEntry && prevEntry.stashSha && prevEntry.stashMessage) {
+        const rollbackResult = await attemptRollback(
+          prevEntry.stashSha, prevEntry.stashMessage, iteration, 'Verify'
+        )
+        if (!rollbackResult || !rollbackResult.success) {
+          const reason = (rollbackResult && rollbackResult.reason) || 'unknown'
+          const details = (rollbackResult && rollbackResult.details) || null
+          log(`Rollback failed after regression on iteration ${iteration}: reason=${reason}`)
+          return {
+            stopReason: 'rollback-error',
+            iterations: iteration - 1,
+            rollbackReason: reason,
+            rollbackDetails: details,
+            auditLog,
+          }
         }
+      } else {
+        log(`Regression detected on iteration ${iteration} but no previous snapshot to roll back to.`)
       }
-      return { stopReason: 'progress-stalled', iterations: iteration - 1, auditLog }
+      return { stopReason: 'regressed', iterations: iteration - 1, auditLog }
     }
-    log(`Flat iteration ${consecutiveFlat}/${FLAT_THRESHOLD} — continuing.`)
-  } else {
-    consecutiveFlat = 0
+    if (countDelta === 0) {
+      consecutiveFlat += 1
+      if (consecutiveFlat >= FLAT_THRESHOLD) {
+        log(`No progress for ${consecutiveFlat} consecutive iterations — rolling back and stopping.`)
+        const prevEntry = auditLog[auditLog.length - 1]
+        if (prevEntry && prevEntry.stashSha && prevEntry.stashMessage) {
+          const rollbackResult = await attemptRollback(
+            prevEntry.stashSha, prevEntry.stashMessage, iteration, 'Verify'
+          )
+          if (!rollbackResult || !rollbackResult.success) {
+            const reason = (rollbackResult && rollbackResult.reason) || 'unknown'
+            const details = (rollbackResult && rollbackResult.details) || null
+            log(`Rollback failed after progress-stalled on iteration ${iteration}: reason=${reason}`)
+            return {
+              stopReason: 'rollback-error',
+              iterations: iteration - 1,
+              rollbackReason: reason,
+              rollbackDetails: details,
+              auditLog,
+            }
+          }
+        } else {
+          log(`Progress-stalled on iteration ${iteration} but no previous snapshot to roll back to.`)
+        }
+        return { stopReason: 'progress-stalled', iterations: iteration - 1, auditLog }
+      }
+      log(`Flat iteration ${consecutiveFlat}/${FLAT_THRESHOLD} — continuing.`)
+    } else {
+      consecutiveFlat = 0
+    }
+  }
+  // Back-patch the previous iteration's `issuesAfter`. Each entry stores
+  // `issuesAfter: null` at write time; this overwrites it with the current
+  // Verify pass's count, so the persisted JSONL has the full before/after
+  // per-iter delta available for postmortem review. (Post-review fix 3.2.)
+  if (auditLog.length > 0) {
+    auditLog[auditLog.length - 1].issuesAfter = verify.issueCount
   }
   previousIssueCount = verify.issueCount
 
@@ -556,6 +630,15 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
   const fix = parseFixText(fixText)
   if (!fix) {
     log(`Fix agent returned malformed result on iteration ${iteration} — aborting.`)
+    // Post-review fix 2.2: roll back the just-applied fix so the
+    // snapshot stash doesn't leak onto the stack. Without this, the
+    // runbook's Step 9 expectation ("no leftover ai-fix-loop-iter-*
+    // entries") is violated by every malformed-fix-agent-error path.
+    if (snapshot && snapshot.stashSha && snapshot.stashMessage) {
+      await attemptRollback(
+        snapshot.stashSha, snapshot.stashMessage, iteration, 'Fix'
+      )
+    }
     return { stopReason: 'fix-agent-error', iterations: iteration - 1, auditLog }
   }
 
@@ -573,16 +656,32 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
     `linesChanged: <integer>\n` +
     `forbiddenTouched: <comma-separated-paths-or-empty>\n` +
     `Forbidden paths are: anything under \`tests/\`, \`docs/\`, or matching \`*.toml\`, \`*.yml\`, \`*.txt\`, \`pyproject.toml\`, \`setup.py\`, \`requirements*.txt\`, \`Dockerfile\`.`,
-    { label: `diff-sanity-iter-${iteration}`, phase: 'Snapshot' }
+    { label: `diff-sanity-iter-${iteration}`, phase: 'Fix' }
   )
   const diffSanity = parseDiffStatText(diffStatText)
   if (!diffSanity) {
     log(`Diff-sanity agent returned malformed result on iteration ${iteration} — aborting.`)
-    return { stopReason: 'fix-agent-error', iterations: iteration - 1, auditLog }
+    // Post-review fix 2.2 + claude#4: roll back the just-applied fix so
+    // the snapshot stash doesn't leak onto the stack, AND emit a
+    // dedicated `diff-sanity-error` stop reason (not the misclassified
+    // `fix-agent-error`) so operators can grep for the right agent's
+    // label when investigating.
+    if (snapshot && snapshot.stashSha && snapshot.stashMessage) {
+      await attemptRollback(
+        snapshot.stashSha, snapshot.stashMessage, iteration, 'Fix'
+      )
+    }
+    return { stopReason: 'diff-sanity-error', iterations: iteration - 1, auditLog }
   }
   if (diffSanity.filesChanged > 5 || diffSanity.linesChanged > 100 || diffSanity.forbiddenTouched.length > 0) {
     log(`Fix exceeded limits on iteration ${iteration}: files=${diffSanity.filesChanged}, lines=${diffSanity.linesChanged}, forbidden=${diffSanity.forbiddenTouched.join(',')} — rolling back.`)
-    const rollbackResult = await attemptRollback(auditLog, iteration)
+    // Post-review fix 2.1: pass the CURRENT iteration's snapshot
+    // directly (the previous auditLog-based lookup would have read
+    // auditLog[length-1] which is the PREVIOUS iter's entry at this
+    // point, undoing both iters' fixes).
+    const rollbackResult = await attemptRollback(
+      snapshot.stashSha, snapshot.stashMessage, iteration, 'Fix'
+    )
     if (!rollbackResult || !rollbackResult.success) {
       const reason = (rollbackResult && rollbackResult.reason) || 'unknown'
       const details = (rollbackResult && rollbackResult.details) || null
@@ -602,10 +701,16 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
   // Persist immediately so a harness crash mid-iteration doesn't lose
   // the audit trail. The script can't write files directly; the agent()
   // call below writes via Bash.
+  //
+  // Post-review fix mcp#4: include `outcome` in the entry so Akosha can
+  // distinguish "fixed cleanly" from "fixed then rolled back". The
+  // outcome is packed into the Akosha text payload (per the contract,
+  // custom metadata keys don't round-trip).
   const entry = {
     iteration,
     issuesBefore: verify.issueCount,
-    issuesAfter: null,  // filled in by next iter's Verify pass
+    issuesAfter: null,  // back-patched at top of next iter's Verify (see countDelta block)
+    outcome: 'fixed',  // the loop only reaches here if diff-sanity passed
     stashSha: (snapshot && snapshot.stashed) ? snapshot.stashSha : null,
     stashMessage: (snapshot && snapshot.stashed) ? snapshot.stashMessage : null,
     changes: fix.changes,
@@ -619,6 +724,16 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
   if (!persistResult || !persistResult.success) {
     const error = (persistResult && persistResult.error) || 'unknown'
     log(`Audit log persistence failed on iteration ${iteration}: ${error}`)
+    // Post-review fix claude#5: roll back the just-applied fix before
+    // returning so the working tree doesn't end up in an unrecorded-
+    // modified state. The fix was applied (snapshot stash popped),
+    // and without this the audit log has no record of which iteration
+    // produced the modified files.
+    if (snapshot && snapshot.stashSha && snapshot.stashMessage) {
+      await attemptRollback(
+        snapshot.stashSha, snapshot.stashMessage, iteration, 'Fix'
+      )
+    }
     return {
       stopReason: 'audit-log-error',
       iterations: iteration - 1,
