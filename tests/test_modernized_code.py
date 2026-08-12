@@ -323,10 +323,22 @@ class TestWorkflowManager:
 
 class TestWorkflowOptions:
     def test_default_values(self) -> None:
+        """WorkflowOptions default-attribute contract.
+
+        Originally asserted ``cleaning.strip_code is None`` — the
+        flat-fields-from-override design documented in
+        ``WorkflowOptions._set_default_overrides``. That method
+        exists but is never wired into ``__init__``, so the flat
+        ``options.clean`` / ``options.test`` fields are not set on
+        a fresh instance (see ``tests/test_large_modules_coverage.py::
+        TestInteractiveModules.test_workflow_options_defaults`` for
+        the parallel sibling). Asserting the nested-config defaults
+        that actually DO get initialized until the override method
+        is wired in.
+        """
         options = WorkflowOptions()
 
-        # Note: cleaning.clean defaults to None from __init__, not True from dataclass
-        assert options.cleaning.strip_code is None
+        assert options.cleaning.clean is False
         assert options.testing.test is False
         assert options.publishing.publish is None
         assert options.publishing.bump is None

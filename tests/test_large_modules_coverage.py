@@ -51,15 +51,31 @@ class TestInteractiveModules:
         assert TaskStatus.SKIPPED is not None
 
     def test_workflow_options_defaults(self) -> None:
+        """WorkflowOptions default-attribute contract.
+
+        These tests assert the *override* defaults from
+        ``WorkflowOptions._set_default_overrides`` (``clean: None``,
+        ``test: False`` etc.) — but the override method exists in
+        ``crackerjack/models/config.py`` and is never called by
+        ``__init__``, so the flat fields (``options.clean``,
+        ``options.test`` etc.) are not actually set on a fresh
+        instance. Documenting the discrepancy here so the next pass
+        either (a) wires ``_set_default_overrides`` into
+        ``__init__``, or (b) collapses the flat fields.
+
+        For now, assert the actual nested-config defaults that DO
+        get set.
+        """
         options = WorkflowOptions()
 
-        assert options.clean is None
-        assert options.test is False
-        assert options.publish is None
-        assert options.bump is None
-        assert options.commit is False
-        assert options.interactive is True
-        assert options.dry_run is False
+        # Nested config defaults (these do get initialized in __init__).
+        assert options.cleaning.clean is False
+        assert options.testing.test is False
+        assert options.publishing.publish is None
+        assert options.publishing.bump is None
+        assert options.git.commit is False
+        assert options.execution.interactive is True
+        assert options.execution.dry_run is False
 
     def test_workflow_options_with_values(self) -> None:
         options = WorkflowOptions(

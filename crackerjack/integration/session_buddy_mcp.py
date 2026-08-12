@@ -49,8 +49,16 @@ class SessionBuddyMCPClient:
 
                 logger.info(f"Connecting to session-buddy MCP server at {server_url}")
 
+                # streamablehttp_client returns an async context manager
+                # that yields (read_stream, write_stream, _). Enter it
+                # first to get the streams, then construct ClientSession
+                # with them — the older ``ClientSession(self._client)``
+                # shape stopped working when the MCP SDK started
+                # requiring explicit read/write streams.
                 self._client = streamablehttp_client(url=f"{server_url}/mcp")
-                self._session = ClientSession(self._client)  # type: ignore
+                streams = await self._client.__aenter__()
+                read_stream, write_stream = streams[0], streams[1]
+                self._session = ClientSession(read_stream, write_stream)
 
                 await self._session.__aenter__()
                 self._is_connected = True
