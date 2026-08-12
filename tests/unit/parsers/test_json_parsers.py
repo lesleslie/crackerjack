@@ -870,3 +870,83 @@ class TestBetterleaksJSONParser:
         )
         issues = parser.parse("", "betterleaks")
         assert len(issues) == 1
+
+    def test_betterleaks_panic_output_short_circuits_to_infra_issue(
+        self, parser
+    ) -> None:
+        """Go panic in stderr → 1 infra issue, NOT N stale findings from report.
+
+        Regression for betterleaks 1.7.4 panicking on malformed .gz files
+        inside .venv/ (e.g. joblib's test fixtures). When the captured output
+        contains Go panic markers, the parser must short-circuit before
+        reading the report file — otherwise it would happily parse a
+        previous run's findings as the current run's.
+        """
+        import json
+
+        panic_output = (
+            " + ○\n"
+            "   ▾\n"
+            " betterleaks 1.7.4\n"
+            "\n"
+            "1:38PM WRN could not read compressed file error=\"gzip: invalid header\"\n"
+            "path=.venv/lib/python3.13/site-packages/joblib/test/data/"
+            "joblib_0.9.2_compressed_pickle_py27_np16.gz\n"
+            "panic: runtime error: invalid memory address or nil pointer dereference\n"
+            "[signal SIGSEGV: segmentation violation code=0x1 addr=0x70 pc=0x3751cae]\n"
+            "\n"
+            "goroutine 1479 [running]:\n"
+            "github.com/klauspost/compress/gzip.(*Reader).Close(0xe624719?)\n"
+        )
+        # Plant 10 stale findings on disk — pre-fix this would have been
+        # parsed as 10 issues from the "current" run.
+        parser.REPORT_PATH.write_text(
+            json.dumps(
+                [
+                    {
+                        "Description": f"Stale {i}",
+                        "File": "x.py",
+                        "StartLine": i,
+                        "StartColumn": 1,
+                        "RuleID": "stale",
+                        "Tags": [],
+                        "Entropy": 5.0,
+                    }
+                    for i in range(10)
+                ]
+            )
+        )
+
+        issues = parser.parse(panic_output, "betterleaks")
+
+        # Must surface as exactly 1 infra issue, never parse the stale report.
+        assert len(issues) == 1, (
+            f"Expected 1 infra issue, got {len(issues)}. "
+            "Stale report must NOT be parsed when output contains panic markers."
+        )
+        assert issues[0].stage == "betterleaks"
+        assert issues[0].type == IssueType.SECURITY
+        assert issues[0].severity == Priority.HIGH
+
+    def test_betterleaks_sigsegv_marker_triggers_panic_short_circuit(
+        self, parser
+    ) -> None:
+        """A SIGSEGV in the output alone is enough to short-circuit, even without
+        the literal 'panic: ' prefix (which Go occasionally omits on Windows)."""
+        output = "[signal SIGSEGV: segmentation violation]\nsome other noise\n"
+        issues = parser.parse(output, "betterleaks")
+        assert len(issues) == 1
+        assert issues[0].stage == "betterleaks"
+
+    def test_betterleaks_runtime_error_marker_triggers_panic_short_circuit(
+        self, parser
+    ) -> None:
+        """Go's 'runtime error:' marker (nil deref, index out of range, etc.) alone
+        is enough to short-circuit, even if 'panic:' is on a separate line."""
+        output = (
+            "betterleaks 1.7.4\n"
+            "runtime error: invalid memory address or nil pointer dereference\n"
+        )
+        issues = parser.parse(output, "betterleaks")
+        assert len(issues) == 1
+        assert issues[0].stage == "betterleaks"

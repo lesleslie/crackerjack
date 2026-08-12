@@ -1046,7 +1046,28 @@ class GitleaksJSONParser(JSONParser):
 class BetterleaksJSONParser(GitleaksJSONParser):
     REPORT_PATH = Path(".cache/betterleaks-report.json")
 
+    # Markers that indicate betterleaks (a Go binary) panicked or crashed.
+    # If any appear in the captured output, the report file is unreliable —
+    # it may be stale from a previous successful run, or partial/garbage from
+    # a mid-write panic — so we must NOT parse it as the current run's
+    # findings. Surface as a single infra issue instead.
+    # See test_betterleaks_panic_output_short_circuits_to_infra_issue.
+    PANIC_MARKERS: tuple[str, ...] = (
+        "panic: ",
+        "SIGSEGV",
+        "runtime error:",
+        "fatal error:",
+        "fatal runtime error",
+    )
+
     def parse(self, output: str, tool_name: str) -> list[Issue]:
+
+        # Detect Go panic before trusting the report file. betterleaks 1.7.4
+        # has an upstream panic on malformed .gz files inside .venv/ (e.g.
+        # joblib test data) — without this guard the parser would happily
+        # report a previous run's findings as if they came from this run.
+        if self._is_betterleaks_panic(output):
+            return [self._build_infra_issue(output)]
 
         if self.REPORT_PATH.exists():
             try:
@@ -1077,6 +1098,10 @@ class BetterleaksJSONParser(GitleaksJSONParser):
             return [self._build_infra_issue(stripped)]
 
         return []
+
+    @staticmethod
+    def _is_betterleaks_panic(output: str) -> bool:
+        return any(marker in output for marker in BetterleaksJSONParser.PANIC_MARKERS)
 
     @staticmethod
     def _is_betterleaks_infra_error(output: str) -> bool:
