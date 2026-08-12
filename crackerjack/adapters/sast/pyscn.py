@@ -41,7 +41,7 @@ class PyscnSettings(ToolAdapterSettings):
     include_rules: list[str] = Field(default_factory=list)
     recursive: bool = True
     max_depth: int | None = None
-    skip_cyclomatic: bool = True
+    skip_cyclomatic: bool = False
     emit_clone_groups: bool = True
     clone_threshold: float = 0.9
 
