@@ -4,7 +4,7 @@ import json
 import os
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, cast
 
 import httpx
 
@@ -58,7 +58,10 @@ def _extract_text(result: object) -> str | None:
 def _summarize(rows: object) -> SkillHealthReport:
     if not isinstance(rows, list):
         return SkillHealthReport(status="fresh", stale_count=0)
-    raw = [r for r in rows if isinstance(r, dict)]
+    raw = cast(
+        list[dict[str, Any]],
+        [r for r in rows if isinstance(r, dict)],
+    )
     stale_count = sum(1 for r in raw if str(r.get("status", "")) == "stale")
     status = "stale" if stale_count > 0 else "fresh"
     return SkillHealthReport(status=status, stale_count=stale_count, raw_rows=raw)

@@ -259,13 +259,17 @@ def analyze_merge_patterns(
                 if repos_data
                 else 0,
                 "avg_conflict_rate": round(
-                    sum(r["conflict_rate"] for r in repos_data) / len(repos_data),
+                    sum(
+                        t.cast("float", r["conflict_rate"]) for r in repos_data
+                    ) / len(repos_data),
                     2,
                 )
                 if repos_data
                 else 0,
                 "merge_success_rate": round(
-                    sum(r["merge_success_rate"] for r in repos_data) / len(repos_data),
+                    sum(
+                        t.cast("float", r["merge_success_rate"]) for r in repos_data
+                    ) / len(repos_data),
                     1,
                 )
                 if repos_data

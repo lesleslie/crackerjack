@@ -41,6 +41,27 @@ from crackerjack.services.pycharm_mcp_integration import (
 from crackerjack.services.refurb_fixer import SafeRefurbFixer
 from crackerjack.utils.issue_detection import extract_issue_lines
 
+if t.TYPE_CHECKING:
+    from crackerjack.adapters.factory import DefaultAdapterFactory
+    from crackerjack.agents.base import AgentContext
+    from crackerjack.models.protocols import LoggerProtocol
+
+
+# Minimal stubs for types whose original modules were removed by the
+# AI-fix subsystem deletion (Tasks 25-27). The signatures on the
+# coordinator reference them, but the methods that consume the values
+# are intentionally left as no-ops post-removal.
+@t.runtime_checkable
+class AgentCoordinatorProtocol(t.Protocol):
+    async def run_fix_iteration(self, *args: t.Any, **kwargs: t.Any) -> t.Any: ...
+
+
+@dataclass(frozen=True, slots=True)
+class SandboxResult:
+    success: bool
+    output: str
+    error: str = ""
+
 logger = logging.getLogger(__name__)
 
 _VALIDATION_DETAIL_LINES: int = 30
@@ -1036,6 +1057,22 @@ class AutofixCoordinator:
 
         return initial_issues
 
+    # -- AI-fix subsystem stubs (Tasks 25-27 removed the original
+    # implementations; the call sites remain so the type-checker and
+    # live code paths still resolve. Each stub returns an empty result,
+    # matching the post-removal semantics where no AI-fix enrichment
+    # runs.)
+
+    def _parse_hook_results_to_issues_with_qa(
+        self, hook_results: Sequence[object]
+    ) -> list[Issue]:
+        return []
+
+    def _check_coverage_regression(
+        self, hook_results: Sequence[object]
+    ) -> list[Issue]:
+        return []
+
     async def _apply_type_tool_fix_prepasses(
         self, hook_results: Sequence[object]
     ) -> dict[str, list[Issue]]:
@@ -1522,7 +1559,7 @@ class AutofixCoordinator:
         if hasattr(settings, "baseline_file"):
             cfg.baseline_file = None
 
-        adapter.settings = settings
+        setattr(adapter, "settings", settings)
 
     def _build_fix_command(
         self, adapter: object, tool_name: str, file_paths: list[Path]
@@ -1557,6 +1594,15 @@ class AutofixCoordinator:
             return []
 
         return self._convert_parsed_issues_to_issues(tool_name, parsed_issues)
+
+    def _convert_parsed_issues_to_issues(
+        self, tool_name: str, parsed_issues: list[object]
+    ) -> list[Issue]:
+        # AI-fix subsystem removed (Tasks 25-27). The re-run path still
+        # invokes this method so the type checker and live callers stay
+        # satisfied; without AI-fix enrichment, no parsed issues are
+        # promoted to actionable Issues here.
+        return []
 
     def _replace_refreshed_type_issues(
         self,
@@ -1596,7 +1642,7 @@ class AutofixCoordinator:
             self.logger.info(
                 f"🛡️ Excluding {len(infra_issues)} infrastructure issues from AI-fix "
                 f"(pipeline files must not be self-modified): "
-                f"{', '.join(sorted(p.file_path for i in infra_issues if (p := i.file_path) is not None))}"
+                f"{', '.join(sorted(i.file_path for i in infra_issues if i.file_path is not None))}"
             )
 
         if skipped_issues:

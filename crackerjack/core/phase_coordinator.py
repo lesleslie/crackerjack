@@ -178,7 +178,6 @@ class PhaseCoordinator:
         self._lazy_autofix = create_lazy_service(
             lambda: AutofixCoordinator(
                 pkg_path=pkg_path,
-                adapter_learner_integration=self._adapter_learning,
             ),
             "autofix_coordinator",
         )

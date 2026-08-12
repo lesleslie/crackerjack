@@ -45,8 +45,8 @@ class _NoOpProgressShim:
                 continue
             if hasattr(result, "issues_count"):
                 total += getattr(result, "issues_count", 0) or 0
-            elif getattr(result, "issues_found", None):
-                total += len(result.issues_found)
+            elif (issues_found := getattr(result, "issues_found", None)) is not None:
+                total += len(issues_found)
         return total
 
     def log_warning(self, message: str) -> None:
