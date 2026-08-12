@@ -365,7 +365,11 @@ class TestHandleRequestTestStatus:
 
         body = ws.send.await_args.args[0]
         assert "run-42" in body
-        assert "running" in body
+        # Returns honest 'unknown' stub since 6bfaa1af (2026-08-03)
+        # replaced the misleading hardcoded 'running' default. See
+        # TestGetTestStatus.test_returns_default_running_status below
+        # for the direct call-site check.
+        assert "unknown" in body
 
     @pytest.mark.asyncio
     async def test_get_test_status_without_run_id_does_nothing(
@@ -552,34 +556,41 @@ class TestChannelAuthorization:
         assert server._can_subscribe_to_channel(user, "quality:p")
         assert server._can_subscribe_to_channel(user, "test:r")
 
-    def test_normalized_read_does_not_grant_quality_or_test(
+    def test_normalized_read_grants_quality_and_test(
         self, server: Any
     ) -> None:
-        # Documents the bug: "crackerjack:read" normalizes to
-        # "crackerjack::read" which does not match the literal
-        # "crackerjack: read" the function looks for.
+        """Regression guard: since 6bfaa1af (2026-08-03) the function
+        normalizes ``crackerjack:read`` (space-stripped) and compares
+        against the canonical form ``crackerjack:read`` — so users with
+        ``crackerjack:read`` permission ARE subscribed to quality and
+        test channels as the policy intends.
+        """
         user = {"permissions": ["crackerjack:read"]}
-        assert not server._can_subscribe_to_channel(user, "quality:p")
-        assert not server._can_subscribe_to_channel(user, "test:r")
+        assert server._can_subscribe_to_channel(user, "quality:p")
+        assert server._can_subscribe_to_channel(user, "test:r")
 
-    def test_normalized_admin_does_not_grant(self, server: Any) -> None:
+    def test_normalized_admin_grants_quality_and_test(
+        self, server: Any
+    ) -> None:
+        """Regression guard: ``crackerjack:admin`` normalizes to the
+        same canonical form and grants quality/test channel access
+        (plus the admin fast-path at the top of the function).
+        """
         user = {"permissions": ["crackerjack:admin"]}
-        # Normalized to "crackerjack::admin" — does not match the literal
-        # "crackerjack: admin" / "admin" the function checks for.
-        assert not server._can_subscribe_to_channel(user, "quality:p")
-        assert not server._can_subscribe_to_channel(user, "test:r")
+        assert server._can_subscribe_to_channel(user, "quality:p")
+        assert server._can_subscribe_to_channel(user, "test:r")
 
-    def test_canonical_space_form_matches_literal_check(self, server: Any) -> None:
-        # The function checks the literal string "crackerjack: admin"
-        # (with single space). After normalization this becomes
-        # "crackerjack::admin" which still does NOT match the literal check.
-        # The only way to pass is to provide the literal string
-        # "crackerjack: admin" verbatim — but even that is normalized away
-        # first. So in practice this test confirms the function never grants
-        # access via the "crackerjack: admin" / "crackerjack: read" forms.
+    def test_canonical_space_form_normalizes_to_grant(
+        self, server: Any
+    ) -> None:
+        """Regression guard: the literal ``crackerjack: admin`` (with
+        space) normalizes to ``crackerjack:admin`` via the
+        ``replace(\" \", \"\")`` step and then matches the canonical
+        check — so it grants access too.
+        """
         user = {"permissions": ["crackerjack: admin"]}
-        assert not server._can_subscribe_to_channel(user, "quality:p")
-        assert not server._can_subscribe_to_channel(user, "test:r")
+        assert server._can_subscribe_to_channel(user, "quality:p")
+        assert server._can_subscribe_to_channel(user, "test:r")
 
     def test_no_permission_denies(self, server: Any) -> None:
         user = {"permissions": []}
@@ -612,13 +623,17 @@ class TestChannelAuthorization:
 
 class TestGetTestStatus:
     @pytest.mark.asyncio
-    async def test_returns_default_running_status(self, server: Any) -> None:
+    async def test_returns_default_unknown_status(self, server: Any) -> None:
+        """Regression guard: _get_test_status returns 'unknown' since
+        6bfaa1af (2026-08-03) "fix(websocket): canonicalize subscription
+        permission + honest test-status stub". The previous hardcoded
+        'running' default misled callers into believing a run was in
+        flight. The pending C-ASYNC-DURABILITY (Bodai portfolio Task 6)
+        will replace this stub with real status tracking.
+        """
         result = await server._get_test_status("run-1")
         assert result["run_id"] == "run-1"
-        assert result["status"] == "running"
-        assert result["tests_completed"] == 0
-        assert result["tests_total"] == 100
-        assert result["failures"] == 0
+        assert result["status"] == "unknown"
 
 
 # ---------------------------------------------------------------------------
