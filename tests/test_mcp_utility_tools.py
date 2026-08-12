@@ -5,7 +5,7 @@ Tests clean, config, analyze, and validate_claude_md tools.
 
 import json
 import pytest
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from unittest.mock import MagicMock, patch, AsyncMock
 
@@ -104,7 +104,7 @@ class TestProcessDirectory:
         result = _process_directory(
             Path("/nonexistent"),
             ["*.log"],
-            datetime.now(),
+            datetime.now(UTC),
             dry_run=True,
         )
 
@@ -121,7 +121,7 @@ class TestProcessDirectory:
             result = _process_directory(
                 Path("/tmp"),
                 ["*.log", "*.tmp"],
-                datetime.now(),
+                datetime.now(UTC),
                 dry_run=True,
             )
 
@@ -133,7 +133,7 @@ class TestProcessPattern:
 
     def test_returns_empty_for_empty_glob(self, tmp_path) -> None:
         """Test returns empty when no files match pattern."""
-        result = _process_pattern(tmp_path, "*.log", datetime.now(), dry_run=True)
+        result = _process_pattern(tmp_path, "*.log", datetime.now(UTC), dry_run=True)
 
         assert result == ([], 0)
 
@@ -142,13 +142,13 @@ class TestProcessPattern:
         old_file = tmp_path / "test.log"
         old_file.write_text("content")
         import os
-        old_time = datetime.now() - timedelta(hours=25)
+        old_time = datetime.now(UTC) - timedelta(hours=25)
         os.utime(old_file, (old_time.timestamp(), old_time.timestamp()))
 
         result = _process_pattern(
             tmp_path,
             "*.log",
-            datetime.now() - timedelta(hours=24),
+            datetime.now(UTC) - timedelta(hours=24),
             dry_run=False,
         )
 
@@ -166,8 +166,10 @@ class TestCheckFileEligibility:
 
         # Pick a cutoff in the past so the freshly-written file is
         # ``newer than cutoff`` and the function returns ``None``.
+        # ``datetime.now(UTC)`` matches the aware datetime that
+        # ``_check_file_eligibility`` constructs from file mtime.
         result = _check_file_eligibility(
-            recent_file, datetime.now() - timedelta(hours=1)
+            recent_file, datetime.now(UTC) - timedelta(hours=1)
         )
 
         assert result is None
@@ -177,10 +179,12 @@ class TestCheckFileEligibility:
         old_file = tmp_path / "old.log"
         old_file.write_text("x" * 100)
         import os
-        old_time = datetime.now() - timedelta(hours=25)
+        old_time = datetime.now(UTC) - timedelta(hours=25)
         os.utime(old_file, (old_time.timestamp(), old_time.timestamp()))
 
-        result = _check_file_eligibility(old_file, datetime.now() - timedelta(hours=24))
+        result = _check_file_eligibility(
+            old_file, datetime.now(UTC) - timedelta(hours=24)
+        )
 
         assert result is not None
         size, should_clean = result
@@ -190,7 +194,7 @@ class TestCheckFileEligibility:
     def test_returns_none_for_oserror(self) -> None:
         """Test returns None on OSError."""
         fake_path = Path("/proc/fake/file")
-        result = _check_file_eligibility(fake_path, datetime.now())
+        result = _check_file_eligibility(fake_path, datetime.now(UTC))
         assert result is None
 
 
