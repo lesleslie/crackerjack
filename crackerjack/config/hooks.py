@@ -391,16 +391,6 @@ COMPREHENSIVE_HOOKS = [
         accepts_file_paths=False,
         description="Comprehensive async link checker (Markdown, HTML, reStructuredText, text files with URLs)",
     ),
-    HookDefinition(
-        name="syrupy",
-        command=[],
-        timeout=300,
-        stage=HookStage.COMPREHENSIVE,
-        auto_run=True,
-        security_level=SecurityLevel.MEDIUM,
-        accepts_file_paths=True,
-        description="Snapshot testing via pytest-syrupy plugin (validates __snapshots__/*.ambr files match current outputs)",
-    ),
 ]
 
 

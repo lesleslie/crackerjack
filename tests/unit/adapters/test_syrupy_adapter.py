@@ -12,18 +12,51 @@ from crackerjack.adapters._tool_adapter_base import ToolExecutionResult
 
 @pytest.mark.unit
 class TestSyrupyHooksRegistration:
-    def test_syrupy_in_comprehensive_hooks(self) -> None:
+    """Syrupy is deliberately NOT registered as an auto-run hook.
+
+    Decision: 35c7ccb3 (2026-06-28) removed the syrupy HookDefinition from
+    COMPREHENSIVE_HOOKS. Syrupy is a pytest plugin — validating snapshots means
+    running tests, which belongs in the test suite, not in a lint-stage quality
+    gate. SyrupyAdapter stays available for explicit opt-in use.
+
+    These assertions are inverted ON PURPOSE. An earlier version of this class
+    asserted *presence*; when the hook was removed the stale assertion started
+    failing, and d85c4ba8 (2026-08-03) resolved it by re-registering the hook
+    rather than updating the test — silently reverting the decision under an
+    unrelated commit message. Do not re-register syrupy to make a test pass;
+    revisit the decision above first.
+    """
+
+    def test_syrupy_not_in_comprehensive_hooks(self) -> None:
         from crackerjack.config.hooks import COMPREHENSIVE_HOOKS
 
         names = [h.name for h in COMPREHENSIVE_HOOKS]
-        assert "syrupy" in names, "syrupy HookDefinition missing from COMPREHENSIVE_HOOKS"
+        assert "syrupy" not in names, (
+            "syrupy re-registered in COMPREHENSIVE_HOOKS — see 35c7ccb3; "
+            "snapshot tests belong in the test suite, not a lint-stage hook"
+        )
 
-    def test_syrupy_not_disabled(self) -> None:
-        from crackerjack.config.hooks import COMPREHENSIVE_HOOKS
+    def test_syrupy_not_in_fast_hooks(self) -> None:
+        from crackerjack.config.hooks import FAST_HOOKS
 
-        hook = next((h for h in COMPREHENSIVE_HOOKS if h.name == "syrupy"), None)
-        assert hook is not None
-        assert hook.disabled is False
+        names = [h.name for h in FAST_HOOKS]
+        assert "syrupy" not in names, (
+            "syrupy re-registered in FAST_HOOKS — see 35c7ccb3; snapshot "
+            "validation runs pytest and is far too slow for the fast tier"
+        )
+
+    def test_syrupy_not_dispatchable_as_native_tool(self) -> None:
+        """No dispatch entry should survive the hook removal.
+
+        Guards the second regression layer: ef49d8fe (2026-08-11) added a
+        ``syrupy`` tool_commands entry plus a wrapper module on top of the
+        already-reverted hook.
+        """
+        from crackerjack.config.tool_commands import list_available_tools
+
+        assert "syrupy" not in list_available_tools(), (
+            "syrupy dispatch entry re-added to tool_commands — see 35c7ccb3"
+        )
 
 
 @pytest.mark.unit

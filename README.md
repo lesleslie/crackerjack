@@ -1445,7 +1445,6 @@ Crackerjack runs quality checks in a two-stage process for optimal development w
 - Skylos dead code detection (Rust, comprehensive stage)
 - Refurb modern Python patterns
 - Creosote unused dependency analysis
-- syrupy snapshot test regression detection
 
 **Opt-in comprehensive hooks (disabled by default):**
 
