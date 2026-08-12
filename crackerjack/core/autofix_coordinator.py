@@ -1509,7 +1509,7 @@ class AutofixCoordinator:
         if settings is None:
             return
 
-        cfg = t.cast("_MutableSettings", settings)
+        cfg = t.cast(t.Any, settings)
 
         try:
             cfg.fix_enabled = True
@@ -1696,13 +1696,6 @@ class _FileChangeTracker:
         return changed
 
 
-class _MutableSettings(t.Protocol):
-    fix_enabled: bool
-    add_ignore_enabled: bool
-    suppress_errors: bool
-    baseline_file: t.Any
-
-
 def _count_bandit_results(data: object) -> int | None:
     if isinstance(data, dict):
         results = data.get("results")
@@ -1783,7 +1776,7 @@ def _extract_issue_count_from_text_lines(output: str) -> int | None:
 def _list_signatures(skill_store: object) -> list[str]:
     internal = getattr(skill_store, "_skills", None)
     if isinstance(internal, dict):
-        return list(internal.keys())  # type: ignore
+        return list(internal)  # type: ignore
     return []
 
 
