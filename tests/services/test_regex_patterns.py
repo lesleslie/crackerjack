@@ -298,6 +298,23 @@ class TestSafePatterns:
         result = update_coverage_requirement(content, 90.0)
         assert "90" in result
 
+    def test_update_coverage_requirement_preserves_precision(self) -> None:
+        """Precision regression: full float must round-trip, not truncate to int.
+
+        The :.0f formatter previously turned 99.48619139370584 into 99, silently
+        losing 8 decimals on every auto-bump. Sibling follow-up tasks exercise
+        this path on commit, so the value must round-trip exactly.
+        """
+        from crackerjack.services.patterns.operations import (
+            update_coverage_requirement as update_coverage_requirement_ops,
+        )
+
+        content = '[tool.pytest.ini_options]\naddopts = "--cov-fail-under=85"\n'
+        result = update_coverage_requirement_ops(content, 99.48619139370584)
+        assert "--cov-fail-under=99.48619139370584" in result, (
+            f"precision lost: {result}"
+        )
+
     def test_sanitize_internal_urls(self) -> None:
         """Test sanitizing internal URLs."""
         # Test with a pattern that should match one of the sanitize patterns
