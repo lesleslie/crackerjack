@@ -7,7 +7,6 @@ import typing as t
 from dataclasses import dataclass
 from pathlib import Path
 
-from pydantic import Field
 from rich.console import Console
 
 from crackerjack.cli.formatting import separator as make_separator
@@ -551,8 +550,8 @@ class IndividualHookExecutor:
     ) -> subprocess.CompletedProcess[str]:
         process = await self._create_subprocess(cmd)
 
-        stdout_lines: list[str] = Field(default_factory=list)
-        stderr_lines: list[str] = Field(default_factory=list)
+        stdout_lines: list[str] = []
+        stderr_lines: list[str] = []
 
         tasks = self._create_stream_reader_tasks(
             process,

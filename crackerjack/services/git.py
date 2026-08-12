@@ -5,8 +5,6 @@ import typing as t
 from contextlib import suppress
 from pathlib import Path
 
-from pydantic import Field
-
 from crackerjack.core.console import CrackerjackConsole
 from crackerjack.models.protocols import ConsoleInterface, GitInterface
 
@@ -473,7 +471,7 @@ class GitService(GitInterface):
         return [category_messages.get(category, "Update core functionality")]
 
     def _generate_specific_messages(self, files: list[str]) -> list[str]:
-        messages: list[str] = Field(default_factory=list)
+        messages: list[str] = []
         if "pyproject.toml" in files:
             messages.append("Update project configuration")
         if any("test_" in f for f in files):

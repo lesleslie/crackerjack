@@ -9,8 +9,6 @@ from contextlib import suppress
 from datetime import UTC, datetime
 from pathlib import Path
 
-from pydantic import Field
-
 from crackerjack.core.console import CrackerjackConsole
 from crackerjack.models.protocols import ConsoleInterface
 from crackerjack.models.session_metrics import SessionMetrics
@@ -274,7 +272,7 @@ class SessionCoordinator:
             if executor is None:
 
                 class _SubprocessExecutor:
-                    allowed_git_patterns: list[str] = Field(default_factory=list)
+                    allowed_git_patterns: t.ClassVar[list[str]] = []
 
                     def execute_secure(
                         self,

@@ -146,7 +146,7 @@ class VultureAdapter(BaseToolAdapter):
         return self._parse_text_output(result.raw_output)
 
     def _parse_text_output(self, output: str) -> list[ToolIssue]:
-        issues: list[ToolIssue] = Field(default_factory=list)
+        issues: list[ToolIssue] = []
         lines = output.strip().split("\n")
 
         for line in lines:
