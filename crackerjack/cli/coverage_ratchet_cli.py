@@ -63,7 +63,7 @@ def init(
                 pyproject_path.write_text(cleaned)
     except FileNotFoundError:
         console.print(
-            "[yellow]�️  pyproject.toml not found; skipped mirroring.[/yellow]"
+            "[yellow]⚠️  pyproject.toml not found; skipped mirroring.[/yellow]"
         )
     console.print(f"[green]✅ Ratchet initialized at {coverage:.2f}%[/green]")
 
