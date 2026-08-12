@@ -412,14 +412,21 @@ class CoverageRatchetService(CoverageRatchetProtocol):
         self.ratchet_file.write_text(json.dumps(data, indent=2))
 
     def mirror_to_pyproject(self, coverage: float) -> None:
-        """Write --cov-fail-under=<coverage> to pyproject.toml."""
+        """Write --cov-fail-under=<coverage> to pyproject.toml.
+
+        Updates BOTH `[tool.pytest.ini_options].addopts` (pytest-cov CLI flag)
+        and `[tool.coverage.report].fail_under` (coverage.py 7.x config block)
+        when present. The ratchet is the source of truth — both mirror sites
+        must agree, since either entry-point (pytest or `coverage report`) can
+        enforce the floor.
+        """
         import re
 
         content = self.pyproject_file.read_text()
         pattern = r"--cov-fail-under=\d+(?:\.\d+)?"
         replacement = f"--cov-fail-under={coverage}"
         if re.search(pattern, content):
-            new_content = re.sub(pattern, replacement, content)
+            content = re.sub(pattern, replacement, content)
         elif re.search(r"addopts\s*=\s*\[", content):
             # Array-form addopts: insert as a new list element before the closing ]
             array_match = re.compile(
@@ -428,29 +435,33 @@ class CoverageRatchetService(CoverageRatchetProtocol):
             if array_match is None:
                 msg = "addopts array detected but regex did not match"
                 raise RuntimeError(msg)
-            existing = array_match.group(2).rstrip()
+            existing = array_match.group(2).rstrip().rstrip(",").rstrip()
             prefix = "    "  # match pytest convention of indented list items
             if existing:
-                new_option = f"{existing.rstrip()},\n{prefix}\"{replacement}\""
+                new_option = f"{existing},\n{prefix}\"{replacement}\","
             else:
-                new_option = f"{prefix}\"{replacement}\""
-            new_content = (
+                new_option = f"{prefix}\"{replacement}\","
+            content = (
                 content[: array_match.start(2)]
                 + new_option
                 + content[array_match.end(2) :]
             )
         elif "addopts" in content:
-            new_content = re.sub(
+            content = re.sub(
                 r'(addopts\s*=\s*"[^"]*)"',
                 rf'\1 {replacement}"',
                 content,
                 count=1,
             )
         else:
-            new_content = (
+            content = (
                 f'{content}\n[tool.pytest.ini_options]\naddopts = "{replacement}"\n'
             )
-        self.pyproject_file.write_text(new_content)
+        # Mirror #2: [tool.coverage.report].fail_under (coverage.py 7.x canonical)
+        coverage_pattern = r"(fail_under\s*=\s*)\d+(?:\.\d+)?"
+        if re.search(coverage_pattern, content):
+            content = re.sub(coverage_pattern, rf"\g<1>{coverage}", content, count=1)
+        self.pyproject_file.write_text(content)
 
     def report_status(self) -> str:
         data = self.get_ratchet_data()
