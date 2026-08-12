@@ -628,10 +628,18 @@ class TestZubanLSPConfig:
     """Tests for ZubanLSPConfig dataclass."""
 
     def test_minimal_zuban_lsp_config(self) -> None:
-        """Verify minimal ZubanLSPConfig creation."""
+        """Verify minimal ZubanLSPConfig creation.
+
+        Regression guard: zuban LSP is disabled by default since
+        13be8c1c (2026-07-14) "feat(crackerjack): disable zuban LSP by
+        default (ty is the new default type checker)". ty replaced zuban
+        as the active type checker — see 511958d0 which restored ty to
+        the default-active state. Zuban remains installable but
+        opt-in-only.
+        """
         config = ZubanLSPConfig()
-        assert config.enabled is True
-        assert config.auto_start is True
+        assert config.enabled is False
+        assert config.auto_start is False
         assert config.port == 8685
         assert config.mode == "stdio"
         assert config.timeout == 30
