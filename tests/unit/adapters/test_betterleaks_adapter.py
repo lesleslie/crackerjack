@@ -211,3 +211,75 @@ class TestBetterleaksParseOutput:
         issues = await adapter.parse_output(result)
         # exit 0 + no report = no secrets found (betterleaks may skip empty report)
         assert issues == []
+
+    async def test_betterleaks_panic_with_stale_report_does_not_invent_issues(
+        self, adapter, tmp_path
+    ) -> None:
+        """Panic (exit 2) with a stale report on disk → gate-failure, NOT 10 issues.
+
+        Regression for the case where betterleaks 1.7.4 panics on a malformed
+        .gz file inside a vendored test fixture (e.g. joblib's pickle gz). If a
+        previous successful run left a report file behind, the parser must NOT
+        parse it as the current run's findings — it must surface the panic as
+        a single gate-failure and discard the stale file.
+        """
+        report = tmp_path / "betterleaks-report.json"
+        # Stale findings from a previous successful run
+        report.write_text(
+            json.dumps(
+                [
+                    {
+                        "Description": f"Stale finding {i}",
+                        "File": f"src/secret{i}.py",
+                        "StartLine": i + 1,
+                        "StartColumn": 1,
+                        "RuleID": "stale-rule",
+                        "Tags": ["stale"],
+                        "Entropy": 5.0,
+                        "Secret": "[REDACTED]",
+                    }
+                    for i in range(10)
+                ]
+            )
+        )
+        adapter.settings.report_path = report
+
+        result = ToolExecutionResult(
+            exit_code=2,  # Go runtime panic
+            raw_output="",
+            error_output=(
+                "panic: runtime error: invalid memory address or nil pointer "
+                "dereference\ngoroutine ...\ngithub.com/klauspost/compress/gzip..."
+            ),
+            execution_time_ms=0.5,
+        )
+        issues = await adapter.parse_output(result)
+
+        # Must surface the panic as a gate failure — never as 10 fabricated issues
+        assert len(issues) == 1, (
+            f"Expected exactly 1 gate-failure ToolIssue, got {len(issues)}. "
+            "Stale report must NOT be parsed as current-run findings."
+        )
+        assert issues[0].code == "betterleaks-gate-failure"
+        assert issues[0].severity == "error"
+        assert "2" in issues[0].message  # exit code surfaced for diagnosis
+        assert not report.exists(), (
+            "Stale report must be deleted so subsequent runs start clean"
+        )
+
+    async def test_betterleaks_build_command_clears_stale_report(
+        self, adapter, tmp_path
+    ) -> None:
+        """build_command deletes any existing report so panic'd runs don't inherit it."""
+        report = tmp_path / "betterleaks-report.json"
+        report.write_text("[{\"File\": \"stale.py\", \"StartLine\": 1}]")
+        assert report.exists()
+
+        adapter.settings.report_path = report
+        _ = adapter.build_command(files=[])
+
+        assert not report.exists(), (
+            "build_command must unlink any stale report before invoking "
+            "betterleaks so a panic in the new run cannot be confused with "
+            "a successful previous run."
+        )

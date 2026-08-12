@@ -16,6 +16,11 @@ from pathlib import Path
 
 from rich.console import Console
 
+# DefaultAdapterFactory is constructed at runtime inside
+# _create_type_tool_adapter (see line ~1502), so it cannot live in
+# the TYPE_CHECKING block — ruff TC004 would flag it.
+from crackerjack.adapters.factory import DefaultAdapterFactory
+
 # NOTE: Many imports below were deleted by Tasks 25-27 (crackerjack.agents,
 # crackerjack.ai_fix, crackerjack.memory, crackerjack.skills, etc.). The
 # dead-code cleanup that will remove the methods using them is pending
@@ -42,7 +47,6 @@ from crackerjack.services.refurb_fixer import SafeRefurbFixer
 from crackerjack.utils.issue_detection import extract_issue_lines
 
 if t.TYPE_CHECKING:
-    from crackerjack.adapters.factory import DefaultAdapterFactory
     from crackerjack.agents.base import AgentContext
     from crackerjack.models.protocols import LoggerProtocol
 
@@ -61,6 +65,7 @@ class SandboxResult:
     success: bool
     output: str
     error: str = ""
+
 
 logger = logging.getLogger(__name__)
 
@@ -1068,9 +1073,7 @@ class AutofixCoordinator:
     ) -> list[Issue]:
         return []
 
-    def _check_coverage_regression(
-        self, hook_results: Sequence[object]
-    ) -> list[Issue]:
+    def _check_coverage_regression(self, hook_results: Sequence[object]) -> list[Issue]:
         return []
 
     async def _apply_type_tool_fix_prepasses(
@@ -1559,7 +1562,7 @@ class AutofixCoordinator:
         if hasattr(settings, "baseline_file"):
             cfg.baseline_file = None
 
-        setattr(adapter, "settings", settings)
+        t.cast(t.Any, adapter).settings = settings
 
     def _build_fix_command(
         self, adapter: object, tool_name: str, file_paths: list[Path]

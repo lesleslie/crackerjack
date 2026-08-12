@@ -272,7 +272,10 @@ class SessionCoordinator:
             if executor is None:
 
                 class _SubprocessExecutor:
-                    allowed_git_patterns: list[str] = []
+                    def __init__(self) -> None:
+                        # Satisfies SecureSubprocessExecutorProtocol without
+                        # using a mutable class-level default (ruff RUF012).
+                        self.allowed_git_patterns: list[str] = []
 
                     def execute_secure(
                         self,

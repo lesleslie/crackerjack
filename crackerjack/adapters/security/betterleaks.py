@@ -75,6 +75,14 @@ class BetterleaksAdapter(BaseToolAdapter):
         )
         report_path.parent.mkdir(parents=True, exist_ok=True)
 
+        # Clean slate: delete any stale report so a panic'd or crashed
+        # betterleaks invocation can never leave a previous run's findings
+        # behind to be parsed as if they were from the current run.
+        # See test_betterleaks_panic_with_stale_report_does_not_invent_issues.
+        with suppress(OSError):
+            if report_path.exists():
+                report_path.unlink()
+
         cmd = [
             self.tool_name,
             self.settings.scan_mode,
@@ -105,6 +113,39 @@ class BetterleaksAdapter(BaseToolAdapter):
         report_path = self.settings.report_path or Path(
             ".cache/betterleaks-report.json"
         )
+
+        # Gitleaks/betterleaks convention:
+        #   exit 0  = tool ran cleanly, no secrets
+        #   exit 1  = tool ran cleanly, secrets found (NORMAL success path)
+        #   exit 2+ = panic, crash, signal kill, or other anomaly
+        # On any non-{0,1} exit, do NOT trust the report file — it may be
+        # stale from a previous run, partial/garbage from a mid-write panic,
+        # or simply never produced. Surface as a gate failure and discard the
+        # report so the next run starts from a known-empty file.
+        # See test_betterleaks_panic_with_stale_report_does_not_invent_issues.
+        if result.exit_code not in (0, 1):
+            with suppress(OSError):
+                if report_path.exists():
+                    report_path.unlink()
+            return [
+                ToolIssue(
+                    file_path=Path(),
+                    line_number=None,
+                    column_number=None,
+                    message=(
+                        f"betterleaks exited with code {result.exit_code} — "
+                        "report discarded (panic or crash). See stderr for "
+                        "details."
+                    ),
+                    code="betterleaks-gate-failure",
+                    severity="error",
+                    suggestion=(
+                        "Check the betterleaks binary version and any malformed "
+                        "files in the scan root. If this persists, file an issue "
+                        "at https://github.com/betterleaks/betterleaks."
+                    ),
+                )
+            ]
 
         if not report_path.exists():
             if result.exit_code != 0:
