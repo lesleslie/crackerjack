@@ -26,8 +26,10 @@ class TestToolCommandsRegistry:
 
     def test_registry_has_expected_count(self) -> None:
         """Test that registry contains expected number of tools."""
-        # Current registry: 5 custom + 9 native + 16 third-party = 30 tools
-        assert len(TOOL_COMMANDS) == 30
+        # Current registry: 6 custom + 9 native + 19 third-party = 34 tools
+        # Added since the original count of 30: ty-ignore-syntax (custom),
+        # betterleaks + cohesion + pymetrica (third-party).
+        assert len(TOOL_COMMANDS) == 34
 
     def test_all_commands_are_lists(self) -> None:
         """Test that all commands are lists of strings."""
@@ -52,9 +54,18 @@ class TestToolCommandsRegistry:
             "complexipy",
             "refurb",
             "pyscn",
+            "cohesion",
+            "pymetrica",
         }
         # Tools that are system-installed (not managed by uv)
-        system_tools = {"lychee", "gitleaks", "semgrep", "ty", "pyrefly"}
+        system_tools = {
+            "lychee",
+            "gitleaks",
+            "semgrep",
+            "ty",
+            "pyrefly",
+            "betterleaks",
+        }
 
         for hook_name, command in TOOL_COMMANDS.items():
             first_arg = command[0]
@@ -363,10 +374,11 @@ class TestCommandStructureValidation:
         mdformat_cmd = get_tool_command("mdformat")
         assert "--check" not in mdformat_cmd
 
-        # Complexipy has --max-complexity-allowed 15
+        # Complexipy has --max-complexity-allowed 25
+        # (raised from 15 as the codebase complexity budget grew)
         complexipy_cmd = get_tool_command("complexipy")
         assert "--max-complexity-allowed" in complexipy_cmd
-        assert "15" in complexipy_cmd
+        assert "25" in complexipy_cmd
 
         # Creosote has --venv flag
         creosote_cmd = get_tool_command("creosote")
@@ -544,11 +556,20 @@ class TestRegistryConsistency:
     def test_all_tools_documented_in_phase_8(self) -> None:
         """Test that tool count matches current implementation."""
         # Current registry has:
-        # - 5 custom tools (validate-regex-patterns, skylos, zuban, pyrefly, ty)
+        # - 6 custom tools (validate-regex-patterns, skylos, zuban, pyrefly,
+        #   ty, ty-ignore-syntax)
         # - 9 native implementations (trailing-whitespace, etc.)
-        # - 16 third-party tools (ruff-check, bandit, semgrep, etc.)
+        # - 19 third-party tools (ruff-check, bandit, semgrep, betterleaks,
+        #   cohesion, pymetrica, etc.)
 
-        custom = ["validate-regex-patterns", "skylos", "zuban", "pyrefly", "ty"]
+        custom = [
+            "validate-regex-patterns",
+            "skylos",
+            "zuban",
+            "pyrefly",
+            "ty",
+            "ty-ignore-syntax",
+        ]
         native = [
             "trailing-whitespace",
             "end-of-file-fixer",
@@ -577,9 +598,12 @@ class TestRegistryConsistency:
             "pip-audit",
             "pyscn",
             "lychee",
+            "betterleaks",
+            "cohesion",
+            "pymetrica",
         ]
 
-        assert len(custom) == 5
+        assert len(custom) == 6
         assert len(native) == 9
-        assert len(third_party) == 16
+        assert len(third_party) == 19
         assert len(TOOL_COMMANDS) == len(custom) + len(native) + len(third_party)

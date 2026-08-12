@@ -5,9 +5,9 @@ from __future__ import annotations
 import pytest
 
 from crackerjack.models.tool_config import (
+    TOOL_CONFIGS,
     OutputFormat,
     ToolConfig,
-    TOOL_CONFIGS,
     get_json_flag,
     get_tool_config,
     supports_json,
@@ -177,8 +177,14 @@ class TestToolConfigsRegistry:
             assert tool in TOOL_CONFIGS
 
     def test_tool_configs_total_count(self) -> None:
-        """Verify expected number of tool configurations."""
-        assert len(TOOL_CONFIGS) == 15
+        """Verify expected number of tool configurations.
+
+        Updated from 15 to 17 as ``betterleaks`` and ``check-jsonschema``
+        were added to TOOL_CONFIGS (these hooks also joined the
+        comprehensive strategy around the same time — see
+        ``crackerjack/config/hooks.py``).
+        """
+        assert len(TOOL_CONFIGS) == 17
 
     def test_tool_config_ruff(self) -> None:
         """Verify ruff configuration."""
