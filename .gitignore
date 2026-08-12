@@ -57,6 +57,7 @@ tox/
 coverage/
 .coverage
 .coverage*
+!.coverage-ratchet.json
 nosetests.xml
 coverage.xml
 coverage.json
