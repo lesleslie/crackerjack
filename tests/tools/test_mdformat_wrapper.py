@@ -25,13 +25,20 @@ def test_should_skip_file_special_files():
     assert should_skip_file(Path("TEST_RESULTS.md"))
 
 
-def test_should_skip_file_regular_files():
-    """Test should_skip_file with regular markdown files."""
-    # Test files that should NOT be skipped
-    assert not should_skip_file(Path("README.md"))
-    assert not should_skip_file(Path("docs/guide.md"))
-    assert not should_skip_file(Path("CHANGELOG.md"))
-    assert not should_skip_file(Path("CONTRIBUTING.md"))
+def test_should_skip_file_regular_files(tmp_path):
+    """Test should_skip_file with regular markdown files.
+
+    Uses ``tmp_path`` so the file-content heuristic (production reads
+    the first line and skips lines made entirely of underscores/dashes)
+    is tested against content we control rather than whatever happens
+    to live in the repo at test time.
+    """
+    regular = tmp_path / "regular.md"
+    regular.write_text("# Heading\n\nSome content.\n")
+    assert not should_skip_file(regular)
+    assert not should_skip_file(tmp_path / "CHANGELOG.md")  # nonexistent → not skipped
+    assert not should_skip_file(tmp_path / "README.md")
+    assert not should_skip_file(tmp_path / "CONTRIBUTING.md")
 
 
 def test_mdformat_no_files(monkeypatch):

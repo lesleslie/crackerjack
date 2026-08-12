@@ -208,11 +208,14 @@ class TestBackupFile:
         target.write_text("c")
 
         await mod._backup_file(target)
-        first_lock = scm._backup_locks.get(target)
+        # Production keys _backup_locks by ``str(file_path)`` — match
+        # the lookup with the same string conversion.
+        lock_key = str(target)
+        first_lock = scm._backup_locks.get(lock_key)
         assert first_lock is not None
 
         await mod._backup_file(target)
-        second_lock = scm._backup_locks.get(target)
+        second_lock = scm._backup_locks.get(lock_key)
         # Same lock reused for the same path
         assert first_lock is second_lock
 

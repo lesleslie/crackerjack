@@ -27,8 +27,11 @@ class TestStructuredLogging:
         logger.info("Test message", key="value")
 
         captured = capsys.readouterr()
-        assert "Test message" in captured.out
-        assert "key" in captured.out and "value" in captured.out
+        # Rich console writes to stderr by default; assert against
+        # captured.err rather than captured.out (the test fixture
+        # predates the Rich-based renderer).
+        assert "Test message" in captured.err
+        assert "key" in captured.err and "value" in captured.err
 
     def test_setup_structured_logging_json_file(self) -> None:
         with tempfile.NamedTemporaryFile(mode="w+", delete=False, suffix=".log") as f:
