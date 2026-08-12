@@ -163,8 +163,15 @@ class TestFastHooksIntegration:
             assert _is_isolated_command(hook.get_command())
 
     def test_fast_hooks_count(self) -> None:
-        """Test that we have expected number of fast hooks."""
-        assert len(FAST_HOOKS) == 17  # Updated 16 -> 17 with skill-coverage
+        """Test that we have expected number of fast hooks.
+
+        16 since 2af1c560 (2026-08-11) removed skill-coverage from FAST_HOOKS.
+        The count was briefly 17 while that hook was wired in (a8dad1c9). If
+        this assertion fails, confirm whether a hook was added or removed on
+        purpose before editing the number — a stale count assertion is what
+        caused the syrupy hook to be silently re-registered in d85c4ba8.
+        """
+        assert len(FAST_HOOKS) == 16
 
 
 class TestComprehensiveHooksIntegration:
