@@ -576,6 +576,10 @@ async def _attempt_coverage_improvement(
     context: t.Any,
 ) -> dict[str, t.Any]:
     # TODO(phase-3): Re-enable coverage improvement orchestrator once the
+    # ``crackerjack.orchestration.coverage_improvement`` module is restored.
+    # Currently removed in Phase 2 — see git history for the prior body that
+    # imported ``create_coverage_improvement_orchestrator`` and dispatched
+    # via ``AgentContext``.
 
     try:
         _update_progress(
