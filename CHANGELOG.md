@@ -1,5 +1,255 @@
 ______________________________________________________________________
 
+## [0.73.0] - 2026-08-11
+
+### Added
+
+- Add skills refresh typer sub-app for cron use
+- Adopt coverage-ratchet at current coverage
+- ai-fix-loop: Implement Fix phase
+- ai-fix-loop: Implement Snapshot phase
+- ai-fix-loop: Implement Verify phase
+- ai-fix-loop: Passive Akosha fix-outcome logging (write-only, per fix)
+- ai-fix-loop: Task 6 — stop conditions, rollback, diff sanity, audit log
+- ai-fix-loop: Workflow script skeleton + .gitignore allow-rule
+- audit: Add skills subcommand with --json and --fail flags
+- ratchet: Add lower_baseline, mirror_to_pyproject, report_status
+- ratchet: CLI commands init, status, lower, migrate
+- refactor: Remove AI-fix subsystem + verify clean test suite
+- ruff: Dirty-tree guard + bak-sibling rollback
+- skills: Extract reusable skill-health probe with typed report
+- Surface Ruff exit-code 2; add golden-diff test
+- Wire HookSettings.ruff_unsafe_fixes into ruff-check
+- Wire ratchet into test-stage integration
+
+### Changed
+
+- Remove skill-coverage from FAST_HOOKS
+
+### Fixed
+
+- ai-fix-loop: Address 5 deferred LOW findings
+- ai-fix-loop: Apply post-review fixes (CRITICAL + HIGH + MEDIUM)
+- ai-fix-loop: Apply remaining LOW review findings
+- cli: Register coverage-ratchet subcommand in main dispatcher
+- ratchet: Fix array double-comma + mirror to coverage.report block
+- ratchet: Handle array-form addopts in mirror_to_pyproject
+- ratchet: Preserve full float precision in update_coverage_requirement
+- ratchet: Restore correct ⚠️ emoji bytes in init CLI
+- skills: Align _post_json signature with call site; add regression test; trailing newlines
+- test-manager: Wire run_with_ratchet_check into _process_coverage_ratchet
+- Wire dirty-tree guard into production ruff path
+
+### Documentation
+
+- ruff: Document safe-by-default fix policy
+- skills: Document refresh cadence + ops crontab example
+- spec: Coverage-ratchet ecosystem standardization
+- superpowers: Implementation plan for ai-fix external loop + Akosha hook
+- superpowers: Implementation plan for ai-fix removal + fixer extraction
+- superpowers: Preflight amendments — initial-issue-count guard + parser normalization
+- superpowers: Revise ai-fix-loop plan with critical + major review findings
+- superpowers: Spec for ai-fix removal + external loop replacement
+- superpowers: Task 1 verification amendments — clean-state + exit-code semantics
+- Update CLAUDE.md for external ai-fix-loop workflow (replaces --ai-fix section)
+
+### Testing
+
+- Add wrapper-execution tests for ratchet gate
+- ai-fix-loop: Add end-to-end acceptance runbook, verified against real repo state
+- ratchet: E2e adoption test for mcp-common
+- Remove stale xfail markers, delete unimplemented-method tests, harden sandbox fixture
+- skills: Add CLI integration test scaffold and CI wiring
+
+### Build
+
+- deps: Pin ruff==0.16.0
+
+### Internal
+
+- gitignore: Allow .coverage-ratchet.json to be tracked
+- hooks: Delete obsolete skill-coverage hook + tests
+- ratchet: Remove temporary migrate CLI
+- ratchet: Trim trailing whitespace in init CLI
+- ruff: Drop redundant noqa: E501 suppressions + unused-var cleanup
+
+## [0.72.0] - 2026-08-11
+
+### Added
+
+- Add skills refresh typer sub-app for cron use
+- Adopt coverage-ratchet at current coverage
+- ai-fix-loop: Implement Fix phase
+- ai-fix-loop: Implement Snapshot phase
+- ai-fix-loop: Implement Verify phase
+- ai-fix-loop: Passive Akosha fix-outcome logging (write-only, per fix)
+- ai-fix-loop: Task 6 — stop conditions, rollback, diff sanity, audit log
+- ai-fix-loop: Workflow script skeleton + .gitignore allow-rule
+- audit: Add skills subcommand with --json and --fail flags
+- ratchet: Add lower_baseline, mirror_to_pyproject, report_status
+- ratchet: CLI commands init, status, lower, migrate
+- refactor: Remove AI-fix subsystem + verify clean test suite
+- ruff: Dirty-tree guard + bak-sibling rollback
+- skills: Extract reusable skill-health probe with typed report
+- Surface Ruff exit-code 2; add golden-diff test
+- Wire HookSettings.ruff_unsafe_fixes into ruff-check
+- Wire ratchet into test-stage integration
+
+### Changed
+
+- Remove skill-coverage from FAST_HOOKS
+
+### Fixed
+
+- ai-fix-loop: Address 5 deferred LOW findings
+- ai-fix-loop: Apply post-review fixes (CRITICAL + HIGH + MEDIUM)
+- ai-fix-loop: Apply remaining LOW review findings
+- cli: Register coverage-ratchet subcommand in main dispatcher
+- ratchet: Fix array double-comma + mirror to coverage.report block
+- ratchet: Handle array-form addopts in mirror_to_pyproject
+- ratchet: Preserve full float precision in update_coverage_requirement
+- ratchet: Restore correct ⚠️ emoji bytes in init CLI
+- skills: Align _post_json signature with call site; add regression test; trailing newlines
+- test-manager: Wire run_with_ratchet_check into _process_coverage_ratchet
+- Wire dirty-tree guard into production ruff path
+
+### Documentation
+
+- ruff: Document safe-by-default fix policy
+- skills: Document refresh cadence + ops crontab example
+- spec: Coverage-ratchet ecosystem standardization
+- superpowers: Implementation plan for ai-fix external loop + Akosha hook
+- superpowers: Implementation plan for ai-fix removal + fixer extraction
+- superpowers: Preflight amendments — initial-issue-count guard + parser normalization
+- superpowers: Revise ai-fix-loop plan with critical + major review findings
+- superpowers: Spec for ai-fix removal + external loop replacement
+- superpowers: Task 1 verification amendments — clean-state + exit-code semantics
+- Update CLAUDE.md for external ai-fix-loop workflow (replaces --ai-fix section)
+
+### Testing
+
+- Add wrapper-execution tests for ratchet gate
+- ai-fix-loop: Add end-to-end acceptance runbook, verified against real repo state
+- ratchet: E2e adoption test for mcp-common
+- Remove stale xfail markers, delete unimplemented-method tests, harden sandbox fixture
+- skills: Add CLI integration test scaffold and CI wiring
+
+### Build
+
+- deps: Pin ruff==0.16.0
+
+### Internal
+
+- gitignore: Allow .coverage-ratchet.json to be tracked
+- hooks: Delete obsolete skill-coverage hook + tests
+- ratchet: Remove temporary migrate CLI
+- ratchet: Trim trailing whitespace in init CLI
+- ruff: Drop redundant noqa: E501 suppressions + unused-var cleanup
+
+## [0.71.0] - 2026-08-11
+
+### Added
+
+- Add skills refresh typer sub-app for cron use
+- Adopt coverage-ratchet at current coverage
+- ai-fix-loop: Implement Fix phase
+- ai-fix-loop: Implement Snapshot phase
+- ai-fix-loop: Implement Verify phase
+- ai-fix-loop: Passive Akosha fix-outcome logging (write-only, per fix)
+- ai-fix-loop: Task 6 — stop conditions, rollback, diff sanity, audit log
+- ai-fix-loop: Workflow script skeleton + .gitignore allow-rule
+- audit: Add skills subcommand with --json and --fail flags
+- config: Add ruff_unsafe_fixes / allow_unsafe_fixes knobs
+- crackerjack: Add discover_tools meta-tool + wire always-on tools
+- crackerjack: Pre-commit skill-coverage gate consuming distilled_skill_health
+- ratchet: Add lower_baseline, mirror_to_pyproject, report_status
+- ratchet: CLI commands init, status, lower, migrate
+- refactor: Remove AI-fix subsystem + verify clean test suite
+- ruff: Dirty-tree guard + bak-sibling rollback
+- skills: Extract reusable skill-health probe with typed report
+- Surface Ruff exit-code 2; add golden-diff test
+- Wire HookSettings.ruff_unsafe_fixes into ruff-check
+- Wire ratchet into test-stage integration
+
+### Changed
+
+- crackerjack: Deep-dig stash to plan + MEMORY_ARCHITECTURE mapping
+- crackerjack: Document second-pass fixes (12→11 stashes, 42→6 fails)
+- crackerjack: Triage 12 orphan stashes + 38 failing tests
+- Remove skill-coverage from FAST_HOOKS
+
+### Fixed
+
+- ai-fix-loop: Address 5 deferred LOW findings
+- ai-fix-loop: Apply post-review fixes (CRITICAL + HIGH + MEDIUM)
+- ai-fix-loop: Apply remaining LOW review findings
+- autofix: Gate refurb prepass on file-change tracker + force_prepass
+- cli: Register coverage-ratchet subcommand in main dispatcher
+- contracts: Surface REQUIRED-check failures on QualityGateReport
+- crackerjack: 4 small fixes for failing tests + project name in verbose output
+- crackerjack: 6 remaining test failures (git_utils + mdformat)
+- crackerjack: Wire skill-coverage gate into FAST_HOOKS
+- git_history_embedder: Clear module thread-local on close
+- hooks: Make ty opt-in via enable_ty (mirror zuban pattern)
+- phase_coordinator: Add class-level _event_publisher default for bare __new__ tests
+- plugins: Trust invariants + URL and python-spec defaults
+- production: Align string formats with expected test values
+- ratchet: Fix array double-comma + mirror to coverage.report block
+- ratchet: Handle array-form addopts in mirror_to_pyproject
+- ratchet: Preserve full float precision in update_coverage_requirement
+- ratchet: Restore correct ⚠️ emoji bytes in init CLI
+- ruff: Drop --unsafe-fixes from default hook; close scaffold leak
+- security: Add semgrep and secrets-scanner to CRITICAL_HOOKS
+- skills: Align _post_json signature with call site; add regression test; trailing newlines
+- skills: Wire failure/timeout EMA + repair skill-tools kwarg
+- test-manager: Wire run_with_ratchet_check into _process_coverage_ratchet
+- test_manager: Wrap pkg_path in Path() before CoverageBadgeService
+- tests: Apply C-WIRE deferred minors (imports + caplog)
+- tests: Patch _execute_batch instead of _execute_single_plan
+- Update 5 tests to match current production state
+- websocket: Canonicalize subscription permission + honest test-status stub
+- Wire dirty-tree guard into production ruff path
+
+### Documentation
+
+- audit: Finalize 2026-08-03 orphan-stashes triage to clean-slate state
+- Ruff fix-safety policy implementation plan
+- ruff: Document safe-by-default fix policy
+- skills: Document refresh cadence + ops crontab example
+- spec: Add Ruff fix-safety policy design
+- spec: Coverage-ratchet ecosystem standardization
+- superpowers: Implementation plan for ai-fix external loop + Akosha hook
+- superpowers: Implementation plan for ai-fix removal + fixer extraction
+- superpowers: Preflight amendments — initial-issue-count guard + parser normalization
+- superpowers: Revise ai-fix-loop plan with critical + major review findings
+- superpowers: Spec for ai-fix removal + external loop replacement
+- superpowers: Task 1 verification amendments — clean-state + exit-code semantics
+- Update CLAUDE.md for external ai-fix-loop workflow (replaces --ai-fix section)
+
+### Testing
+
+- Add baseline arg to TestPreflightParallelExecution mocks
+- Add wrapper-execution tests for ratchet gate
+- ai-fix-loop: Add end-to-end acceptance runbook, verified against real repo state
+- mcp_git_analytics: Update 4 stale TypeError assertions to assert successful results
+- ratchet: E2e adoption test for mcp-common
+- Remove stale xfail markers, delete unimplemented-method tests, harden sandbox fixture
+- secure_status_formatter: Fix auth-mask typo (18→16 char expected value)
+- skills: Add CLI integration test scaffold and CI wiring
+
+### Build
+
+- deps: Pin ruff==0.16.0
+
+### Internal
+
+- gitignore: Allow .coverage-ratchet.json to be tracked
+- hooks: Delete obsolete skill-coverage hook + tests
+- ratchet: Remove temporary migrate CLI
+- ratchet: Trim trailing whitespace in init CLI
+- ruff: Drop redundant noqa: E501 suppressions + unused-var cleanup
+- tests: Drop stale comments in test_websocket_auth.py
+
 ## [0.70.2] - 2026-07-27
 
 ### Added

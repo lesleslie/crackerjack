@@ -290,9 +290,8 @@ def _find_block_end(content: str, start_line: int, code_type: str) -> int | None
                 if node.lineno == start_line:
                     return node.end_lineno
 
-            if isinstance(node, ast.ClassDef):
-                if node.lineno == start_line:
-                    return node.end_lineno
+            if isinstance(node, ast.ClassDef) and node.lineno == start_line:
+                return node.end_lineno
 
         if code_type in ("function", "method", "class"):
             return _find_block_end_by_indent(lines, start_line)

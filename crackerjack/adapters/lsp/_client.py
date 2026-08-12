@@ -262,6 +262,6 @@ class ZubanLSPClient:
         self,
         exc_type: type[BaseException] | None,
         exc_val: BaseException | None,
-        exc_tb: t.Any,
+        exc_tb: object,
     ) -> None:
         await self.disconnect()

@@ -108,12 +108,12 @@ def _add_precommit_only_commands(
     results: dict[str, dict],
     precommit_commands: dict[str, list[str]],
 ) -> None:
-    for hook_id in precommit_commands:
+    for hook_id, commands in precommit_commands.items():
         if hook_id not in TOOL_COMMANDS:
             results[hook_id] = {
                 "status": "precommit_only",
                 "tool_command": None,
-                "precommit_command": precommit_commands[hook_id],
+                "precommit_command": commands,
                 "match": None,
             }
 

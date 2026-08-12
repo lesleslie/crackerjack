@@ -8,7 +8,7 @@ import logging
 import shutil
 import sys
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -100,7 +100,7 @@ class SkillsMigrator:
         self.dry_run = dry_run
 
     def migrate(self) -> MigrationResult:
-        start_time = datetime.now()
+        start_time = datetime.now(UTC)
         result = MigrationResult(success=False)
 
         logger.info(
@@ -173,7 +173,7 @@ class SkillsMigrator:
             logger.info(f" - Invocations to migrate: {result.invocations_migrated}")
             logger.info(f" - Skills to migrate: {result.skills_migrated}")
 
-        duration = (datetime.now() - start_time).total_seconds()
+        duration = (datetime.now(UTC) - start_time).total_seconds()
         result.duration_seconds = duration
 
         return result
@@ -196,7 +196,7 @@ class SkillsMigrator:
             data = json.loads(self.json_path.read_text(encoding="utf-8"))
 
             if not isinstance(data, dict):
-                raise ValueError("JSON root must be an object")
+                raise TypeError("JSON root must be an object")
 
             if "invocations" not in data and "skills" not in data:
                 raise ValueError("JSON must contain 'invocations' or 'skills' key")

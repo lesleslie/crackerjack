@@ -132,6 +132,7 @@ class FrontmatterValidator:
         allow_nonstandard: bool = True,
         validate_links: bool = False,
         store: str | None = None,
+        skip_link_note: bool = True,
     ) -> FrontmatterValidationResult:
         try:
             stores = _resolve_stores(self.pkg_path, store)
@@ -158,7 +159,7 @@ class FrontmatterValidator:
                         strict=strict,
                         allow_nonstandard=allow_nonstandard,
                         validate_links=validate_links,
-                        skip_link_note=not validate_links,
+                        skip_link_note=skip_link_note,
                     )
                 )
             except Exception as exc:

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import typing as t
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 import yaml
@@ -84,7 +84,7 @@ class MkDocsIntegrationService:
             config=config,
             pages=pages,
             assets=assets,
-            generated_at=datetime.now(),
+            generated_at=datetime.now(UTC),
             build_path=site_dir,
         )
 

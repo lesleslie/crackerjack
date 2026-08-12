@@ -38,11 +38,17 @@ from crackerjack.integration.mahavishnu_learning import (
 from crackerjack.integration.oneiric_learning import (
     DAGExecutionRecord,
     ExecutionStrategy,
-    NoOpDAGO_optimizer as NoOpDAGOptimizer,
     OneiricLearningIntegration,
-    DAGO_optimizerProtocol as DAGOptimizerProtocol,
-    SQLiteDAGO_optimizer as SQLiteDAGOptimizer,
     create_dag_optimizer,
+)
+from crackerjack.integration.oneiric_learning import (
+    DAGO_optimizerProtocol as DAGOptimizerProtocol,
+)
+from crackerjack.integration.oneiric_learning import (
+    NoOpDAGO_optimizer as NoOpDAGOptimizer,
+)
+from crackerjack.integration.oneiric_learning import (
+    SQLiteDAGO_optimizer as SQLiteDAGOptimizer,
 )
 from crackerjack.integration.session_buddy_integration import (
     CorrelationInsight,

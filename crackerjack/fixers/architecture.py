@@ -430,12 +430,9 @@ def _add_missing_annotations(content: str, error_message: str) -> str:
                         func_line = node.lineno - 1
                         line = lines[func_line]
                         colon_pos = line.rfind(":")
-                        if colon_pos > 0:
-                            if "->" not in line:
-                                new_line = (
-                                    line[:colon_pos] + " -> None" + line[colon_pos:]
-                                )
-                                lines[func_line] = new_line
+                        if colon_pos > 0 and "->" not in line:
+                            new_line = line[:colon_pos] + " -> None" + line[colon_pos:]
+                            lines[func_line] = new_line
         return "".join(lines)
     except Exception as e:
         logger.debug(f"Could not add annotations via AST: {e}")

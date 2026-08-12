@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 import os
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -45,7 +45,7 @@ class AdapterOutputPaths:
         if timestamped:
             stem = Path(filename).stem
             suffix = Path(filename).suffix
-            timestamp = datetime.now().strftime("%Y_%m_%d__%H:%M:%S")
+            timestamp = datetime.now(UTC).strftime("%Y_%m_%d__%H:%M:%S")
             filename = f"{stem}_{timestamp}{suffix}"
 
         return output_dir / filename

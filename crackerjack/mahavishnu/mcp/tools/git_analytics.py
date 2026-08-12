@@ -7,7 +7,7 @@ import subprocess
 import typing as t
 from collections import Counter
 from contextlib import suppress
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any, cast
 
@@ -181,7 +181,7 @@ def analyze_merge_patterns(
             GitMetricsCollector,
         )
 
-        period_end = datetime.now()
+        period_end = datetime.now(UTC)
         period_start = period_end - timedelta(days=days_back)
 
         repos_data = []
@@ -322,7 +322,7 @@ def get_best_practices_propagation(
 
         import asyncio
 
-        period_end = datetime.now()
+        period_end = datetime.now(UTC)
         period_start = period_end - timedelta(days=days_back)
 
         repos_data = []
@@ -421,7 +421,7 @@ def get_repository_comparison(
 
         import asyncio
 
-        period_end = datetime.now()
+        period_end = datetime.now(UTC)
         period_start = period_end - timedelta(days=days_back)
 
         comparison_data = []
@@ -551,7 +551,7 @@ def _execute_conflict_analysis(project_paths: list[str], days_back: int) -> dict
         f"(last {days_back} days)"
     )
 
-    period_end = datetime.now()
+    period_end = datetime.now(UTC)
     period_start = period_end - timedelta(days=days_back)
 
     collected = _collect_conflicts_from_repos(project_paths, period_start, period_end)
@@ -1313,7 +1313,7 @@ def get_active_branches_analysis(
             f"(stale threshold: {stale_threshold_days} days)"
         )
 
-        period_end = datetime.now()
+        period_end = datetime.now(UTC)
         stale_threshold = timedelta(days=stale_threshold_days)
 
         repos_data = []
@@ -1467,6 +1467,7 @@ def _collect_branch_data(
             capture_output=True,
             text=True,
             timeout=30,
+            check=False,
         )
 
         if result.returncode != 0:
@@ -1867,7 +1868,7 @@ def get_repository_health_dashboard(
         from crackerjack.memory.git_metrics_collector import GitMetricsCollector
         from crackerjack.services.secure_subprocess import SecureSubprocessExecutor
 
-        period_end = datetime.now()
+        period_end = datetime.now(UTC)
         period_start = period_end - timedelta(days=days_back)
 
         all_health_data: list[dict] = []
@@ -2090,7 +2091,7 @@ def get_workflow_recommendations(
 
         import asyncio
 
-        period_end = datetime.now()
+        period_end = datetime.now(UTC)
         period_start = period_end - timedelta(days=days_back)
 
         repos_data = []
@@ -2154,7 +2155,7 @@ def get_workflow_recommendations(
             "summary": {
                 "repositories_analyzed": len(repo_workflow_data),
                 "period_days": days_back,
-                "analysis_timestamp": datetime.now().isoformat(),
+                "analysis_timestamp": datetime.now(UTC).isoformat(),
                 "overall_health": round(
                     sum(r["velocity"].health_score for r in repo_workflow_data)
                     / len(repo_workflow_data),
@@ -2442,7 +2443,7 @@ def _scan_stale_branches(repo_path: Path) -> list[dict]:
             text=True,
         )
 
-        period_end = datetime.now()
+        period_end = datetime.now(UTC)
         stale_threshold_days = 90
 
         for line in result.stdout.strip().split("\n"):

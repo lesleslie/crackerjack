@@ -34,16 +34,16 @@ Run it after:
 ## Steps
 
 1. **`git status --short`** — confirm clean tree before starting.
-2. **`uv run python -m crackerjack run -v 2>&1 | tail -40`** — record
+1. **`uv run python -m crackerjack run -v 2>&1 | tail -40`** — record
    the current real hook results by eye. This is the ground truth
    the loop will be measured against.
-3. **`cat .crackerjack/audit/ai-fix-loop.jsonl 2>/dev/null | wc -l`** —
+1. **`cat .crackerjack/audit/ai-fix-loop.jsonl 2>/dev/null | wc -l`** —
    record the audit log line count. Should be `0` on a fresh state;
    non-zero means a prior interrupted run left state. Decide whether
    to resume (re-invoke the workflow and trust the in-memory
    `auditLog` push) or archive-and-start-fresh (move the file aside)
    before proceeding.
-4. **Invoke the workflow**:
+1. **Invoke the workflow**:
    ```
    Workflow({ scriptPath: '.claude/workflows/ai-fix-loop.js', args: { maxIterations: 10 } })
    ```
@@ -51,7 +51,7 @@ Run it after:
    Note: `args.maxIterations` is silently clamped to a minimum of 10 by
    the script (`Math.max(REQUESTED_MAX, 10)`); passing 5 produces the
    same behavior as passing 10.
-5. **Confirm `stopReason` matches expectations**:
+1. **Confirm `stopReason` matches expectations**:
    - If step 2 showed a clean pass, expect `stopReason: 'clean'`,
      `iterations: 0`.
    - If step 2 showed issues but the count was ≤ `INITIAL_ISSUE_GUARD`
@@ -69,24 +69,24 @@ Run it after:
      `'fix-agent-error'`, `'diff-sanity-error'`,
      `'rollback-error'`, `'concurrent-change-detected'` indicates a bug, not a known
      limitation.
-6. **`uv run python -m crackerjack run -v 2>&1 | tail -40` again** —
+1. **`uv run python -m crackerjack run -v 2>&1 | tail -40` again** —
    confirm the real hook results improved or reached clean, matching
    what the workflow reported. Don't trust the workflow's
    self-report alone.
-7. **`git log --oneline -10`** — confirm no unexpected commits were
+1. **`git log --oneline -10`** — confirm no unexpected commits were
    created. The loop only stash/pop, never commit. A new commit here
    is a regression.
-8. **`git status --short`** — confirm no leftover dirty files. Any
+1. **`git status --short`** — confirm no leftover dirty files. Any
    unstaged modifications mean the loop's stash/pop didn't fully
    restore state, which is a rollback bug.
-9. **`git stash list`** — confirm no leftover `ai-fix-loop-iter-*`
+1. **`git stash list`** — confirm no leftover `ai-fix-loop-iter-*`
    entries. If any remain, the loop crashed mid-iteration before
    `git stash drop` ran. Manual cleanup:
    ```
    git stash drop "stash@{<N>}"
    ```
    where `<N>` is the leftover entry's positional index.
-10. **`test -f .crackerjack/audit/ai-fix-loop.jsonl && cat .crackerjack/audit/ai-fix-loop.jsonl || echo "(file does not exist — fresh state, expected)"`** — the file is created lazily by the first successful `persistAuditLog` call. On a fresh state or when the loop aborted before any iter completed (e.g., `initial-issue-count-too-high`), the file does not exist. When it does exist, confirm one JSON line per completed iteration. Each line's full field set is: `iteration`, `issuesBefore`, `issuesAfter` (back-patched on the next iter's Verify pass; the last entry may legitimately have `null`), `outcome` (always `'fixed'` for entries that completed — rolled-back entries are flagged via the separate `rolledBack: true` field, not via `outcome`), `stashSha`, `stashMessage`, `changes`, `diffStat`. This file is the durable record — keep it for postmortem review; delete it between runs only if you want a fresh start.
+1. **`test -f .crackerjack/audit/ai-fix-loop.jsonl && cat .crackerjack/audit/ai-fix-loop.jsonl || echo "(file does not exist — fresh state, expected)"`** — the file is created lazily by the first successful `persistAuditLog` call. On a fresh state or when the loop aborted before any iter completed (e.g., `initial-issue-count-too-high`), the file does not exist. When it does exist, confirm one JSON line per completed iteration. Each line's full field set is: `iteration`, `issuesBefore`, `issuesAfter` (back-patched on the next iter's Verify pass; the last entry may legitimately have `null`), `outcome` (always `'fixed'` for entries that completed — rolled-back entries are flagged via the separate `rolledBack: true` field, not via `outcome`), `stashSha`, `stashMessage`, `changes`, `diffStat`. This file is the durable record — keep it for postmortem review; delete it between runs only if you want a fresh start.
 
 ## Expected Outcome for This Repo (2026-08-10 baseline)
 

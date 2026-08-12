@@ -139,7 +139,7 @@ class DecomposeConditionalPattern(BasePattern):
         if isinstance(operand, ast.Call):
             return True
 
-        return bool(isinstance(operand, ast.Subscript))
+        return isinstance(operand, ast.Subscript)
 
     def _get_attribute_depth(self, node: ast.expr) -> int:
         if isinstance(node, ast.Attribute):

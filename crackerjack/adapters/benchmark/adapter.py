@@ -265,7 +265,7 @@ class PytestBenchmarkAdapter(BaseToolAdapter):
             self._baseline_manager.update(name, current)
             logger.debug(
                 "Updated baseline",
-                extra={"name": name, "median": current.median},
+                extra={"adapter_name": name, "median": current.median},
             )
             return issues
 

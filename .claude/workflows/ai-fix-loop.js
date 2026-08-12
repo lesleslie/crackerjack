@@ -336,7 +336,7 @@ function parseRollbackText(text) {
 // JSON-stringified entry (a single `JSON.stringify` call). Earlier
 // revisions wrapped the line in a second `JSON.stringify`, producing a
 // JSON-escaped string the agent would write verbatim — that put the
-// JSONL file into an unparseable state where every line was a string
+// JSONL file into an unparsable state where every line was a string
 // instead of an object. The runbook's Step 10 would fail to parse the
 // audit log without this fix.
 async function persistAuditLog(entry) {

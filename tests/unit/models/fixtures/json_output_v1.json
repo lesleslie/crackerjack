@@ -1,6 +1,10 @@
 {
-    "schema_version": "1",
-    "success": false,
-    "issues": [],
-    "summary": {"total": 0, "fixed": 0, "remaining": 0}
+  "issues": [],
+  "schema_version": "1",
+  "success": false,
+  "summary": {
+    "fixed": 0,
+    "remaining": 0,
+    "total": 0
+  }
 }

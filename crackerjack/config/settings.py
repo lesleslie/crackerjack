@@ -4,6 +4,7 @@ import typing as t
 from pathlib import Path
 
 from oneiric.core.config import OneiricMCPConfig
+from pydantic import Field
 
 
 class CleaningSettings(OneiricMCPConfig):
@@ -372,7 +373,7 @@ class MahavishnuSettings(OneiricMCPConfig):
     enabled: bool = False
     git_metrics_enabled: bool = True
     git_metrics_db_path: str = ".crackerjack/git_metrics.db"
-    portfolio_repos: list[str] = []
+    portfolio_repos: list[str] = Field(default_factory=list)
     websocket_enabled: bool = False
     websocket_host: str = "127.0.0.1"
     websocket_port: int = 8686

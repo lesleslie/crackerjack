@@ -6,8 +6,8 @@ import typing as t
 from contextlib import suppress
 from pathlib import Path
 
-from crackerjack.models.issues import Issue, IssueType, Priority
 from crackerjack.models.enums import WorkflowPhase
+from crackerjack.models.issues import Issue, IssueType, Priority
 from crackerjack.models.protocols import OptionsProtocol
 
 

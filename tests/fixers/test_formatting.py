@@ -178,17 +178,17 @@ class TestApplyContentFormatting:
 
 class TestExtractAmbiguousCodespellTypos:
     def test_single_suggestion_is_not_ambiguous(self) -> None:
-        stdout = "/tmp/sample.py:1: recieve ==> receive\n"
+        stdout = "/tmp/sample.py:1: receive ==> receive\n"
 
         assert formatting._extract_ambiguous_codespell_typos(stdout) == []
 
     def test_multiple_suggestions_are_ambiguous(self) -> None:
-        stdout = "/tmp/sample.py:3: teh ==> the, tech\n"
+        stdout = "/tmp/sample.py:3: the ==> the, tech\n"
 
         result = formatting._extract_ambiguous_codespell_typos(stdout)
 
         assert len(result) == 1
-        assert "teh ==> the, tech" in result[0]
+        assert "the ==> the, tech" in result[0]
 
     def test_lines_without_arrow_are_ignored(self) -> None:
         stdout = "FIXED: /tmp/sample.py\nsome unrelated line\n"
@@ -390,7 +390,7 @@ class TestRunCommandCwdPinning:
         monkeypatch.setattr(formatting, "_run_command", fake_run_command)
 
         file_path = tmp_path / "sample.py"
-        file_path.write_text("# recieve\n", encoding="utf-8")
+        file_path.write_text("# receive\n", encoding="utf-8")
         issue = _issue(message="spelling error", file_path=str(file_path))
 
         await formatting._apply_spelling_fixes(issue, tmp_path)
@@ -539,7 +539,7 @@ class TestApplySpellingFixes:
     async def test_real_fix_on_disk_is_never_reported(self, tmp_path: Path) -> None:
         file_path = tmp_path / "sample.py"
         file_path.write_text(
-            "# This is a comment with a typo: recieve\n", encoding="utf-8"
+            "# This is a comment with a typo: receive\n", encoding="utf-8"
         )
         issue = _issue(message="spelling error", file_path=str(file_path))
 

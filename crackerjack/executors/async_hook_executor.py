@@ -577,7 +577,7 @@ class AsyncHookExecutor:
                 error_message="Event loop closed during hook execution",
                 is_timeout=False,
             )
-        raise
+        raise error
 
     def _handle_general_error(
         self,

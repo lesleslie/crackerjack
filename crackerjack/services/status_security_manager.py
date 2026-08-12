@@ -279,7 +279,9 @@ class RequestLock:
     async def __aenter__(self) -> t.Self:
         return self
 
-    async def __aexit__(self, exc_type: t.Any, exc_val: t.Any, exc_tb: t.Any) -> None:
+    async def __aexit__(
+        self, exc_type: object, exc_val: object, exc_tb: object
+    ) -> None:
         self.security_manager._release_request_lock(
             self.request_id,
             self.client_id,

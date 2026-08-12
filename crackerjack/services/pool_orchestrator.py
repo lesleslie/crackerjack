@@ -184,12 +184,11 @@ class PoolOrchestrator(ServiceProtocol):
                 for hook in hooks
             }
 
-            for future in futures:
+            for future, hook in futures.items():
                 try:
                     result = future.result()
                     results.append(result)
                 except Exception as e:
-                    hook = futures[future]
                     logger.error(f"Hook execution failed for {hook.name}: {e}")
 
                     from crackerjack.models.task import HookResult

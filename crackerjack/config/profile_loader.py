@@ -28,7 +28,7 @@ class QualityGates(BaseModel):
 
 class RuffConfig(BaseModel):
     select: list[str] = ["E", "W", "F"]
-    ignore: list[str] = []
+    ignore: list[str] = Field(default_factory=list)
 
 
 class TestingConfig(BaseModel):

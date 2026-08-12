@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
 
+import sys
+
 with open("crackerjack/managers/test_manager.py") as f:
     lines = f.readlines()
 
@@ -13,7 +15,7 @@ for i, line in enumerate(lines):
 
 if insert_after is None:
     print("ERROR: Could not find ANSI_ESCAPE_RE line")
-    exit(1)
+    sys.exit(1)
 
 
 new_patterns = """

@@ -6,8 +6,10 @@ import time
 import typing as t
 import uuid
 from contextlib import suppress
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
+
+from pydantic import Field
 
 from crackerjack.core.console import CrackerjackConsole
 from crackerjack.models.protocols import ConsoleInterface
@@ -272,7 +274,7 @@ class SessionCoordinator:
             if executor is None:
 
                 class _SubprocessExecutor:
-                    allowed_git_patterns: list[str] = []
+                    allowed_git_patterns: list[str] = Field(default_factory=list)
 
                     def execute_secure(
                         self,
@@ -310,7 +312,7 @@ class SessionCoordinator:
             SessionMetrics(
                 session_id=self.session_id,
                 project_path=self.pkg_path,
-                start_time=datetime.fromtimestamp(self.start_time),
+                start_time=datetime.fromtimestamp(self.start_time, tz=UTC),
             )
 
             updated_metrics = await self.git_metrics_collector.collect_session_metrics(
@@ -330,8 +332,8 @@ class SessionCoordinator:
             logger.warning(f"Git metrics collection failed (ValueError): {e}")
             return None
         except Exception as e:
-            logger.error(
-                f"Git metrics collection failed unexpectedly: {e}", exc_info=True
+            logger.exception(
+                f"Git metrics collection failed unexpectedly: {e}",
             )
             return None
 

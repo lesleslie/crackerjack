@@ -429,18 +429,18 @@ class CoverageRatchetService(CoverageRatchetProtocol):
             content = re.sub(pattern, replacement, content)
         elif re.search(r"addopts\s*=\s*\[", content):
             # Array-form addopts: insert as a new list element before the closing ]
-            array_match = re.compile(
-                r"(addopts\s*=\s*\[\s*)([^\]]*?)(\s*\])"
-            ).search(content)
+            array_match = re.compile(r"(addopts\s*=\s*\[\s*)([^\]]*?)(\s*\])").search(
+                content
+            )
             if array_match is None:
                 msg = "addopts array detected but regex did not match"
                 raise RuntimeError(msg)
             existing = array_match.group(2).rstrip().rstrip(",").rstrip()
             prefix = "    "  # match pytest convention of indented list items
             if existing:
-                new_option = f"{existing},\n{prefix}\"{replacement}\","
+                new_option = f'{existing},\n{prefix}"{replacement}",'
             else:
-                new_option = f"{prefix}\"{replacement}\","
+                new_option = f'{prefix}"{replacement}",'
             content = (
                 content[: array_match.start(2)]
                 + new_option

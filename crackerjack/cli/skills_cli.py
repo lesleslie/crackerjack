@@ -68,9 +68,7 @@ def refresh(
         console.print(f"[red][skill-coverage] refresh failed: {exc}[/red]")
         raise typer.Exit(1) from exc
 
-    console.print(
-        f"[green][skill-coverage] OK: distill_skills_now → {url}[/green]"
-    )
+    console.print(f"[green][skill-coverage] OK: distill_skills_now → {url}[/green]")
 
 
-__all__ = ["app", "_post_json", "_distill_payload"]
+__all__ = ["_distill_payload", "_post_json", "app"]

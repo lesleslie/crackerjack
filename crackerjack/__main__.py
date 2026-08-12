@@ -64,7 +64,6 @@ from crackerjack.cli.handlers.analytics import (
 from crackerjack.cli.handlers.changelog import (
     handle_changelog_commands,
     handle_version_analysis,
-    setup_debug_and_verbose_flags,
 )
 from crackerjack.cli.handlers.coverage import handle_coverage_status
 from crackerjack.cli.handlers.documentation import (

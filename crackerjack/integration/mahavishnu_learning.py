@@ -5,7 +5,7 @@ import logging
 import sqlite3
 import typing as t
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -343,7 +343,7 @@ class SQLiteWorkflowLearner:
                     json.dumps(best_contexts),
                     json.dumps(worst_contexts),
                     record.timestamp.isoformat(),
-                    datetime.now().isoformat(),
+                    datetime.now(UTC).isoformat(),
                     record.workflow_id,
                     record.execution_strategy,
                 ),
@@ -374,7 +374,7 @@ class SQLiteWorkflowLearner:
                         [record.project_context] if record.quality_score < 0.5 else []
                     ),
                     record.timestamp.isoformat(),
-                    datetime.now().isoformat(),
+                    datetime.now(UTC).isoformat(),
                 ),
             )
 
@@ -650,7 +650,7 @@ class MahavishnuLearningIntegration:
             success=success,
             quality_score=quality_score,
             resource_efficiency=resource_efficiency,
-            timestamp=datetime.now(),
+            timestamp=datetime.now(UTC),
         )
 
         self.workflow_learner.record_workflow_execution(record)

@@ -386,8 +386,8 @@ async def batch_file_operations() -> t.AsyncGenerator[BatchFileOperations]:
     try:
         yield batch
         await batch.commit_all()
-    except Exception:
-        raise
+    finally:
+        await batch.close()
 
 
 class SafeFileOperations:

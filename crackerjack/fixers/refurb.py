@@ -1696,7 +1696,7 @@ def _transform_redundant_fstring(content: str, issue: Issue) -> tuple[str, str]:
     for func_name, method_name in func_to_method.items():
         pattern = re.compile(r"os\.path\." + re.escape(func_name) + r"\s*\(([^)]*)\)")
         new_content2 = pattern.sub(
-            lambda m: f"Path({m.group(1)}).{method_name}()",
+            lambda m, _method_name=method_name: f"Path({m.group(1)}).{_method_name}()",
             new_content,
         )
         if new_content2 != new_content:

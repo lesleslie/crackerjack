@@ -8,10 +8,9 @@ from io import StringIO
 from pathlib import Path
 from pstats import SortKey
 
-from rich.console import Console
-
 from crackerjack.agents.base import AgentContext, Issue, IssueType, Priority
 from crackerjack.services.batch_processor import get_batch_processor
+from rich.console import Console
 
 
 def create_test_issues(count: int = 10) -> list[Issue]:

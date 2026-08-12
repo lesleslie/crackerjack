@@ -273,10 +273,10 @@ def get_velocity_comparison(
         )
 
         import asyncio
-        from datetime import datetime, timedelta
+        from datetime import UTC, datetime, timedelta
 
-        period_end = datetime.now()
-        period_start = datetime.now() - timedelta(days=compare_period_days)
+        period_end = datetime.now(UTC)
+        period_start = datetime.now(UTC) - timedelta(days=compare_period_days)
 
         current_velocity = asyncio.run(
             aggregator._collect_repository_velocity(str(repo), period_start, period_end)

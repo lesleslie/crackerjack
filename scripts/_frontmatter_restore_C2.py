@@ -78,7 +78,7 @@ def _render_yaml(parsed: dict[str, str]) -> str:
             continue
         val = parsed[key]
 
-        if val in ("null", "[]") or val.startswith("[") or val.startswith('"'):
+        if val in ("null", "[]") or val.startswith(("[", '"')):
             lines.append(f"{key}: {val}")
         else:
             lines.append(f"{key}: {val}")

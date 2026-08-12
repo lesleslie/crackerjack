@@ -56,10 +56,10 @@ Per-repo state (all 7 Bodai repos):
 **Invariants:**
 
 1. `.coverage-ratchet.json` is the only source of truth for the floor.
-2. `pyproject.toml` `--cov-fail-under` is a mirror, kept in sync by the Crackerjack test stage.
-3. No 80% default. Initial floor = current coverage at `init` time.
-4. The ratchet ticks up only when coverage rises. It never moves down automatically.
-5. Direct commits to main per `bodai-pre-1.0-merge-policy.md`. No PRs.
+1. `pyproject.toml` `--cov-fail-under` is a mirror, kept in sync by the Crackerjack test stage.
+1. No 80% default. Initial floor = current coverage at `init` time.
+1. The ratchet ticks up only when coverage rises. It never moves down automatically.
+1. Direct commits to main per `bodai-pre-1.0-merge-policy.md`. No PRs.
 
 ## Data flow
 
@@ -106,6 +106,7 @@ To recover:
 ```
 
 The author chooses:
+
 - **a. Add tests** → push → CI runs again → passes (ratchet stays at 49.13).
 - **b. Run `lower`** → records reason in history, commits the ratchet update.
 
@@ -118,12 +119,14 @@ The `lower` command is logged in history with reason and timestamp. The history 
 **Path:** `crackerjack/crackerjack/services/coverage_ratchet.py`
 
 **Existing methods (production-ready):**
+
 - `initialize_baseline(initial_coverage)` — creates the ratchet file
 - `get_ratchet_data()` — round-trip JSON
 - `record_coverage(coverage)` — bumps up only
 - `check_drop(coverage)` — tolerance math, drop detection
 
 **Methods to add:**
+
 - `lower_baseline(new_coverage, reason)` — explicit operator ack, requires `--reason`
 - `mirror_to_pyproject(coverage)` — writes `--cov-fail-under` to pyproject.toml
 - `report_status()` — human-readable summary for `status` CLI command
@@ -137,6 +140,7 @@ The `lower` command is logged in history with reason and timestamp. The history 
 **Existing behavior:** partly wires the ratchet.
 
 **Behavior to add:**
+
 - After pytest exits, call `CoverageRatchetService.check_drop()`.
 - On drop (outside tolerance): exit 1 with the message in Phase 3 above.
 - On bump: write updated ratchet + mirror to pyproject.
@@ -147,6 +151,7 @@ The `lower` command is logged in history with reason and timestamp. The history 
 **Path:** `crackerjack/crackerjack/cli/coverage_ratchet_cli.py`
 
 **Commands:**
+
 - `init` — first-time setup. Reads current coverage, creates ratchet, mirrors pyproject.
 - `status` — show ratchet state + history + next milestone.
 - `lower --to <N> --reason "<text>"` — explicit operator ack of regression.
@@ -165,6 +170,7 @@ The `lower` command is logged in history with reason and timestamp. The history 
 | `lower` without `--reason` | 1 | "Reason required" | Re-run with `--reason` |
 
 **Specific design choices:**
+
 - **Hard fail on drop**: matches the user's choice. No soft warnings.
 - **Tolerance is built-in**: `TOLERANCE_MARGIN = 2.0` already in the service. No new code.
 - **Auto-fix for mirror drift**: the ratchet is the source of truth. pyproject.toml sync is automatic. No operator-friendly "fix manually" path.
@@ -177,6 +183,7 @@ The `lower` command is logged in history with reason and timestamp. The history 
 **Path:** `crackerjack/tests/services/test_coverage_ratchet.py`
 
 Targets:
+
 - `initialize_baseline`: creates file with correct schema
 - `record_coverage`: bumps up only, never down (without explicit `lower`)
 - `check_drop`: tolerance math, drop detection, status string
@@ -189,6 +196,7 @@ Targets:
 **Path:** `crackerjack/tests/managers/test_test_manager_ratchet.py`
 
 Targets:
+
 - Test stage calls `CoverageRatchetService` after pytest
 - Exit code 1 on drop, exit code 0 on pass
 - pyproject.toml mirror is updated on bump
@@ -201,6 +209,7 @@ Uses fixtures: `tmp_path`, fake pytest subprocess, fake coverage.json.
 **Path:** `crackerjack/tests/e2e/test_bodai_ratchet_adoption.py`
 
 Targets (one test per Bodai repo):
+
 - Clone-repo-style fixture (use a tmp copy of mcp-common, etc.)
 - Run `crackerjack coverage-ratchet init`
 - Verify `.coverage-ratchet.json` created with current coverage
@@ -209,6 +218,7 @@ Targets (one test per Bodai repo):
 - Verify ratchet ticks up on bump, fails on drop
 
 **Test philosophy:**
+
 - Pure logic in unit tests.
 - Boundaries in integration tests.
 - Real-world scenarios in e2e tests.
@@ -241,6 +251,7 @@ Per-repo migration, lowest coverage first. Direct commits to main, no PRs.
 | 8 | oneiric | ratchet at 79.41% | No change (already aligned) |
 
 **Migration invariants:**
+
 - Each repo's migration is one commit on its own `main`.
 - Each commit lands only if the ratchet math is satisfied post-init.
 - Direct commits to main, no PRs.

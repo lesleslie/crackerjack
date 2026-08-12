@@ -37,7 +37,7 @@ def _register_execute_crackerjack_tool(mcp_app: t.Any) -> None:
 
 
 async def _handle_context_validation(context: t.Any) -> str | None:
-    from datetime import datetime
+    from datetime import UTC, datetime
 
     try:
         validation_error = await _validate_context_and_rate_limit(context)
@@ -51,7 +51,7 @@ async def _handle_context_validation(context: t.Any) -> str | None:
                     "status": "failed",
                     "error": "Context validation failed: rate limiter returned None. "
                     "MCP server may not be properly initialized.",
-                    "timestamp": datetime.now().isoformat(),
+                    "timestamp": datetime.now(UTC).isoformat(),
                     "details": str(e),
                 },
             )
@@ -69,7 +69,7 @@ def _prepare_execution_kwargs(kwargs: dict[str, t.Any]) -> dict[str, t.Any]:
 
 def _handle_type_error(error: TypeError) -> str:
     import traceback
-    from datetime import datetime
+    from datetime import UTC, datetime
 
     if "NoneType" in str(error) and "await" in str(error):
         return json.dumps(
@@ -77,7 +77,7 @@ def _handle_type_error(error: TypeError) -> str:
                 "status": "failed",
                 "error": f"Async execution error: A function returned None instead of an awaitable. {error}",
                 "traceback": traceback.format_exc(),
-                "timestamp": datetime.now().isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
             },
         )
     raise error
@@ -85,7 +85,7 @@ def _handle_type_error(error: TypeError) -> str:
 
 def _handle_general_error(error: Exception) -> str:
     import traceback
-    from datetime import datetime
+    from datetime import UTC, datetime
 
     context = get_context()
     return json.dumps(
@@ -95,7 +95,7 @@ def _handle_general_error(error: Exception) -> str:
             "traceback": traceback.format_exc(),
             "timestamp": context.get_current_time()
             if context and hasattr(context, "get_current_time")
-            else datetime.now().isoformat(),
+            else datetime.now(UTC).isoformat(),
         },
     )
 

@@ -6,7 +6,7 @@ import operator
 import sqlite3
 import typing as t
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 if t.TYPE_CHECKING:
@@ -233,7 +233,7 @@ class SQLiteQueryOptimizer:
                     json.dumps(results_skipped),
                     user_satisfaction,
                     outcome,
-                    datetime.now().isoformat(),
+                    datetime.now(UTC).isoformat(),
                     session_id,
                 ),
             )
@@ -268,7 +268,7 @@ class SQLiteQueryOptimizer:
                 avg_satisfaction, last_updated
             ) VALUES (?, 0, 1, 0.0, ?)
             """,
-            (pattern, datetime.now().isoformat()),
+            (pattern, datetime.now(UTC).isoformat()),
         )
 
         if outcome == "success":
@@ -281,7 +281,7 @@ class SQLiteQueryOptimizer:
                     last_updated = ?
                 WHERE query_pattern = ?
                 """,
-                (satisfaction, datetime.now().isoformat(), pattern),
+                (satisfaction, datetime.now(UTC).isoformat(), pattern),
             )
         else:
             cursor.execute(
@@ -292,7 +292,7 @@ class SQLiteQueryOptimizer:
                     last_updated = ?
                 WHERE query_pattern = ?
                 """,
-                (satisfaction, datetime.now().isoformat(), pattern),
+                (satisfaction, datetime.now(UTC).isoformat(), pattern),
             )
 
     def get_query_suggestions(
@@ -392,10 +392,8 @@ class SQLiteQueryOptimizer:
                     click_counts[result_id] = click_counts.get(result_id, 0) + 1
 
             ctr_scores = {}
-            for result_id in total_shown:
-                ctr_scores[result_id] = (
-                    click_counts.get(result_id, 0) / total_shown[result_id]
-                )
+            for result_id, count in total_shown.items():
+                ctr_scores[result_id] = click_counts.get(result_id, 0) / count
 
             ranked_results: list[dict[str, t.Any]] = []
             for result in candidate_results:

@@ -224,8 +224,10 @@ class GitCleanupService:
             if changed_files:
                 return (
                     False,
-                    f"Working tree has {len(changed_files)} uncommitted changes. "
-                    "Please commit or stash changes before git cleanup.",
+                    (
+                        f"Working tree has {len(changed_files)} uncommitted changes. "
+                        "Please commit or stash changes before git cleanup."
+                    ),
                 )
             return True, None
         except Exception as e:

@@ -1,5 +1,4 @@
 #!/usr/bin/env uv run python
-
 from __future__ import annotations
 
 import argparse
@@ -9,6 +8,7 @@ import sys
 import tempfile
 from collections import Counter
 from dataclasses import dataclass
+from datetime import UTC
 from pathlib import Path
 from typing import Any
 
@@ -442,7 +442,7 @@ def main(argv: list[str] | None = None) -> int:
         entries_by_store[store] = store_entries
         total_with_frontmatter += len(store_entries)
 
-    generated_at = datetime.date.today().isoformat()
+    generated_at = datetime.datetime.now(UTC).date().isoformat()
     rendered = _render_index(entries_by_store, generated_at=generated_at)
 
     if args.dry_run:

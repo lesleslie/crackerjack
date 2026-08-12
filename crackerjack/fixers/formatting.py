@@ -168,7 +168,7 @@ from crackerjack.services.regex_patterns import apply_formatting_fixes
 def _read_file(file_path: str | Path) -> str | None:
     try:
         return Path(file_path).read_text(encoding="utf-8")
-    except OSError:
+    except (Exception, OSError):
         return None
 
 
@@ -381,7 +381,7 @@ async def _apply_spelling_fixes(issue: Issue, project_path: Path) -> list[str]:
             fixes.append(guidance)
 
     except Exception:
-        pass
+        return fixes
 
     return fixes
 
@@ -424,7 +424,7 @@ def _apply_content_formatting(content: str) -> str:
 async def _fix_specific_file(file_path: str) -> list[str]:
     fixes: list[str] = []
 
-    try:
+    with suppress(Exception):
         path = Path(file_path)
         content = _read_file(path)
         if not content:
@@ -436,9 +436,6 @@ async def _fix_specific_file(file_path: str) -> list[str]:
         if cleaned_content != original_content:
             if _write_file(path, cleaned_content):
                 fixes.append(f"Fixed formatting in {file_path}")
-
-    except Exception:
-        pass
 
     return fixes
 
@@ -556,7 +553,7 @@ def _replace_segment_flexibly(content: str, change: ChangeSpec) -> str | None:
 
 
 def _run_post_write_ruff_format(file_path: Path, project_path: Path) -> None:
-    try:
+    with suppress(Exception):
         import subprocess
 
         subprocess.run(
@@ -565,9 +562,8 @@ def _run_post_write_ruff_format(file_path: Path, project_path: Path) -> None:
             capture_output=True,
             text=True,
             timeout=30,
+            check=False,
         )
-    except Exception:
-        pass
 
 
 def _apply_planned_changes(plan: FixPlan, project_path: Path) -> FixResult:

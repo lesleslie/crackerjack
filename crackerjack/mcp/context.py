@@ -366,8 +366,9 @@ class MCPServerContext:
 
     def get_current_time(self) -> str:
         import datetime
+        from datetime import UTC
 
-        return datetime.datetime.now().isoformat()
+        return datetime.datetime.now(UTC).isoformat()
 
     def get_context_stats(self) -> dict[str, t.Any]:
         return {

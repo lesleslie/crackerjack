@@ -7,6 +7,8 @@ from contextlib import suppress
 from pathlib import Path
 from uuid import UUID
 
+from pydantic import Field
+
 from crackerjack.adapters._tool_adapter_base import (
     BaseToolAdapter,
     ToolAdapterSettings,
@@ -30,9 +32,9 @@ logger = logging.getLogger(__name__)
 class VultureSettings(ToolAdapterSettings):
     tool_name: str = "vulture"
     min_confidence: int = 60
-    exclude_patterns: list[str] = []
-    ignore_decorators: list[str] = []
-    ignore_names: list[str] = []
+    exclude_patterns: list[str] = Field(default_factory=list)
+    ignore_decorators: list[str] = Field(default_factory=list)
+    ignore_names: list[str] = Field(default_factory=list)
     sort_by_size: bool = False
     make_whitelist: bool = False
 
@@ -144,7 +146,7 @@ class VultureAdapter(BaseToolAdapter):
         return self._parse_text_output(result.raw_output)
 
     def _parse_text_output(self, output: str) -> list[ToolIssue]:
-        issues: list[ToolIssue] = []
+        issues: list[ToolIssue] = Field(default_factory=list)
         lines = output.strip().split("\n")
 
         for line in lines:

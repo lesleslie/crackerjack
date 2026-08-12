@@ -362,7 +362,11 @@ class AIAgentDebugger:
 
         self.logger.error(
             f"Error: {error_type}",
-            extra={"error_type": error_type, "message": message, "context": context},
+            extra={
+                "error_type": error_type,
+                "log_message": message,
+                "context": context,
+            },
         )
 
         if self.verbose:
@@ -809,6 +813,5 @@ def enable_ai_agent_debugging(verbose: bool = False) -> AIAgentDebugger:
 
 
 def disable_ai_agent_debugging() -> None:
-    global _ai_agent_debugger
     if _ai_agent_debugger:
         _ai_agent_debugger.enabled = False

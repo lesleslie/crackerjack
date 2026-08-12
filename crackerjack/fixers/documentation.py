@@ -95,7 +95,7 @@ import re
 import subprocess
 import typing as t
 from contextlib import suppress
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 from crackerjack.models.fix_plan import ChangeSpec, FixPlan
@@ -492,7 +492,7 @@ def _parse_commit_messages(commit_output: str) -> list[dict[str, str]]:
 
 
 def _generate_changelog_entry(changes: list[dict[str, str]]) -> str:
-    date_str = datetime.now().strftime("%Y-%m-%d")
+    date_str = datetime.now(UTC).strftime("%Y-%m-%d")
     entry_lines = [f"## [Unreleased] - {date_str}", ""]
 
     categorized_changes = _categorize_changes(changes)
@@ -919,9 +919,11 @@ def _find_and_fix_link(
                 relative_path = os.path.relpath(path.resolve(), source_path.resolve())
                 pattern = _build_link_match_pattern(target_file)
 
-                def replace_link(match: t.Match[str]) -> str:
+                def replace_link(
+                    match: t.Match[str], _relative_path: str = relative_path
+                ) -> str:
                     text = match.group(1)
-                    return f"[{text}]({relative_path})"
+                    return f"[{text}]({_relative_path})"
 
                 fixed_line = re.sub(pattern, replace_link, line)
                 return fixed_line

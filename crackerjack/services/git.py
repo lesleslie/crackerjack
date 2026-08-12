@@ -5,6 +5,8 @@ import typing as t
 from contextlib import suppress
 from pathlib import Path
 
+from pydantic import Field
+
 from crackerjack.core.console import CrackerjackConsole
 from crackerjack.models.protocols import ConsoleInterface, GitInterface
 
@@ -133,10 +135,21 @@ class GitService(GitInterface):
                 cmd = GIT_COMMANDS["add_file"] + [file]
                 result = self._run_git_command(cmd)
                 if result.returncode != 0:
-                    self.console.print(
-                        f"[red]❌[/ red] Failed to add {file}: {result.stderr}"
-                    )
-                    return False
+                    # git refuses to `add` paths whose parent directory is
+                    # in .gitignore (e.g. `.claude/workflows/ai-fix-loop.js`
+                    # under an ignored `.claude/`), even when the path
+                    # itself is re-included via `!.claude/workflows/**`.
+                    # Retry with `-f`; the path is either tracked (update
+                    # is safe) or genuinely ignored (the `-f` failure will
+                    # surface a real error).
+                    if "ignored by one of your .gitignore files" in result.stderr:
+                        cmd = GIT_COMMANDS["add_file"] + ["-f", file]
+                        result = self._run_git_command(cmd)
+                    if result.returncode != 0:
+                        self.console.print(
+                            f"[red]❌[/ red] Failed to add {file}: {result.stderr}"
+                        )
+                        return False
             return True
         except Exception as e:
             self.console.print(f"[red]❌[/ red] Error adding files: {e}")
@@ -460,7 +473,7 @@ class GitService(GitInterface):
         return [category_messages.get(category, "Update core functionality")]
 
     def _generate_specific_messages(self, files: list[str]) -> list[str]:
-        messages: list[str] = []
+        messages: list[str] = Field(default_factory=list)
         if "pyproject.toml" in files:
             messages.append("Update project configuration")
         if any("test_" in f for f in files):
@@ -528,6 +541,29 @@ class GitService(GitInterface):
             return False
         except Exception as e:
             self.console.print(f"[red]❌[/red] Error during reset: {e}")
+            return False
+
+    def checkout_files(self, files: list[str]) -> bool:
+        """Revert the given paths in the working tree to HEAD.
+
+        Used to roll back uncommitted edits (e.g. a version bump whose
+        commit subsequently failed) without touching staged-but-unrelated
+        changes.
+        """
+        if not files:
+            return True
+        try:
+            cmd = ["checkout", "--"] + files
+            result = self._run_git_command(cmd)
+            if result.returncode == 0:
+                self.console.print(
+                    f"[green]✅[/green] Reverted {len(files)} files to HEAD"
+                )
+                return True
+            self.console.print(f"[red]❌[/red] Checkout failed: {result.stderr}")
+            return False
+        except Exception as e:
+            self.console.print(f"[red]❌[/red] Error during checkout: {e}")
             return False
 
     def get_changed_files_since(self, since: str, project_root: Path) -> list[str]:

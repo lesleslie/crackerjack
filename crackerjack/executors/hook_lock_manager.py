@@ -11,6 +11,8 @@ from collections import defaultdict
 from contextlib import asynccontextmanager, suppress
 from pathlib import Path
 
+from pydantic import Field
+
 from crackerjack.config.global_lock_config import (
     GlobalLockConfig,
     get_global_lock_config,
@@ -731,7 +733,7 @@ hook_lock_manager = HookLockManager()
 
 
 class FileEditLock:
-    _registry: dict[Path, asyncio.Lock] = {}
+    _registry: dict[Path, asyncio.Lock] = Field(default_factory=dict)
     _registry_lock: asyncio.Lock = asyncio.Lock()
 
     def __init__(self, file: Path) -> None:

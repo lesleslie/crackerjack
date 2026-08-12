@@ -4,7 +4,7 @@ import json
 import tempfile
 import time
 import typing as t
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 from crackerjack.mcp.context import get_context
@@ -34,7 +34,7 @@ async def clean_temp_files(
     if directories is None:
         directories = [Path(tempfile.gettempdir())]
 
-    cutoff = datetime.now() - timedelta(hours=older_than_hours)
+    cutoff = datetime.now(UTC) - timedelta(hours=older_than_hours)
     cleaned_files = []
     total_size = 0
 
@@ -116,7 +116,7 @@ def _process_pattern(
 
 def _check_file_eligibility(file: Path, cutoff: t.Any) -> tuple[int, bool] | None:
     try:
-        file_time = datetime.fromtimestamp(file.stat().st_mtime)
+        file_time = datetime.fromtimestamp(file.stat().st_mtime, tz=UTC)
         if file_time < cutoff:
             file_size = file.stat().st_size
             return file_size, True
@@ -232,7 +232,7 @@ def _execute_cleanup_operations(
     from datetime import datetime, timedelta
 
     cutoff_time = (
-        datetime.now() - timedelta(hours=clean_config["older_than_hours"])
+        datetime.now(UTC) - timedelta(hours=clean_config["older_than_hours"])
     ).timestamp()
     all_cleaned_files = []
     total_size = 0

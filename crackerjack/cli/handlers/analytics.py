@@ -111,9 +111,9 @@ def generate_anomaly_sample_data(
     detector: t.Any,
     console: ConsoleInterface,
 ) -> None:
-    from datetime import datetime, timedelta
+    from datetime import UTC, datetime, timedelta
 
-    base_time = datetime.now() - timedelta(hours=24)
+    base_time = datetime.now(UTC) - timedelta(hours=24)
 
     metric_types = [
         "test_pass_rate",
@@ -190,10 +190,10 @@ def save_anomaly_report(
     console: ConsoleInterface,
 ) -> None:
     import json
-    from datetime import datetime
+    from datetime import UTC, datetime
 
     report_data = {
-        "timestamp": datetime.now().isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "summary": {
             "total_anomalies": len(anomalies),
             "baselines_count": len(baselines),
@@ -272,9 +272,9 @@ def generate_predictive_sample_data(
     console: ConsoleInterface,
 ) -> list[str]:
     import random
-    from datetime import datetime, timedelta
+    from datetime import UTC, datetime, timedelta
 
-    base_time = datetime.now() - timedelta(hours=72)
+    base_time = datetime.now(UTC) - timedelta(hours=72)
 
     metric_types = [
         "test_pass_rate",
@@ -384,10 +384,10 @@ def save_analytics_dashboard(
     console: ConsoleInterface,
 ) -> None:
     import json
-    from datetime import datetime
+    from datetime import UTC, datetime
 
     dashboard_data = {
-        "timestamp": datetime.now().isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "summary": {
             "prediction_periods": prediction_periods,
             "metrics_analyzed": len(metric_types),

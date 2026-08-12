@@ -2,21 +2,17 @@ from __future__ import annotations
 
 import ast
 import asyncio
-import fnmatch
-import hashlib
 import json
 import logging
 import os
 import re
 import shutil
 import subprocess
-import time
 import typing as t
 from collections.abc import Callable, Sequence
 from contextlib import suppress
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 from rich.console import Console
 
@@ -24,29 +20,16 @@ from rich.console import Console
 # crackerjack.ai_fix, crackerjack.memory, crackerjack.skills, etc.). The
 # dead-code cleanup that will remove the methods using them is pending
 # Task 24b Step 1. Until then this file will fail to import.
-from crackerjack.config import CrackerjackSettings
-from crackerjack.config.hooks import COMPREHENSIVE_HOOKS
-from crackerjack.config.tool_commands import get_tool_command
 from crackerjack.core.ai_fix_event_bus import AIFixEventBus
 from crackerjack.core.ai_fix_events import (
-    FixSessionFinished,
-    FixSessionStarted,
-    IssueResolved,
-    IterationFinished,
-    IterationStarted,
-    RunFinished,
     RunStarted,
 )
 from crackerjack.core.ai_fix_sinks import build_default_bus
 from crackerjack.core.preflight import PreflightConfig, PreflightFixer
 from crackerjack.models.fix_plan import FixPlan
-from crackerjack.models.issues import FixResult, Issue, IssueType, Priority
-from crackerjack.models.qa_config import QACheckConfig
-from crackerjack.models.qa_results import QAResult
+from crackerjack.models.issues import Issue, IssueType
 from crackerjack.parsers.factory import (
     ParserFactory,
-    ParsingError,
-    strip_non_error_output,
 )
 from crackerjack.services.ai_fix_progress import AIFixProgressManager
 from crackerjack.services.cache import CrackerjackCache
@@ -256,13 +239,13 @@ class AutofixCoordinator:
     ) -> None:
         import json
         import tempfile
-        from datetime import datetime
+        from datetime import UTC, datetime
 
         log_dirs = [
             self.pkg_path / ".crackerjack" / "logs",
             Path(tempfile.gettempdir()) / "crackerjack" / "logs",
         ]
-        timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+        timestamp = datetime.now(UTC).strftime("%Y%m%d-%H%M%S")
         log_data = {
             "timestamp": timestamp,
             "total_errors": len(self._collected_errors),
@@ -1285,7 +1268,7 @@ class AutofixCoordinator:
         any_reformatted = False
         for file_path in file_paths:
             try:
-                reformatted = await adapter.reformat_file(file_path)  # type: ignore noqa: FURB123 (Path objects must be coerced for adapter API)
+                reformatted = await adapter.reformat_file(file_path)  # type: ignore  # noqa: FURB123 (Path objects must be coerced for adapter API)
             except Exception as e:
                 self.logger.debug(
                     "PyCharm reformat failed for %s: %s",
@@ -1613,7 +1596,7 @@ class AutofixCoordinator:
             self.logger.info(
                 f"🛡️ Excluding {len(infra_issues)} infrastructure issues from AI-fix "
                 f"(pipeline files must not be self-modified): "
-                f"{', '.join(sorted(p for i in infra_issues for p in [i.file_path] if p is not None))}"
+                f"{', '.join(sorted(p.file_path for i in infra_issues if (p := i.file_path) is not None))}"
             )
 
         if skipped_issues:
@@ -1628,6 +1611,7 @@ class AutofixCoordinator:
         return fixable_issues
 
     _swarm_manager: t.Any = None  # type: ignore[misc]
+
 
 def _extract_issue_count_from_json(output: str, tool_name: str) -> int | None:
     try:

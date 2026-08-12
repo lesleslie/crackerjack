@@ -6,7 +6,7 @@ import logging
 import sqlite3
 import typing as t
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -292,7 +292,7 @@ class SQLiteDAGO_optimizer:
                         new_success_rate,
                         new_sample_size,
                         confidence,
-                        datetime.now().isoformat(),
+                        datetime.now(UTC).isoformat(),
                         record.dag_hash,
                     ),
                 )
@@ -313,7 +313,7 @@ class SQLiteDAGO_optimizer:
                     1.0,
                     1,
                     0.5,
-                    datetime.now().isoformat(),
+                    datetime.now(UTC).isoformat(),
                 ),
             )
 
@@ -414,7 +414,7 @@ class SQLiteDAGO_optimizer:
                         json.dumps(optimal_ordering),
                         new_time_ms,
                         new_sample_size,
-                        datetime.now().isoformat(),
+                        datetime.now(UTC).isoformat(),
                         dag_hash,
                     ),
                 )
@@ -525,7 +525,7 @@ class OneiricLearningIntegration:
             success=success,
             resource_usage=resource_usage,
             conflicts_detected=conflicts_detected,
-            timestamp=datetime.now(),
+            timestamp=datetime.now(UTC),
         )
 
         self.dag_optimizer.record_execution(record)

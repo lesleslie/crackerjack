@@ -6,6 +6,8 @@ import typing as t
 from pathlib import Path
 from uuid import UUID
 
+from pydantic import Field
+
 from crackerjack.adapters._tool_adapter_base import (
     BaseToolAdapter,
     ToolAdapterSettings,
@@ -39,7 +41,7 @@ class PipAuditSettings(ToolAdapterSettings):
     fix: bool = False
     output_desc: bool = True
     cache_dir: Path | None = None
-    ignore_vulns: list[str] = []
+    ignore_vulns: list[str] = Field(default_factory=list)
 
 
 class PipAuditAdapter(BaseToolAdapter):

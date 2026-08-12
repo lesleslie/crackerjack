@@ -1553,9 +1553,7 @@ def _fix_bare_except(issue: Issue, code: str, old_code: str) -> ChangeSpec | Non
     return span_change
 
 
-def _rewrite_percent_format(  # noqa: C901
-    issue: Issue, code: str
-) -> ChangeSpec | None:
+def _rewrite_percent_format(issue: Issue, code: str) -> ChangeSpec | None:
     if not issue.line_number:
         return None
 

@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import logging
 from dataclasses import asdict, dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -20,7 +20,7 @@ class BenchmarkResult:
     stddev: float
     rounds: int
     iterations: int
-    timestamp: str = field(default_factory=lambda: datetime.now().isoformat())
+    timestamp: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
 
     @classmethod
     def from_pytest_benchmark(cls, data: dict[str, Any]) -> BenchmarkResult:
@@ -102,7 +102,7 @@ class BaselineManager:
 
         data = {
             "version": "1.0",
-            "timestamp": datetime.now().isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "benchmarks": {k: v.to_dict() for k, v in self._baselines.items()},
         }
 
@@ -153,7 +153,7 @@ class BaselineManager:
         self._baselines[name] = result
         logger.debug(
             "Updated baseline",
-            extra={"name": name, "median": result.median},
+            extra={"baseline_name": name, "median": result.median},
         )
 
     def get_baseline(self, name: str) -> BenchmarkResult | None:

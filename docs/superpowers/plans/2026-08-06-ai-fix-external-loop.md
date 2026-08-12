@@ -43,30 +43,34 @@ This plan depends only on `crackerjack run -v` producing informative output — 
 ## File Structure
 
 **New files:**
+
 - `.claude/workflows/ai-fix-loop.js` — the Workflow script itself.
 - `tests/integration/test_ai_fix_loop_acceptance.md` — a manual acceptance-test runbook (this is agent-orchestration code, not a pytest-testable unit — see Task 9 for why).
 - `.crackerjack/audit/` — created at runtime; holds the per-iteration `ai-fix-loop.jsonl` log (Task 6 Step 4). The directory should be `.gitignore`d — it's a per-run artifact, not source.
 
 **Modified files:**
+
 - `CLAUDE.md` — replace the removed `--ai-fix` usage in "Most Common Commands" with the new workflow invocation.
 - `.gitignore` — required changes (discovered 2026-08-10 during Task 2 commit):
   - Add `.claude/*` rule (replace existing `.claude/` rule if present) so files inside `.claude/` are ignored WITHOUT ignoring the directory itself.
   - Add `!.claude/workflows/` exception to re-include the canonical Workflow scripts directory. Note: per gitignore semantics, you CANNOT re-include a file if its parent directory is excluded — that is why we use `.claude/*` (file-pattern) instead of `.claude/` (dir-pattern).
   - `.crackerjack/audit/` is already covered by the existing `.crackerjack/` rule; no additional line needed.
 
----
+______________________________________________________________________
 
 ### Task 1: Verify the `run -v` precondition
 
 **Files:** None modified — verification task.
 
 **Interfaces:**
+
 - Consumes: `crackerjack run -v`'s existing human-readable output (no new crackerjack code required).
 
 - [ ] **Step 1: Confirm `run -v` produces informative output on both a dirty and a clean repo state**
 
 Run: `uv run python -m crackerjack run -v 2>&1 | tail -40`
 Expected: a per-hook results section similar to:
+
 ```
 Fast Hook Results:
  - codespell        :: FAILED | issues=1
@@ -84,14 +88,16 @@ Run: `uv run python -m crackerjack run -v; echo "exit=$?"` on the current (post-
 
 **Exit-code semantics verified 2026-08-10:** Both the dirty-tree and clean-tree runs exited with code 1 (failure with informative `Fast Hook Results` summary present). The crash-mode test (`crackerjack run --skip-hooks --run-tests`) also exited 1 but with **no `Fast Hook Results` header** — instead it printed `💥 Test execution error after 0.3s: 'PosixPath' object has no attribute 'startswith'`. Distinguishing rule: presence of a `Fast Hook Results` summary line = "issues found" (informative failure); absence of that summary + presence of a `💥` or `Workflow failed: Task tests failed` marker = "crashed". The verify-agent prompt in Task 3 must encode this rule.
 
----
+______________________________________________________________________
 
 ### Task 2: Write the Workflow script skeleton with loop scaffolding
 
 **Files:**
+
 - Create: `.claude/workflows/ai-fix-loop.js`
 
 **Interfaces:**
+
 - Produces: a `meta` export and the top-level loop shape that later tasks fill in. `args` accepted: `{ maxIterations?: number }` (default 10).
 
 - [ ] **Step 1: Write the skeleton**
@@ -167,15 +173,18 @@ git add .claude/workflows/ai-fix-loop.js
 git commit -m "feat(ai-fix-loop): workflow script skeleton with loop scaffolding"
 ```
 
----
+______________________________________________________________________
 
 ### Task 3: Implement the Verify phase
 
 **Files:**
+
 - Modify: `.claude/workflows/ai-fix-loop.js`
 
 **Interfaces:**
+
 - Consumes: the `parseVerifyText` helper from Task 2 (skeleton phase).
+
 - Produces: `verify` object per iteration, with `cleanExit`, `issueCount`, `issuesSummary` — consumed by Task 6's stop-condition checks and Task 5's fix-dispatch prompt.
 
 - [ ] **Step 1: Replace the `// Task 3 fills in the Verify phase here.` comment with the real call**
@@ -266,14 +275,16 @@ git add .claude/workflows/ai-fix-loop.js
 git commit -m "feat(ai-fix-loop): implement Verify phase (run crackerjack -v, agent-interpreted)"
 ```
 
----
+______________________________________________________________________
 
 ### Task 4: Implement the Snapshot phase
 
 **Files:**
+
 - Modify: `.claude/workflows/ai-fix-loop.js`
 
 **Interfaces:**
+
 - Produces: `snapshot` object per iteration with `stashRef: string` — consumed by Task 6's rollback logic.
 
 - [ ] **Step 1: Replace the `// Task 4 fills in the Snapshot phase here.` comment**
@@ -321,15 +332,18 @@ git add .claude/workflows/ai-fix-loop.js
 git commit -m "feat(ai-fix-loop): implement Snapshot phase (conditional git stash before each fix attempt)"
 ```
 
----
+______________________________________________________________________
 
 ### Task 5: Implement the Fix phase
 
 **Files:**
+
 - Modify: `.claude/workflows/ai-fix-loop.js`
 
 **Interfaces:**
+
 - Consumes: `verify.issuesSummary` from Task 3.
+
 - Produces: `fix` object per iteration with `changes: Array<{file: string, description: string}>` — appended to `auditLog` in Task 6.
 
 - [ ] **Step 1: Replace the `// Task 5 fills in the Fix phase here.` comment**
@@ -378,14 +392,16 @@ git add .claude/workflows/ai-fix-loop.js
 git commit -m "feat(ai-fix-loop): implement Fix phase (dispatch residual issues to an agent)"
 ```
 
----
+______________________________________________________________________
 
 ### Task 6: Implement stop-condition checks, rollback, audit log, and diff-sanity
 
 **Files:**
+
 - Modify: `.claude/workflows/ai-fix-loop.js`
 
 **Interfaces:**
+
 - Consumes: `verify`, `snapshot`, `fix` from Tasks 3-5.
 - Produces: the loop's final return value — `{ stopReason: <expanded-taxonomy>, iterations: number, auditLog: Array }`.
 
@@ -440,9 +456,9 @@ git commit -m "feat(ai-fix-loop): implement Fix phase (dispatch residual issues 
 `attemptRollback(auditLog, iteration)` reads `auditLog[auditLog.length - 1]` for the last snapshot's `stashMessage` and `stashSha`, then runs an `agent()` call that:
 
 1. `git stash list --grep '^<stashMessage>$'` to find the entry by message (positional index may have shifted).
-2. Verify the entry's commit SHA matches the captured `stashSha` (via `git rev-parse "<entry>^3"`).
-3. If SHA matches: `git stash pop "<entry>"`, then `git stash drop "<entry>"` to prevent accumulation.
-4. If SHA mismatch: abort with `rollback-error` rather than guess.
+1. Verify the entry's commit SHA matches the captured `stashSha` (via `git rev-parse "<entry>^3"`).
+1. If SHA matches: `git stash pop "<entry>"`, then `git stash drop "<entry>"` to prevent accumulation.
+1. If SHA mismatch: abort with `rollback-error` rather than guess.
 
 The positional `stashRef` (`stash@{N}`) is never used for rollback. Document this in the helper's leading comment.
 
@@ -506,13 +522,13 @@ The positional `stashRef` (`stash@{N}`) is never used for rollback. Document thi
 Final iteration body order is:
 
 1. Verify (Task 3) — with `parseVerifyText` and `Number.isFinite` guard
-2. Clean-exit check (Task 3)
-3. Initial-issue-count + MAX_ITERATIONS adjustment (Task 3, on first iter only)
-4. **No-improvement / regressed / progress-stalled check (Task 6 Step 1)**
-5. Snapshot (Task 4) — with clean-tree invariant
-6. Fix (Task 5) — with hard constraints in prompt
-7. **Diff-sanity check (Task 6 Step 3)**
-8. **Audit-log append + persist (Task 6 Step 4)**
+1. Clean-exit check (Task 3)
+1. Initial-issue-count + MAX_ITERATIONS adjustment (Task 3, on first iter only)
+1. **No-improvement / regressed / progress-stalled check (Task 6 Step 1)**
+1. Snapshot (Task 4) — with clean-tree invariant
+1. Fix (Task 5) — with hard constraints in prompt
+1. **Diff-sanity check (Task 6 Step 3)**
+1. **Audit-log append + persist (Task 6 Step 4)**
 
 Re-read the full file after assembly to confirm no phase was duplicated or dropped during the incremental edits across Tasks 3-6.
 
@@ -543,15 +559,18 @@ git add .claude/workflows/ai-fix-loop.js
 git commit -m "feat(ai-fix-loop): stop conditions, SHA-anchored rollback, diff sanity, audit log"
 ```
 
----
+______________________________________________________________________
 
 ### Task 7: Wire the Akosha passive-logging hook
 
 **Files:**
+
 - Modify: `.claude/workflows/ai-fix-loop.js`
 
 **Interfaces:**
+
 - Consumes: each `auditLog` entry's `changes` list from Task 6.
+
 - Produces: no new return value — this is a side-effecting write to Akosha after the loop concludes.
 
 - [ ] **Step 1: Discover the real Akosha tool names**
@@ -605,11 +624,12 @@ git add .claude/workflows/ai-fix-loop.js
 git commit -m "feat(ai-fix-loop): passive Akosha fix-outcome logging (write-only, per fix)"
 ```
 
----
+______________________________________________________________________
 
 ### Task 8: Update CLAUDE.md's usage documentation
 
 **Files:**
+
 - Modify: `CLAUDE.md`
 
 **Interfaces:** N/A — documentation update.
@@ -617,11 +637,14 @@ git commit -m "feat(ai-fix-loop): passive Akosha fix-outcome logging (write-only
 - [ ] **Step 1: Replace the removed `--ai-fix` example**
 
 In the "Most Common Commands" section, replace:
+
 ```
 # Daily development (quality + tests + AI fixes) - RECOMMENDED
 python -m crackerjack run --ai-fix --run-tests
 ```
+
 with:
+
 ```
 # Daily development (quality + tests) - RECOMMENDED
 python -m crackerjack run --run-tests
@@ -641,11 +664,12 @@ git add CLAUDE.md
 git commit -m "docs: update CLAUDE.md for external ai-fix-loop workflow (replaces --ai-fix section)"
 ```
 
----
+______________________________________________________________________
 
 ### Task 9: End-to-end acceptance test against this repo's real failures
 
 **Files:**
+
 - Create: `tests/integration/test_ai_fix_loop_acceptance.md` (a runbook, not a pytest file — this exercises live agent dispatch and git mutation, which isn't meaningfully unit-testable)
 
 **Interfaces:** N/A — acceptance verification, the final gate for this plan.

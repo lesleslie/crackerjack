@@ -147,7 +147,9 @@ def skills(
         help="Override Session-Buddy MCP URL (default: $SESSION_BUDDY_MCP_URL or localhost:8678/mcp).",
     ),
     json_output: bool = typer.Option(
-        False, "--json", help="Emit a single-line JSON record instead of the Markdown report."
+        False,
+        "--json",
+        help="Emit a single-line JSON record instead of the Markdown report.",
     ),
     fail: bool = typer.Option(
         False,
@@ -196,9 +198,7 @@ def skills(
             if report.raw_rows:
                 console.print("[dim]" + json.dumps(report.raw_rows) + "[/dim]")
         else:
-            console.print(
-                "[green][skill-coverage] OK: fresh — 0 stale skills.[/green]"
-            )
+            console.print("[green][skill-coverage] OK: fresh — 0 stale skills.[/green]")
 
     if report.status == "stale" and fail:
         raise typer.Exit(1)

@@ -3,7 +3,7 @@ import signal
 import time
 import typing as t
 from contextlib import suppress
-from datetime import datetime
+from datetime import UTC, datetime
 from importlib.metadata import version as pkg_version
 from pathlib import Path
 from typing import Final
@@ -495,7 +495,7 @@ def main(
             watchers_running=True,
             lifecycle_state={
                 "server_status": "running",
-                "start_time": datetime.now().isoformat(),
+                "start_time": datetime.now(UTC).isoformat(),
                 "http_mode": http_mode,
                 "http_port": mcp_config.get("http_port") if http_mode else None,
             },
@@ -519,7 +519,7 @@ def main(
                 watchers_running=False,
                 lifecycle_state={
                     "server_status": "stopped",
-                    "shutdown_time": datetime.now().isoformat(),
+                    "shutdown_time": datetime.now(UTC).isoformat(),
                 },
             )
             write_runtime_health(runtime_dir / "runtime_health.json", snapshot)

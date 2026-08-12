@@ -123,6 +123,7 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
         "validate-regex-patterns": _python_module_command(
             "crackerjack.tools.validate_regex_patterns"
         ),
+        "syrupy": _python_module_command("crackerjack.tools.syrupy_wrapper"),
         "ty-ignore-syntax": _python_module_command(
             "crackerjack.tools.ty_ignore_syntax",
             "--exclude",

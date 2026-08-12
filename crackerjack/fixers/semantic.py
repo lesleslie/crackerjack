@@ -128,6 +128,7 @@ from __future__ import annotations
 
 import ast
 import typing as t
+from contextlib import suppress
 from pathlib import Path
 
 from crackerjack.models.issues import FixResult, Issue
@@ -138,7 +139,7 @@ from crackerjack.services.vector_store import VectorStore
 def _read_file(file_path: str | Path) -> str | None:
     try:
         return Path(file_path).read_text(encoding="utf-8")
-    except OSError:
+    except (Exception, OSError):
         return None
 
 
@@ -301,7 +302,7 @@ async def _analyze_issue_context(
         min_similarity=0.5,
     )
 
-    try:
+    with suppress(Exception):
         results = vector_store.search(search_query)
         if results:
             suggestions.append(
@@ -318,8 +319,6 @@ async def _analyze_issue_context(
                     ],
                 },
             )
-    except Exception:
-        pass
 
     return suggestions
 
@@ -347,7 +346,7 @@ async def _discover_semantic_patterns(
             file_types=["py"],
         )
 
-        try:
+        with suppress(Exception):
             results = vector_store.search(search_query)
             if results:
                 related_results = [
@@ -369,9 +368,6 @@ async def _discover_semantic_patterns(
                             ],
                         },
                     )
-
-        except Exception:
-            pass
 
     if issue.message:
         issue_insights = await _analyze_issue_context(vector_store, issue)
@@ -468,10 +464,8 @@ async def _perform_semantic_analysis(
             remaining_issues=[f"Could not read file: {file_path}"],
         )
 
-    try:
+    with suppress(Exception):
         vector_store.index_file(file_path)
-    except Exception:
-        pass
 
     semantic_insights = await _discover_semantic_patterns(
         vector_store,

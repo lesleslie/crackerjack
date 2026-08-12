@@ -330,7 +330,7 @@ class SQLiteAdapterLearner:
                     new_avg_time,
                     json.dumps(errors),
                     attempt.timestamp.isoformat(),
-                    datetime.now().isoformat(),
+                    datetime.now(UTC).isoformat(),
                     attempt.adapter_name,
                     attempt.file_type,
                 ),
@@ -355,7 +355,7 @@ class SQLiteAdapterLearner:
                     attempt.execution_time_ms,
                     json.dumps(errors),
                     attempt.timestamp.isoformat(),
-                    datetime.now().isoformat(),
+                    datetime.now(UTC).isoformat(),
                 ),
             )
 
@@ -931,7 +931,7 @@ def _safe_abort_sync(connection: t.Any) -> None:
         result = abort()
         if asyncio.iscoroutine(result):
             asyncio.run(result)
-    except BaseException as exc:  # noqa: BLE001 - by design
+    except BaseException as exc:
         logger.debug(f"finalizer: connection abort failed: {exc!r}")
 
 
@@ -1054,7 +1054,7 @@ class DharaLearningIntegration:
             success=success,
             execution_time_ms=execution_time_ms,
             error_type=error_type,
-            timestamp=datetime.now(),
+            timestamp=datetime.now(UTC),
         )
 
         self.adapter_learner.record_adapter_attempt(attempt)

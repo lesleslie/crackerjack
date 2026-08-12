@@ -12,6 +12,7 @@ Use case: Intelligent agent selection based on historical data
 from pathlib import Path
 
 from crackerjack.agents.base import AgentContext
+
 from crackerjack.integration.skills_tracking import create_skills_tracker
 
 

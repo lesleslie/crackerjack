@@ -12,6 +12,7 @@ Use case: Optimize agent selection by workflow phase
 from pathlib import Path
 
 from crackerjack.agents.base import AgentContext
+
 from crackerjack.integration.skills_tracking import create_skills_tracker
 
 
@@ -100,10 +101,10 @@ def main() -> None:
         recs = phase_recommendations[phase]
 
         # Select agent with highest weighted score
-        def weighted_score(rec: dict) -> float:
+        def weighted_score(rec: dict, _phase: str = phase) -> float:
             similarity = rec["similarity_score"]
             completed = 1.5 if rec["completed"] else 0.5
-            phase_match = 1.2 if rec.get("workflow_phase") == phase else 1.0
+            phase_match = 1.2 if rec.get("workflow_phase") == _phase else 1.0
             return similarity * completed * phase_match
 
         best = max(recs, key=weighted_score)

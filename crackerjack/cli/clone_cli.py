@@ -35,6 +35,7 @@ def _run_pyscn_json(path: Path, threshold: float = 0.9) -> dict[str, Any]:
         capture_output=True,
         text=True,
         cwd=str(path),
+        check=False,
     )
     if result.returncode not in (0, 1):
         console.print(f"[red]pyscn failed: {result.stderr}[/red]")

@@ -56,9 +56,7 @@ def init(
         pyproject_path = pkg_path / "pyproject.toml"
         if pyproject_path.exists():
             content = pyproject_path.read_text()
-            cleaned = FileSystemService.clean_trailing_whitespace_and_newlines(
-                content
-            )
+            cleaned = FileSystemService.clean_trailing_whitespace_and_newlines(content)
             if cleaned != content:
                 pyproject_path.write_text(cleaned)
     except FileNotFoundError:

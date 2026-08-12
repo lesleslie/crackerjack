@@ -84,9 +84,7 @@ class CloneRefactorEngine:
     def _is_pycharm_available(self) -> bool:
         try:
             result = subprocess.run(
-                ["pycharm", "--version"],
-                capture_output=True,
-                timeout=2,
+                ["pycharm", "--version"], capture_output=True, timeout=2, check=False
             )
             return result.returncode == 0
         except (FileNotFoundError, subprocess.TimeoutExpired):

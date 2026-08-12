@@ -90,7 +90,7 @@ def _handle_exception(
         return fallback() if callable(fallback) else fallback
 
     if not suppress:
-        raise
+        raise e
 
     return None
 

@@ -40,9 +40,7 @@ class AsyncTaskManager:
                 f"[green]🎯 Task Manager started (max {self.max_concurrent_tasks} concurrent)[ / green]",
             )
         except (ValueError, OSError):
-            import logging
-
-            logging.info(
+            logger.info(
                 f"Task Manager started (max {self.max_concurrent_tasks} concurrent) ",
             )
 
@@ -58,9 +56,7 @@ class AsyncTaskManager:
         try:
             console.print("[yellow]🎯 Task Manager stopped[ / yellow]")
         except (ValueError, OSError):
-            import logging
-
-            logging.info("Task Manager stopped")
+            logger.info("Task Manager stopped")
 
     async def create_task(
         self,
@@ -218,9 +214,7 @@ class AsyncTaskManager:
                 f"[yellow]🧹 Cancelling {len(tasks_to_cancel)} running tasks[ / yellow]",
             )
         except (ValueError, OSError):
-            import logging
-
-            logging.info(f"Cancelling {len(tasks_to_cancel)} running tasks")
+            logger.info(f"Cancelling {len(tasks_to_cancel)} running tasks")
 
         for task_info in tasks_to_cancel:
             task_info.task.cancel()

@@ -114,7 +114,7 @@ async def run_linter(files: list[Path]) -> dict:
     """
     # Simulated linter run
     result = subprocess.run(
-        ["ruff", "check", *[str(f) for f in files]],
+        ["ruff", "check", *[str(f, check=False) for f in files]],
         capture_output=True,
         text=True,
     )
@@ -150,7 +150,7 @@ async def execute_quality_checks(project_dir: Path) -> dict:
         capture_output=True,
         text=True,
         timeout=50,
-    )
+     check=False)
 
     if result.returncode != 0:
         raise ExecutionError(
@@ -199,7 +199,7 @@ async def run_test_suite(test_dir: Path) -> dict:
     for analysis.
     """
     result = subprocess.run(
-        ["pytest", str(test_dir), "-v"],
+        ["pytest", str(test_dir, check=False), "-v"],
         capture_output=True,
         text=True,
     )
@@ -270,7 +270,7 @@ class QualityManager:
             ["pre-commit", "run", hook_type],
             capture_output=True,
             text=True,
-        )
+         check=False)
 
         return result.returncode == 0
 

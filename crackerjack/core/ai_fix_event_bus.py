@@ -4,6 +4,7 @@ import asyncio
 import datetime
 import logging
 from contextlib import suppress
+from datetime import UTC
 from typing import Protocol
 
 from uuid_utils import uuid4 as _uuid4
@@ -50,5 +51,5 @@ class AIFixEventBus:
 
     @staticmethod
     def new_run_id() -> str:
-        ts = datetime.datetime.now().strftime("%Y-%m-%d-%H%M")
+        ts = datetime.datetime.now(UTC).strftime("%Y-%m-%d-%H%M")
         return f"{ts}-{_uuid4().hex[:4]}"

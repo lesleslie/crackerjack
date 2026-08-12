@@ -1,7 +1,12 @@
 ---
 title: Crackerjack Ruff Fix Policy Design
-status: proposed
+status: draft
+role: implementation
+topic: architecture
 date: 2026-08-06
+last_reviewed: 2026-08-06
+superseded_by: null
+blocks_on: []
 authors: brainstormsession
 related:
   - docs/CLI_REFERENCE.md
@@ -85,7 +90,7 @@ Concretely:
 
 ### 4.3 Preview path (no mutation)
 
-Add or expose a preview verb that uses `ruff check --diff ./crackerjack`. Ruff documents that `--diff` exits 1 when fixes would be applied and does not write files. See the Ruff [CLI documentation](https://docs.astral.sh/ruff/cli/).
+Add or expose a preview verb that uses `ruff check --diff ./crackerjack`. Ruff documents that `--diff` exits 1 when fixes would be applied and does not write files. See the Ruff [CLI documentation](https://docs.astral.sh/ruff/).
 
 Suggested user flow:
 

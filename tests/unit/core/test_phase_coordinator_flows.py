@@ -1896,6 +1896,71 @@ class TestRunFastHooksWithRetry:
         assert result is False
         assert mock_exec.call_count == 2
 
+    def test_failure_print_is_deferred_until_after_loop(
+        self, coordinator: PhaseCoordinator, mock_options: MagicMock
+    ) -> None:
+        """Regression: when both attempts fail, _display_hook_failures must run
+        AFTER the loop exits (not between attempts). This avoids interleaving the
+        verbose failure block with the "Verification Retry 2/2" banner and the
+        second attempt's results table.
+        """
+        mock_options.fast_iteration = False
+
+        # Track relative call order: every entry is a mock name invoked so far.
+        call_order: list[str] = []
+
+        def _record_exec(*_args: object, **_kwargs: object) -> bool:
+            call_order.append("exec")
+            return False
+
+        def _record_display(*_args: object, **_kwargs: object) -> None:
+            call_order.append("display")
+
+        coordinator._last_hook_results = [
+            HookResult(id="h1", name="ruff", status="failed", duration=0.1),
+        ]
+
+        with patch.object(
+            coordinator, "_execute_hooks_once", side_effect=_record_exec
+        ), patch.object(
+            coordinator, "_display_hook_phase_header"
+        ), patch.object(
+            coordinator, "_display_hook_failures", side_effect=_record_display
+        ), patch.object(
+            coordinator, "_prepare_jsonc_files_before_retry"
+        ):
+            result = coordinator._run_fast_hooks_with_retry(mock_options)
+
+        assert result is False
+        # Two _execute_hooks_once calls (one per attempt), one deferred display.
+        assert call_order.count("exec") == 2
+        assert call_order.count("display") == 1
+        # The single display call must come AFTER both exec calls.
+        assert call_order[-1] == "display"
+        last_exec = max(i for i, name in enumerate(call_order) if name == "exec")
+        assert call_order.index("display") > last_exec
+
+    def test_failure_print_skipped_when_attempt_succeeds(
+        self, coordinator: PhaseCoordinator, mock_options: MagicMock
+    ) -> None:
+        """If the second attempt succeeds, no failure print fires — the helper
+        is reserved for the "both attempts failed" case only."""
+        mock_options.fast_iteration = False
+
+        with patch.object(
+            coordinator, "_execute_hooks_once", side_effect=[False, True]
+        ), patch.object(
+            coordinator, "_display_hook_phase_header"
+        ), patch.object(
+            coordinator, "_display_hook_failures"
+        ) as mock_display, patch.object(
+            coordinator, "_prepare_jsonc_files_before_retry"
+        ):
+            result = coordinator._run_fast_hooks_with_retry(mock_options)
+
+        assert result is True
+        mock_display.assert_not_called()
+
 
 class TestCompleteFastHooksTask:
     """_complete_fast_hooks_task sets session state correctly."""

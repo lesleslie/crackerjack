@@ -91,7 +91,7 @@ class WorkflowPipeline:
             return
         try:
             bridge = self._bridge_resolver(self.settings, runtime)
-        except Exception as exc:  # noqa: BLE001 -- resolver is operator-supplied
+        except Exception as exc:
             self.logger.warning(
                 "bridge_resolver raised %s; skipping EventBridge wiring",
                 exc,

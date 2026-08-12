@@ -146,6 +146,7 @@ import asyncio
 import json
 import operator
 from collections.abc import Callable
+from contextlib import suppress
 from pathlib import Path
 from typing import Any
 
@@ -159,7 +160,7 @@ from crackerjack.models.issues import FixResult, Issue
 def _read_file(file_path: str | Path) -> str | None:
     try:
         return Path(file_path).read_text(encoding="utf-8")
-    except OSError:
+    except (Exception, OSError):
         return None
 
 
@@ -179,16 +180,13 @@ def _write_file(file_path: str | Path, content: str) -> bool:
 async def extract_functions_from_file(file_path: Path) -> list[dict[str, Any]]:
     functions: list[dict[str, Any]] = []
 
-    try:
+    with suppress(Exception):
         content = _read_file(file_path)
         if not content:
             return functions
 
         tree = ast.parse(content)
         functions = _parse_function_nodes(tree)
-
-    except Exception:
-        pass
 
     return functions
 
@@ -232,16 +230,13 @@ def _create_function_info(
 async def extract_classes_from_file(file_path: Path) -> list[dict[str, Any]]:
     classes: list[dict[str, Any]] = []
 
-    try:
+    with suppress(Exception):
         content = _read_file(file_path)
         if not content:
             return classes
 
         tree = ast.parse(content)
         classes = _process_ast_nodes_for_classes(tree)
-
-    except Exception:
-        pass
 
     return classes
 
@@ -328,7 +323,7 @@ def _get_module_import_path(file_path: Path, project_path: Path) -> str:
         relative_path = file_path.relative_to(project_path)
         parts = (*relative_path.parts[:-1], relative_path.stem)
         return ".".join(parts)
-    except ValueError:
+    except (Exception, ValueError):
         return file_path.stem
 
 
@@ -1368,9 +1363,8 @@ async def _get_existing_coverage_data(project_path: Path) -> dict[str, Any] | No
         coverage_file = project_path / ".coverage"
         if coverage_file.exists():
             return await _process_coverage_results_enhanced(project_path)
-
     except Exception:
-        pass
+        return None
 
     return None
 
@@ -1601,7 +1595,7 @@ async def _find_untested_functions_in_file_enhanced(
 ) -> list[dict[str, Any]]:
     untested: list[dict[str, Any]] = []
 
-    try:
+    with suppress(Exception):
         functions = await extract_functions_from_file(py_file)
         for func in functions:
             if not await function_has_test(func, py_file, project_path):
@@ -1611,9 +1605,6 @@ async def _find_untested_functions_in_file_enhanced(
                     project_path,
                 )
                 untested.append(func_info)
-
-    except Exception:
-        pass
 
     return untested
 
@@ -1679,7 +1670,7 @@ async def _analyze_function_testability(
 
 async def _identify_coverage_gaps(project_path: Path) -> list[dict[str, Any]]:
     gaps: list[dict[str, Any]] = []
-    try:
+    with suppress(Exception):
         package_dir = project_path / "crackerjack"
         tests_dir = project_path / "tests"
 
@@ -1693,21 +1684,18 @@ async def _identify_coverage_gaps(project_path: Path) -> list[dict[str, Any]]:
         ]
 
         results: list[dict[str, Any] | BaseException] = await asyncio.gather(
-            *(
-                _analyze_existing_test_coverage(py_file, project_path)
-                for py_file in py_files
-            ),
-            return_exceptions=True,
+        *(
+        _analyze_existing_test_coverage(py_file, project_path)
+        for py_file in py_files
+        ),
+        return_exceptions=True,
         )
 
         gaps = [
-            r
-            for r in results
-            if isinstance(r, dict) and not isinstance(r, Exception) and r.get("has_gaps")
+        r
+        for r in results
+        if isinstance(r, dict) and not isinstance(r, Exception) and r.get("has_gaps")
         ]
-
-    except Exception:
-        pass
 
     return gaps[:10]
 
@@ -1774,13 +1762,10 @@ async def create_tests_for_module(
     fixes: list[str] = []
     files: list[str] = []
 
-    try:
+    with suppress(Exception):
         test_results = await _generate_module_tests(module_path, project_path)
         fixes.extend(test_results["fixes"])
         files.extend(test_results["files"])
-
-    except Exception:
-        pass
 
     return {"fixes": fixes, "files": files}
 
@@ -1899,7 +1884,7 @@ async def create_test_for_function(
     fixes: list[str] = []
     files: list[str] = []
 
-    try:
+    with suppress(Exception):
         func_file = Path(func_info["file"])
 
         test_file_path = await generate_test_file_path(func_file, project_path)
@@ -1918,9 +1903,6 @@ async def create_test_for_function(
                 fixes.append(f"Created test file with test for {func_info['name']}")
                 files.append(str(test_file_path))
 
-    except Exception:
-        pass
-
     return {"fixes": fixes, "files": files}
 
 
@@ -1937,19 +1919,17 @@ async def analyze_module_priority(
 ) -> dict[str, Any]:
     module_info = await _analyze_module_priority(module_file, project_path)
 
-    try:
+    with suppress(Exception):
         content = _read_file(module_file) or ""
         tree = ast.parse(content)
         public_top_level = [
-            node
-            for node in ast.walk(tree)
-            if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef)
-            and node.col_offset == 0
-            and not node.name.startswith("_")
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef)
+        and node.col_offset == 0
+        and not node.name.startswith("_")
         ]
         module_info["public_function_count"] = len(public_top_level)
-    except Exception:
-        pass
 
     return module_info
 

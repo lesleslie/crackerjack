@@ -87,4 +87,3 @@ def test_process_coverage_ratchet_wrapper_skips_when_no_coverage_json(
         manager._process_coverage_ratchet()
 
     spy.assert_not_called()
-

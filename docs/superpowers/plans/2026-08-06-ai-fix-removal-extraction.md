@@ -25,6 +25,7 @@ This plan covers spec sections 1a, 1b, 2, 3, and 4 (extraction, shared vocabular
 ## File Structure
 
 **New files:**
+
 - `crackerjack/models/issues.py` — `Issue`, `IssueType`, `Priority`, `FixResult`, and the versioned JSON output schema (extracted/redefined from `agents/base.py`).
 - `crackerjack/fixers/__init__.py` — package marker + fixer registry (plain dict, no framework).
 - `crackerjack/fixers/refactoring.py` — from `agents/refactoring_agent.py`.
@@ -47,6 +48,7 @@ This plan covers spec sections 1a, 1b, 2, 3, and 4 (extraction, shared vocabular
 - `crackerjack/fixers/helpers/` — from `agents/helpers/refactoring/`, `agents/helpers/test_creation/`, `agents/helpers/performance/` (moved as-is).
 
 **Deleted (whole packages/files):**
+
 - `crackerjack/agents/` in its entirety (after extraction tasks below relocate the keepers) — includes `coordinator.py`, `enhanced_coordinator.py`, `fixer_coordinator.py`, `analysis_coordinator.py`, `validation_coordinator.py`, `parallel_dispatcher.py`, `claude_code_bridge.py`, `enhanced_proactive_agent.py`, `base.py`, `tracker.py`, and everything else not listed as extracted above.
 - `crackerjack/ai_fix/` in its entirety.
 - `crackerjack/intelligence/` in its entirety.
@@ -54,6 +56,7 @@ This plan covers spec sections 1a, 1b, 2, 3, and 4 (extraction, shared vocabular
 - `crackerjack/skills/` in its entirety.
 
 **Modified:**
+
 - `crackerjack/models/protocols.py` — remove `AgentCoordinatorProtocol`, `AgentTrackerProtocol`, `AgentRegistryProtocol`.
 - `crackerjack/core/autofix_coordinator.py` — remove AI-specific methods (list built during Task 30).
 - `crackerjack/core/phase_coordinator.py` — remove AI-specific methods (list built during Task 30).
@@ -62,11 +65,12 @@ This plan covers spec sections 1a, 1b, 2, 3, and 4 (extraction, shared vocabular
 - `crackerjack/__main__.py` — remove `--ai-fix` flag and its wiring.
 - Eight files in `docs/superpowers/specs/` — frontmatter `superseded_by` set to this design's spec filename.
 
----
+______________________________________________________________________
 
 ### Task 1: Baseline safety net
 
 **Files:**
+
 - None modified — this task only records state.
 
 **Interfaces:** N/A (verification task).
@@ -92,16 +96,18 @@ git tag pre-ai-fix-removal
 
 This is a cheap, reversible checkpoint — not a branch, just a tag for `git diff pre-ai-fix-removal..HEAD` reference later.
 
----
+______________________________________________________________________
 
 ### Task 2: Create the shared issue vocabulary module
 
 **Files:**
+
 - Create: `crackerjack/models/issues.py`
 - Test: `tests/unit/models/test_issues.py`
 - Reference: `crackerjack/agents/base.py` (source of the four types — read this file in full before starting; it is 357 lines)
 
 **Interfaces:**
+
 - Produces: `Issue`, `IssueType` (Enum), `Priority` (Enum), `FixResult` — importable as `from crackerjack.models.issues import Issue, IssueType, Priority, FixResult`. These must be structurally identical (same fields, same enum values) to the current definitions in `agents/base.py`, since ~30 files depend on their exact shape.
 
 - [ ] **Step 1: Write the failing test**
@@ -161,18 +167,21 @@ git add crackerjack/models/issues.py tests/unit/models/test_issues.py
 git commit -m "feat(models): extract Issue/IssueType/Priority/FixResult into dependency-free module"
 ```
 
----
+______________________________________________________________________
 
 ### Task 3: Define the versioned `--json` output schema
 
 **Files:**
+
 - Modify: `crackerjack/models/issues.py` (add schema)
 - Test: `tests/unit/models/test_issues.py` (add golden-file test)
 - Create: `tests/unit/models/fixtures/json_output_v1.json` (golden file)
 - Reference: locate the current `--json` output construction — search `crackerjack/__main__.py` around the `json_output` option (line ~788) and follow it into whatever core module actually serializes results (likely `core/autofix_coordinator.py` or `core/phase_coordinator.py` — confirm exact location before writing this task's implementation).
 
 **Interfaces:**
+
 - Consumes: `Issue`, `IssueType`, `Priority`, `FixResult` from Task 2.
+
 - Produces: `CrackerjackRunResult` (Pydantic model) with a `schema_version: str = "1"` field, importable as `from crackerjack.models.issues import CrackerjackRunResult`. This is what the external loop (separate plan) parses.
 
 - [ ] **Step 1: Read the current `--json` output code path**
@@ -253,16 +262,18 @@ git add crackerjack/models/issues.py tests/unit/models/
 git commit -m "feat(models): versioned --json output schema with golden-file contract test"
 ```
 
----
+______________________________________________________________________
 
 ### Task 4: Extract `refactoring_agent.py` → `crackerjack/fixers/refactoring.py`
 
 **Files:**
+
 - Read: `crackerjack/agents/refactoring_agent.py` (1,639 lines), `crackerjack/agents/helpers/ast_transform/` (moved in Task 18, but read now for reference)
 - Create: `crackerjack/fixers/refactoring.py`
 - Test: `tests/fixers/test_refactoring.py` (new; port relevant cases from existing `tests/agents/test_refactoring_agent.py` if present — locate it with `find tests -iname "*refactoring*"`)
 
 **Interfaces:**
+
 - Produces: plain functions, not a class inheriting `SubAgent`. Exact function names are determined by what's actually in the file (e.g., a `_reduce_complexity` method becomes a module-level `reduce_complexity(source: str, issue: Issue) -> FixResult` function) — read the file fully before naming; do not invent signatures that don't correspond to real logic in the source file.
 
 - [ ] **Step 1: Read the full source file**
@@ -305,342 +316,475 @@ git add crackerjack/fixers/refactoring.py tests/fixers/test_refactoring.py
 git commit -m "refactor(fixers): extract refactoring_agent transform logic as plain functions"
 ```
 
----
+______________________________________________________________________
 
 ### Task 5: Extract `performance_agent.py` → `crackerjack/fixers/performance.py`
 
 **Files:**
+
 - Read: `crackerjack/agents/performance_agent.py`, `crackerjack/agents/helpers/performance/` (the `PerformanceASTAnalyzer` helper)
 - Create: `crackerjack/fixers/performance.py`, `crackerjack/fixers/helpers/performance/`
 - Test: `tests/fixers/test_performance.py`
 
 **Interfaces:**
+
 - Produces: plain functions wrapping `PerformanceASTAnalyzer`'s AST-based hot-spot detection — exact names determined by reading the file (do not invent signatures not backed by real logic in the source).
 
 - [ ] **Step 1:** Read `crackerjack/agents/performance_agent.py` and `crackerjack/agents/helpers/performance/` in full. Identify every method doing real AST analysis (delegates to `PerformanceASTAnalyzer`) versus `SubAgent`/coordinator plumbing (`can_handle`, `confidence`, dispatch bookkeeping).
+
 - [ ] **Step 2:** Run `find tests -iname "*performance*agent*"` and read what's found. Identify which test cases exercise the AST analysis (keep) versus `SubAgent` dispatch behavior (drop).
+
 - [ ] **Step 3:** Port the kept test cases into `tests/fixers/test_performance.py`, updating imports from `crackerjack.agents.performance_agent` to `crackerjack.fixers.performance` and call sites to the new plain-function form from Step 1.
+
 - [ ] **Step 4:** Run `pytest tests/fixers/test_performance.py -v`. Expected: FAIL (`crackerjack.fixers.performance` doesn't exist yet).
+
 - [ ] **Step 5:** Create `crackerjack/fixers/performance.py` and `crackerjack/fixers/helpers/performance/` with the ported `PerformanceASTAnalyzer` logic as module-level functions, `self`/`self.context` converted to explicit parameters. Import only `crackerjack.models.issues` types.
+
 - [ ] **Step 6:** Run `pytest tests/fixers/test_performance.py -v`. Expected: PASS.
+
 - [ ] **Step 7:** Run `grep -n "crackerjack.agents\|crackerjack.ai_fix\|crackerjack.intelligence\|crackerjack.memory" crackerjack/fixers/performance.py`. Expected: no output.
+
 - [ ] **Step 8:** Commit:
+
 ```bash
 git add crackerjack/fixers/performance.py crackerjack/fixers/helpers/performance tests/fixers/test_performance.py
 git commit -m "refactor(fixers): extract performance_agent AST analysis as plain functions"
 ```
 
----
+______________________________________________________________________
 
 ### Task 6: Extract `security_agent.py` → `crackerjack/fixers/security.py`
 
 **Files:**
+
 - Read: `crackerjack/agents/security_agent.py` (1,118 lines)
 - Create: `crackerjack/fixers/security.py`
 - Test: `tests/fixers/test_security.py`
 
 **Interfaces:**
+
 - Produces: plain functions wrapping the `SAFE_PATTERNS` regex library and `_fix_regex_patterns_project_wide` — exact names determined by reading the file.
 
 - [ ] **Step 1:** Read `crackerjack/agents/security_agent.py` in full. Identify every method doing real regex-based fixing (uses `SAFE_PATTERNS`, `_fix_regex_patterns_project_wide`) versus `SubAgent`/coordinator plumbing.
+
 - [ ] **Step 2:** Run `find tests -iname "*security*agent*"` and read what's found. Identify which test cases exercise the regex fixes (keep) versus dispatch behavior (drop).
+
 - [ ] **Step 3:** Port the kept test cases into `tests/fixers/test_security.py`, updating imports from `crackerjack.agents.security_agent` to `crackerjack.fixers.security` and call sites to match Step 1's plain-function form.
+
 - [ ] **Step 4:** Run `pytest tests/fixers/test_security.py -v`. Expected: FAIL.
+
 - [ ] **Step 5:** Create `crackerjack/fixers/security.py` with the ported `SAFE_PATTERNS`/fix logic as module-level functions, `self.context` references converted to explicit parameters. Import only `crackerjack.models.issues` types.
+
 - [ ] **Step 6:** Run `pytest tests/fixers/test_security.py -v`. Expected: PASS.
+
 - [ ] **Step 7:** Run `grep -n "crackerjack.agents\|crackerjack.ai_fix\|crackerjack.intelligence\|crackerjack.memory" crackerjack/fixers/security.py`. Expected: no output.
+
 - [ ] **Step 8:** Commit:
+
 ```bash
 git add crackerjack/fixers/security.py tests/fixers/test_security.py
 git commit -m "refactor(fixers): extract security_agent regex fixes as plain functions"
 ```
 
----
+______________________________________________________________________
 
 ### Task 7: Extract `documentation_agent.py` → `crackerjack/fixers/documentation.py`
 
 **Files:**
+
 - Read: `crackerjack/agents/documentation_agent.py` (888 lines)
 - Create: `crackerjack/fixers/documentation.py`
 - Test: `tests/fixers/test_documentation.py`
 
 **Interfaces:**
+
 - Produces: plain functions wrapping `_get_commit_messages`/`_generate_changelog_entry` (git-log-based, regex parsing) — exact names determined by reading the file.
 
 - [ ] **Step 1:** Read `crackerjack/agents/documentation_agent.py` in full. Identify every method doing real changelog generation (`_get_commit_messages`, `_generate_changelog_entry`, and any related helpers) versus `SubAgent`/coordinator plumbing. Confirm zero LLM/bridge references remain, per the design investigation's finding.
+
 - [ ] **Step 2:** Run `find tests -iname "*documentation*agent*"` and read what's found. Identify which test cases exercise changelog generation (keep) versus dispatch behavior (drop).
+
 - [ ] **Step 3:** Port the kept test cases into `tests/fixers/test_documentation.py`, updating imports from `crackerjack.agents.documentation_agent` to `crackerjack.fixers.documentation` and call sites to match Step 1's plain-function form.
+
 - [ ] **Step 4:** Run `pytest tests/fixers/test_documentation.py -v`. Expected: FAIL.
+
 - [ ] **Step 5:** Create `crackerjack/fixers/documentation.py` with the ported changelog logic as module-level functions, `self.context` references converted to explicit parameters. Import only `crackerjack.models.issues` types.
+
 - [ ] **Step 6:** Run `pytest tests/fixers/test_documentation.py -v`. Expected: PASS.
+
 - [ ] **Step 7:** Run `grep -n "crackerjack.agents\|crackerjack.ai_fix\|crackerjack.intelligence\|crackerjack.memory" crackerjack/fixers/documentation.py`. Expected: no output.
+
 - [ ] **Step 8:** Commit:
+
 ```bash
 git add crackerjack/fixers/documentation.py tests/fixers/test_documentation.py
 git commit -m "refactor(fixers): extract documentation_agent changelog logic as plain functions"
 ```
 
----
+______________________________________________________________________
 
 ### Task 8: Extract `test_creation_agent.py` → `crackerjack/fixers/test_creation.py`
 
 **Files:**
+
 - Read: `crackerjack/agents/test_creation_agent.py` (793 lines), `crackerjack/agents/helpers/test_creation/` (the `TestASTAnalyzer` helper and `test_template_generator.py`)
 - Create: `crackerjack/fixers/test_creation.py`, `crackerjack/fixers/helpers/test_creation/`
 - Test: `tests/fixers/test_test_creation.py`
 
 **Interfaces:**
+
 - Produces: plain functions wrapping `TestASTAnalyzer`'s `ast.parse`/`ast.walk` scaffolding over `FunctionDef`/`AsyncFunctionDef` nodes — exact names determined by reading the file.
 
 - [ ] **Step 1:** Read `crackerjack/agents/test_creation_agent.py` and `crackerjack/agents/helpers/test_creation/` in full. Identify every method doing real AST-based test scaffolding versus `SubAgent`/coordinator plumbing.
+
 - [ ] **Step 2:** Run `find tests -iname "*test_creation*agent*"` and read what's found. Identify which test cases exercise scaffolding (keep) versus dispatch behavior (drop).
+
 - [ ] **Step 3:** Port the kept test cases into `tests/fixers/test_test_creation.py`, updating imports from `crackerjack.agents.test_creation_agent` to `crackerjack.fixers.test_creation` and call sites to match Step 1's plain-function form.
+
 - [ ] **Step 4:** Run `pytest tests/fixers/test_test_creation.py -v`. Expected: FAIL.
+
 - [ ] **Step 5:** Create `crackerjack/fixers/test_creation.py` and `crackerjack/fixers/helpers/test_creation/` with the ported `TestASTAnalyzer`/`test_template_generator` logic as module-level functions, `self.context` references converted to explicit parameters. Import only `crackerjack.models.issues` types.
+
 - [ ] **Step 6:** Run `pytest tests/fixers/test_test_creation.py -v`. Expected: PASS.
+
 - [ ] **Step 7:** Run `grep -n "crackerjack.agents\|crackerjack.ai_fix\|crackerjack.intelligence\|crackerjack.memory" crackerjack/fixers/test_creation.py`. Expected: no output.
+
 - [ ] **Step 8:** Commit:
+
 ```bash
 git add crackerjack/fixers/test_creation.py crackerjack/fixers/helpers/test_creation tests/fixers/test_test_creation.py
 git commit -m "refactor(fixers): extract test_creation_agent AST scaffolding as plain functions"
 ```
 
----
+______________________________________________________________________
 
 ### Task 9: Extract `dry_agent.py` → `crackerjack/fixers/dry.py`
 
 **Files:**
+
 - Read: `crackerjack/agents/dry_agent.py` (589 lines)
 - Create: `crackerjack/fixers/dry.py`
 - Test: `tests/fixers/test_dry.py`
 
 **Interfaces:**
+
 - Produces: plain functions wrapping `_detect_error_response_patterns`/`_detect_exception_patterns` (regex-driven duplicate detection) — exact names determined by reading the file.
 
 - [ ] **Step 1:** Read `crackerjack/agents/dry_agent.py` in full. Identify every method doing real regex-driven duplicate-pattern detection versus `SubAgent`/coordinator plumbing.
+
 - [ ] **Step 2:** Run `find tests -iname "*dry*agent*"` and read what's found. Identify which test cases exercise the detectors (keep) versus dispatch behavior (drop).
+
 - [ ] **Step 3:** Port the kept test cases into `tests/fixers/test_dry.py`, updating imports from `crackerjack.agents.dry_agent` to `crackerjack.fixers.dry` and call sites to match Step 1's plain-function form.
+
 - [ ] **Step 4:** Run `pytest tests/fixers/test_dry.py -v`. Expected: FAIL.
+
 - [ ] **Step 5:** Create `crackerjack/fixers/dry.py` with the ported detector/fix logic as module-level functions, `self.context` references converted to explicit parameters. Import only `crackerjack.models.issues` types.
+
 - [ ] **Step 6:** Run `pytest tests/fixers/test_dry.py -v`. Expected: PASS.
+
 - [ ] **Step 7:** Run `grep -n "crackerjack.agents\|crackerjack.ai_fix\|crackerjack.intelligence\|crackerjack.memory" crackerjack/fixers/dry.py`. Expected: no output.
+
 - [ ] **Step 8:** Commit:
+
 ```bash
 git add crackerjack/fixers/dry.py tests/fixers/test_dry.py
 git commit -m "refactor(fixers): extract dry_agent duplicate-pattern detectors as plain functions"
 ```
 
----
+______________________________________________________________________
 
 ### Task 10: Extract `formatting_agent.py` → `crackerjack/fixers/formatting.py`
 
 **Files:**
+
 - Read: `crackerjack/agents/formatting_agent.py` (506 lines)
 - Create: `crackerjack/fixers/formatting.py`
 - Test: `tests/fixers/test_formatting.py`
 
 **Interfaces:**
+
 - Produces: plain functions wrapping `_apply_ruff_fixes` (subprocess shell-out to `ruff`) plus manual whitespace/tab fixes — exact names determined by reading the file.
 
 - [ ] **Step 1:** Read `crackerjack/agents/formatting_agent.py` in full. Identify every method doing real formatting work (`_apply_ruff_fixes`, manual whitespace/tab fixes) versus `SubAgent`/coordinator plumbing.
+
 - [ ] **Step 2:** Run `find tests -iname "*formatting*agent*"` and read what's found. Identify which test cases exercise the ruff wrapper/whitespace fixes (keep) versus dispatch behavior (drop).
+
 - [ ] **Step 3:** Port the kept test cases into `tests/fixers/test_formatting.py`, updating imports from `crackerjack.agents.formatting_agent` to `crackerjack.fixers.formatting` and call sites to match Step 1's plain-function form.
+
 - [ ] **Step 4:** Run `pytest tests/fixers/test_formatting.py -v`. Expected: FAIL.
+
 - [ ] **Step 5:** Create `crackerjack/fixers/formatting.py` with the ported ruff-subprocess/whitespace logic as module-level functions, `self.context` references converted to explicit parameters. Import only `crackerjack.models.issues` types.
+
 - [ ] **Step 6:** Run `pytest tests/fixers/test_formatting.py -v`. Expected: PASS.
+
 - [ ] **Step 7:** Run `grep -n "crackerjack.agents\|crackerjack.ai_fix\|crackerjack.intelligence\|crackerjack.memory" crackerjack/fixers/formatting.py`. Expected: no output.
+
 - [ ] **Step 8:** Commit:
+
 ```bash
 git add crackerjack/fixers/formatting.py tests/fixers/test_formatting.py
 git commit -m "refactor(fixers): extract formatting_agent ruff-wrapper logic as plain functions"
 ```
 
----
+______________________________________________________________________
 
 ### Task 11: Extract `import_optimization_agent.py` → `crackerjack/fixers/import_optimization.py`
 
 **Files:**
+
 - Read: `crackerjack/agents/import_optimization_agent.py` (2,134 lines — second-largest file in the plan; budget extra time for Step 1)
 - Create: `crackerjack/fixers/import_optimization.py`
 - Test: `tests/fixers/test_import_optimization.py`
 
 **Interfaces:**
+
 - Produces: plain functions wrapping the `ast`-based import analysis plus `_run_vulture_analysis` (subprocess shell-out to `vulture`) — exact names determined by reading the file.
 
 - [ ] **Step 1:** Read `crackerjack/agents/import_optimization_agent.py` in full — this is the second-largest extraction in the plan, so enumerate every method as a checklist rather than skimming. Identify every method doing real import-optimization work (`ast` usage, `_run_vulture_analysis`) versus `SubAgent`/coordinator plumbing.
+
 - [ ] **Step 2:** Run `find tests -iname "*import_optimization*agent*"` and read what's found. Identify which test cases exercise the ast/vulture logic (keep) versus dispatch behavior (drop).
+
 - [ ] **Step 3:** Port the kept test cases into `tests/fixers/test_import_optimization.py`, updating imports from `crackerjack.agents.import_optimization_agent` to `crackerjack.fixers.import_optimization` and call sites to match Step 1's plain-function form.
+
 - [ ] **Step 4:** Run `pytest tests/fixers/test_import_optimization.py -v`. Expected: FAIL.
+
 - [ ] **Step 5:** Create `crackerjack/fixers/import_optimization.py` with the ported ast/vulture logic as module-level functions, `self.context` references converted to explicit parameters. Import only `crackerjack.models.issues` types.
+
 - [ ] **Step 6:** Run `pytest tests/fixers/test_import_optimization.py -v`. Expected: PASS.
+
 - [ ] **Step 7:** Run `grep -n "crackerjack.agents\|crackerjack.ai_fix\|crackerjack.intelligence\|crackerjack.memory" crackerjack/fixers/import_optimization.py`. Expected: no output.
+
 - [ ] **Step 8:** Commit:
+
 ```bash
 git add crackerjack/fixers/import_optimization.py tests/fixers/test_import_optimization.py
 git commit -m "refactor(fixers): extract import_optimization_agent ast/vulture logic as plain functions"
 ```
 
----
+______________________________________________________________________
 
 ### Task 12: Extract `test_specialist_agent.py` → `crackerjack/fixers/test_specialist.py`
 
 **Files:**
+
 - Read: `crackerjack/agents/test_specialist_agent.py` (530 lines)
 - Create: `crackerjack/fixers/test_specialist.py`
 - Test: `tests/fixers/test_test_specialist.py`
 
 **Interfaces:**
+
 - Produces: plain functions wrapping `_identify_failure_type` (string/regex matching) and templated fixture/import fixes — exact names determined by reading the file.
 
 - [ ] **Step 1:** Read `crackerjack/agents/test_specialist_agent.py` in full. Identify every method doing real failure-type classification and templated fixes versus `SubAgent`/coordinator plumbing.
+
 - [ ] **Step 2:** Run `find tests -iname "*test_specialist*agent*"` and read what's found. Identify which test cases exercise the classification/templating (keep) versus dispatch behavior (drop).
+
 - [ ] **Step 3:** Port the kept test cases into `tests/fixers/test_test_specialist.py`, updating imports from `crackerjack.agents.test_specialist_agent` to `crackerjack.fixers.test_specialist` and call sites to match Step 1's plain-function form.
+
 - [ ] **Step 4:** Run `pytest tests/fixers/test_test_specialist.py -v`. Expected: FAIL.
+
 - [ ] **Step 5:** Create `crackerjack/fixers/test_specialist.py` with the ported classification/templating logic as module-level functions, `self.context` references converted to explicit parameters. Import only `crackerjack.models.issues` types.
+
 - [ ] **Step 6:** Run `pytest tests/fixers/test_test_specialist.py -v`. Expected: PASS.
+
 - [ ] **Step 7:** Run `grep -n "crackerjack.agents\|crackerjack.ai_fix\|crackerjack.intelligence\|crackerjack.memory" crackerjack/fixers/test_specialist.py`. Expected: no output.
+
 - [ ] **Step 8:** Commit:
+
 ```bash
 git add crackerjack/fixers/test_specialist.py tests/fixers/test_test_specialist.py
 git commit -m "refactor(fixers): extract test_specialist_agent failure-type fixes as plain functions"
 ```
 
----
+______________________________________________________________________
 
 ### Task 13: Extract `refurb_agent.py` → `crackerjack/fixers/refurb.py`
 
 **Files:**
+
 - Read: `crackerjack/agents/refurb_agent.py` (2,146 lines — the largest single extraction in the plan)
 - Create: `crackerjack/fixers/refurb.py`
 - Test: `tests/fixers/test_refurb.py`
 
 **Interfaces:**
+
 - Produces: plain functions, one per `_ast_transform_*` method (confirmed present: `_ast_transform_startswith_tuple`, `_ast_transform_membership_tuple`, and at least 8 more — enumerate all of them in Step 1, do not assume only the two named ones exist).
 
 - [ ] **Step 1:** Read `crackerjack/agents/refurb_agent.py` in full. Build an explicit checklist of every `_ast_transform_*` method found (there are 10+) before touching anything else, so none are silently dropped during extraction. Separately identify `SubAgent`/coordinator plumbing to exclude.
+
 - [ ] **Step 2:** Run `find tests -iname "*refurb*agent*"` and read what's found. Cross-check every transform in the Step 1 checklist against the test file — note any transform with no corresponding test coverage (port what exists; flag gaps, don't invent tests for untested transforms beyond what's needed to prove the port is faithful).
+
 - [ ] **Step 3:** Port the kept test cases into `tests/fixers/test_refurb.py`, updating imports from `crackerjack.agents.refurb_agent` to `crackerjack.fixers.refurb` and call sites to match Step 1's plain-function form, one test group per transform.
+
 - [ ] **Step 4:** Run `pytest tests/fixers/test_refurb.py -v`. Expected: FAIL.
+
 - [ ] **Step 5:** Create `crackerjack/fixers/refurb.py` with every checklisted `_ast_transform_*` method ported as a module-level function, `self.context` references converted to explicit parameters. Import only `crackerjack.models.issues` types. Tick off each transform on the Step 1 checklist as it's ported.
+
 - [ ] **Step 6:** Run `pytest tests/fixers/test_refurb.py -v`. Expected: PASS.
+
 - [ ] **Step 7:** Run `grep -n "crackerjack.agents\|crackerjack.ai_fix\|crackerjack.intelligence\|crackerjack.memory" crackerjack/fixers/refurb.py`. Expected: no output. Also confirm the Step 1 checklist is fully ticked off — no transform left behind.
+
 - [ ] **Step 8:** Commit:
+
 ```bash
 git add crackerjack/fixers/refurb.py tests/fixers/test_refurb.py
 git commit -m "refactor(fixers): extract refurb_agent AST transforms as plain functions"
 ```
 
----
+______________________________________________________________________
 
 ### Task 14: Extract `dead_code_removal_agent.py` → `crackerjack/fixers/dead_code.py`
 
 **Files:**
+
 - Read: `crackerjack/agents/dead_code_removal_agent.py` (712 lines)
 - Create: `crackerjack/fixers/dead_code.py`
 - Test: `tests/fixers/test_dead_code.py`
 
 **Interfaces:**
+
 - Produces: plain functions wrapping the `ast`-based dead-code detection and its existing backup/rollback file-edit safety mechanism (preserve this behavior — it's independently valuable) — exact names determined by reading the file.
 
 - [ ] **Step 1:** Read `crackerjack/agents/dead_code_removal_agent.py` in full. Identify every method doing real dead-code detection/removal (including the backup/rollback mechanism) versus `SubAgent`/coordinator plumbing.
+
 - [ ] **Step 2:** Run `find tests -iname "*dead_code*agent*"` and read what's found. Identify which test cases exercise detection/removal/rollback (keep) versus dispatch behavior (drop).
+
 - [ ] **Step 3:** Port the kept test cases into `tests/fixers/test_dead_code.py`, updating imports from `crackerjack.agents.dead_code_removal_agent` to `crackerjack.fixers.dead_code` and call sites to match Step 1's plain-function form.
+
 - [ ] **Step 4:** Run `pytest tests/fixers/test_dead_code.py -v`. Expected: FAIL.
+
 - [ ] **Step 5:** Create `crackerjack/fixers/dead_code.py` with the ported detection/removal/rollback logic as module-level functions, `self.context` references converted to explicit parameters. Import only `crackerjack.models.issues` types.
+
 - [ ] **Step 6:** Run `pytest tests/fixers/test_dead_code.py -v`. Expected: PASS.
+
 - [ ] **Step 7:** Run `grep -n "crackerjack.agents\|crackerjack.ai_fix\|crackerjack.intelligence\|crackerjack.memory" crackerjack/fixers/dead_code.py`. Expected: no output.
+
 - [ ] **Step 8:** Commit:
+
 ```bash
 git add crackerjack/fixers/dead_code.py tests/fixers/test_dead_code.py
 git commit -m "refactor(fixers): extract dead_code_removal_agent AST logic as plain functions"
 ```
 
----
+______________________________________________________________________
 
 ### Task 15: Extract `type_error_specialist.py` → `crackerjack/fixers/type_errors.py`
 
 **Files:**
+
 - Read: `crackerjack/agents/type_error_specialist.py` (1,107 lines)
 - Create: `crackerjack/fixers/type_errors.py`
 - Test: `tests/fixers/test_type_errors.py`
 
 **Interfaces:**
+
 - Produces: plain functions wrapping the `ast.parse`/`ast.Module` splicing logic for Literal-type fixes — exact names determined by reading the file.
 
 - [ ] **Step 1:** Read `crackerjack/agents/type_error_specialist.py` in full. Identify every method doing real AST splicing for type fixes versus `SubAgent`/coordinator plumbing.
+
 - [ ] **Step 2:** Run `find tests -iname "*type_error*specialist*"` and read what's found. Identify which test cases exercise the splicing logic (keep) versus dispatch behavior (drop).
+
 - [ ] **Step 3:** Port the kept test cases into `tests/fixers/test_type_errors.py`, updating imports from `crackerjack.agents.type_error_specialist` to `crackerjack.fixers.type_errors` and call sites to match Step 1's plain-function form.
+
 - [ ] **Step 4:** Run `pytest tests/fixers/test_type_errors.py -v`. Expected: FAIL.
+
 - [ ] **Step 5:** Create `crackerjack/fixers/type_errors.py` with the ported AST-splicing logic as module-level functions, `self.context` references converted to explicit parameters. Import only `crackerjack.models.issues` types.
+
 - [ ] **Step 6:** Run `pytest tests/fixers/test_type_errors.py -v`. Expected: PASS.
+
 - [ ] **Step 7:** Run `grep -n "crackerjack.agents\|crackerjack.ai_fix\|crackerjack.intelligence\|crackerjack.memory" crackerjack/fixers/type_errors.py`. Expected: no output.
+
 - [ ] **Step 8:** Commit:
+
 ```bash
 git add crackerjack/fixers/type_errors.py tests/fixers/test_type_errors.py
 git commit -m "refactor(fixers): extract type_error_specialist AST splicing as plain functions"
 ```
 
----
+______________________________________________________________________
 
 ### Task 16: Extract `anti_pattern_agent.py` → `crackerjack/fixers/anti_pattern.py`
 
 **Files:**
+
 - Read: `crackerjack/agents/anti_pattern_agent.py`
 - Create: `crackerjack/fixers/anti_pattern.py`
 - Test: `tests/fixers/test_anti_pattern.py`
 
 **Interfaces:**
+
 - Produces: plain functions wrapping the `ast`-based anti-pattern detection/fix logic — exact names determined by reading the file.
 
 - [ ] **Step 1:** Read `crackerjack/agents/anti_pattern_agent.py` in full. Identify every method doing real AST-based anti-pattern detection versus `SubAgent`/coordinator plumbing.
+
 - [ ] **Step 2:** Run `find tests -iname "*anti_pattern*agent*"` and read what's found. Identify which test cases exercise detection/fixing (keep) versus dispatch behavior (drop).
+
 - [ ] **Step 3:** Port the kept test cases into `tests/fixers/test_anti_pattern.py`, updating imports from `crackerjack.agents.anti_pattern_agent` to `crackerjack.fixers.anti_pattern` and call sites to match Step 1's plain-function form.
+
 - [ ] **Step 4:** Run `pytest tests/fixers/test_anti_pattern.py -v`. Expected: FAIL.
+
 - [ ] **Step 5:** Create `crackerjack/fixers/anti_pattern.py` with the ported AST logic as module-level functions, `self.context` references converted to explicit parameters. Import only `crackerjack.models.issues` types.
+
 - [ ] **Step 6:** Run `pytest tests/fixers/test_anti_pattern.py -v`. Expected: PASS.
+
 - [ ] **Step 7:** Run `grep -n "crackerjack.agents\|crackerjack.ai_fix\|crackerjack.intelligence\|crackerjack.memory" crackerjack/fixers/anti_pattern.py`. Expected: no output.
+
 - [ ] **Step 8:** Commit:
+
 ```bash
 git add crackerjack/fixers/anti_pattern.py tests/fixers/test_anti_pattern.py
 git commit -m "refactor(fixers): extract anti_pattern_agent AST logic as plain functions"
 ```
 
----
+______________________________________________________________________
 
 ### Task 17: Extract `dependency_agent.py` → `crackerjack/fixers/dependency.py`
 
 **Files:**
+
 - Read: `crackerjack/agents/dependency_agent.py`
 - Create: `crackerjack/fixers/dependency.py`
 - Test: `tests/fixers/test_dependency.py`
 
 **Interfaces:**
+
 - Produces: plain functions wrapping the regex-based `pyproject.toml` dependency removal logic — exact names determined by reading the file.
 
 - [ ] **Step 1:** Read `crackerjack/agents/dependency_agent.py` in full. Identify every method doing real `pyproject.toml` regex editing versus `SubAgent`/coordinator plumbing.
+
 - [ ] **Step 2:** Run `find tests -iname "*dependency*agent*"` and read what's found. Identify which test cases exercise the dependency-removal logic (keep) versus dispatch behavior (drop).
+
 - [ ] **Step 3:** Port the kept test cases into `tests/fixers/test_dependency.py`, updating imports from `crackerjack.agents.dependency_agent` to `crackerjack.fixers.dependency` and call sites to match Step 1's plain-function form.
+
 - [ ] **Step 4:** Run `pytest tests/fixers/test_dependency.py -v`. Expected: FAIL.
+
 - [ ] **Step 5:** Create `crackerjack/fixers/dependency.py` with the ported `pyproject.toml` regex logic as module-level functions, `self.context` references converted to explicit parameters. Import only `crackerjack.models.issues` types.
+
 - [ ] **Step 6:** Run `pytest tests/fixers/test_dependency.py -v`. Expected: PASS.
+
 - [ ] **Step 7:** Run `grep -n "crackerjack.agents\|crackerjack.ai_fix\|crackerjack.intelligence\|crackerjack.memory" crackerjack/fixers/dependency.py`. Expected: no output.
+
 - [ ] **Step 8:** Commit:
+
 ```bash
 git add crackerjack/fixers/dependency.py tests/fixers/test_dependency.py
 git commit -m "refactor(fixers): extract dependency_agent pyproject.toml fixes as plain functions"
 ```
 
----
+______________________________________________________________________
 
 ### Task 18: Move `agents/helpers/ast_transform/` and remaining helper support modules as-is
 
 **Files:**
+
 - Move: `crackerjack/agents/helpers/ast_transform/` (including `patterns/`, `surgeons/libcst_surgeon.py` — 1,809 lines, `validator.py`) → `crackerjack/fixers/ast_transform/`
 - Move: `crackerjack/agents/helpers/refactoring/code_transformer.py` → `crackerjack/fixers/helpers/refactoring/code_transformer.py` (if not already covered by Task 4's extraction)
 - Test: existing tests under `tests/agents/helpers/ast_transform/` (locate with `find tests -path "*ast_transform*"`) move to `tests/fixers/ast_transform/`, import paths updated.
 
 **Interfaces:**
+
 - Consumes: nothing from `agents/` after the move.
+
 - Produces: the same public API these modules already have today (this is a location move, not a rewrite — these files were already found to be framework-free during the design investigation).
 
 - [ ] **Step 1: Verify these modules are genuinely framework-free before moving**
@@ -677,17 +821,20 @@ git add -A crackerjack/fixers/ast_transform tests/fixers/ast_transform
 git commit -m "refactor(fixers): move ast_transform helpers out of agents/ (framework-free, no logic change)"
 ```
 
----
+______________________________________________________________________
 
 ### Task 19: Extract the deterministic subset of `architect_agent.py` → `crackerjack/fixers/architecture.py`
 
 **Files:**
+
 - Read: `crackerjack/agents/architect_agent.py` (729 lines)
 - Create: `crackerjack/fixers/architecture.py`
 - Test: `tests/fixers/test_architecture.py`
 
 **Interfaces:**
+
 - Produces: plain functions for the `TYPE_ERROR`/`DEPENDENCY`/`DOCUMENTATION` fix methods only (confirmed present: `_apply_type_error_fixes`, `_fix_missing_typing_imports`).
+
 - Explicitly drops: the `COMPLEXITY`/`DRY_VIOLATION` branch that returns `{"strategy": "external_specialist_guided", "specialist": "crackerjack-architect"}` and the `execute_with_plan` method that refuses to act on it — this is bucket-B orchestration-deferral logic with no independent value once the coordinator is gone.
 
 - [ ] **Step 1: Read the full source file and confirm the mixed split**
@@ -728,16 +875,18 @@ git add crackerjack/fixers/architecture.py tests/fixers/test_architecture.py
 git commit -m "refactor(fixers): extract architect_agent deterministic fixes, drop external-specialist deferral branch"
 ```
 
----
+______________________________________________________________________
 
 ### Task 20: Extract `semantic_agent.py` → `crackerjack/fixers/semantic.py`
 
 **Files:**
+
 - Read: `crackerjack/agents/semantic_agent.py`
 - Create: `crackerjack/fixers/semantic.py`
 - Test: `tests/fixers/test_semantic.py`
 
 **Interfaces:**
+
 - Produces: plain functions wrapping the local `VectorStore`/embedding-search logic (confirmed deterministic — no LLM call for the actual fix, uses `sentence-transformers` for embedding search only).
 
 - [ ] **Step 1: Read the full source file, confirm no coordinator dependency beyond type imports**
@@ -759,11 +908,12 @@ git add crackerjack/fixers/semantic.py tests/fixers/test_semantic.py
 git commit -m "refactor(fixers): extract semantic_agent VectorStore logic as plain functions"
 ```
 
----
+______________________________________________________________________
 
 ### Task 21: Scope `planning_agent.py` — decide what's reusable vs. redundant
 
 **Files:**
+
 - Read: `crackerjack/agents/planning_agent.py` (3,349 lines — largest file in the whole package)
 
 **Interfaces:** N/A — this task produces a decision and a short written note, not code, consumed by Task 22.
@@ -775,6 +925,7 @@ This file needs deliberate scrutiny, not a mechanical port (per the design spec'
 - [ ] **Step 2: Classify each major section**
 
 For each top-level class/function group in the file, classify as:
+
 - **(a) Genuinely reusable fix-plan construction** — e.g., if there's logic that turns "here's a refurb violation" into "here's the exact mechanical edit to make," that's the same kind of thing as the other 15 extracted files and should move to `crackerjack/fixers/planning.py` following the Task 4 pattern.
 - **(b) Orchestration-adjacent decision logic** — e.g., anything that decides *which* fixer to run, batches issues, or sequences multi-step repairs across issue types. This duplicates the external loop's role and should be dropped, not ported.
 
@@ -784,21 +935,30 @@ Write the classification as a short markdown list (which methods/classes are (a)
 
 Given this is the single largest, most ambiguous file in the plan, do not proceed to Task 22 on a single read. Re-read the (b)-classified sections once more specifically looking for any mechanical logic embedded inside them that would be lost if the whole method is dropped — pull that logic out into the (a) list if found.
 
----
+______________________________________________________________________
 
 ### Task 22: Extract the (a)-classified portion of `planning_agent.py` → `crackerjack/fixers/planning.py`
 
 **Files:**
+
 - Create: `crackerjack/fixers/planning.py` (only if Task 21 found genuinely reusable (a) content — if Task 21's classification finds nothing qualifies as (a), skip this task and note that in the Task 21 write-up instead)
+
 - Test: `tests/fixers/test_planning.py`
 
 - [ ] **Step 1:** Using Task 21's written classification, list the specific (a)-classified methods/classes to port — do not re-derive the classification, use the decision already recorded.
+
 - [ ] **Step 2:** Run `find tests -iname "*planning*agent*"` and read what's found. Identify which test cases exercise the (a)-classified methods (keep) versus (b)-classified orchestration logic (drop).
+
 - [ ] **Step 3:** Port the kept test cases into `tests/fixers/test_planning.py`, updating imports from `crackerjack.agents.planning_agent` to `crackerjack.fixers.planning` and call sites to the new plain-function form (methods converted from `self`/`self.context` to explicit parameters).
+
 - [ ] **Step 4:** Run `pytest tests/fixers/test_planning.py -v`. Expected: FAIL (`crackerjack.fixers.planning` doesn't exist yet).
+
 - [ ] **Step 5:** Create `crackerjack/fixers/planning.py` containing only the (a)-classified methods, ported as module-level functions with `self`/`self.context` converted to explicit parameters (using the `SafeRefurbFixer` service and `ast`/`ChangeSpec`/`FixPlan` construction already confirmed present in the source). Import only `crackerjack.models.issues` types — no import of anything from `crackerjack.agents`.
+
 - [ ] **Step 6:** Run `pytest tests/fixers/test_planning.py -v`. Expected: PASS.
+
 - [ ] **Step 7:** Run `grep -n "crackerjack.agents\|crackerjack.ai_fix\|crackerjack.intelligence\|crackerjack.memory" crackerjack/fixers/planning.py`. Expected: no output.
+
 - [ ] **Step 8: Commit**
 
 ```bash
@@ -808,11 +968,12 @@ git commit -m "refactor(fixers): extract genuinely reusable planning_agent fix-p
 
 (If Task 21's classification found nothing qualifying as (a), skip Steps 1-8 entirely and note that outcome in Task 21's write-up instead — do not create an empty module.)
 
----
+______________________________________________________________________
 
 ### Task 22a: Fix dropped `cwd` pinning across all extracted fixers' `_run_command` helpers
 
 **Files:**
+
 - Modify: every `crackerjack/fixers/*.py` file created by Tasks 4-22 that defines its own subprocess-invoking helper (confirmed present in at least `refactoring.py`, `security.py`, `documentation.py`, `dry.py`, `formatting.py` as of Tasks 4/6/7/9/10 — re-derive the authoritative current list in Step 1 rather than trusting this list, since Tasks 11-22 ran after this task was written and may have introduced more instances of the same pattern)
 - Test: extend each affected file's existing test file with one new test covering the project-wide (no explicit file path) invocation path
 
@@ -855,11 +1016,12 @@ git add crackerjack/fixers/
 git commit -m "fix(fixers): thread project_root cwd pinning through all extracted _run_command helpers"
 ```
 
----
+______________________________________________________________________
 
 ### Task 23: Delete `claude_code_bridge.py` and `enhanced_proactive_agent.py`
 
 **Files:**
+
 - Delete: `crackerjack/agents/claude_code_bridge.py`, `crackerjack/agents/enhanced_proactive_agent.py`
 - Delete corresponding tests: `find tests -iname "*claude_code_bridge*" -o -iname "*enhanced_proactive*"`
 
@@ -884,11 +1046,12 @@ git rm crackerjack/agents/claude_code_bridge.py crackerjack/agents/enhanced_proa
 git commit -m "refactor(agents): delete claude_code_bridge + enhanced_proactive_agent (pure LLM-dispatch plumbing, replaced by external loop)"
 ```
 
----
+______________________________________________________________________
 
 ### Task 24: Rewrite the 6 behavioral call sites off deleted orchestration
 
 **Files:**
+
 - Modify: `crackerjack/core/proactive_workflow.py`
 - Modify: `crackerjack/core/tier3_factory.py`
 - Modify: `crackerjack/documentation/dual_output_generator.py`
@@ -898,7 +1061,9 @@ git commit -m "refactor(agents): delete claude_code_bridge + enhanced_proactive_
 - Test: run each file's existing test suite before and after.
 
 **Interfaces:**
+
 - Consumes: `crackerjack.models.issues` types (Task 2) where these files need `Issue`/`IssueType`/etc.
+
 - Produces: N/A — each of these files loses its AI-dispatch code path; none is expected to gain a new one in this plan.
 
 - [ ] **Step 1: `core/proactive_workflow.py`**
@@ -932,11 +1097,12 @@ Expected: no `ImportError`/`ModuleNotFoundError` referencing `crackerjack.agents
 
 **Note (added 2026-08-08, mid-execution)**: Task 24's Step 2 escalated `tier3_factory.py` — it turned out to be wired into a live, currently-tested code path (`autofix_coordinator.py`'s `_apply_ai_agent_fixes_v2`), not dormant. Tracing that further revealed `autofix_coordinator.py`'s AI-fix control flow (`_apply_fast_stage_fixes`/`_apply_comprehensive_stage_fixes`, gated on `AI_AGENT` env var) is the actual live `--ai-fix` invocation path — it constructs `AnalysisCoordinator`/`FixerCoordinator`/`ValidationCoordinator` from `crackerjack/agents/` and drives tier-3's `IterativeFixAgent` (`LocalClaudeSubprocess`/`MahavishnuPool`/`SessionBuddySkillStore` — an LLM-dispatch + skill-learning loop never named in the original 4-subsystem spec inventory), all woven into the same methods that handle the coordinator's normal non-AI fallback. Task 28 (originally scoped as a light "remove AI-specific methods" pass, and originally scheduled *after* Task 27's bulk deletion of `agents/` — which was backwards, since `autofix_coordinator.py`'s live imports from `agents/` must be gone *before* `agents/` can be safely deleted) is **superseded by Tasks 24a and 24b below**, inserted here per user decision. Do not run Task 28 as originally written.
 
----
+______________________________________________________________________
 
 ### Task 24a: Scope `autofix_coordinator.py` + `phase_coordinator.py` + `tier3_factory.py` + `iterative_fix_agent.py` — decide AI-dispatch vs. deterministic-fallback
 
 **Files:**
+
 - Read: `crackerjack/core/autofix_coordinator.py` (5,425 lines, ~226 methods, AI and non-AI interleaved in one class body)
 - Read: `crackerjack/core/phase_coordinator.py` (2,242 lines, partially AI-specific — confirmed eager `from crackerjack.agents.base import FixResult` at module level, plus `AgentCoordinator`/`AgentContext`/`AgentTracker` imports)
 - Read: `crackerjack/core/tier3_factory.py` (234 lines — confirmed live, wired into `autofix_coordinator.py._attach_tier3_agent`, called unconditionally from `_apply_ai_agent_fixes_v2` whenever there are fixable issues)
@@ -953,20 +1119,22 @@ This is the highest-risk, most consequential scoping task in the whole plan: `au
 Confirmed starting point: `_apply_fast_stage_fixes`/`_apply_comprehensive_stage_fixes` check `os.environ.get("AI_AGENT") == "1"`. When true, they call `_apply_ai_agent_fixes` → `_apply_ai_agent_fixes_v2`, which constructs `AnalysisCoordinator`/`FixerCoordinator`/`ValidationCoordinator` (from `crackerjack/agents/`, all scheduled for deletion in Task 27) and, via `_attach_tier3_agent`, `tier3_factory.build_iterative_agent()` (tier-3). When `AI_AGENT` is unset, the same two methods fall back to `_execute_fast_fixes()` — the deterministic, non-AI path. Map every method reachable from `_apply_ai_agent_fixes_v2`/`_run_v2_ai_fix_iteration_loop` and every method reachable only from the `AI_AGENT`-unset fallback branch.
 
 - [ ] **Step 3: Classify every top-level method in all four files** (matching Task 21's classification format):
+
   - **(a) AI-dispatch, drop entirely** — anything only reachable through the `AI_AGENT=1` branch: `_apply_ai_agent_fixes`, `_apply_ai_agent_fixes_v2`, `_attach_tier3_agent`, `_run_v2_ai_fix_iteration_loop`, and their exclusive callees; all of `tier3_factory.py`; all of `iterative_fix_agent.py`; `phase_coordinator.py`'s `AgentCoordinator`/`AgentTracker`-touching methods.
   - **(b) Deterministic/non-AI, keep as the unconditional path** — `_execute_fast_fixes` and everything the non-`AI_AGENT` fallback already reaches; all genuine tool-orchestration logic (ruff/pytest/hook-suite sequencing) unrelated to AI fixing.
   - **(c) Shared/ambiguous** — methods called from both branches (e.g. `_collect_fixable_issues`, `_build_ai_fix_scope_files`) — these stay, but any AI-specific parameter/branch inside them gets simplified away in Task 24b.
-  Write this as a named-method checklist (not an abstract description) — this becomes Task 24b's exact worklist, same discipline as Task 21.
+    Write this as a named-method checklist (not an abstract description) — this becomes Task 24b's exact worklist, same discipline as Task 21.
 
 - [ ] **Step 4: Second read.** Re-read every (a)-classified method once more, specifically hunting for embedded deterministic logic that would be lost if dropped wholesale (matching Task 21's Step 3/4 pattern) — e.g., confirm `_apply_ai_agent_fixes_v2`'s deterministic prepasses (type-tool fix, zuban fix, refurb prepass, `_execute_fast_fixes()` call before AI analysis even starts) are NOT AI-specific and must be preserved/promoted into the unconditional path, not dropped along with the AI dispatch that currently wraps them.
 
 - [ ] **Step 5: Write the classification** to a report file, following Task 21's format (Summary, per-file classification, mechanical logic recovered from (a) sections, uncertain items, recommendation for Task 24b).
 
----
+______________________________________________________________________
 
 ### Task 24b: Execute Task 24a's classification — remove the `AI_AGENT`-gated AI-fix control flow
 
 **Files:**
+
 - Modify: `crackerjack/core/autofix_coordinator.py`
 - Modify: `crackerjack/core/phase_coordinator.py`
 - Delete: `crackerjack/core/tier3_factory.py`
@@ -991,15 +1159,17 @@ Run: `pytest tests/unit/core/ -v`
 Expected: PASS, no AI-related imports remain in either file (`grep -n "crackerjack.agents\|crackerjack.ai_fix\|crackerjack.intelligence\|crackerjack.memory\|crackerjack.skills\|tier3_factory\|AI_AGENT" crackerjack/core/autofix_coordinator.py crackerjack/core/phase_coordinator.py` returns nothing beyond inert comments).
 
 - [ ] **Step 7: Commit** (final batch, after Steps 3-6):
+
 ```bash
 git commit -m "refactor(core): remove AI_AGENT-gated ai-fix control flow from autofix_coordinator/phase_coordinator, delete tier3_factory + iterative_fix_agent"
 ```
 
----
+______________________________________________________________________
 
 ### Task 25: Delete `SubAgent`, `agent_registry`, and orchestration protocols
 
 **Files:**
+
 - Modify: `crackerjack/agents/base.py` — remove `SubAgent`, `AgentContext`, `AgentRegistry`, module-level `agent_registry` (the four vocabulary types were already copied out in Task 2 — this task removes the *rest* of the file's contents; the file itself gets deleted in Task 27 along with the rest of `agents/`)
 - Modify: `crackerjack/models/protocols.py` — remove `AgentCoordinatorProtocol`, `AgentTrackerProtocol`, `AgentRegistryProtocol`
 
@@ -1025,11 +1195,12 @@ git add crackerjack/models/protocols.py
 git commit -m "refactor(models): remove orchestration protocols (AgentCoordinator/Tracker/Registry) — no longer implemented by anything"
 ```
 
----
+______________________________________________________________________
 
 ### Task 26: Delete `crackerjack/ai_fix/`, `crackerjack/intelligence/`, `crackerjack/memory/`, `crackerjack/skills/`
 
 **Files:**
+
 - Delete: all four packages in their entirety
 - Delete corresponding tests: `tests/test_ai_fix_*.py`, `tests/integration/test_ai_fix_*.py`, `tests/unit/ai_fix/`, `tests/regression/test_check_yaml_ai_fix_regression.py`, `tests/unit/core/test_ai_fix_*.py`, and equivalents for `intelligence/`, `memory/`, `skills/` (locate all with `find tests -iname "*intelligence*" -o -iname "*memory*" -o -iname "*skills*" -o -iname "*ai_fix*"`)
 
@@ -1068,11 +1239,12 @@ Expected: no collection errors referencing the deleted packages.
 git commit -m "refactor: delete ai_fix/, intelligence/, memory/, skills/ (unstable orchestration/learning subsystems, superseded by external loop)"
 ```
 
----
+______________________________________________________________________
 
 ### Task 27: Delete the remainder of `crackerjack/agents/`
 
 **Files:**
+
 - Delete: `crackerjack/agents/` in its entirety (everything not already moved to `crackerjack/fixers/` in Tasks 4-20, 22) — includes `coordinator.py`, `enhanced_coordinator.py`, `fixer_coordinator.py`, `analysis_coordinator.py`, `validation_coordinator.py`, `parallel_dispatcher.py`, `tracker.py`, `base.py`, `error_middleware.py`, `performance_tracker.py`, and any remaining agent files not covered above (confirm the full remaining file list with `ls crackerjack/agents/*.py` right before this task — it should only contain coordination/dispatch plumbing at this point).
 - Delete corresponding tests: `tests/agents/` remainder not already moved to `tests/fixers/`.
 
@@ -1113,7 +1285,7 @@ Expected: no collection errors.
 git commit -m "refactor: delete remainder of agents/ (coordination/dispatch plumbing — deterministic fixers already extracted to crackerjack/fixers/)"
 ```
 
----
+______________________________________________________________________
 
 ### Task 28 (SUPERSEDED — do not run): Remove AI-specific methods from `core/autofix_coordinator.py` and `core/phase_coordinator.py`
 
@@ -1125,6 +1297,7 @@ git commit -m "refactor: delete remainder of agents/ (coordination/dispatch plum
 ### Task 28 (ORIGINAL, SUPERSEDED): Remove AI-specific methods from `core/autofix_coordinator.py` and `core/phase_coordinator.py`
 
 **Files:**
+
 - Modify: `crackerjack/core/autofix_coordinator.py` (5,425 lines, ~226 methods, AI and non-AI interleaved in one class body)
 - Modify: `crackerjack/core/phase_coordinator.py` (2,242 lines, partially AI-specific)
 - Test: run each file's existing test suite before and after every removal batch, not just at the end.
@@ -1159,11 +1332,12 @@ Expected: PASS, no AI-related imports remain in either file (`grep -n "crackerja
 
 </details>
 
----
+______________________________________________________________________
 
 ### Task 29: Remove the `--ai-fix` CLI flag
 
 **Files:**
+
 - Modify: `crackerjack/__main__.py`
 
 **Interfaces:** N/A — removes a CLI option.
@@ -1190,11 +1364,12 @@ git add crackerjack/__main__.py
 git commit -m "refactor(cli): remove --ai-fix flag (orchestration it drove has been removed)"
 ```
 
----
+______________________________________________________________________
 
 ### Task 30: Recompute the coverage ratchet baseline
 
 **Files:**
+
 - Modify: whatever config file holds the ratchet baseline (locate with `grep -rn "coverage" pyproject.toml crackerjack/config/ 2>/dev/null | grep -i ratchet`, or check `docs/reference/COVERAGE_POLICY.md` referenced in CLAUDE.md for the mechanism)
 
 **Interfaces:** N/A — configuration update.
@@ -1216,7 +1391,7 @@ git add <ratchet config file>
 git commit -m "chore(coverage): recompute ratchet baseline after ai-fix removal (~43K lines + tests deleted)"
 ```
 
----
+______________________________________________________________________
 
 ### Task 31: Grep session-buddy for coupling to deleted code
 
@@ -1236,11 +1411,12 @@ If the search is empty, the skills-tracking integration CLAUDE.md describes must
 
 Do not silently patch session-buddy as part of this plan — per this plan's Global Constraints and the design spec's Risks section, a real cross-repo dependency here means this plan's scope needs a deliberate expansion decision, not an ad-hoc fix. Report exactly what was found to the user before proceeding further in this plan.
 
----
+______________________________________________________________________
 
 ### Task 32: Mark the eight superseded specs
 
 **Files:**
+
 - Modify frontmatter (`superseded_by` field) in:
   - `docs/superpowers/specs/2026-07-07-ai-fix-improvement-design.md`
   - `docs/superpowers/specs/2026-07-08-fix-sandbox-integration-design.md`
@@ -1262,7 +1438,7 @@ git add docs/superpowers/specs/
 git commit -m "docs(superpowers): mark 8 ai-fix specs as superseded by the removal design"
 ```
 
----
+______________________________________________________________________
 
 ### Task 33: Post-delete MCP server verification
 
@@ -1290,7 +1466,7 @@ Run: `python -m crackerjack stop`
 
 If anything failed, fix it and re-run this task from Step 1 before considering this plan complete — do not mark the plan done on a clean `git diff` alone, per the design spec's explicit instruction to verify by running.
 
----
+______________________________________________________________________
 
 ### Task 34: Final full-suite verification against baseline
 

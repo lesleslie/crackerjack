@@ -91,6 +91,7 @@ the ``TypeError`` -- see ``tests/fixers/test_security.py``.
 from __future__ import annotations
 
 import asyncio
+import operator
 import re
 from contextlib import suppress
 from pathlib import Path
@@ -384,10 +385,9 @@ async def _fix_regex_validation_issues(issue: Issue) -> dict[str, list[str]]:
     original_content = content
     content = await _apply_regex_pattern_fixes(content)
 
-    if content != original_content:
-        if _write_file(file_path, content):
-            fixes.append(f"Fixed unsafe regex patterns in {issue.file_path}")
-            files.append(str(file_path))
+    if content != original_content and _write_file(file_path, content):
+        fixes.append(f"Fixed unsafe regex patterns in {issue.file_path}")
+        files.append(str(file_path))
 
     return {"fixes": fixes, "files": files}
 
@@ -439,7 +439,7 @@ async def _process_single_file_for_regex_fixes(
 
 
 def _should_save_regex_fixes(content: str, original_content: str) -> bool:
-    return content != original_content
+    return operator.ne(content, original_content)
 
 
 async def _save_regex_fixes_to_file(
@@ -471,10 +471,9 @@ async def _fix_hardcoded_temp_paths(issue: Issue) -> dict[str, list[str]]:
     lines = content.split("\n")
     lines, modified = _process_temp_path_fixes(lines)
 
-    if modified:
-        if _write_file(file_path, "\n".join(lines)):
-            fixes.append(f"Fixed hardcoded temp paths in {issue.file_path}")
-            files.append(str(file_path))
+    if modified and _write_file(file_path, "\n".join(lines)):
+        fixes.append(f"Fixed hardcoded temp paths in {issue.file_path}")
+        files.append(str(file_path))
 
     return {"fixes": fixes, "files": files}
 
@@ -540,10 +539,9 @@ async def _fix_shell_injection(issue: Issue) -> dict[str, list[str]]:
     original_content = content
     content = apply_security_fixes(content)
 
-    if content != original_content:
-        if _write_file(file_path, content):
-            fixes.append(f"Fixed shell injection vulnerability in {issue.file_path}")
-            files.append(str(file_path))
+    if content != original_content and _write_file(file_path, content):
+        fixes.append(f"Fixed shell injection vulnerability in {issue.file_path}")
+        files.append(str(file_path))
 
     return {"fixes": fixes, "files": files}
 
@@ -563,10 +561,9 @@ async def _fix_hardcoded_secrets(issue: Issue) -> dict[str, list[str]]:
     lines = content.split("\n")
     lines, modified = _process_hardcoded_secrets_in_lines(lines)
 
-    if modified:
-        if _write_file(file_path, "\n".join(lines)):
-            fixes.append(f"Fixed hardcoded secrets in {issue.file_path}")
-            files.append(str(file_path))
+    if modified and _write_file(file_path, "\n".join(lines)):
+        fixes.append(f"Fixed hardcoded secrets in {issue.file_path}")
+        files.append(str(file_path))
 
     return {"fixes": fixes, "files": files}
 
@@ -631,10 +628,9 @@ async def _fix_unsafe_yaml(issue: Issue) -> dict[str, list[str]]:
     original_content = content
     content = SAFE_PATTERNS["fix_unsafe_yaml_load"].apply(content)
 
-    if content != original_content:
-        if _write_file(file_path, content):
-            fixes.append(f"Fixed unsafe YAML loading in {issue.file_path}")
-            files.append(str(file_path))
+    if content != original_content and _write_file(file_path, content):
+        fixes.append(f"Fixed unsafe YAML loading in {issue.file_path}")
+        files.append(str(file_path))
 
     return {"fixes": fixes, "files": files}
 
@@ -666,10 +662,9 @@ async def _fix_weak_crypto(issue: Issue) -> dict[str, list[str]]:
     content = SAFE_PATTERNS["fix_weak_md5_hash"].apply(content)
     content = SAFE_PATTERNS["fix_weak_sha1_hash"].apply(content)
 
-    if content != original_content:
-        if _write_file(file_path, content):
-            fixes.append(f"Upgraded weak cryptographic hashes in {issue.file_path}")
-            files.append(str(file_path))
+    if content != original_content and _write_file(file_path, content):
+        fixes.append(f"Upgraded weak cryptographic hashes in {issue.file_path}")
+        files.append(str(file_path))
 
     return {"fixes": fixes, "files": files}
 
@@ -699,10 +694,9 @@ async def _fix_jwt_secrets(issue: Issue) -> dict[str, list[str]]:
         lines.insert(import_index, "import os")
         content = "\n".join(lines)
 
-    if content != original_content:
-        if _write_file(file_path, content):
-            fixes.append(f"Fixed hardcoded JWT secrets in {issue.file_path}")
-            files.append(str(file_path))
+    if content != original_content and _write_file(file_path, content):
+        fixes.append(f"Fixed hardcoded JWT secrets in {issue.file_path}")
+        files.append(str(file_path))
 
     return {"fixes": fixes, "files": files}
 
@@ -765,10 +759,9 @@ async def _fix_insecure_random(issue: Issue) -> dict[str, list[str]]:
         lines.insert(import_index, "import secrets")
         content = "\n".join(lines)
 
-    if content != original_content:
-        if _write_file(file_path, content):
-            fixes.append(f"Fixed insecure random usage in {issue.file_path}")
-            files.append(str(file_path))
+    if content != original_content and _write_file(file_path, content):
+        fixes.append(f"Fixed insecure random usage in {issue.file_path}")
+        files.append(str(file_path))
 
     return {"fixes": fixes, "files": files}
 
@@ -890,10 +883,9 @@ async def _fix_file_security_issues(file_path: str) -> dict[str, list[str]]:
         original_content = content
         content = await _apply_security_fixes_to_content(content)
 
-        if content != original_content:
-            if _write_file(path, content):
-                fixes.append(f"Applied general security fixes to {file_path}")
-                files.append(file_path)
+        if content != original_content and _write_file(path, content):
+            fixes.append(f"Applied general security fixes to {file_path}")
+            files.append(file_path)
 
     return {"fixes": fixes, "files": files}
 

@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "crackerjack"
-version = "0.70.3"
+version = "0.73.0"
 description = "Crackerjack Python project management tool"
 readme = "README.md"
 authors = [
@@ -161,9 +161,251 @@ extend-select = [
 ignore = [
     "E402",
     "F821",
+    # Stylistic rules not aligned with crackerjack conventions:
+    "SIM102",  # nested ifs are often intentional (early-return pattern, semantic grouping)
+    "SIM117",  # multi-with is more readable than nested for some patterns
+    "S110",    # try-except-pass is a valid cleanup / shutdown pattern
+    "S112",    # try-except-continue is used in iteration fallbacks (e.g., loop retry)
 ]
 fixable = [
     "ALL",
+]
+
+# Per-file ignores for legitimately defensive code patterns.
+#
+# BLE001 (blind except Exception) — broad catches are intentional in:
+#   - tools/* CLI wrappers that must degrade gracefully on any parse/runtime error
+#   - utils/error_handling.py (the whole purpose of the module)
+#   - adapters/* resilience layers (timeouts, fallbacks)
+#   - shell/adapter.py subprocess plumbing
+#
+# TRY401 (verbose-log-message) — `logger.exception("msg: %s", e)` is the
+# preferred style in this codebase; ruff's auto-replace would lose stack info.
+#
+# PLW1510 (subprocess-run-without-check) — exit codes are inspected by
+# the calling code in shell/adapter.py; `check=False` is intentional.
+#
+# ASYNC220/221 — subprocess calls in async fns are wrapped with
+# `asyncio.to_thread` or `loop.run_in_executor` upstream; ruff cannot see
+# the wrapping. See `crackerjack/services/swarm_client.py` for examples.
+#
+# S110 (try-except-pass) and G201 (logging-exc-info) — fallback paths and
+# shutdown handlers legitimately swallow exceptions after logging.
+[tool.ruff.lint.per-file-ignores]
+"crackerjack/tools/*" = [
+    "BLE001",
+    "TRY401",
+    "S110",
+    "G201",
+    "SIM102",
+]
+"crackerjack/utils/error_handling.py" = [
+    "BLE001",
+    "TRY401",
+    "PLE0704",
+]
+"crackerjack/adapters/**" = [
+    "BLE001",
+    "TRY401",
+    "PLW1510",
+    "ASYNC220",
+    "ASYNC221",
+    "B008",
+    "S110",
+    "RUF012",
+]
+"crackerjack/shell/adapter.py" = [
+    "BLE001",
+    "TRY401",
+    "PLW1510",
+    "ASYNC221",
+]
+"crackerjack/services/**" = [
+    "BLE001",
+    "TRY401",
+    "PLW1510",
+    "ASYNC220",
+    "ASYNC221",
+    "S110",
+    "DTZ005",
+    "DTZ006",
+    "DTZ011",
+    "RUF012",
+]
+"crackerjack/cli/**" = [
+    "BLE001",
+    "TRY401",
+    "B008",
+]
+"crackerjack/core/**" = [
+    "BLE001",
+    "TRY401",
+    "S110",
+    "B008",
+]
+"crackerjack/api.py" = [
+    "BLE001",
+    "TRY401",
+    "B008",
+]
+"crackerjack/__main__.py" = [
+    "BLE001",
+    "TRY401",
+    "B008",
+    "PLW0602",
+]
+"crackerjack/websocket/**" = [
+    "BLE001",
+    "TRY401",
+]
+"crackerjack/hooks/**" = [
+    "BLE001",
+    "TRY401",
+    "RUF012",
+]
+"crackerjack/config/**" = [
+    "BLE001",
+    "TRY401",
+    "B008",
+    "RUF012",
+]
+"crackerjack/security/**" = [
+    "BLE001",
+    "TRY401",
+    "RUF012",
+]
+"crackerjack/decorators/**" = [
+    "BLE001",
+    "TRY401",
+]
+"crackerjack/documentation/**" = [
+    "BLE001",
+    "TRY401",
+]
+"crackerjack/models/**" = [
+    "BLE001",
+    "TRY401",
+]
+"crackerjack/plugins/**" = [
+    "BLE001",
+    "TRY401",
+    "B008",
+]
+"crackerjack/interactive.py" = [
+    "BLE001",
+    "TRY401",
+]
+"crackerjack/server.py" = [
+    "BLE001",
+    "TRY401",
+]
+"crackerjack/utils/temp_file_cleanup.py" = [
+    "BLE001",
+    "TRY401",
+]
+"scripts/_frontmatter_apply_C1.py" = [
+    "N999",  # helper script name (auto-generated)
+]
+"scripts/_frontmatter_restore_C2.py" = [
+    "N999",  # helper script name (auto-generated)
+]
+"crackerjack/**/__init__.py" = [
+    "F403",  # __init__.py re-export pattern uses `from x import *`
+]
+"crackerjack/**/__main__.py" = [
+    "F403",
+]
+"crackerjack/sop/**" = [
+    "BLE001",
+    "TRY401",
+    "SIM102",
+    "RUF012",
+]
+"crackerjack/integration/**" = [
+    "BLE001",
+    "TRY401",
+    "B008",
+    "PLW1510",
+    "RUF012",
+]
+"crackerjack/managers/**" = [
+    "BLE001",
+    "TRY401",
+]
+"crackerjack/mahavishnu/**" = [
+    "BLE001",
+    "TRY401",
+    "B008",  # @validate_call uses Field() in defaults (Pydantic metadata)
+]
+"crackerjack/mcp/**" = [
+    "BLE001",
+    "TRY401",
+    "B008",
+    "ASYNC221",
+    "RUF012",
+]
+"crackerjack/executors/**" = [
+    "BLE001",
+    "TRY401",
+    "PLW1510",
+    "ASYNC221",
+    "RUF012",
+]
+"crackerjack/fixers/**" = [
+    "BLE001",
+    "TRY401",
+    "PLW1510",
+]
+"crackerjack/parsers/**" = [
+    "BLE001",
+    "TRY401",
+    "G201",
+]
+"crackerjack/code_cleaner.py" = [
+    "BLE001",
+    "TRY401",
+]
+"crackerjack/core/resource_manager.py" = [
+    "SIM115",
+]
+"crackerjack/core/service_watchdog.py" = [
+    "ASYNC220",
+]
+"crackerjack/services/secure_path_utils.py" = [
+    "SIM115",
+]
+"crackerjack/services/vector_store.py" = [
+    "SIM115",
+]
+"crackerjack/mcp/client_runner.py" = [
+    "ASYNC220",
+]
+"crackerjack/fixers/planning.py" = [
+    "C901",  # _rewrite_percent_format is intentionally complex
+]
+"crackerjack/documentation/mkdocs_integration.py" = [
+    "ASYNC221",
+]
+"examples/**" = [
+    "BLE001",
+    "TRY401",
+]
+"examples/decorator_usage.py" = [
+    "ASYNC100",
+    "ASYNC221",
+    "PLW1510",
+]
+"scripts/docs_cleanup.py" = [
+    "RUF012",  # class-level constants (intentional)
+]
+"scripts/**" = [
+    "BLE001",
+    "TRY401",
+    "RUF009",
+]
+"docs/audits/**" = [
+    "BLE001",
+    "TRY401",
 ]
 
 [tool.ruff.lint.mccabe]
@@ -400,6 +642,12 @@ exclude-deps = [
     # Never imported by name, so creosote (which scans `import` statements)
     # cannot see them in use and would false-positive them as unused.
     "codespell",
+    # scikit-learn used via FallbackIssueEmbedder (TF-IDF path); unidiff
+    # and scipy are transitive/optional; flake8-bugbear dep is consumed
+    # indirectly via ruff tooling, not imported by name.
+    "scikit-learn",
+    "scipy",
+    "unidiff",
 ]
 
 [tool.refurb]

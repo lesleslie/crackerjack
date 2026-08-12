@@ -381,8 +381,12 @@ class PhaseCoordinator:
             if getattr(options, "fast_iteration", False):
                 break
 
-            if attempt < max_attempts:
-                self._display_hook_failures("fast", self._last_hook_results, options)
+        # Deferred verbose failure print: only fires after the loop exits and
+        # only when both attempts failed. This keeps the retry banner and the
+        # second attempt's results table adjacent, instead of interleaving the
+        # verbose failure block between attempts.
+        if not success:
+            self._display_hook_failures("fast", self._last_hook_results, options)
 
         return success
 
@@ -681,7 +685,11 @@ class PhaseCoordinator:
         self._display_cleanup_header()
 
         validator = FrontmatterValidator(pkg_path=self.pkg_path)
-        vresult = validator.validate(allow_nonstandard=True)
+        vresult = validator.validate(
+            allow_nonstandard=True,
+            validate_links=False,
+            skip_link_note=False,
+        )
         if not vresult.success:
             self.session.fail_task(
                 "documentation_cleanup",
@@ -1531,8 +1539,14 @@ class PhaseCoordinator:
         if not new_version:
             return False
 
+        # Snapshot the files modified by the bump so we can revert them
+        # if the subsequent commit fails (mirrors the pypi-failure rollback).
+        bump_files = self.git_service.get_changed_files()
+
         current_commit_hash = self._commit_version_changes(new_version)
         if not current_commit_hash:
+            if bump_files:
+                self._attempt_rollback_version_bump_files(bump_files)
             return False
 
         if not self._publish_to_pypi(
@@ -1655,6 +1669,32 @@ class PhaseCoordinator:
             return False
         except Exception as e:
             self.console.print(f"[red]❌ Error during version rollback: {e}[/red]")
+            return False
+
+    def _attempt_rollback_version_bump_files(self, files: list[str]) -> bool:
+        """Revert uncommitted bump-file edits when the version bump commit fails.
+
+        Mirrors ``_attempt_rollback_version_bump`` for the pre-commit failure
+        case: ``reset_hard`` would discard unrelated un-staged work, so we
+        surgically revert only the files the bump touched.
+        """
+        try:
+            self.console.print(
+                "[yellow]🔄 Attempting to rollback version bump edits...[/yellow]",
+            )
+            if not self.git_service.checkout_files(files):
+                self.console.print(
+                    "[red]❌ Failed to revert version bump edits[/red]",
+                )
+                return False
+            self.console.print(
+                f"[green]✅ Version bump edits ({len(files)} files) reverted[/green]",
+            )
+            return True
+        except Exception as e:
+            self.console.print(
+                f"[red]❌ Error during version bump file rollback: {e}[/red]",
+            )
             return False
 
     def _display_version_bump_header(self) -> None:

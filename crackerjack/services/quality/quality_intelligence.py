@@ -12,8 +12,6 @@ from .quality_baseline_enhanced import (
 )
 
 try:  # pragma: no cover - optional dependency
-    import scipy  # noqa: F401
-
     SCIPY_AVAILABLE = True
 except Exception:  # pragma: no cover - optional dependency
     SCIPY_AVAILABLE = False
