@@ -5,7 +5,7 @@
 > **Plan under execution:** `docs/superpowers/plans/2026-08-06-ai-fix-external-loop.md`.
 > **Target of Task 1:** Verify `crackerjack run -v` produces informative output on both dirty and clean repo states; confirm exit-code signal reliability.
 
----
+______________________________________________________________________
 
 ## Context
 
@@ -17,7 +17,7 @@ A `crackerjack` codebase claim — *"the `-v` output is informative enough for a
 
 Pre-flight checks on 2026-08-10 partially completed Task 1 (the dirty case) and identified two amendments that were merged as commit `1d1527aa`. This kickoff documents what's done, what's blocked, and the safe path to complete Task 1.
 
----
+______________________________________________________________________
 
 ## What's Already Verified (from pre-flight 2026-08-10)
 
@@ -27,9 +27,9 @@ Pre-flight checks on 2026-08-10 partially completed Task 1 (the dirty case) and 
 | `crackerjack run -v` produces per-hook summary | Foreground run captured 100+ lines | **✅ PASS** — `name :: FAILED \| X \| issues=N` format confirmed (e.g. `ruff-check :: FAILED \| 5.02s \| issues=999`) |
 | Per-hook issue counts sum to total issues | Manual summation of captured output | **✅ PASS** — failed hooks: ruff-check=999, codespell=7, mdformat=1, check-local-links=8, skill-coverage=2, pip-audit=2 → ~1019 baseline |
 | Output uses Rich-formatted markup | Visual inspection of captured output | **✅ PASS** — ANSI escapes, UTF-8 emoji (`✅`, `❌`, `⏳`, `🔍`), Unicode box-drawing (`─`, `│`, `╭`, `╰`) all present; documented in plan as Task 1 normalization note (line 74) |
-| Per-issue lines have parseable format | Visual inspection | **✅ PASS** — Ruff-style `path:line: CODE message` confirmed (e.g. `/Users/les/Projects/crackerjack/crackerjack/__main__.py:26: BLE001 Do not catch blind exception: \`Exception\``) |
+| Per-issue lines have parseable format | Visual inspection | **✅ PASS** — Ruff-style `path:line: CODE message` confirmed (e.g. `/Users/les/Projects/crackerjack/crackerjack/__main__.py:26: BLE001 Do not catch blind exception: \`Exception\`\`) |
 
----
+______________________________________________________________________
 
 ## What's NOT Yet Verified
 
@@ -67,34 +67,37 @@ Not yet executed. Plan rationale (line 81):
 > *"non-zero exit could mean either 'hooks found issues' or 'the command itself crashed' — note in your report which failure mode is distinguishable from the output alone and which isn't."*
 
 This step needs:
+
 - A run that exits 0 (clean) — blocked by B1
 - A run that exits non-zero with issues (verified by pre-flight dirty run, which presumably exited non-zero)
 - A run that exits non-zero due to crash (need to induce or observe a known-crash scenario)
 
----
+______________________________________________________________________
 
 ## Proposed Sequencing
 
 ### Path A: Throwaway worktree (Recommended)
 
 1. Create a fresh worktree at commit `1d1527aa` (current main, +44 ahead of origin):
+
    ```bash
    cd /Users/les/Projects/crackerjack
    git worktree add /tmp/task1-clean-verify 1d1527aa
    cd /tmp/task1-clean-verify
    ```
 
-2. Run `crackerjack run -v` from the clean worktree. Expected:
+1. Run `crackerjack run -v` from the clean worktree. Expected:
+
    - Either clean pass (exit 0, "all hooks passed" output) — documents the success path
    - Or failures with smaller issue counts (e.g. ~100 baseline vs. ~1000 on dirty tree) — also documents informative output
 
-3. Capture exit code separately: `crackerjack run -v; echo "exit=$?"`
+1. Capture exit code separately: `crackerjack run -v; echo "exit=$?"`
 
-4. Capture output via `2>&1 | tee /tmp/task1-clean-output.txt`
+1. Capture output via `2>&1 | tee /tmp/task1-clean-output.txt`
 
-5. **Do NOT push the worktree** — its only purpose is verification. Remove with `git worktree remove /tmp/task1-clean-verify` after.
+1. **Do NOT push the worktree** — its only purpose is verification. Remove with `git worktree remove /tmp/task1-clean-verify` after.
 
-6. **Do NOT run `crackerjack run` on the main checkout** — that would re-introduce autofix dirty files.
+1. **Do NOT run `crackerjack run` on the main checkout** — that would re-introduce autofix dirty files.
 
 ### Path B: Wait for Task 24b
 
@@ -104,7 +107,7 @@ If Task 24b is resolved in the next 24-48 hours (owning agent: TBD per plan), th
 
 `git stash` of the 12 dirty files would risk losing Task 24b's partial import cleanup. The blast radius of `git stash drop` after a failed restore is too large given the comment explicitly warning that file will fail to import. Path C is explicitly rejected.
 
----
+______________________________________________________________________
 
 ## Acceptance Criteria for Task 1
 
@@ -120,7 +123,7 @@ If Task 24b is resolved in the next 24-48 hours (owning agent: TBD per plan), th
 
 If any criterion fails, Task 1 stops and reports back. Per the plan: *"the whole Verify-phase design depends on there being something informative to interpret, even if it isn't JSON."*
 
----
+______________________________________________________________________
 
 ## Risks
 
@@ -132,7 +135,7 @@ If any criterion fails, Task 1 stops and reports back. Per the plan: *"the whole
 | The plan's Task 3 agent prompt interpretation of `-v` output still fails on actual agent call | High | Path A doesn't test the agent interpretation — it tests the CLI output. Agent interpretation testing is Task 3's job, gated on Task 1's success. |
 | Mahavishnu pool timeout (300s default) interferes with the pre-flight run that took 117s on first attempt | Low | Use foreground `crackerjack run -v` directly, not via Mahavishnu pool. Avoids the pool's overhead and lets the run finish naturally. |
 
----
+______________________________________________________________________
 
 ## Concrete Commands (when ready to execute Path A)
 
@@ -178,7 +181,7 @@ echo "Exit codes: clean=$EXIT, dirty=<re-run needed>, crash=<from step 6>"
 echo "=== End report ==="
 ```
 
----
+______________________________________________________________________
 
 ## What This Kickoff Does NOT Cover
 
@@ -188,11 +191,11 @@ echo "=== End report ==="
 
 The kickoff only addresses Task 1. Sequential tasks should each get their own kickoff before execution.
 
----
+______________________________________________________________________
 
 ## Open Questions for User
 
 1. **Path A vs Path B**: Do you want to proceed with the worktree verification now, or wait for Task 24b to clear the dirty state and verify on main directly?
-2. **Crash-mode test (criterion 4)**: Are you comfortable running `crackerjack run --skip-hooks --run-tests` (known-crash path per sibling plan)? It exits non-zero without producing useful output — that's exactly the data we need, but it does mean running a command we know will fail.
-3. **The 12 dirty files**: Should I attempt to identify which were caused by my pre-flight run vs. which were pre-existing? This would require `git stash` of the suspected-mine files only, then comparing — risky given the Task 24b file. Alternative: leave them all alone, let Task 24b resolve.
-4. **Push to origin**: After Task 1 PASS, the next action is Task 2 in a new worktree. No push needed until a real commit-worthy result lands. Confirm: hold off on `git push` until you say so?
+1. **Crash-mode test (criterion 4)**: Are you comfortable running `crackerjack run --skip-hooks --run-tests` (known-crash path per sibling plan)? It exits non-zero without producing useful output — that's exactly the data we need, but it does mean running a command we know will fail.
+1. **The 12 dirty files**: Should I attempt to identify which were caused by my pre-flight run vs. which were pre-existing? This would require `git stash` of the suspected-mine files only, then comparing — risky given the Task 24b file. Alternative: leave them all alone, let Task 24b resolve.
+1. **Push to origin**: After Task 1 PASS, the next action is Task 2 in a new worktree. No push needed until a real commit-worthy result lands. Confirm: hold off on `git push` until you say so?
