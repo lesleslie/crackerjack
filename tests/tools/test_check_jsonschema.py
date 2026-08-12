@@ -388,20 +388,20 @@ class TestProcessFile:
         data_file.write_text('{}')
 
         with patch("builtins.print"):
-            result = _process_file(data_file, schema_file, False)
-        assert result == 0
+            result = _process_file(data_file, schema_file, False, False)
+        assert result == (0, [])
 
     def test_no_schema_not_strict(self, tmp_path: Path) -> None:
         """Verify skip when no schema in non-strict mode."""
         with patch("builtins.print"):
-            result = _process_file(tmp_path / "data.json", None, False)
-        assert result == 0
+            result = _process_file(tmp_path / "data.json", None, False, False)
+        assert result == (0, [])
 
     def test_no_schema_strict(self, tmp_path: Path) -> None:
         """Verify fail when no schema in strict mode."""
         with patch("builtins.print"):
-            result = _process_file(tmp_path / "data.json", None, True)
-        assert result == 1
+            result = _process_file(tmp_path / "data.json", None, True, False)
+        assert result == (1, [])
 
 
 class TestMain:
@@ -419,11 +419,17 @@ class TestMain:
     @patch("crackerjack.tools.check_jsonschema.find_schema_for_json")
     @patch("crackerjack.tools.check_jsonschema._process_file")
     def test_processes_files(self, mock_process, mock_find, mock_get, tmp_path: Path) -> None:
-        """Verify files are processed."""
+        """Verify files are processed.
+
+        Regression guard: since 95ea2aaa (2025-11-13) ``_process_file``
+        takes ``json_mode`` as a 4th positional argument and returns
+        ``tuple[int, list[dict]]`` so ``main`` can aggregate the
+        structured error list across files.
+        """
         file1 = tmp_path / "file1.json"
         mock_get.return_value = [file1]
         mock_find.return_value = None
-        mock_process.return_value = 0
+        mock_process.return_value = (0, [])
 
         with patch("builtins.print"):
             result = main([])
