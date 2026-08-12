@@ -184,7 +184,7 @@ def analyze_merge_patterns(
         period_end = datetime.now(UTC)
         period_start = period_end - timedelta(days=days_back)
 
-        repos_data = []
+        repos_data: list[dict[str, int | float | str | Path]] = []
         total_merges = 0
         total_rebases = 0
         total_conflicts = 0
@@ -198,7 +198,7 @@ def analyze_merge_patterns(
                 continue
 
             try:
-                collector = GitMetricsCollector(repo_path)  # type: ignore
+                collector = GitMetricsCollector(repo_path)
                 merge_metrics = collector.collect_merge_patterns(
                     since=period_start, until=period_end
                 )
@@ -601,7 +601,7 @@ def _collect_conflicts_from_repos(
             continue
 
         try:
-            collector = GitMetricsCollector(repo_path)  # type: ignore
+            collector = GitMetricsCollector(repo_path)
             merge_metrics = collector.collect_merge_patterns(
                 since=period_start, until=period_end
             )
@@ -2117,7 +2117,7 @@ def get_workflow_recommendations(
         for repo_velocity in repos_data:
             repo_path = Path(repo_velocity.repository_path)
             try:
-                collector = GitMetricsCollector(repo_path)  # type: ignore
+                collector = GitMetricsCollector(repo_path)
                 commit_metrics = collector.collect_commit_metrics(
                     since=period_start, until=period_end
                 )

@@ -2085,16 +2085,16 @@ def _create_test_creation_result(
     # Preserved verbatim from TestCreationAgent._create_test_creation_result:
     # `success` is assigned the *list* `fixes_applied`, not `bool(fixes_applied)`.
     # See module docstring for the full quirk explanation.
-    success = fixes_applied
+    success = bool(fixes_applied)
 
-    confidence = _calculate_confidence(success, fixes_applied, files_modified)  # type: ignore[arg-type]
+    confidence = _calculate_confidence(success, fixes_applied, files_modified)
 
     return FixResult(
-        success=success,  # type: ignore[arg-type]
+        success=success,
         confidence=confidence,
         fixes_applied=fixes_applied,
         remaining_issues=[],
-        recommendations=_generate_recommendations(success),  # type: ignore[arg-type]
+        recommendations=_generate_recommendations(success),
         files_modified=files_modified,
     )
 

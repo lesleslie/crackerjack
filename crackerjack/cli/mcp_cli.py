@@ -611,8 +611,8 @@ def health(
             f" Process: {'[green]alive[/green]' if health_data['process_alive'] else '[red]dead[/red]'}"
         )
 
-        if health_data.get("snapshot"):
-            snapshot = health_data["snapshot"]
+        snapshot = health_data.get("snapshot")
+        if snapshot is not None:
             console.print(
                 f" Watchers: {'[green]running[/green]' if snapshot.get('watchers_running') else '[red]stopped[/red]'}"
             )

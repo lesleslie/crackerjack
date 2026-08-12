@@ -372,6 +372,7 @@ class TestGitInterface:
         mock_git.push = MagicMock(return_value=True)
         mock_git.add_files = MagicMock(return_value=True)
         mock_git.add_all_files = MagicMock(return_value=True)
+        mock_git.checkout_files = MagicMock(return_value=True)
 
         assert isinstance(mock_git, GitInterface)
 
@@ -395,6 +396,9 @@ class TestGitInterface:
                 return True
 
             def add_all_files(self) -> bool:
+                return True
+
+            def checkout_files(self, files: list[str]) -> bool:
                 return True
 
         git = SimpleGit()
@@ -543,6 +547,24 @@ class TestCoverageRatchetProtocol:
         mock_ratchet.get_status_report = MagicMock(return_value={})
         mock_ratchet.get_coverage_report = MagicMock(return_value="Report")
         mock_ratchet.check_and_update_coverage = MagicMock(return_value={})
+        mock_ratchet.get_ratchet_data = MagicMock(return_value={})
+        mock_ratchet.mirror_to_pyproject = MagicMock(return_value=None)
+        # ServiceProtocol inherited methods (all 12) — required by
+        # CoverageRatchetProtocol(ServiceProtocol) inheritance.
+        mock_ratchet.initialize = MagicMock(return_value=None)
+        mock_ratchet.cleanup = MagicMock(return_value=None)
+        mock_ratchet.health_check = MagicMock(return_value=True)
+        mock_ratchet.shutdown = MagicMock(return_value=None)
+        mock_ratchet.metrics = MagicMock(return_value={})
+        mock_ratchet.is_healthy = MagicMock(return_value=True)
+        mock_ratchet.register_resource = MagicMock(return_value=None)
+        mock_ratchet.cleanup_resource = MagicMock(return_value=None)
+        mock_ratchet.record_error = MagicMock(return_value=None)
+        mock_ratchet.increment_requests = MagicMock(return_value=None)
+        mock_ratchet.get_custom_metric = MagicMock(return_value=None)
+        mock_ratchet.set_custom_metric = MagicMock(return_value=None)
+        mock_ratchet.TOLERANCE_MARGIN = 0.01
+        mock_ratchet.ratchet_file = Path("/tmp/ratchet.json")
 
         assert isinstance(mock_ratchet, CoverageRatchetProtocol)
 

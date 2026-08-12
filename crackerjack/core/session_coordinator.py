@@ -272,7 +272,7 @@ class SessionCoordinator:
             if executor is None:
 
                 class _SubprocessExecutor:
-                    allowed_git_patterns: t.ClassVar[list[str]] = []
+                    allowed_git_patterns: list[str] = []
 
                     def execute_secure(
                         self,

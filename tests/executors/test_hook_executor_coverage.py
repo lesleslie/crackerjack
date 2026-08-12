@@ -676,14 +676,25 @@ class TestUpdateStatusReportingTools:
 
 class TestExtractIssuesForReportingTools:
     def test_complexipy_dispatches(self, executor: HookExecutor) -> None:
+        """Verify complexipy dispatches through the JSON parser path.
+
+        The production ``_extract_issues_for_reporting_tools`` routes
+        complexipy (along with pyscn/betterleaks/check-jsonschema)
+        through ``_extract_issues_via_json_parser``, NOT directly to
+        ``_parse_complexipy_issues`` — patching the wrong method made
+        the test permanently green-but-untested. Patch the actual
+        dispatch target.
+        """
         with patch.object(
-            executor, "_parse_complexipy_issues", return_value=["c1"]
+            executor,
+            "_extract_issues_via_json_parser",
+            return_value=["c1"],
         ) as m:
             out = executor._extract_issues_for_reporting_tools(
                 HookDefinition(name="complexipy", command=[]), "raw"
             )
         assert out == ["c1"]
-        m.assert_called_once()
+        m.assert_called_once_with("complexipy", "raw")
 
     def test_refurb_dispatches(self, executor: HookExecutor) -> None:
         with patch.object(executor, "_parse_refurb_issues", return_value=["r1"]):

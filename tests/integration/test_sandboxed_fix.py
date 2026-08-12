@@ -74,7 +74,7 @@ def test_sandboxed_fix_in_worktree(tmp_path: Path) -> None:
         env["CRACKERJACK_AI_FIX_PER_ISSUE_TIMEOUT"] = "30"
         env["CRACKERJACK_AI_FIX_GLOBAL_RETRY_BUDGET"] = "5"
         result = subprocess.run(
-            ["uv", "run", "crackerjack", "run", "--ai-fix",
+            ["uv", "run", "crackerjack", "run", "--all-files",
              "--skip-hooks", "-n"],
             cwd=worktree, env=env, capture_output=True, text=True, timeout=540,
         )

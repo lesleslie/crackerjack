@@ -69,12 +69,18 @@ class TestPyscnCCSuppression:
             "(ruff C901 already covers this in the fast stage)"
         )
 
-    async def test_pyscn_cyclomatic_default_is_true(self) -> None:
-        """skip_cyclomatic must default to True."""
+    async def test_pyscn_cyclomatic_default_is_false(self) -> None:
+        """skip_cyclomatic must default to False.
+
+        Regression guard: pyscn's primary purpose is to detect
+        complexity issues. Defaulting skip_cyclomatic to True made
+        the parser return 0 issues for every output — defeating the
+        tool. Flipped in d0f0c8b3.
+        """
         from crackerjack.adapters.sast.pyscn import PyscnSettings
 
         settings = PyscnSettings(timeout_seconds=120, max_workers=4)
-        assert settings.skip_cyclomatic is True
+        assert settings.skip_cyclomatic is False
 
     async def test_pyscn_cc_returned_when_not_skipped(
         self, adapter_with_cc_enabled

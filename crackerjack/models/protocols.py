@@ -9,7 +9,8 @@ from typing import TYPE_CHECKING
 from crackerjack.config.settings import CrackerjackSettings
 
 if t.TYPE_CHECKING:
-    from crackerjack.models.issues import Issue
+    from crackerjack.agents.base import AgentContext
+    from crackerjack.models.issues import FixResult, Issue
     from crackerjack.models.qa_config import QACheckConfig
     from crackerjack.models.qa_results import QAResult
 
@@ -248,6 +249,8 @@ class GitInterface(t.Protocol):
 
     def add_all_files(self) -> bool: ...
 
+    def checkout_files(self, files: list[str]) -> bool: ...
+
     if TYPE_CHECKING:
 
         def get_staged_files(self) -> list[str]: ...
@@ -321,6 +324,9 @@ class SecurityAwareHookManager(HookManager, t.Protocol):
 
 @t.runtime_checkable
 class CoverageRatchetProtocol(ServiceProtocol, t.Protocol):
+    TOLERANCE_MARGIN: float
+    ratchet_file: Path
+
     def get_baseline_coverage(self) -> float: ...
 
     def update_baseline_coverage(self, new_coverage: float) -> bool: ...
@@ -334,6 +340,10 @@ class CoverageRatchetProtocol(ServiceProtocol, t.Protocol):
     def get_coverage_report(self) -> str | None: ...
 
     def check_and_update_coverage(self) -> dict[str, t.Any]: ...
+
+    def get_ratchet_data(self) -> dict[str, t.Any]: ...
+
+    def mirror_to_pyproject(self, coverage: float) -> None: ...
 
 
 @t.runtime_checkable

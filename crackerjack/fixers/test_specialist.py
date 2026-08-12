@@ -510,9 +510,9 @@ async def _apply_file_fixes(issue: Issue) -> tuple[list[str], bool]:
     file_fixes = await _fix_test_file_issues(issue.file_path)
     # NOTE: second element is actually `file_fixes` (a list), not a bool --
     # preserved verbatim from TestSpecialistAgent._apply_file_fixes (which
-    # has a `# type: ignore` on this exact line). See module docstring
+    # has a `type-ignore` directive on this exact line). See module docstring
     # quirk (1).
-    return file_fixes, file_fixes  # type: ignore[return-value]
+    return file_fixes, bool(file_fixes)
 
 
 def _get_failure_recommendations(fixes_applied: list[str]) -> list[str]:

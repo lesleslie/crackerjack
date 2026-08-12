@@ -148,21 +148,27 @@ async def test_connect_returns_false_on_connection_error() -> None:
     import types
 
     client = DharaMCPClient(DharaMCPConfig(url="http://unreachable:9999"))
-    fake_module = types.ModuleType("mcp.client.streamablehttp")
+    # MCP SDK renamed the module from ``streamablehttp`` to
+    # ``streamable_http`` (note the underscore). Production
+    # (``crackerjack/integration/dhara_mcp_client.py``) imports from
+    # the new name. Patch the new module path so the
+    # ``ImportError`` fallback isn't triggered instead of the
+    # intended ``ConnectionError`` path.
+    fake_module = types.ModuleType("mcp.client.streamable_http")
 
     def _raise(*args: object, **kwargs: object) -> None:
         raise ConnectionError("refused")
 
     fake_module.streamablehttp_client = _raise  # type: ignore[attr-defined]
-    saved = sys.modules.get("mcp.client.streamablehttp")
-    sys.modules["mcp.client.streamablehttp"] = fake_module
+    saved = sys.modules.get("mcp.client.streamable_http")
+    sys.modules["mcp.client.streamable_http"] = fake_module
     try:
         result = await client.connect()
     finally:
         if saved is None:
-            sys.modules.pop("mcp.client.streamablehttp", None)
+            sys.modules.pop("mcp.client.streamable_http", None)
         else:
-            sys.modules["mcp.client.streamablehttp"] = saved
+            sys.modules["mcp.client.streamable_http"] = saved
 
     assert result is False
     assert client._is_connected is False

@@ -18,7 +18,7 @@ from crackerjack.config.global_lock_config import (
 
 
 class HookLockManager:
-    _instance: HookLockManager | None = None
+    _instance: t.Self | None = None
     _initialized: bool = False
 
     def __new__(cls) -> t.Self:
