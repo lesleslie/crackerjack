@@ -7,6 +7,7 @@ import typer
 from rich.console import Console
 
 from crackerjack.services.coverage_ratchet import CoverageRatchetService
+from crackerjack.services.filesystem import FileSystemService
 
 app = typer.Typer(
     name="coverage-ratchet",
@@ -51,9 +52,18 @@ def init(
     svc.initialize_baseline(coverage)
     try:
         svc.mirror_to_pyproject(coverage)
+        # Symmetrize with auto-bump path: trim trailing whitespace/newlines.
+        pyproject_path = pkg_path / "pyproject.toml"
+        if pyproject_path.exists():
+            content = pyproject_path.read_text()
+            cleaned = FileSystemService.clean_trailing_whitespace_and_newlines(
+                content
+            )
+            if cleaned != content:
+                pyproject_path.write_text(cleaned)
     except FileNotFoundError:
         console.print(
-            "[yellow]⚠️  pyproject.toml not found; skipped mirroring.[/yellow]"
+            "[yellow]�️  pyproject.toml not found; skipped mirroring.[/yellow]"
         )
     console.print(f"[green]✅ Ratchet initialized at {coverage:.2f}%[/green]")
 

@@ -13,12 +13,11 @@ class FileSystemService(FileSystemInterface):
     def clean_trailing_whitespace_and_newlines(content: str) -> str:
         lines = content.splitlines()
         cleaned_lines = [line.rstrip() for line in lines]
-
-        result = "\n".join(cleaned_lines)
-        if result and not result.endswith("\n"):
-            result += "\n"
-
-        return result
+        while cleaned_lines and not cleaned_lines[-1]:
+            cleaned_lines.pop()
+        if not cleaned_lines:
+            return ""
+        return "\n".join(cleaned_lines) + "\n"
 
     def _validate_path_exists(self, path_obj: Path, operation: str) -> None:
         if not path_obj.exists():

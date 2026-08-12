@@ -83,3 +83,20 @@ def test_status_prints_ratchet_state(tmp_path: Path) -> None:
     result = runner.invoke(app, ["status", "--pkg-path", str(tmp_path)])
     assert result.exit_code == 0, result.output
     assert "Baseline" in result.output or "50" in result.output
+
+
+@pytest.mark.unit
+def test_init_trims_trailing_whitespace_and_newlines(tmp_path: Path) -> None:
+    (tmp_path / "coverage.json").write_text(
+        json.dumps({"totals": {"percent_covered": 50.0}})
+    )
+    (tmp_path / "pyproject.toml").write_text(
+        '[tool.pytest.ini_options]\naddopts = "--cov-fail-under=80"'
+        "\n\n\n"  # multiple trailing newlines
+    )
+    result = runner.invoke(app, ["init", "--pkg-path", str(tmp_path)])
+    assert result.exit_code == 0, result.output
+    content = (tmp_path / "pyproject.toml").read_text()
+    # Single trailing newline, no whitespace-only trailing lines
+    assert content.endswith("\n")
+    assert not content.endswith("\n\n")
