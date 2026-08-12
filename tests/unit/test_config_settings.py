@@ -59,12 +59,18 @@ class TestHookSettings:
     """Tests for HookSettings."""
 
     def test_default_values(self):
-        """Test default values for HookSettings."""
+        """Test default values for HookSettings.
+
+        enable_ty is True: ty replaced zuban as the primary type checker, so it
+        is active by default. It was briefly False after 370983cf (2026-08-03)
+        demoted the hook to opt-in, which silently disabled type checking for
+        every consumer past 0.70.x. zuban and pyrefly remain opt-in.
+        """
         settings = HookSettings()
         assert settings.skip_hooks is False
         assert settings.experimental_hooks is False
         assert settings.enable_pyrefly is False
-        assert settings.enable_ty is False
+        assert settings.enable_ty is True
         assert settings.enable_lsp_optimization is False
 
     def test_enable_pyrefly(self):

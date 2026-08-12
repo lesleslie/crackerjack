@@ -21,7 +21,7 @@ class HookSettings(OneiricMCPConfig):
     skip_hooks: bool = False
     experimental_hooks: bool = False
     enable_pyrefly: bool = False
-    enable_ty: bool = False
+    enable_ty: bool = True
     enable_zuban: bool = False
     enable_ty_ignore_syntax: bool = False
     enable_lsp_optimization: bool = False

@@ -223,8 +223,9 @@ COMPREHENSIVE_HOOKS = [
         security_level=SecurityLevel.HIGH,
         accepts_file_paths=True,
         description=(
-            "Type checker (opt-in via enable_ty flag). zuban is registered as the "
-            "default primary type checker; enable_ty=True here adds ty alongside it."
+            "Primary type checker (replaced zuban). Active by default via "
+            "settings.hooks.enable_ty; the runnable entry is appended by "
+            "_build_opt_in_type_hooks(), so this entry stays auto_run=False."
         ),
     ),
     HookDefinition(
@@ -442,7 +443,7 @@ def _build_opt_in_type_hooks() -> list[HookDefinition]:
                     auto_run=True,
                     security_level=SecurityLevel.HIGH,
                     accepts_file_paths=True,
-                    description="Opt-in ty type checking",
+                    description="Primary ty type checking (default-on, replaced zuban)",
                 )
             )
 

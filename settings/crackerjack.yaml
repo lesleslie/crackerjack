@@ -21,7 +21,7 @@ skip_hooks: false
 update_precommit: false
 experimental_hooks: false
 enable_pyrefly: false
-enable_ty: false
+enable_ty: true
 enable_lsp_optimization: false
 
 # Testing
