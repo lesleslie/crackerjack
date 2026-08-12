@@ -311,6 +311,14 @@ class BatchFileOperations:
         self.operations.append(delete_op)
         self.rollback_operations.append(rollback_op)
 
+    async def close(self) -> None:
+        # No resources to release — ``commit_all`` already executed the
+        # queued operations during the success path of the
+        # ``batch_file_operations`` async context manager. This hook
+        # exists so the context manager's ``finally`` block has something
+        # to call on every exit (clean *and* exception paths).
+        return None
+
     async def commit_all(self) -> None:
         executed_ops = 0
 

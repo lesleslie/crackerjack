@@ -233,7 +233,19 @@ async def test_atomic_file_write_context_manager(temp_dir):
 
 @pytest.mark.asyncio
 async def test_batch_file_operations_context_manager():
-    """Test batch_file_operations context manager."""
+    """Test batch_file_operations context manager.
+
+    Regression guard: the ``finally`` block of the
+    ``batch_file_operations`` async context manager invokes
+    ``batch.close()`` on every exit (clean and exception paths). The
+    ``BatchFileOperations`` class must therefore expose ``close``; the
+    ``ef49d8fe`` (2026-08-11) dump commit added the wrapper without
+    defining the method and produced an AttributeError on every use.
+    """
     async with batch_file_operations() as batch:
         # Just test that the context manager works
         assert batch is not None
+        assert hasattr(batch, "close"), (
+            "BatchFileOperations must expose close() — invoked from "
+            "batch_file_operations() finally block at file_lifecycle.py:390"
+        )
