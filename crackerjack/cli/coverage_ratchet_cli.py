@@ -11,7 +11,7 @@ from crackerjack.services.coverage_ratchet import CoverageRatchetService
 app = typer.Typer(
     name="coverage-ratchet",
     help=(
-        "Coverage ratchet commands: initialize, status, lower, migrate. "
+        "Coverage ratchet commands: initialize, status, lower. "
         "See CoverageRatchetService for underlying state."
     ),
     no_args_is_help=True,
@@ -22,7 +22,7 @@ console = Console()
 @app.command()
 def init(
     pkg_path: Path = typer.Option(
-        Path("."),
+        Path(),
         "--pkg-path",
         help="Project root containing coverage.json and pyproject.toml.",
     ),
@@ -61,7 +61,7 @@ def init(
 @app.command()
 def status(
     pkg_path: Path = typer.Option(
-        Path("."),
+        Path(),
         "--pkg-path",
         help="Project root to read ratchet state from.",
     ),
@@ -84,7 +84,7 @@ def lower(
         help="Non-empty justification for lowering the ratchet.",
     ),
     pkg_path: Path = typer.Option(
-        Path("."),
+        Path(),
         "--pkg-path",
         help="Project root containing the ratchet file.",
     ),
@@ -104,18 +104,6 @@ def lower(
         )
     console.print(
         f"[green]✅ Ratchet lowered to {to_coverage:.2f}% (reason: {reason})[/green]"
-    )
-
-
-@app.command()
-def migrate() -> None:
-    """Auto-invoke init across all 7 Bodai repos (temporary, removed in Phase C)."""
-    console.print(
-        "[yellow]⚠️  This is a temporary CLI. "
-        "Replaced by per-repo init in Phase B.[/yellow]"
-    )
-    console.print(
-        "    Run [cyan]crackerjack coverage-ratchet init[/cyan] in each repo directly."
     )
 
 

@@ -83,10 +83,3 @@ def test_status_prints_ratchet_state(tmp_path: Path) -> None:
     result = runner.invoke(app, ["status", "--pkg-path", str(tmp_path)])
     assert result.exit_code == 0, result.output
     assert "Baseline" in result.output or "50" in result.output
-
-
-@pytest.mark.unit
-def test_migrate_prints_hint(tmp_path: Path) -> None:
-    result = runner.invoke(app, ["migrate"])
-    assert result.exit_code == 0, result.output
-    assert "temporary" in result.output.lower()
