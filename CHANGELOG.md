@@ -1,5 +1,31 @@
 ______________________________________________________________________
 
+## [0.73.2] - 2026-08-12
+
+### Fixed
+
+- Clear 6 ty failures across autofix + skills + analytics
+- fast-hooks: Clear 4 crackerjack fast-hook lint failures
+- file-lifecycle: BatchFileOperations.close() missing since ef49d8fe
+- hooks: Restore ty as the default-active type checker
+- pyscn: Default skip_cyclomatic=False so parser returns issues
+- Remove syrupy from COMPREHENSIVE_HOOKS (restores 35c7ccb3)
+- Replace pydantic Field() misused as mutable default in 6 places
+- test/mcp: WorkflowOptions fixtures + MCP SDK ClientSession drift
+- workflow-executor: Restore truncated TODO for coverage improvement
+
+### Testing
+
+- Assert ZubanLSPConfig disabled-by-default (ty replaces zuban)
+- check_jsonschema: Align _process_file signature with production
+- cleanup: Align 5 final failures with current production
+- Fix stale FAST_HOOKS count assertion (17 -> 16)
+- misc: Align fixtures with production behavior
+- tool-registry: Update counts and tier lists to match current state
+- utility-tools: Use UTC-aware datetime to match production parser
+- websocket: Align with 6bfaa1af honest-stub + canonical-permission fixes
+- workflow-executor: Remove dead TestAttemptCoverageImprovement class
+
 ## [0.73.0] - 2026-08-11
 
 ### Added
