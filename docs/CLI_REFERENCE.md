@@ -204,7 +204,7 @@ python -m crackerjack run --comp
 
 **Comprehensive Hooks**:
 
-- Zuban type checking
+- ty type checking
 - Bandit security analysis
 - Dead code detection
 - Dependency analysis
