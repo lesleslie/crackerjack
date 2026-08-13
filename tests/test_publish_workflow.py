@@ -16,10 +16,6 @@ import pytest
 
 EXPECTED_CLAUDE_FILES = [
     "CLAUDE.md",
-    "CLAUDE_ARCHITECTURE.md",
-    "CLAUDE_QUICKSTART.md",
-    "CLAUDE_PROTOCOLS.md",
-    "CLAUDE_PATTERNS.md",
 ]
 
 ARCHIVE_KEYWORDS = [

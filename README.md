@@ -324,26 +324,26 @@ section of `CLAUDE.md`.
 #### MCP Integration
 
 When invoking crackerjack via MCP tools from another workflow (e.g.
-session-buddy, mahavishnu), use the semantic `crackerjack_run` tool. The
+session-buddy, mahavishnu), use the semantic `execute_crackerjack` tool. The
 previous `ai_agent_mode=True` parameter is now a no-op (the internal
 12-agent subsystem was removed 2026-08-06); AI auto-fix is dispatched
 via the Workflow tool, not via the MCP wrapper.
 
 ```python
 # ✅ CORRECT - Use semantic command (no AI auto-fix):
-crackerjack_run(command="test")
+execute_crackerjack(command="test")
 
 # ✅ CORRECT - With additional arguments:
-crackerjack_run(command="check", args="--verbose", timeout=600)
+execute_crackerjack(command="check", args="--verbose", timeout=600)
 
 # ✅ CORRECT - Dry-run mode:
-crackerjack_run(command="test", args="--dry-run")
+execute_crackerjack(command="test", args="--dry-run")
 
 # ❌ WRONG - `--ai-fix` flag was removed on 2026-08-06; use the Workflow tool
-crackerjack_run(command="--ai-fix -t")  # No such option: --ai-fix
+execute_crackerjack(command="--ai-fix -t")  # No such option: --ai-fix
 
 # ❌ WRONG - Don't try to use --ai-fix in args
-crackerjack_run(command="test", args="--ai-fix")  # Use Workflow({ scriptPath: '.claude/workflows/ai-fix-loop.js' }) instead
+execute_crackerjack(command="test", args="--ai-fix")  # Use Workflow({ scriptPath: '.claude/workflows/ai-fix-loop.js' }) instead
 ```
 
 #### Configuration
@@ -1774,7 +1774,7 @@ python -m crackerjack start
 }
 ```
 
-**Available tools:** `crackerjack_run` (the primary entry point), `get_job_progress`, `get_stage_status`, `smart_error_analysis`, `analyze_crackerjack`, `get_next_action`, `session_management`. The Workflow tool (`.claude/workflows/ai-fix-loop.js`) handles auto-fix dispatch.
+**Available tools:** `execute_crackerjack` (the primary entry point), `run_crackerjack_stage`, `get_job_progress`, `get_stage_status`, `smart_error_analysis`, `analyze_crackerjack`, `get_next_action`, `session_management`. The Workflow tool (`.claude/workflows/ai-fix-loop.js`) handles auto-fix dispatch.
 
 ## Complementary Tools
 
@@ -1922,7 +1922,7 @@ python -m crackerjack start --verbose
 
 - **GitHub Issues**: [Report bugs](https://github.com/lesleslie/crackerjack/issues)
 - **Command Help**: `python -m crackerjack run --help`
-- **MCP Tools**: Use `crackerjack_run` to invoke the workflow; `get_next_action` returns a state-machine hint when stuck
+- **MCP Tools**: Use `execute_crackerjack` to invoke the workflow; `get_next_action` returns a state-machine hint when stuck
 
 ## Contributing
 
