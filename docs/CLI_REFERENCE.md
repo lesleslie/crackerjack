@@ -70,7 +70,7 @@ python -m crackerjack run --fast
    ✓ Spell checking
 
 ✅ Comprehensive hooks completed in 28.3s
-   ✓ Zuban type checking (45 files)
+   ✓ ty type checking (45 files)
    ✓ Bandit security analysis (23 files)
    ✓ Dead code detection
    ✓ Dependency analysis
