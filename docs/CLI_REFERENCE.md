@@ -50,8 +50,8 @@ python -m crackerjack run
 # Quality checks + tests
 python -m crackerjack run --run-tests
 
-# AI auto-fixing + tests (recommended)
-python -m crackerjack run --ai-fix --run-tests
+# AI auto-fixing + tests — invoked via the Workflow tool, not the shell
+# (Workflow tool → .claude/workflows/ai-fix-loop.js)
 
 # Fast mode (skip comprehensive hooks)
 python -m crackerjack run --fast
@@ -243,109 +243,39 @@ python -m crackerjack run --quality-tier silver
 
 ## AI Integration Commands
 
-### `--ai-fix`
+The AI auto-fix loop is **not** a shell flag. The previous `--ai-fix`,
+`--ai-debug` (as a sub-bullet of `--ai-fix`), `--dry-run` (as a sub-bullet
+of `--ai-fix`), `--max-iterations`, `--quick` (as a sub-bullet of
+`--ai-fix`), and `--thorough` (as a sub-bullet of `--ai-fix`) flags were
+removed on 2026-08-06 along with the 12-agent internal subsystem they
+dispatched to. The replacement is the Claude Code `Workflow`-tool loop
+that lives at `.claude/workflows/ai-fix-loop.js`; that script calls
+`python -m crackerjack run -v` itself and dispatches residual issues to a
+single fix agent.
 
-**Description**: Enable AI-powered auto-fixing.
+### Workflow Tool (recommended)
 
-**Usage**:
-
-```bash
-python -m crackerjack run --ai-fix
+```js
+// Example invocation (Workflow tool, NOT bash):
+Workflow({
+  scriptPath: '.claude/workflows/ai-fix-loop.js',
+  args: {
+    maxIterations: 10,       // clamped to a minimum of 10 by the script
+    initialIssueGuard: 200,  // abort if baseline issues exceed this
+    auditLogPath: '.crackerjack/audit/ai-fix-loop.jsonl',
+  },
+});
 ```
 
-**How It Works**:
+Supported knobs (forwarded via `args`):
 
-1. Run all quality checks
-1. Collect all failures
-1. AI analyzes each issue
-1. Applies targeted fixes
-1. Re-runs checks
-1. Repeats until all pass (max 8 iterations)
+- `args.maxIterations` — cap on iterations (default 10)
+- `args.initialIssueGuard` — abort if baseline issues exceed this (default 200)
+- `args.auditLogPath` — JSONL output path (default `.crackerjack/audit/ai-fix-loop.jsonl`)
 
-**Output**:
-
-```
-🤖 AI Auto-Fixing Enabled
-
-Iteration 1/8:
-  ❌ 12 issues found
-  🤖 AI analyzing issues...
-  ✅ 10 issues fixed automatically
-  ❌ 2 issues require manual review
-
-Iteration 2/8:
-  ❌ 2 issues remaining
-  🤖 AI analyzing issues...
-  ✅ 2 issues fixed automatically
-
-✅ All quality checks passed after 2 iterations!
-```
-
-### `--ai-debug`
-
-**Description**: Verbose debugging for AI auto-fixing.
-
-**Usage**:
-
-```bash
-python -m crackerjack run --ai-fix --ai-debug --run-tests
-```
-
-**Output Includes**:
-
-- AI agent selection reasoning
-- Confidence scores for each fix
-- Prompt/response details
-- Fix validation results
-
-### `--dry-run`
-
-**Description**: Preview AI fixes without applying changes.
-
-**Usage**:
-
-```bash
-python -m crackerjack run --ai-fix --dry-run
-```
-
-**Use Case**: Review what AI would change before applying fixes.
-
-### `--max-iterations`
-
-**Description**: Set maximum iterations for AI auto-fixing.
-
-**Usage**:
-
-```bash
-python -m crackerjack run --ai-fix --max-iterations 15
-```
-
-**Default**: 8 iterations
-**CI/CD Recommended**: 3 iterations (`--quick` mode)
-
-### `--quick`
-
-**Description**: Quick mode (3 iterations max, for CI/CD).
-
-**Usage**:
-
-```bash
-python -m crackerjack run --ai-fix --quick --run-tests
-```
-
-**Use Case**: CI/CD pipelines where speed is critical.
-
-### `--thorough`
-
-**Description**: Thorough mode (8 iterations max, for complex refactoring).
-
-**Usage**:
-
-```bash
-python -m crackerjack run --ai-fix --thorough --run-tests
-```
-
-**Use Case**: Complex refactoring tasks that require multiple iterations.
+For the design rationale and contract details, see
+`docs/superpowers/specs/2026-08-06-ai-fix-removal-external-loop-design.md`
+and `docs/superpowers/plans/2026-08-06-ai-fix-external-loop.md`.
 
 ## Testing Commands
 
@@ -904,8 +834,8 @@ vim src/my_module.py
 # 2. Quality checks
 python -m crackerjack run
 
-# 3. Fix issues
-python -m crackerjack run --ai-fix
+# 3. Fix issues (Workflow tool auto-fixes residual issues after each run)
+python -m crackerjack run -v
 
 # 4. Run tests
 python -m crackerjack run --run-tests
@@ -939,8 +869,8 @@ python -m crackerjack run
 # Quality + tests
 python -m crackerjack run --run-tests
 
-# AI auto-fixing + tests
-python -m crackerjack run --ai-fix --run-tests
+# AI auto-fixing + tests (Workflow tool dispatches on residual issues)
+python -m crackerjack run --run-tests -v
 
 # Coverage status
 python -m crackerjack run --coverage-status

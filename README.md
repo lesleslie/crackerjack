@@ -96,7 +96,7 @@ Crackerjack and pre-commit solve related but different problems. While pre-commi
 | ------------------------- | ----------------------------------- | ---------------------------------------------- |
 | **Code Formatting** | ✅ Via hooks (black, ruff, etc.) | ✅ Native Ruff integration + mdformat |
 | **Linting** | ✅ Via hooks (flake8, pylint, etc.) | ✅ Native Ruff + codespell |
-| **Type Checking** | ✅ Via hooks (mypy, pyright) | ✅**Zuban** (20-200x faster than pyright) |
+| **Type Checking** | ✅ Via hooks (mypy, pyright) | ✅**ty** (default) + opt-in Zuban/Pyrefly lanes |
 | **Security Scanning** | ✅ Via hooks (bandit, gitleaks) | ✅ Native bandit + gitleaks integration |
 | **Dead Code Detection** | ✅ Via vulture hook | ✅**Skylos** (20x faster than vulture) |
 | **Complexity Analysis** | ❌ Not built-in | ✅ Native complexipy integration |
@@ -120,7 +120,7 @@ Crackerjack and pre-commit solve related but different problems. While pre-commi
 
 | Feature | Pre-commit | Crackerjack |
 | ---------------------------- | ------------------------------------------------- | --------------------------------------------- |
-| **AI Integration** | ❌ Not built-in | ✅ 12 specialized AI agents + auto-fixing |
+| **AI Integration** | ❌ Not built-in | ✅ External Workflow-tool auto-fix loop (`.claude/workflows/ai-fix-loop.js`) |
 | **Dependency Injection** | ❌ Not applicable | ✅ legacy framework with protocol-based DI |
 | **Caching** | ✅ Per-file hash caching | ✅ Content-based caching (70% hit rate) |
 | **MCP Server** | ❌ Not included | ✅ Built-in MCP server for Claude integration |
@@ -247,7 +247,7 @@ python -m crackerjack run -i
 ## AI Auto-Fix Features
 
 ![AI Agent Orchestration](docs/diagrams/ai-agent-orchestration.png)
-*12 specialized AI agents with confidence-based routing and batch processing*
+*External `Workflow`-tool loop with SHA-anchored stashes, rollback on regression, and JSONL audit trail*
 
 Crackerjack provides two distinct approaches to automatic error fixing:
 
@@ -294,45 +294,56 @@ The AI agent can fix:
 - **Code Quality (refurb)**: Applies refactoring, reduces complexity
 - **All Hook Failures**: Formatting, linting, style issues
 
-The AI-fix workflow keeps `zuban` as the baseline type checker. `ty --fix` is treated as a pre-pass, not a replacement for the AI loop.
+The AI-fix workflow runs `ty --fix` as a pre-pass; residual diagnostics are sent to the AI loop. Type checking is opt-in via `enable_zuban` (Zuban) or `enable_pyrefly` (Pyrefly) — the default lane is `ty`.
 
-#### AI Agent Commands
+#### AI Auto-Fix (Workflow Tool — not a shell command)
 
-```bash
-# Standard AI agent mode (recommended)
-python -m crackerjack run --ai-fix --run-tests --verbose
+The auto-fix loop is invoked through Claude Code's `Workflow` tool, not the
+shell. The script lives at `.claude/workflows/ai-fix-loop.js` and runs
+`crackerjack run -v` itself, so there is no `crackerjack --ai-fix` flag
+(the flag was removed on 2026-08-06 along with the 12-agent internal
+subsystem it dispatched to).
 
-# Preview fixes without applying (dry-run mode)
-python -m crackerjack run --dry-run --run-tests --verbose
+Supported knobs (forwarded via `args`):
 
-# Custom iteration limit
-python -m crackerjack run --ai-fix --max-iterations 15
+- `args.maxIterations` — cap on iterations (default 10; clamped to a minimum of 10 by the script)
+- `args.initialIssueGuard` — abort if baseline issues exceed this (default 200)
+- `args.auditLogPath` — JSONL output path (default `.crackerjack/audit/ai-fix-loop.jsonl`)
 
-# MCP server
-python -m crackerjack start
-
-# Lifecycle commands (start/stop/restart/status/health) are available via MCPServerCLIFactory.
+```js
+// Example invocation (Workflow tool, NOT bash):
+Workflow({
+  scriptPath: '.claude/workflows/ai-fix-loop.js',
+  args: { maxIterations: 10, initialIssueGuard: 200 }
+})
 ```
+
+For the design rationale and contract details, see the **AI Agent System**
+section of `CLAUDE.md`.
 
 #### MCP Integration
 
-When using crackerjack via MCP tools (session-buddy):
+When invoking crackerjack via MCP tools from another workflow (e.g.
+session-buddy, mahavishnu), use the semantic `crackerjack_run` tool. The
+previous `ai_agent_mode=True` parameter is now a no-op (the internal
+12-agent subsystem was removed 2026-08-06); AI auto-fix is dispatched
+via the Workflow tool, not via the MCP wrapper.
 
 ```python
-# ✅ CORRECT - Use semantic command + ai_agent_mode parameter
-crackerjack_run(command="test", ai_agent_mode=True)
+# ✅ CORRECT - Use semantic command (no AI auto-fix):
+crackerjack_run(command="test")
 
-# ✅ CORRECT - With additional arguments
-crackerjack_run(command="check", args="--verbose", ai_agent_mode=True, timeout=600)
+# ✅ CORRECT - With additional arguments:
+crackerjack_run(command="check", args="--verbose", timeout=600)
 
-# ✅ CORRECT - Dry-run mode
-crackerjack_run(command="test", args="--dry-run", ai_agent_mode=True)
+# ✅ CORRECT - Dry-run mode:
+crackerjack_run(command="test", args="--dry-run")
 
-# ❌ WRONG - Don't put flags in command parameter
-crackerjack_run(command="--ai-fix -t")  # This will error!
+# ❌ WRONG - `--ai-fix` flag was removed on 2026-08-06; use the Workflow tool
+crackerjack_run(command="--ai-fix -t")  # No such option: --ai-fix
 
-# ❌ WRONG - Don't use --ai-fix in args
-crackerjack_run(command="test", args="--ai-fix")  # Use ai_agent_mode=True instead
+# ❌ WRONG - Don't try to use --ai-fix in args
+crackerjack_run(command="test", args="--ai-fix")  # Use Workflow({ scriptPath: '.claude/workflows/ai-fix-loop.js' }) instead
 ```
 
 #### Configuration
@@ -359,28 +370,28 @@ Auto-fix requires:
 - **Broad Coverage**: Handles more than formatting-only fixes
 - **Reviewable Results**: Produces changes that should still be reviewed before merge
 
-#### Specialized Agent Architecture
+#### Quality-fix Coverage Categories
 
-**12 Specialized AI Agents** for code quality improvements:
+The external `Workflow`-tool loop dispatches residual issues to a single
+fix agent that handles all of these categories in batch. The previous
+internal 12-agent subsystem (SecurityAgent, RefactoringAgent, etc.) was
+removed on 2026-08-06 alongside the `--ai-fix` flag.
 
-- **SecurityAgent**: Fixes shell injections, weak crypto, token exposure, unsafe library usage
-- **RefactoringAgent**: Reduces complexity ≤15, extracts helper methods, applies SOLID principles
-- **PerformanceAgent**: Optimizes algorithms, fixes O(n²) patterns, improves string building
-- **DocumentationAgent**: Auto-generates changelogs, maintains .md file consistency
-- **DRYAgent**: Eliminates code duplication, extracts common patterns to utilities
-- **FormattingAgent**: Handles code style, import organization, formatting violations
-- **TestCreationAgent**: Fixes test failures, missing fixtures, dependency issues
-- **ImportOptimizationAgent**: Removes unused imports, restructures import statements
-- **TestSpecialistAgent**: Advanced testing scenarios, fixture management
-- **SemanticAgent**: Advanced semantic analysis, code comprehension, refactoring suggestions based on business logic understanding
-- **ArchitectAgent**: High-level architectural patterns, design recommendations, system-level optimization strategies
-- **EnhancedProactiveAgent**: Early issue detection, predictive quality monitoring, and pre-merge optimization
+- **Security hardening** (bandit: shell injection, weak crypto, token exposure, unsafe YAML)
+- **Refactoring** (complexity ≤15, helper-method extraction, SOLID principles)
+- **Performance** (O(n²) → O(n), string building, nested loops)
+- **Documentation** (changelog generation, .md consistency)
+- **DRY** (duplication elimination, extract-helper patterns)
+- **Formatting** (style, import organization, formatting violations)
+- **Test failures** (fixture repair, import errors, assertion fixes)
+- **Unused-import cleanup**
+- **Type annotations** (ty first, then zuban or pyrefly if enabled)
 
-**Agent Coordination Features**:
+**Auto-Fix Coordination Features**:
 
-- **Confidence Scoring**: Routes issues to best-match agent (≥0.7 confidence)
-- **Batch Processing**: Groups related issues for efficient parallel processing
-- **Collaborative Mode**: Multiple agents handle complex cross-cutting concerns
+- **Confidence Scoring**: Routes fixes by predicted success (≥0.7 confidence)
+- **Batch Processing**: Groups related issues for efficient parallel handling
+- **Stash Snapshots**: SHA-anchored snapshots before each iteration enable rollback
 
 #### Security & Safety Features
 
@@ -400,11 +411,14 @@ Auto-fix requires:
   - Integrates with crackerjack's quality workflow
   - Zero configuration changes required
 
-- **Zuban** (Type Checking): Replaces pyright with **20-200x performance improvement**
+- **ty** (Type Checking, default since v0.8): Rust-based type checker
 
-  - Fast type checking and static analysis
-  - Drop-in replacement for slower Python-based tools
-  - Maintains full compatibility with existing configurations
+  - Default in the comprehensive hook stage (`enable_ty` is implicit)
+  - `ty --fix` runs as a pre-pass before the AI auto-fix loop
+- **Zuban** (Type Checking, opt-in): 20-200x faster than pyright
+
+  - Enable via `enable_zuban` in `pyproject.toml` under `[tool.crackerjack]`
+  - LSP server wiring lives in `zuban_lsp_enabled = true` (default on)
 
 **Performance Benefits**:
 
@@ -419,7 +433,7 @@ Auto-fix requires:
 # These commands now benefit from Rust tool speed improvements:
 python -m crackerjack run                    # Dead code detection 20x faster
 python -m crackerjack run --run-tests        # Type checking 20-200x faster
-python -m crackerjack run --ai-fix --run-tests # Complete workflow optimized
+python -m crackerjack run --run-tests # Complete workflow optimized
 ```
 
 **Benchmark Results**: Internal measurements show higher throughput during comprehensive quality checks.
@@ -746,7 +760,7 @@ python scripts/rollback_skills_migration.py --force
 
 **With AI integration:**
 
-- `--ai-fix` flag enables automatic error resolution with specialized sub-agents
+- External `Workflow`-tool loop (`.claude/workflows/ai-fix-loop.js`) handles residual issues after each `crackerjack run -v`
 - MCP server allows AI agents to run crackerjack commands with real-time progress tracking
 - Structured error output for programmatic fixes with confidence scoring
 - Centralized regex pattern system ensures safe automated text transformations
@@ -918,7 +932,7 @@ legacy-registered adapters for all quality checks:
 - **Format:** Ruff formatting, mdformat
 - **Lint:** Codespell, complexity analysis
 - **Security:** Bandit security scanning, Gitleaks secret detection
-- **Type:** Zuban type checking by default, with opt-in Ty and Pyrefly lanes for canary / experimental use
+- **Type:** `ty` type checking by default (since v0.8), with opt-in Zuban and Pyrefly lanes for repositories that require them
 - **Refactor:** Creosote (unused dependencies), Refurb (Python idioms)
 - **Complexity:** Complexipy analysis
 - **Utility:** Various validation checks
@@ -1381,8 +1395,8 @@ keyring set https://upload.pypi.org/legacy/ __token__
 
 **Error Analysis:**
 
-- **analyze_errors\`**: Analyze and categorize code quality errors
-- **smart_error_analysis\`**: AI-powered error analysis with cached patterns
+- **analyze_errors\`**: Extract error patterns from hook output; mark auto-fixable successes
+- **smart_error_analysis\`**: AI-prioritized fix suggestions from accumulated error patterns
 
 **Session Management:**
 
@@ -1477,8 +1491,8 @@ python -m crackerjack run --xcode-tests
 # Full release workflow
 python -m crackerjack run --all patch
 
-# AI agent mode
-python -m crackerjack run --ai-fix
+# AI agent mode (Workflow tool; --ai-fix removed 2026-08-06)
+python -m crackerjack run
 ```
 
 ## Quick Reference Index
@@ -1489,7 +1503,7 @@ python -m crackerjack run --ai-fix
 | ----------------------- | -------------------------------------------------- | --------------------------------------- |
 | **Basic Quality Check** | `python -m crackerjack run` | Run quality checks only |
 | **Quality + Tests** | `python -m crackerjack run --run-tests` | Quality checks with test suite |
-| **AI Auto-Fix** | `python -m crackerjack run --ai-fix --run-tests` | AI-powered fixing + tests (recommended) |
+| **AI Auto-Fix** | `python -m crackerjack run --run-tests` (then dispatch Workflow tool) | Workflow tool auto-fix dispatches on remaining issues |
 | **Full Release** | `python -m crackerjack run --all patch` | Version bump, quality checks, publish |
 | **Quick Publish** | `python -m crackerjack run --publish patch` | Version bump + publish only |
 | **Start MCP Server** | `python -m crackerjack start` | Launch MCP agent integration |
@@ -1505,7 +1519,6 @@ python -m crackerjack run --ai-fix
 | Flag | Short | Description |
 | ----------------------- | ----- | --------------------------------------------------- |
 | `--ai-debug` | - | Verbose debugging for AI auto-fixing |
-| `--ai-fix` | - | Enable AI-powered auto-fixing |
 | `--all` | `-a` | Full release workflow (bump, test, publish) |
 | `--benchmark` | - | Run tests in benchmark mode |
 | `--boost-coverage` | - | Auto-improve test coverage (default) |
@@ -1552,7 +1565,7 @@ ______________________________________________________________________
 # Quality checks and development
 python -m crackerjack run                    # Quality checks only
 python -m crackerjack run --run-tests        # Quality checks + tests
-python -m crackerjack run --ai-fix --run-tests  # AI auto-fixing + tests (recommended)
+python -m crackerjack run --run-tests -v    # Workflow tool auto-fix dispatches on remaining issues
 python -m crackerjack run --xcode-tests      # Xcode tests (macOS)
 
 # Release workflow
@@ -1563,9 +1576,9 @@ python -m crackerjack run --publish patch      # Version bump + publish
 **AI-Powered Development:**
 
 ```bash
-python -m crackerjack run --ai-fix              # AI auto-fixing mode
+python -m crackerjack run                     # AI auto-fixing via Workflow tool (.claude/workflows/ai-fix-loop.js)
 python -m crackerjack run --ai-debug --run-tests # AI debugging with verbose output
-python -m crackerjack run --ai-fix --run-tests --verbose # Full AI workflow
+python -m crackerjack run --run-tests -v      # Full AI workflow (then dispatch Workflow tool)
 python -m crackerjack run --orchestrated        # Advanced orchestrated workflow
 python -m crackerjack run --quick               # Quick mode (3 iterations max)
 python -m crackerjack run --thorough            # Thorough mode (8 iterations max)
@@ -1761,7 +1774,7 @@ python -m crackerjack start
 }
 ```
 
-**Available tools:** `execute_crackerjack`, `get_job_progress`, `run_crackerjack_stage`, `analyze_errors`, `smart_error_analysis`, `get_next_action`, `session_management`
+**Available tools:** `crackerjack_run` (the primary entry point), `get_job_progress`, `get_stage_status`, `smart_error_analysis`, `analyze_crackerjack`, `get_next_action`, `session_management`. The Workflow tool (`.claude/workflows/ai-fix-loop.js`) handles auto-fix dispatch.
 
 ## Complementary Tools
 
@@ -1808,7 +1821,7 @@ For enhanced AI-assisted development with conversation memory and context persis
 
 ```bash
 # Just start working - session auto-initializes!
-python -m crackerjack run --ai-fix --run-tests
+python -m crackerjack run --run-tests
 
 # Checkpoint periodically (auto-compacts if needed)
 /checkpoint
@@ -1909,7 +1922,7 @@ python -m crackerjack start --verbose
 
 - **GitHub Issues**: [Report bugs](https://github.com/lesleslie/crackerjack/issues)
 - **Command Help**: `python -m crackerjack run --help`
-- **MCP Tools**: Use `get_next_action` tool for guidance
+- **MCP Tools**: Use `crackerjack_run` to invoke the workflow; `get_next_action` returns a state-machine hint when stuck
 
 ## Contributing
 
