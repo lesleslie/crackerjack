@@ -203,23 +203,9 @@ show_progress = true
 color = true
 ```
 
-## AI Auto-Fix (Experimental)
+## AI Auto-Fix
 
-Crackerjack can automatically fix some issues using AI:
-
-```bash
-# Run checks with AI-powered auto-fix
-crackerjack run --ai-fix
-
-# Auto-fix with specific provider
-crackerjack run --ai-fix --provider openai
-crackerjack run --ai-fix --provider anthropic
-
-# Dry run to see what would be fixed
-crackerjack run --ai-fix --dry-run
-```
-
-**Note**: AI auto-fix requires API keys and is experimental.
+AI auto-fix now requires the workflow tool (`.claude/workflows/ai-fix-loop.js`); see CLAUDE.md.
 
 ## MCP Integration
 
@@ -264,13 +250,10 @@ git commit -m "Add new feature"
 # 1. Run checks to find issues
 crackerjack run
 
-# 2. Auto-fix what's possible
-crackerjack run --ai-fix
-
-# 3. Verify fixes
+# 2. Verify fixes (AI auto-fix now lives in the workflow tool)
 crackerjack run
 
-# 4. Check if ready for commit
+# 3. Check if ready for commit
 crackerjack check-gate
 ```
 
