@@ -6,15 +6,15 @@ Static type checking with a stable Rust-backed default and two opt-in experiment
 
 ## Overview
 
-- Zuban is the default comprehensive checker and remains the safest baseline
-- Ty is opt-in and can apply limited native fixes with `ty check --fix`
+- Ty is the active default type checker (active by default via `settings.hooks.enable_ty`)
+- Zuban is opt-in (legacy, gated behind `enable_zuban`) and remains available as a fallback
 - Pyrefly is opt-in and speaks JSON with `pyrefly check --output-format=json`
 
 ## Built-in Implementations
 
 | Module | Description | Status |
 | ------ | ----------- | ------ |
-| `zuban.py` | Rust-based type checking, current default baseline | Stable |
+| `zuban.py` | Rust-based type checking, opt-in legacy baseline | Stable |
 | `pyrefly.py` | Python type checker with JSON diagnostics, baseline/suppress support | Experimental |
 | `ty.py` | Python type checker with concise output and native fix support | Experimental |
 
@@ -55,8 +55,7 @@ Settings class: `TySettings`
 - `add_ignore_enabled` (bool)
 - `no_progress` (bool)
 
-Ty is opt-in only and is best used as a canary or AI-fix pre-pass.
-When enabled in comprehensive mode, Ty stays additive: it does not replace Zuban as the default baseline.
+Ty is the active default. It runs automatically in comprehensive mode whenever `settings.hooks.enable_ty` is true (default) and is best used as the primary type checker.
 
 ## Pyrefly Settings
 
@@ -71,13 +70,13 @@ Settings class: `PyreflySettings`
 - `remove_unused_ignores` (bool)
 
 Pyrefly is opt-in only and works well when you want JSON diagnostics plus baselines or suppressions.
-When enabled in comprehensive mode, Pyrefly is additive and does not replace Zuban as the default baseline.
+When enabled in comprehensive mode, Pyrefly is additive and does not replace Ty as the default baseline.
 
 ## AI-Fix Workflow Notes
 
 - `ty` can run a native `--fix` pre-pass before AI analysis.
 - `pyrefly` is used for diagnostics, suppressions, and baselines rather than native code rewriting.
-- `zuban` remains the default type-checking baseline for comprehensive runs.
+- `ty` is the default type-checking baseline for comprehensive runs (active by default).
 
 ## Related
 
