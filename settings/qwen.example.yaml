@@ -6,7 +6,7 @@
 # To use Qwen:
 # 1. Copy this file to settings/local.yaml (or append to your existing local.yaml)
 # 2. Set your QWEN_API_KEY environment variable
-# 3. Run crackerjack with --ai-fix flag
+# 3. AI auto-fix uses the workflow tool (see CLAUDE.md)
 
 # AI Provider Selection
 # Options: "claude" (default) or "qwen"
