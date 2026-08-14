@@ -34,7 +34,7 @@ The project is built on the **legacy DI framework** framework, providing:
 
 - Model Context Protocol (MCP) server for AI agent integration
 - WebSocket-enabled real-time progress monitoring
-- 12 specialized AI agents for different aspects (security, refactoring, performance, documentation, etc.)
+- 42 MCP-registered quality tools for hookable enforcement
 - Confidence scoring and collaborative multi-agent processing
 
 ### Performance Optimizations
@@ -69,9 +69,6 @@ python -m crackerjack
 
 # Quality checks + tests
 python -m crackerjack --run-tests
-
-# AI-powered auto-fixing + tests (recommended)
-python -m crackerjack --ai-fix --run-tests
 
 # Full release workflow
 python -m crackerjack --all patch
