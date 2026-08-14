@@ -30,7 +30,7 @@ For a shorter, tool-neutral bootstrap document, start with `AGENTS.md`.
 
 ## Core Features
 
-- **🧠 Proactive AI Architecture**: 12 specialized AI agents prevent issues before they occur
+- **🧠 Proactive Quality System**: ~42 MCP-registered tools for hookable quality enforcement
 - **⚡ Autonomous Quality**: Intelligent auto-fixing with architectural planning
 - **🛡️ Zero-Compromise Standards**: 100% test coverage target, complexity ≤15, security-first patterns
 - **🔄 Learning System**: Skills tracking via session-buddy integration for agent recommendations
