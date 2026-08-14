@@ -57,12 +57,9 @@ from .errors import (
 )
 from .interactive import InteractiveWorkflowOptions as WorkflowOptions
 
-try:
-    from importlib.metadata import version
+from importlib.metadata import version
 
-    __version__ = version("crackerjack")
-except (ImportError, ModuleNotFoundError):
-    __version__ = "0.19.8"
+__version__ = version("crackerjack")
 __all__: t.Sequence[str] = [
     "CleaningError",
     "ConfigError",
