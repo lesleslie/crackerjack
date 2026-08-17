@@ -379,7 +379,7 @@ sequenceDiagram
     participant Repo as FailureMetricsRepository
     participant SB as Session-Buddy
     participant Gen as ImprovementGenerator
-    participant Over as ImprovementOverseer
+    participant Ovsr as ImprovementOverseer
     participant SP as SelfPatcher
     participant Dhara as Dhara KV / TimeSeries
 
@@ -396,14 +396,14 @@ sequenceDiagram
     alt count >= 3
         Gen->>Gen: emit improvement_job_id (status="generating")
         Gen-->>PC: {improvement_job_id, status: "generating", priority}
-        Note over Gen: fire-and-forget; no diff generation today
+        Note over Gen: fire-and-forget, no diff generation today
     else count < 3
         Gen-->>PC: None
     end
 
     Note over SP: Operator-runs improvement_job_id via get_pending_approvals
-    SP->>Over: review_diff(diff, constitution, failure_context)
-    Over-->>SP: OverseerVerdict(approved, concerns, model_used)
+    SP->>Ovsr: review_diff(diff, constitution, failure_context)
+    Ovsr-->>SP: OverseerVerdict(approved, concerns, model_used)
     alt approved
         SP->>SP: self_patcher.apply_patch(diff) (whitelist via SELFPATCHER_DENY_PATHS)
     else concerns
