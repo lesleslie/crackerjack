@@ -61,9 +61,11 @@ Crackerjack is a quality control and CI/CD automation platform designed to enfor
 │    └───────────────────────────────────────────────┘      │
 │                   │                                      │
 │    ┌──────────────▼───────────────────────────────┐      │
-│    │          AI Auto-Fix Engine (Optional)        │      │
+│    │          (AI Auto-Fix removed 2026-08-12)      │      │
 │    │  ┌─────────────────────────────────────────┐  │      │
-│    │  │  Agent Orchestration                    │  │      │
+│    │  │  No AI Auto-Fix Engine today             │  │      │
+│    │  │  (see docs/superpowers/specs/2026-08-    │  │      │
+│    │  │   06-ai-fix-removal-external-loop-design)│  │      │
 │    │  └─────────────────────────────────────────┘  │      │
 │    └───────────────────────────────────────────────┘      │
 │                   │                                      │
@@ -223,39 +225,28 @@ Manages test execution and result aggregation:
 - Integration tests: Cross-component testing
 - Property-based tests: Hypothesis integration
 
-### 7. AI Auto-Fix Engine
+### 7. AI Auto-Fix Engine (REMOVED 2026-08-12)
 
-**Location**: `crackerjack/ai/`
+**Status**: Removed. The `crackerjack/ai/` package and all agent orchestration
+machinery have been deleted as part of the 2026-08-12 AI-fix subsystem
+removal. See `docs/superpowers/specs/2026-08-06-ai-fix-removal-external-loop-design.md`
+for the rationale and the new external-loop design.
 
-Optional AI-powered code fixing:
+**Former capabilities** (now deleted):
 
-**Components**:
+- ~~Agent Orchestration~~ — Multiple specialized AI agents
+- ~~Agent selection and routing~~ — Replaced by hook-time retry + Dhara `fix-failures/{fingerprint}` recording
+- ~~Context-aware fixing~~ — Replaced by `FailureRecorder.record()` writes to `git_metrics.db`
 
-**Agent Orchestration**:
+**Former providers** (now disconnected):
 
-- Multiple specialized AI agents
-- Agent selection and routing
-- Context-aware fixing
+- ~~OpenAI~~ (GPT-4, GPT-3.5)
+- ~~Anthropic~~ (Claude)
+- ~~Local models~~ (via Ollama)
 
-**Supported Providers**:
-
-- OpenAI (GPT-4, GPT-3.5)
-- Anthropic (Claude)
-- Local models (via Ollama)
-
-**Fix Strategies**:
-
-- Automatic fixes for simple issues
-- Interactive fixes for complex issues
-- Dry-run mode for preview
-- Rollback capability
-
-**Safety Features**:
-
-- Change validation
-- Test verification
-- Rollback on failure
-- Approval workflow
+**Note**: For new self-improvement work, follow the
+`crackerjack/services/failure_recorder.py` + `ImprovementGenerator`
+pattern, not the legacy AI Auto-Fix Engine.
 
 ### 8. Reporting & Analytics
 
