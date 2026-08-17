@@ -61,6 +61,8 @@ DEFAULT_SKIP_DIRS = (
     ".mypy_cache",
     ".worktrees",
     ".claude",
+    ".crackerjack",
+    "uv",
 )
 
 
