@@ -1250,7 +1250,7 @@ This pattern management system standardizes regex validation and helps reduce sp
 ## Adapters
 
 ![Adapter Taxonomy](docs/diagrams/adapter-taxonomy.png)
-*18 QA adapters organized by category with protocol-based registration*
+*33 QA adapters organized by category (Q1 2026 adapter taxonomy) with protocol-based registration*
 
 Adapters connect Crackerjack to external tools and subsystems (e.g., Ruff, Zuban, Bandit) using legacy patterns. Each adapter exposes typed settings, async initialization, and standardized results.
 
@@ -1429,7 +1429,7 @@ keyring set https://upload.pypi.org/legacy/ __token__
 ## Quality Hook Modes
 
 ![Quality Hooks](docs/diagrams/quality-hooks.png)
-*Fast hooks (~5s) and Comprehensive hooks (~30s) with retry logic and AI-fix integration*
+*Fast hooks (~5s) and Comprehensive hooks (~30s) with retry logic (AI-fix integration removed 2026-08-12; see docs/superpowers/specs/2026-08-06-ai-fix-removal-external-loop-design.md)*
 
 Crackerjack runs quality checks in a two-stage process for optimal development workflow:
 
