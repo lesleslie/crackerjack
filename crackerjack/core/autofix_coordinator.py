@@ -1825,7 +1825,7 @@ def _extract_issue_count_from_text_lines(output: str) -> int | None:
 def _list_signatures(skill_store: object) -> list[str]:
     internal = getattr(skill_store, "_skills", None)
     if isinstance(internal, dict):
-        return list(internal)  # type: ignore
+        return t.cast("list[str]", list(internal))
     return []
 
 

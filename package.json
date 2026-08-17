@@ -1,8 +1,8 @@
 {
-  "name": "crackerjack-mermaid-validator",
-  "private": true,
   "description": "Wave-9 CI guard dev deps for the mermaid diagram validator. The runtime mermaid package is loaded from the homebrew mermaid-cli install; jsdom is the only Node dep we add here.",
   "devDependencies": {
     "jsdom": "^26.0.0"
-  }
+  },
+  "name": "crackerjack-mermaid-validator",
+  "private": true
 }

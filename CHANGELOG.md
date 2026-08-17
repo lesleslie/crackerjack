@@ -1,5 +1,53 @@
 ______________________________________________________________________
 
+## [0.73.5] - 2026-08-17
+
+### Added
+
+- crackerjack: Add jsdom dev dep for mermaid CI guard
+- crackerjack: Add mermaid-render pytest test + check-mermaid CLI subcommand
+- crackerjack: Add mermaid.parse() validator (services + JS runner)
+
+### Fixed
+
+- crackerjack: __init__.py:65 — drop stale 0.19.8 fallback literal
+- crackerjack: Adapters/type/README.md — correct default from Zuban to Ty
+- crackerjack: CLAUDE.md:33 — replace '12 agents' with MCP tool count
+- crackerjack: Correct fabricated MCP tool name + drop deleted stubs from tests
+- crackerjack: Correct false "Used In: CLAUDE.md" in diagram index
+- crackerjack: Correct README ASCII architecture diagram (Agent Orchestrator → PhaseCoordinator)
+- crackerjack: Drop list_skills and find_best_skill from read-groups diagram
+- crackerjack: Mark AI Auto-Fix Engine as removed (2026-08-12)
+- crackerjack: Mark SKILL_SYSTEM + ADR-002 + MEMORY_ARCHITECTURE diagrams as post-removal
+- crackerjack: QUICKSTART.md:212,215,216,219,268 — drop broken --ai-fix invocations
+- crackerjack: QWEN.md:37,74 — drop '12 agents' claim + remove broken --ai-fix example
+- crackerjack: Regenerate MEMORY_ARCHITECTURE schema map against surviving stores
+- crackerjack: Remove orphaned diagram entries from README after git rm
+- crackerjack: Rename Over participant to Ovsr in failure flow sequence
+- crackerjack: Rename Over participant to Ovsr in self-improvement sequence
+- crackerjack: Revert ai-agent-orchestration.png caption to pre-removal wording
+- crackerjack: Settings/qwen.example.yaml:9 — drop broken --ai-fix comment
+- crackerjack: Unescape quote in skills-ecosystem-mermaid Q node label
+- crackerjack: Update adapter-taxonomy + quality-hooks captions for post-removal state
+- crackerjack: Update failure flow to surviving failure_recorder path
+- crackerjack: Use jsdom for DOM environment in mermaid validator
+
+### Documentation
+
+- audit: Apply 2026-08-12 drift fixes
+- crackerjack: Drop stale Zuban mention from CLI reference example
+- crackerjack: Drop stale Zuban mention from Comprehensive Hooks list
+
+### Internal
+
+- crackerjack: Git rm oneiric-skills-integration.mmd (unconsumable + stale)
+- crackerjack: Git rm orphan agent-selection.png and layered-architecture.png
+- crackerjack: Git rm skills-ecosystem-mermaid.md (entirely stale)
+- Gitignore runtime artifacts + untrack previously-tracked cache files (bodai cleanup 2026-08-17)
+- gitignore: Drop stale coverage-ratchet negation (bodai 2026-08-17)
+- Untrack previously-tracked runtime artifact cache files (bodai cleanup 2026-08-17)
+- Widen DEFAULT_SKIP_DIRS to include .crackerjack + uv
+
 ## [0.73.2] - 2026-08-12
 
 ### Fixed

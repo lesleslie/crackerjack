@@ -5,6 +5,7 @@ import os
 import re
 import shutil
 import subprocess
+import typing as t
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -110,9 +111,7 @@ DEFAULT_MERMAID_PREFIXES: tuple[str, ...] = (
 # imported and executed as code. We trust only the locally-vendored
 # `node_modules/jsdom/` installed in the crackerjack repo by `npm install`
 # (which pins the version in package.json). The path is `<repo>/node_modules/`.
-DEFAULT_JSDOM_LOCATIONS: tuple[str, ...] = (
-    "node_modules/jsdom/lib/api.js",
-)
+DEFAULT_JSDOM_LOCATIONS: tuple[str, ...] = ("node_modules/jsdom/lib/api.js",)
 
 
 def _locate_mermaid_core() -> Path | None:
@@ -201,9 +200,7 @@ def _locate_jsdom() -> Path | None:
 def _is_trusted_mermaid_path(path: Path) -> bool:
     """Allow-list check: `path` must live under a known-good mermaid prefix."""
     resolved = str(path.resolve())
-    return any(
-        resolved.startswith(prefix) for prefix in DEFAULT_MERMAID_PREFIXES
-    )
+    return any(resolved.startswith(prefix) for prefix in DEFAULT_MERMAID_PREFIXES)
 
 
 def validate_mermaid_blocks(
@@ -219,33 +216,48 @@ def validate_mermaid_blocks(
     if not blocks:
         return []
 
+    runner = _resolve_runner_path()
+    mermaid_core = _locate_mermaid_core()
+    jsdom = _locate_jsdom()
+    payload = json.dumps(
+        [{"file": str(b.file), "line": b.line, "code": b.code} for b in blocks]
+    )
+    stdout = _run_validator_subprocess(
+        runner, mermaid_core, jsdom, payload, len(blocks), timeout
+    )
+    results = _decode_validator_output(stdout)
+    return _collect_errors(results)
+
+
+def _resolve_runner_path() -> Path:
+    """Locate the Node.js validator script or raise FileNotFoundError."""
     runner = Path(__file__).parent.parent / "bin" / "validate-mermaid.mjs"
     if not runner.exists():
         raise FileNotFoundError(f"validate-mermaid.mjs not found at {runner}")
+    return runner
 
-    mermaid_core = _locate_mermaid_core()
+
+def _run_validator_subprocess(
+    runner: Path,
+    mermaid_core: Path | None,
+    jsdom: Path | None,
+    payload: str,
+    block_count: int,
+    timeout: float,
+) -> str:
+    """Execute the Node.js validator and return its stdout on success."""
     if not mermaid_core:
         raise RuntimeError(
             "could not find mermaid/dist/mermaid.core.mjs; install "
             "@mermaid-js/mermaid-cli (e.g. `brew install mermaid-cli`) "
             "or set a path that exposes mmdc on PATH"
         )
-
-    jsdom = _locate_jsdom()
     if not jsdom:
         raise RuntimeError(
             "could not find jsdom at node_modules/jsdom/lib/api.js; "
             "run `npm install` in the crackerjack repo to install the "
             "wave-9 dev dep, or set CRACKERJACK_JSDOM to its absolute path"
         )
-
-    payload = json.dumps(
-        [
-            {"file": str(b.file), "line": b.line, "code": b.code}
-            for b in blocks
-        ]
-    )
-
     try:
         completed = subprocess.run(
             ["node", str(runner), str(mermaid_core), str(jsdom)],
@@ -261,35 +273,40 @@ def validate_mermaid_blocks(
         ) from e
     except subprocess.TimeoutExpired as e:
         raise RuntimeError(
-            f"validate-mermaid.mjs timed out after {timeout}s on {len(blocks)} "
-            f"blocks"
+            f"validate-mermaid.mjs timed out after {timeout}s on "
+            f"{block_count} blocks"
         ) from e
-
     if completed.returncode != 0:
         raise RuntimeError(
             f"validate-mermaid.mjs exited {completed.returncode}: "
             f"{completed.stderr.strip()[:500]}"
         )
+    return completed.stdout
 
+
+def _decode_validator_output(stdout: str) -> list[dict[str, object]]:
+    """Parse the validator's JSON output into a list of result dicts."""
     try:
-        results = json.loads(completed.stdout)
+        decoded = json.loads(stdout)
     except json.JSONDecodeError as e:
         raise RuntimeError(
             f"validate-mermaid.mjs returned invalid JSON: {e}; "
-            f"stdout={completed.stdout[:200]!r}"
+            f"stdout={stdout[:200]!r}"
         ) from e
+    return decoded if isinstance(decoded, list) else []
 
-    errors: list[MermaidValidationError] = []
-    for entry in results:
-        if entry.get("status") == "error":
-            errors.append(
-                MermaidValidationError(
-                    file=Path(entry["file"]),
-                    line=entry["line"],
-                    error=entry.get("error", "<unknown error>"),
-                )
-            )
-    return errors
+
+def _collect_errors(results: list[dict[str, object]]) -> list[MermaidValidationError]:
+    """Filter the validator results to entries that failed to parse."""
+    return [
+        MermaidValidationError(
+            file=Path(t.cast("str", entry["file"])),
+            line=t.cast("int", entry["line"]),
+            error=t.cast("str", entry.get("error", "<unknown error>")),
+        )
+        for entry in results
+        if entry.get("status") == "error"
+    ]
 
 
 def find_broken_mermaid_blocks(

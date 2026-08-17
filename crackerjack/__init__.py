@@ -25,6 +25,8 @@ if not _EARLY_DEBUG_MODE:
         logger.setLevel(logging.WARNING)
         logger.propagate = False
 
+from importlib.metadata import version
+
 from .api import (
     CrackerjackAPI,
     PublishResult,
@@ -56,8 +58,6 @@ from .errors import (
     handle_error,
 )
 from .interactive import InteractiveWorkflowOptions as WorkflowOptions
-
-from importlib.metadata import version
 
 __version__ = version("crackerjack")
 __all__: t.Sequence[str] = [

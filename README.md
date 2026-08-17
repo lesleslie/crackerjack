@@ -415,6 +415,7 @@ removed on 2026-08-06 alongside the `--ai-fix` flag.
 
   - Default in the comprehensive hook stage (`enable_ty` is implicit)
   - `ty --fix` runs as a pre-pass before the AI auto-fix loop
+
 - **Zuban** (Type Checking, opt-in): 20-200x faster than pyright
 
   - Enable via `enable_zuban` in `pyproject.toml` under `[tool.crackerjack]`

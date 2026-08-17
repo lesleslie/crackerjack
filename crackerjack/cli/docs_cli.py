@@ -294,10 +294,7 @@ def check_mermaid(
 
         console.print(
             _json.dumps(
-                [
-                    {"file": e.relpath, "line": e.line, "error": e.error}
-                    for e in errors
-                ],
+                [{"file": e.relpath, "line": e.line, "error": e.error} for e in errors],
                 indent=2,
             )
         )
