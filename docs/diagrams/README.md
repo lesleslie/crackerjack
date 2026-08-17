@@ -13,14 +13,12 @@ This directory contains visual documentation for the Crackerjack project, design
 | Diagram | Description | Used In |
 |---------|-------------|---------|
 | [oneiric-workflow-dag.png](./oneiric-workflow-dag.png) | Complete execution pipeline from CLI entry through all phases: Fast Hooks → Code Cleaning → Comprehensive Hooks → Tests → AI Batch Fixing | [README.md](../../README.md) |
-| [layered-architecture.png](./layered-architecture.png) | (No live embed; consider removing or linking from CLAUDE.md.) | (none) |
 
 ### AI & Agent System
 
 | Diagram | Description | Used In |
 |---------|-------------|---------|
-| [ai-agent-orchestration.png](./ai-agent-orchestration.png) | 12 specialized AI agents with confidence-based routing, issue classification, and batch processing loop | [README.md](../../README.md) |
-| [agent-selection.png](./agent-selection.png) | (Orphaned; depicts the removed 12-agent system. Regenerate or remove.) | (none) |
+| [ai-agent-orchestration.png](./ai-agent-orchestration.png) | 12 specialized AI agents with confidence-based routing, issue classification, and batch processing loop (pending regeneration post-removal) | [README.md](../../README.md) |
 
 ### Quality & Decision Frameworks
 
@@ -47,8 +45,8 @@ This directory contains visual documentation for the Crackerjack project, design
 ### By Priority (Impact on Understanding)
 
 1. **Start Here**: `oneiric-workflow-dag.png` - Understand the complete execution flow
-1. **Architecture**: `layered-architecture.png` - Understand the codebase structure
-1. **AI System**: `ai-agent-orchestration.png` - Understand how AI fixing works
+1. **Architecture**: ~~`layered-architecture.png`~~ (removed 2026-08-16) - See `docs/architecture/MEMORY_ARCHITECTURE.md` instead
+1. **AI System**: `ai-agent-orchestration.png` - Understand how AI fixing works (pending regeneration)
 1. **Quality**: `quality-hooks.png` - Understand the two-phase quality system
 1. **Decision Making**: `decision-framework.png` - Know when to fix vs defer
 
@@ -56,14 +54,12 @@ This directory contains visual documentation for the Crackerjack project, design
 
 **New Contributors:**
 
-- `layered-architecture.png` - Where does my code go?
 - `oneiric-workflow-dag.png` - How does everything connect?
 - `adapter-taxonomy.png` - What tools are available?
 
 **AI Agents (Claude, etc.):**
 
-- `agent-selection.png` - Which specialist to use?
-- `ai-agent-orchestration.png` - How does batch fixing work?
+- `ai-agent-orchestration.png` - How does batch fixing work? (pending regeneration)
 - `decision-framework.png` - Fix now or later?
 
 **Security Reviewers:**
