@@ -121,7 +121,7 @@ How should Crackerjack orchestrate multiple specialized AI agents to:
                          │
                          ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                  Agent Registry (12 Agents)                 │
+│   Agent Registry (12 Agents, REMOVED 2026-08-12 — superseded)│
 │  ┌──────────────┬──────────────┬────────────────────────┐  │
 │  │ Security     │ Refactoring  │ Performance            │  │
 │  │ Agent        │ Agent        │ Agent                  │  │

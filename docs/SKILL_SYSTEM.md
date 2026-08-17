@@ -12,6 +12,14 @@ Crackerjack's Skills System provides a multi-layered architecture that bridges A
 1. **MCP Skills** (Option 2) - Groups existing MCP tools into purpose-based skills
 1. **Hybrid Skills** (Option 3) - Combines agents with MCP tool delegation
 
+> **Post-removal note (2026-08-12)**: The `crackerjack/skills/` package today
+> contains only `__init__.py` and `health.py`. The three registries above
+> (Agent, MCP, Hybrid) were removed as part of the AI-fix subsystem removal
+> (see `docs/superpowers/specs/2026-08-06-ai-fix-removal-external-loop-design.md`).
+> The code samples below describe the **legacy** registry model and are
+> preserved here for historical reference and as a reference for the new
+> external-loop pattern. Do NOT treat these as live code.
+
 ## Architecture
 
 ```

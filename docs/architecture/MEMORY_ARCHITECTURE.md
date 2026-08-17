@@ -1040,13 +1040,13 @@ ______________________________________________________________________
 
 ## 7. Diagrams
 
-Three diagrams are persisted with this document. Two are embedded
-above; the third is the self-improvement sequence diagram in
-[Section 2](#2-mcp-write-surface). All three are also reachable via
-the global `bodai/docs/memory/INDEX.md` once Stage 3 of the
-documentation plan lands.
+Six diagrams are persisted with this document. Five are embedded
+above; the sixth is the quality gate flow (`execute_crackerjack`
+→ `crackerjack_run`) below. All are also reachable via the global
+`bodai/docs/memory/INDEX.md` once Stage 3 of the documentation
+plan lands.
 
-1. **Schema map** (Section 1) — `erDiagram` of all on-disk stores, the in-process registries, and the failure-flow join through `issue_fingerprint` into Dhara KV and Session-Buddy reflections. The `FixStrategyDB` and `GitMetricsDB` are the authoritative write targets; `error_patterns` is derived (JSON, in-process `ErrorCache`); `skill_registries` are derived (Python `dict`, in-process only).
+1. **Schema map** (Section 1) — `erDiagram` of all surviving on-disk stores and the failure-flow join through `issue_fingerprint` into Dhara KV and Session-Buddy reflections. `GitMetricsDB` and `AdapterLearningDB` are the authoritative write targets; `StateManagerJson` and `ErrorCacheJson` are derived (JSON, in-process); `OneiricDBSqlite` is Oneiric-managed.
 1. **Read groups by access pattern** (Section 3) — `flowchart` of how Mahavishnu's hot path (every dispatch), dashboards (monitoring), code intelligence (search), self-improvement (skill coverage), and admin (utility) tools read from the schema.
 1. **Self-improvement loop** (Section 2) — `sequenceDiagram` of `PhaseCoordinator → FailureRecorder → FailureMetricsRepository → Session-Buddy → ImprovementGenerator → ImprovementOverseer → SelfPatcher`, with the `MIN_FAILURES_BEFORE_IMPROVEMENT=3` and `MAX_IMPROVEMENTS_PER_DAY=5` guards called out.
 
