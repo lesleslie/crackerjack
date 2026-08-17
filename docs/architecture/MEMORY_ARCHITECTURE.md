@@ -78,146 +78,31 @@ aspirational / aspirational-DLQ.
 
 ```mermaid
 erDiagram
-    %% fix-attempt + strategy_effectiveness (crackerjack/memory/fix_strategy_schema.sql)
-    FixStrategyDB ||--o{ fix_attempts : "owns"
-    FixStrategyDB ||--o{ strategy_effectiveness : "owns (trigger-rebuild)"
-    fix_attempts {
-        integer id PK
-        text issue_type
-        text issue_message
-        text file_path
-        text stage
-        blob issue_embedding "Packed 384-dim float array (neural) OR zeros (TF-IDF)"
-        blob tfidf_vector "Optional TF-IDF sparse (scipy.sparse.save_npz)"
-        text agent_used
-        text strategy
-        bool success
-        real confidence
-        text timestamp
-        text session_id
-    }
-    strategy_effectiveness {
-        text agent_strategy PK "agent:strategy"
-        integer total_attempts
-        integer successful_attempts
-        real success_rate
-        text last_attempted
-        text last_successful
-    }
+    %% surviving stores after AI-fix subsystem removal (2026-08-12)
+    %% see "Storage paths" table below for source files
 
-    %% git-metrics (crackerjack/memory/git_metrics_schema.sql)
-    GitMetricsDB ||--o{ git_metrics : "owns"
-    GitMetricsDB ||--o{ git_events : "owns"
-    git_metrics {
-        text timestamp PK
-        text repository_path PK
-        text metric_type PK "commit_velocity, merge_conflicts, ..."
-        real value
-        text metadata "JSON string"
-    }
-    git_events {
-        text repository_path PK
-        text event_type PK "commit, push, merge, rebase, ..."
-        text timestamp PK
-        text details "JSON string"
-    }
+    GitMetricsDB["GitMetricsDB<br/>(crackerjack/memory/git_metrics_collector.py)<br/>SQLite — git_metrics + git_events"]
+    OneiricDBSqlite["OneiricDBSqlite<br/>(managed by oneiric)<br/>SQLite — workflow_checkpoints"]
+    StateManagerJson["StateManagerJson<br/>(crackerjack/mcp/state.py)<br/>JSON — current_session.json + checkpoints"]
+    ErrorCacheJson["ErrorCacheJson<br/>(crackerjack/mcp/cache.py)<br/>JSON — error_patterns.json + fix_results.json"]
+    AdapterLearningDB["AdapterLearningDB<br/>(crackerjack/integration/dhara_integration.py)<br/>SQLite — adapter_attempts + adapter_effectiveness"]
 
-    %% adapter learning (crackerjack/.crackerjack/adapter_learning.db)
-    AdapterLearningDB ||--o{ adapter_attempts : "owns"
-    AdapterLearningDB ||--o{ adapter_effectiveness : "owns"
-    adapter_attempts {
-        integer id PK
-        text adapter_name
-        text file_type
-        integer file_size
-        text project_context
-        bool success
-        integer execution_time_ms
-        text error_type
-        text timestamp
-    }
-    adapter_effectiveness {
-        integer id PK
-        text adapter_name
-        text file_type "UNIQUE"
-        integer total_attempts
-        integer successful_attempts
-        real success_rate
-        real avg_execution_time_ms
-        text common_errors "JSON string"
-        text last_attempted
-        text last_updated
-    }
+    %% Failure-flow (failure_recorder.py + Dhara + Session-Buddy)
+    %% written from PhaseCoordinator; read by ImprovementGenerator
+    FailureRecorder["FailureRecorder<br/>(crackerjack/services/failure_recorder.py)"]
+    DharaKV["Dhara KV / TimeSeries<br/>fix-failures/{fingerprint}"]
+    SBReflection["Session-Buddy MCP<br/>store_reflection(tags=[fix-failure,...])"]
 
-    %% Oneiric workflow checkpoints (managed by oneiric)
-    OneiricDBSqlite ||--o{ workflow_checkpoints : "owns"
-    OneiricDBSqlite ||--o{ workflow_executions : "owns"
-    OneiricDBSqlite ||--o{ workflow_execution_nodes : "owns"
-    workflow_checkpoints {
-        text workflow_key PK
-        text node_id PK
-        blob payload
-    }
+    FailureRecorder ||--o{ DharaKV : "put('fix-failures/{fingerprint}', ...)"
+    FailureRecorder ||--o{ SBReflection : "store_reflection(content, tags=[fix-failure, ...])"
+    GitMetricsDB ||--o{ FailureRecorder : "read for git_metrics context"
 
-    %% In-process state (crackerjack/mcp/state.py)
-    StateManagerJson ||--o{ session_state : "owns (current_session.json)"
-    StateManagerJson ||--o{ checkpoints : "owns (<name>.json)"
-    StateManagerJson ||--o{ error_patterns : "owns (error_patterns.json)"
-    StateManagerJson ||--o{ fix_results : "owns (fix_results.json)"
-    session_state {
-        text session_id
-        text start_time
-        text current_stage
-        text stages_json
-        text issues_json
-        text fixes_applied_json
-    }
-    error_patterns {
-        text pattern_id PK "sha256(error pattern)"
-        text error_type "ruff | pyright | bandit"
-        text error_code
-        text message_pattern
-        int frequency
-        bool auto_fixable
-        text last_seen
-    }
-
-    %% In-process skill registries (crackerjack/skills/)
-    SkillRegistriesPython ||--o{ agent_skills : "holds"
-    SkillRegistriesPython ||--o{ mcp_skills : "holds"
-    SkillRegistriesPython ||--o{ hybrid_skills : "holds"
-    agent_skills {
-        text skill_id PK "skill_<8hex>"
-        text name "agent class name"
-        text category "code_quality | testing | security | ..."
-        int execution_count
-        real success_rate "EMA alpha=0.1"
-    }
-    mcp_skills {
-        text skill_id PK "named in MCP_SKILL_GROUPS"
-        text domain "execution | monitoring | intelligence | ..."
-        int total_tools "sum of ToolReference per skill"
-    }
-
-    %% Failure-flow (failure_recorder.py + Dhara + SB)
-    fix_attempts ||--o{ FixAttemptRecord : "produced by"
-    FixAttemptRecord ||--o{ DharaKV : "put('fix-failures/{fingerprint}')"
-    FixAttemptRecord ||--o{ SBReflection : "store_reflection(content, tags=[fix-failure, ...])"
-    DharaKV ||--o{ FailureRecorderCount : "count_similar(fingerprint)"
-    FailureRecorderCount ||--o{ ImprovementGenerator : "maybe_generate(fingerprint)"
-
-    style FixStrategyDB fill:#dfd,stroke:#383
-    style fix_attempts fill:#dfd,stroke:#383
-    style strategy_effectiveness fill:#dfd,stroke:#383
-    style GitMetricsDB fill:#ffd,stroke:#993
-    style git_metrics fill:#dfd,stroke:#383
-    style git_events fill:#dfd,stroke:#383
-    style AdapterLearningDB fill:#dfd,stroke:#383
+    style GitMetricsDB fill:#dfd,stroke:#383
     style OneiricDBSqlite fill:#dde,stroke:#338
     style StateManagerJson fill:#ffd,stroke:#993
-    style error_patterns fill:#ffd,stroke:#993
-    style SkillRegistriesPython fill:#eee,stroke:#666
-    style fix_attempts fill:#dff,stroke:#399
+    style ErrorCacheJson fill:#ffd,stroke:#993
+    style AdapterLearningDB fill:#dfd,stroke:#383
+    style FailureRecorder fill:#dff,stroke:#399
     style DharaKV fill:#dff,stroke:#399
     style SBReflection fill:#dff,stroke:#399
 ```
