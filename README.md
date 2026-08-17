@@ -469,9 +469,9 @@ Crackerjack integrates with **session-buddy** for AI agent metrics tracking and 
 ┌─────────────────────────────────────────────────────────────┐
 │                    Crackerjack                              │
 │  ┌───────────────┐    ┌───────────────┐    ┌───────────────┐│
-│  │  Agent        │    │  Agent        │    │  Agent        ││
-│  │  Orchestrator │───▶│  Context      │───▶│  Skills       ││
-│  │              │    │              │    │  Tracker      ││
+│  │  Phase        │    │  Hooks        │    │  Skills       ││
+│  │  Coordinator  │───▶│  Runners      │───▶│  Tracker      ││
+│  │              │    │              │    │  (compat)     ││
 │  └───────────────┘    └───────────────┘    └───────┬───────┘│
 │                                                 │          │
 └─────────────────────────────────────────────────┼───────────┘
