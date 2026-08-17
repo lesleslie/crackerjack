@@ -401,8 +401,6 @@ flowchart LR
         Q9[find_workflow_patterns]
     end
     subgraph SKILL["Skill / self-improvement"]
-        Q10[list_skills]
-        Q11[find_best_skill]
         Q12[skill_coverage_report]
         Q13[agent_performance_analysis]
     end
