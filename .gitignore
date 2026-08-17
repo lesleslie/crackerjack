@@ -260,3 +260,9 @@ feature-implementation-*.md
 test-implementation-*.md
 session_handoff_*.md
 .worktrees/
+
+# ============================================================================
+# Bodai Runtime Artifacts (canonical 2026-08-17 cleanup)
+# ============================================================================
+*.pyd
+example.mcp.json
