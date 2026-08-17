@@ -247,7 +247,7 @@ python -m crackerjack run -i
 ## AI Auto-Fix Features
 
 ![AI Agent Orchestration](docs/diagrams/ai-agent-orchestration.png)
-*External `Workflow`-tool loop with SHA-anchored stashes, rollback on regression, and JSONL audit trail*
+*12 specialized AI agents with confidence-based routing and batch processing (NOTE: pending regeneration post AI-fix subsystem removal; see docs/superpowers/specs/2026-08-06-ai-fix-removal-external-loop-design.md)*
 
 Crackerjack provides two distinct approaches to automatic error fixing:
 
