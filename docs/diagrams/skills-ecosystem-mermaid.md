@@ -10,7 +10,7 @@ ______________________________________________________________________
 graph TB
     subgraph "User Layer"
         U[User]
-        Q[Query: "Fix type errors"]
+        Q["Query: Fix type errors"]
     end
 
     subgraph "Session-Buddy Layer - Core Tracking"
