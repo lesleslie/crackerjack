@@ -1094,27 +1094,27 @@ default). `_clear_oneiric_cache` runs at the start of every
 checkpoints; cross-key pollution is not prevented (see
 [Known gaps](#known-gaps-planned-but-unimplemented-parts)).
 
-### Failure flow (run → fix_attempts → Dhara → SB → ImprovementGenerator)
+### Failure flow (run → failure_recorder → Dhara → SB → ImprovementGenerator)
 
 ```mermaid
 sequenceDiagram
     autonumber
     participant Phase as PhaseCoordinator
-    participant Agent as AgentCoordinator / SubAgent
-    participant FixMem as FixStrategyStorage
     participant FR as FailureRecorder
     participant Repo as FailureMetricsRepository
+    participant GM as GitMetricsDB
     participant Dhara as Dhara KV
     participant SB as Session-Buddy MCP
     participant Gen as ImprovementGenerator
     participant Ovsr as ImprovementOverseer
     participant Akosha as Akosha changepoints
 
-    Note over Phase: AI fix exhausts iterations (>=3 attempts)
+    Note over Phase: phase exhausts retries (no AI-fix subsystem)
     Phase->>FR: record(FixAttemptRecord(hook, issue_type, fingerprint, fix_code, ...))
     FR->>Repo: record(rec) -> put("fix-failures/{fingerprint}", rec.to_dict())
     Repo->>Dhara: record_time_series("fix-failures", fingerprint, {ts, repo, hook, ...})
     FR->>SB: store_reflection(content, tags=[fix-failure, hook, repo])
+    FR->>GM: write git_metrics + git_events (commit_velocity, merge_conflict)
 
     Note over Gen: next request for same fingerprint
     Gen->>Repo: count_similar(fingerprint) -> Dhara.query_time_series
