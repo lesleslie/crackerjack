@@ -138,6 +138,16 @@ settings/ecosystem.yaml
 settings.local.json
 
 # ============================================================================
+# Node.js - Wave-9 mermaid CI guard
+# ============================================================================
+# jsdom is the dev dep for the wave-9 mermaid CI guard (see
+# crackerjack/bin/validate-mermaid.mjs). The package.json + package-lock.json
+# ARE committed; only the resolved artifacts are excluded.
+node_modules/
+# Allow the empty placeholder so a fresh clone gets a usable `npm install`.
+!node_modules/.gitkeep
+
+# ============================================================================
 # Sensitive Configuration Files
 # ============================================================================
 config.yaml
