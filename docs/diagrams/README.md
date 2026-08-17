@@ -13,20 +13,20 @@ This directory contains visual documentation for the Crackerjack project, design
 | Diagram | Description | Used In |
 |---------|-------------|---------|
 | [oneiric-workflow-dag.png](./oneiric-workflow-dag.png) | Complete execution pipeline from CLI entry through all phases: Fast Hooks → Code Cleaning → Comprehensive Hooks → Tests → AI Batch Fixing | [README.md](../../README.md) |
-| [layered-architecture.png](./layered-architecture.png) | 8-layer modular architecture with 100% protocol compliance: Entry → CLI → Coordinators → Managers → Services → Adapters → Agents → MCP | [CLAUDE.md](../../CLAUDE.md) |
+| [layered-architecture.png](./layered-architecture.png) | (No live embed; consider removing or linking from CLAUDE.md.) | (none) |
 
 ### AI & Agent System
 
 | Diagram | Description | Used In |
 |---------|-------------|---------|
 | [ai-agent-orchestration.png](./ai-agent-orchestration.png) | 12 specialized AI agents with confidence-based routing, issue classification, and batch processing loop | [README.md](../../README.md) |
-| [agent-selection.png](./agent-selection.png) | Decision tree for routing tasks to appropriate specialized agents by domain (language, database, infrastructure, testing, security, architecture) | [CLAUDE.md](../../CLAUDE.md) |
+| [agent-selection.png](./agent-selection.png) | (Orphaned; depicts the removed 12-agent system. Regenerate or remove.) | (none) |
 
 ### Quality & Decision Frameworks
 
 | Diagram | Description | Used In |
 |---------|-------------|---------|
-| [decision-framework.png](./decision-framework.png) | "Fix Now or Later?" decision tree: Blocker → While-Here → Critical → Defer with examples for each category | [CLAUDE.md](../../CLAUDE.md) |
+| [decision-framework.png](./decision-framework.png) | "Fix Now or Later?" decision tree (still useful post-removal) | (none — link from CLAUDE.md or remove) |
 | [quality-hooks.png](./quality-hooks.png) | Fast hooks (~5s) vs Comprehensive hooks (~30s) execution flow with retry logic and AI-fix integration | [README.md](../../README.md) |
 
 ### Security & Validation
