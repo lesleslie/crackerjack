@@ -1224,7 +1224,7 @@ sequenceDiagram
     participant Dhara as Dhara KV
     participant SB as Session-Buddy MCP
     participant Gen as ImprovementGenerator
-    participant Over as ImprovementOverseer
+    participant Ovsr as ImprovementOverseer
     participant Akosha as Akosha changepoints
 
     Note over Phase: AI fix exhausts iterations (>=3 attempts)
@@ -1244,14 +1244,14 @@ sequenceDiagram
 
     alt count >= MIN_FAILURES_BEFORE_IMPROVEMENT (3) OR abrupt early trigger
         Gen-->>Phase: {improvement_job_id, status: "generating", priority}
-        Note over Phase: improvement_job_id is not consumed today;<br/>no diff generation; see Contract 5.8
+        Note over Phase: improvement_job_id is not consumed today,<br/>no diff generation, see Contract 5.8
     else
         Gen-->>Phase: None
     end
 
-    Note over Over,Gen: future Phase 3 (not implemented)
-    Over->>Over: review_diff(diff, constitution, failure_context) -> OverseerVerdict
-    Over->>Gen: emit proposal via approval queue
+    Note over Ovsr,Gen: future Phase 3 (not implemented)
+    Ovsr->>Ovsr: review_diff(diff, constitution, failure_context) -> OverseerVerdict
+    Ovsr->>Gen: emit proposal via approval queue
 ```
 
 The `repo` and `hook` tags on the Session-Buddy reflection are the
