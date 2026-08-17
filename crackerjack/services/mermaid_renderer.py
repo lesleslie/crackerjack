@@ -93,34 +93,115 @@ def extract_mermaid_blocks(path: Path) -> list[MermaidBlock]:
     return blocks
 
 
+# Allow-listed prefixes for the mermaid-cli install. The validator trusts
+# only paths that resolve under one of these. This prevents an attacker
+# from planting a directory tree on PATH and having it picked up by a
+# parent-walk — the walker must still land in a trusted prefix.
+DEFAULT_MERMAID_PREFIXES: tuple[str, ...] = (
+    "/usr/local/Cellar/mermaid-cli/",
+    "/opt/homebrew/Cellar/mermaid-cli/",
+    "/usr/local/lib/node_modules/",
+    "/opt/homebrew/lib/node_modules/",
+)
+
+# Allow-list for the jsdom install. Like mermaid, jsdom is dynamically
+# imported and executed as code. We trust only the locally-vendored
+# `node_modules/jsdom/` installed in the crackerjack repo by `npm install`
+# (which pins the version in package.json). The path is `<repo>/node_modules/`.
+DEFAULT_JSDOM_LOCATIONS: tuple[str, ...] = (
+    "node_modules/jsdom/lib/api.js",
+)
+
+
 def _locate_mermaid_core() -> Path | None:
     """Return the absolute path to `mermaid/dist/mermaid.core.mjs`, if reachable.
 
-    Resolves the `mmdc` symlink to find the homebrew / npm prefix. The Node.js
-    runner takes this path as argv[2] and uses dynamic `import()` to load it
-    (Node ESM does NOT honor NODE_PATH for static imports in v18+).
+    Resolution order (fail-closed; returns None if no trusted path):
+
+    1. ``CRACKERJACK_MERMAID_CORE`` env var (operator-pinned). Must pass
+       the allow-list check.
+    2. ``mmdc`` symlink resolution, validated against the allow-list.
+
+    The Node.js runner takes the resolved path as argv[2] and uses dynamic
+    ``import()`` to load it (Node ESM does NOT honor NODE_PATH for static
+    imports in v18+). The path is then executed as code, so it must
+    resolve to a verified, allow-listed install.
     """
+    # 1. Explicit env var override (preferred for CI / production).
+    env_override = os.environ.get("CRACKERJACK_MERMAID_CORE")
+    if env_override:
+        path = Path(env_override).resolve()
+        if _is_trusted_mermaid_path(path):
+            return path
+        raise RuntimeError(
+            f"CRACKERJACK_MERMAID_CORE={env_override} is not under a "
+            f"trusted mermaid-cli prefix; refusing to import. Allowed "
+            f"prefixes: {DEFAULT_MERMAID_PREFIXES}"
+        )
+
+    # 2. Walk from `mmdc` on PATH, but only return matches inside the
+    # allow-list. This prevents an attacker who plants a directory on
+    # PATH from having the walker resolve to a malicious install.
     bin_path = shutil.which("mmdc")
     if not bin_path:
         return None
     real = Path(bin_path).resolve()
-    # Homebrew layout: /usr/local/Cellar/mermaid-cli/<v>/libexec/lib/node_modules
-    # Walk up to find the parent that contains node_modules/@mermaid-js/mermaid-cli.
+    if not _is_trusted_mermaid_path(real):
+        return None
     for candidate in real.parents:
         nm = candidate / "node_modules"
-        if nm.is_dir() and (nm / "@mermaid-js" / "mermaid-cli").is_dir():
-            core = (
-                nm
-                / "@mermaid-js"
-                / "mermaid-cli"
-                / "node_modules"
-                / "mermaid"
-                / "dist"
-                / "mermaid.core.mjs"
-            )
-            if core.is_file():
-                return core
+        if not (nm.is_dir() and (nm / "@mermaid-js" / "mermaid-cli").is_dir()):
+            continue
+        core = (
+            nm
+            / "@mermaid-js"
+            / "mermaid-cli"
+            / "node_modules"
+            / "mermaid"
+            / "dist"
+            / "mermaid.core.mjs"
+        )
+        if core.is_file() and _is_trusted_mermaid_path(core):
+            return core
     return None
+
+
+def _locate_jsdom() -> Path | None:
+    """Return the absolute path to the locally-installed jsdom package.
+
+    Looks for the `node_modules/jsdom/` directory under the crackerjack
+    repo root (where the wave-9 dev dep is installed). The result is
+    the package's main entry point, `jsdom/lib/api.js`, which exposes
+    the `JSDOM` class.
+
+    Override via ``CRACKERJACK_JSDOM`` env var for CI where the
+    crackerjack repo lives at a different path.
+    """
+    env_override = os.environ.get("CRACKERJACK_JSDOM")
+    if env_override:
+        path = Path(env_override).resolve()
+        if path.is_file():
+            return path
+        raise RuntimeError(
+            f"CRACKERJACK_JSDOM={env_override} does not exist or is not a file"
+        )
+
+    # Walk up from this file to find the crackerjack repo root.
+    repo_root = Path(__file__).resolve()
+    while repo_root != repo_root.parent:
+        candidate = repo_root / "node_modules" / "jsdom" / "lib" / "api.js"
+        if candidate.is_file():
+            return candidate
+        repo_root = repo_root.parent
+    return None
+
+
+def _is_trusted_mermaid_path(path: Path) -> bool:
+    """Allow-list check: `path` must live under a known-good mermaid prefix."""
+    resolved = str(path.resolve())
+    return any(
+        resolved.startswith(prefix) for prefix in DEFAULT_MERMAID_PREFIXES
+    )
 
 
 def validate_mermaid_blocks(
@@ -148,6 +229,14 @@ def validate_mermaid_blocks(
             "or set a path that exposes mmdc on PATH"
         )
 
+    jsdom = _locate_jsdom()
+    if not jsdom:
+        raise RuntimeError(
+            "could not find jsdom at node_modules/jsdom/lib/api.js; "
+            "run `npm install` in the crackerjack repo to install the "
+            "wave-9 dev dep, or set CRACKERJACK_JSDOM to its absolute path"
+        )
+
     payload = json.dumps(
         [
             {"file": str(b.file), "line": b.line, "code": b.code}
@@ -157,7 +246,7 @@ def validate_mermaid_blocks(
 
     try:
         completed = subprocess.run(
-            ["node", str(runner), str(mermaid_core)],
+            ["node", str(runner), str(mermaid_core), str(jsdom)],
             input=payload,
             capture_output=True,
             text=True,
