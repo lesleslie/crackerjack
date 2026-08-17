@@ -262,3 +262,47 @@ def validate(
 
     if not result.success or (strict and result.warning_count > 0):
         raise typer.Exit(1)
+
+
+@app.command(name="check-mermaid")
+def check_mermaid(
+    repo_root: Path = typer.Option(
+        None,
+        "--repo-root",
+        callback=_resolve_repo_root,
+        help="Repo root to scan. Defaults to git toplevel of cwd.",
+    ),
+    json_output: bool = typer.Option(
+        False, "--json", help="Emit JSON instead of human-readable output."
+    ),
+) -> None:
+    """Validate every fenced ```mermaid block in the repo.
+
+    Uses `mermaid.parse()` via Node.js (no Chrome/Puppeteer needed). Catches
+    syntax errors like the 3 broken diagrams fixed in wave-8. The companion
+    pytest test is `tests/unit/test_mermaid_renders.py`; this CLI is the
+    developer-facing entry point that runs the same validator.
+    """
+    from crackerjack.services.mermaid_renderer import (
+        find_broken_mermaid_blocks,
+        print_errors,
+    )
+
+    errors = find_broken_mermaid_blocks(root=repo_root)
+    if json_output:
+        import json as _json
+
+        console.print(
+            _json.dumps(
+                [
+                    {"file": e.relpath, "line": e.line, "error": e.error}
+                    for e in errors
+                ],
+                indent=2,
+            )
+        )
+    else:
+        print_errors(errors)
+
+    if errors:
+        raise typer.Exit(1)
