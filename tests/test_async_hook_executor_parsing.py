@@ -157,3 +157,96 @@ def test_parse_hook_output_check_added_large_files_populates_structured_issues()
     # The issue string must reference the offending file path so the panel
     # can show operators which file triggered the failure.
     assert "coverage__20260728-055629.json" in result["issues"][0]
+
+
+def test_apply_raw_fallback_excludes_headers_and_separators() -> None:
+    """Regression: raw-fallback must use ``extract_issue_lines`` filter.
+
+    Before Option A, the async raw-fallback did a dumb ``output.split("\\n")``
+    and treated every non-empty line as an issue — meaning a single-ruff-error
+    output like ``"Found 1 error:\\nfile.py:10:5: F401 unused import"``
+    would surface as ``Issues: 2`` in the fast-hooks panel (the ``"Found 1
+    error"`` header was counted as a separate issue).
+
+    The fix delegates to ``extract_issue_lines`` which filters out
+    summary/header/separator/JSON lines. This test asserts the filter
+    excludes such lines and keeps only the genuine diagnostic line.
+    """
+    import logging
+
+    console = Console()
+    logger = logging.getLogger(__name__)
+    executor = AsyncHookExecutor(console=console, pkg_path=Path())
+
+    # Ruff concise-style output with a leading summary line that must be
+    # filtered out. The body line is the only genuine issue.
+    output = (
+        "Found 1 error.\n"
+        "ruff_check.py:42:5: F401 unused import `os`"
+    )
+    issues = executor._apply_raw_fallback("ruff-check", output)
+
+    assert len(issues) == 1, (
+        f"Expected exactly 1 issue after filtering the 'Found 1 error.' "
+        f"header, got {len(issues)}: {issues!r}"
+    )
+    assert "F401" in issues[0]
+
+
+def test_apply_raw_fallback_excludes_separators_and_empty_lines() -> None:
+    """Regression: raw-fallback must ignore separator runes and blank lines.
+
+    Multi-line hook output typically interleaves the genuine diagnostic lines
+    with separator characters (``─────``, ``====``, ``┌``, ``└``) and blank
+    padding. The filter excludes those so the panel count reflects only
+    real issues.
+
+    Note: ruff's *verbose* diagnostic format (``code --> file:line:col``
+    followed by ``|``-prefixed context lines) has context lines that the
+    filter does not yet recognize. That case is handled by Option C via
+    ``ParserFactory`` dispatch to the registered ``RuffRegexParser``;
+    keeping the fix in scope here to that filter would also widen the
+    sync-path behavior, which is out of scope for this change.
+    """
+    import logging
+
+    console = Console()
+    logger = logging.getLogger(__name__)
+    executor = AsyncHookExecutor(console=console, pkg_path=Path())
+
+    output = (
+        "=====\n"
+        "file1.py:1:1: F401 unused import `os`\n"
+        "-----\n"
+        "\n"
+        "file2.py:2:2: E501 line too long\n"
+        "=====\n"
+    )
+    issues = executor._apply_raw_fallback("ruff-check", output)
+
+    # Two genuine diagnostics; the separator lines and the blank line
+    # must be excluded.
+    assert len(issues) == 2, (
+        f"Separator/blank lines must be filtered out; "
+        f"got {len(issues)}: {issues!r}"
+    )
+    assert "F401" in issues[0]
+    assert "E501" in issues[1]
+
+
+def test_apply_raw_fallback_returns_synthetic_when_nothing_parseable() -> None:
+    """When output has only headers/summaries, fallback must report a generic
+    failure rather than producing an empty issues list (which would otherwise
+    show ``Issues: 0`` for a failed hook)."""
+    import logging
+
+    console = Console()
+    logger = logging.getLogger(__name__)
+    executor = AsyncHookExecutor(console=console, pkg_path=Path())
+
+    issues = executor._apply_raw_fallback("some-hook", "Found 1 error.\nAll checks passed")
+
+    # ``Found 1 error.`` is filtered as a summary line; ``All checks passed``
+    # is filtered as a success line. Net: no parseable issues, so the
+    # synthetic ``"Hook failed with non-zero exit code"`` is the sole entry.
+    assert issues == ["Hook failed with non-zero exit code"]

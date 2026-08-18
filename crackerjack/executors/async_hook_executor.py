@@ -522,10 +522,11 @@ class AsyncHookExecutor:
         skip_raw_fallback = hook.name == "ty"
 
         if status == "failed" and not issues and output_text and not skip_raw_fallback:
-            error_lines = [
-                line.strip() for line in output_text.split("\n") if line.strip()
-            ][:10]
-            issues = error_lines or ["Hook failed with non-zero exit code"]
+            # Last-resort line-counting safety net for hooks whose structured
+            # parser returned nothing parseable. See ``_apply_raw_fallback``
+            # for why this delegates to ``extract_issue_lines`` rather than
+            # splitting on ``\n`` directly.
+            issues = self._apply_raw_fallback(hook.name, output_text)
 
         issues_count = max(len(issues), 1 if status == "failed" else 0)
 
@@ -832,6 +833,21 @@ class AsyncHookExecutor:
             else issue.message
             for issue in issues
         ]
+
+    def _apply_raw_fallback(self, hook_name: str, output_text: str) -> list[str]:
+        # Last-resort line-counting safety net used when a hook's structured
+        # parser returned ``[]`` (parser drift, new tool versions, crash
+        # tracebacks). Delegate to ``extract_issue_lines`` rather than splitting
+        # on ``\\n`` directly so headers (``Found``, ``Checked``, ``N errors
+        # found``), separators (``┌``, ``└``, ``────``), JSON lines, and comments
+        # are excluded — otherwise the panel over-counts by treating them as
+        # separate issues. Capped at 10 lines to mirror the previous behavior.
+        from crackerjack.utils.issue_detection import extract_issue_lines
+
+        issues = extract_issue_lines(output_text, tool_name=hook_name)[:10]
+        if not issues:
+            issues = ["Hook failed with non-zero exit code"]
+        return issues
 
     def _extract_file_count_from_output(self, output: str) -> int:
         import re
