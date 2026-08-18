@@ -745,6 +745,12 @@ class AsyncHookExecutor:
             return result
 
         result["files_processed"] = self._extract_file_count_from_output(output)
+        # Default fallthrough: dispatch the registered ``ParserFactory`` parser
+        # for the hook name (if any) so structured issues flow into the panel
+        # count rather than being approximated by the raw line-counting
+        # fallback. Returns ``[]`` when no parser is registered or parsing
+        # fails — ``_build_success_result`` then delegates to the raw fallback.
+        result["issues"] = self._parse_factory_issues(hook_name, output)
         return result
 
     def _parse_ty_output_async(
@@ -848,6 +854,31 @@ class AsyncHookExecutor:
         if not issues:
             issues = ["Hook failed with non-zero exit code"]
         return issues
+
+    def _parse_factory_issues(self, hook_name: str, output: str) -> list[str]:
+        # Primary path: dispatch the hook's registered ``ParserFactory``
+        # parser to extract structured issues. Returns ``[]`` when no parser
+        # is registered (``ValueError`` from ``create_parser``) or when the
+        # parser raises (``ParsingError``, malformed JSON, etc.) — in both
+        # cases ``_build_success_result`` falls through to the raw line
+        # counter.
+        try:
+            from crackerjack.parsers.factory import ParserFactory
+        except ImportError:
+            return []
+
+        try:
+            factory = ParserFactory()
+            issues = factory.parse_with_validation(hook_name, output)
+        except Exception:
+            return []
+
+        return [
+            f"{issue.file_path}:{issue.line_number}: {issue.message}"
+            if issue.file_path and issue.line_number
+            else issue.message
+            for issue in issues
+        ]
 
     def _extract_file_count_from_output(self, output: str) -> int:
         import re

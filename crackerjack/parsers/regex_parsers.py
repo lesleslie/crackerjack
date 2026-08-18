@@ -916,6 +916,7 @@ def register_regex_parsers(factory: ParserFactory) -> None:
     factory.register_regex_parser("refurb", RefurbRegexParser)
 
     factory.register_regex_parser("ruff", RuffRegexParser)
+    factory.register_regex_parser("ruff-check", RuffRegexParser)
     factory.register_regex_parser("ruff-format", RuffFormatRegexParser)
     factory.register_regex_parser("complexipy", ComplexityRegexParser)
     factory.register_regex_parser("complexity", ComplexityRegexParser)

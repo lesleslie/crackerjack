@@ -250,3 +250,74 @@ def test_apply_raw_fallback_returns_synthetic_when_nothing_parseable() -> None:
     # is filtered as a success line. Net: no parseable issues, so the
     # synthetic ``"Hook failed with non-zero exit code"`` is the sole entry.
     assert issues == ["Hook failed with non-zero exit code"]
+
+
+def test_parse_factory_issues_for_ruff_check() -> None:
+    """Regression: ``ruff-check`` must dispatch via the registered RuffRegexParser.
+
+    Before Option C, ``_parse_hook_output`` for ``ruff-check`` fell through to
+    the raw line-counting fallback, which would over-count verbose
+    diagnostic output. With Option C, the default fallthrough delegates to
+    ``ParserFactory.parse_with_validation`` which calls the registered
+    parser (``ruff-check`` is an alias for the ``ruff`` regex parser).
+    """
+    import logging
+
+    console = Console()
+    logger = logging.getLogger(__name__)
+    executor = AsyncHookExecutor(console=console, pkg_path=Path())
+
+    output = (
+        "ruff_check.py:10:5: F401 unused import `os`\n"
+        "ruff_check.py:20:1: E501 line too long\n"
+    )
+    issues = executor._parse_factory_issues("ruff-check", output)
+
+    assert len(issues) == 2, (
+        f"Expected 2 structured issues from ruff-check parser, "
+        f"got {len(issues)}: {issues!r}"
+    )
+    assert any("F401" in issue for issue in issues)
+    assert any("E501" in issue for issue in issues)
+
+
+def test_parse_factory_issues_for_unregistered_tool() -> None:
+    """Regression: hooks without a registered parser must return ``[]``.
+
+    ``pip-audit`` has no ``ParserFactory`` registration. The factory
+    dispatch must catch the resulting ``ValueError`` and return ``[]``,
+    letting ``_build_success_result`` fall through to the raw line-counter.
+    """
+    import logging
+
+    console = Console()
+    logger = logging.getLogger(__name__)
+    executor = AsyncHookExecutor(console=console, pkg_path=Path())
+
+    issues = executor._parse_factory_issues("pip-audit", "some output")
+
+    assert issues == []
+
+
+def test_parse_hook_output_fallthrough_uses_factory() -> None:
+    """Regression: full ``_parse_hook_output`` fallthrough now populates issues.
+
+    For a hook with a registered parser that previously relied on the raw
+    fallback (``ruff-check``), the fallthrough in ``_parse_hook_output``
+    must now route through ``ParserFactory`` and populate
+    ``result["issues"]`` with structured entries.
+    """
+    import logging
+
+    console = Console()
+    logger = logging.getLogger(__name__)
+    executor = AsyncHookExecutor(console=console, pkg_path=Path())
+
+    output = "ruff_check.py:10:5: F401 unused import `os`\n"
+    result = executor._parse_hook_output(1, output, "ruff-check")
+
+    assert len(result["issues"]) == 1, (
+        f"Expected 1 structured issue from ruff-check fallthrough, "
+        f"got {len(result['issues'])}: {result['issues']!r}"
+    )
+    assert "F401" in result["issues"][0]
