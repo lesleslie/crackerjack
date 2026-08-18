@@ -120,3 +120,45 @@ class TestHandleNoIssuesForFailedHook:
         assert len(out) == 10
         assert out[0] == "line 0"
         assert out[-1] == "line 9"
+
+    def test_traceback_still_triggers_infrastructure_error(self) -> None:
+        """Traceback output must keep returning the early infrastructure path."""
+        executor = _make_executor()
+        stderr = (
+            "Traceback (most recent call last):\n"
+            '  File "/path/to/file.py", line 42, in <module>\n'
+            "    raise ValueError('boom')\n"
+            "ValueError: boom\n"
+        )
+        result = _make_result(returncode=1, stdout="", stderr=stderr)
+
+        out = executor._handle_no_issues_for_failed_hook("failed", [], result)
+
+        assert len(out) == 1
+        assert out[0].startswith("Tool crashed (infrastructure error):")
+        assert "ValueError: boom" in out[0]
+
+    def test_filters_summary_header_lines(self) -> None:
+        """A 'Found 1 error.' header must NOT count as an issue (sync parity with async).
+
+        Regression: raw line-splitting counted both the header and the actual
+        error, inflating the issues count. ``extract_issue_lines`` strips
+        summary lines like ``Found``, ``Checked``, ``N errors found`` etc.
+        """
+        executor = _make_executor()
+        stderr = "Found 1 error.\nreal issue on line 5\n"
+        result = _make_result(returncode=1, stdout='{"errors": 0}', stderr=stderr)
+
+        out = executor._handle_no_issues_for_failed_hook("failed", [], result)
+
+        assert out == ["real issue on line 5"]
+
+    def test_filters_separator_lines(self) -> None:
+        """Box-drawing separators (e.g. '────') must not become issues."""
+        executor = _make_executor()
+        stderr = "────\nactual problem\n────\n"
+        result = _make_result(returncode=1, stdout='{"errors": 0}', stderr=stderr)
+
+        out = executor._handle_no_issues_for_failed_hook("failed", [], result)
+
+        assert out == ["actual problem"]

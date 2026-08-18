@@ -823,20 +823,28 @@ class HookExecutor:
                     return [f"Tool crashed (infrastructure error): {exception_line}"]
 
             if stderr:
-                error_lines = [
-                    line.strip() for line in stderr.split("\n") if line.strip()
-                ][:10]
-                issues_found = error_lines
+                issues_found = self._extract_filtered_error_lines(stderr)
             elif stdout and not stdout.startswith(("{", "[")):
-                error_lines = [
-                    line.strip() for line in stdout.split("\n") if line.strip()
-                ][:10]
-                issues_found = error_lines
+                issues_found = self._extract_filtered_error_lines(stdout)
             else:
                 issues_found = [
                     f"Hook exited with code {result.returncode} but reported no parseable issues"
                 ]
         return issues_found
+
+    def _extract_filtered_error_lines(self, text: str) -> list[str]:
+        # Last-resort line-counting safety net for stderr/stdout when the
+        # upstream parsers returned []. Delegate to ``extract_issue_lines``
+        # rather than splitting on ``\n`` directly so headers (``Found``,
+        # ``Checked``, ``N errors found``), separators (``┌``, ``└``,
+        # ``────``), JSON lines, and comments are excluded — otherwise the
+        # panel over-counts by treating them as separate issues. Capped at
+        # 10 lines to mirror the previous behaviour and the async path's
+        # ``_apply_raw_fallback``. Mirrors the async fix in
+        # ``crackerjack/executors/async_hook_executor.py:843``.
+        if not text:
+            return []
+        return extract_issue_lines(text, tool_name="")[:10]
 
     def _calculate_issues_count(self, status: str, issues_found: list[str]) -> int:
         return len(issues_found)
