@@ -179,7 +179,8 @@ function registers which tool group. It is checked mechanically by
 | `register_utility_tools` | `utility_tools` (`clean_crackerjack`, `config_crackerjack`, `analyze_crackerjack`, `validate_claude_md`, `list_slash_commands`) | `crackerjack/mcp/tools/utility_tools.py` |
 | `register_workspace_tools` | `workspace_tools` (stubbed — Phase 3 deferred, NOT called from `server_core.py`) | `crackerjack/mcp/tools/workspace_tools.py` |
 | `register_mahavishnu_tools` | `mahavishnu_tools` (`get_cross_project_git_dashboard`, `get_repository_health`, `get_velocity_comparison`, `get_cross_project_patterns`) | `crackerjack/mcp/tools/mahavishnu_tools.py` |
-| `register_discover_tools` | `discover_tools` (`discover_tools` meta-tool — surfaces the full registry + deferred set; resolves Contract 5.5) | `crackerjack/mcp/tools/discover_tools.py` |
+| `_apply_tool_profile` (W0 helper) | `discover_tools` (meta-tool — auto-registered by `mcp_common.tools.dispatch._apply_tool_profile`; query filter via `crackerjack/mcp/tools/discover_query.py`) | `crackerjack/mcp/server_core.py` (W2a) |
+| `register_all_tool_groups` | Bulk registrar passed as `register_all_fn=` to `_apply_tool_profile`; iterates every group in `REGISTRATION_MAP` | `crackerjack/mcp/tools/profiles.py` (W2a) |
 
 ## 11. Cross-references
 

@@ -254,6 +254,13 @@ def called_register_names(server_core_source: str) -> set[str]:
         line = lines[SERVER_CORE_SKILL_CALL_LINE - 1]
         for match in re.finditer(r"\b(register_[A-Za-z0-9_]+)\s*\(", line):
             in_block.add(match.group(1))
+    # W2a: also count kwarg-style calls like ``register_all_fn=register_all_tool_groups``
+    # (the W0 helper is invoked with kwargs, not positional calls).
+    for match in re.finditer(
+        r"\bregister_[A-Za-z0-9_]+=\s*\b(register_[A-Za-z0-9_]+)\b",
+        server_core_source,
+    ):
+        in_block.add(match.group(1))
     return in_block
 
 
@@ -336,6 +343,18 @@ def test_each_register_function_has_unique_tools(tool_module_paths: list[Path]) 
             continue
 
         for func in register_nodes:
+            # W2a: wrappers (e.g., ``register_crackerjack_health``) wrap an
+            # existing register_X and may not have a direct @mcp_app.tool().
+            # Skip files explicitly tagged as wrappers.
+            if module_path.name in {"health_tools_wrapper.py", "eventbridge_tools_wrapper.py"}:
+                continue
+            if module_path.name == "profiles.py" and func.name in {
+                "register_all_tool_groups",
+            }:
+                # profiles.py's register_all_tool_groups is the W0
+                # ``register_all_fn`` — delegates to per-group register
+                # functions; not a direct tool registrar.
+                continue
             if not _function_registers_tool(module_path, func):
                 missing_tools.append(f"{module_path.name}::{func.name}")
 
@@ -434,17 +453,63 @@ def test_no_orphan_register_modules(
     Catches the case where a developer adds a new register_X function
     but forgets to wire it into ``create_mcp_server``. The function
     then looks production-ready but contributes zero tools to the surface.
+
+    W2a: the ``register_X`` function is considered "called" if it appears
+    as a value in :data:`crackerjack.mcp.tools.profiles.REGISTRATION_MAP`
+    (the W0 helper dispatches via the map) OR if ``create_mcp_server``
+    invokes it directly.
     """
     orphans: list[str] = []
     modules_without_register: list[str] = []
 
+    # W2a: scan profiles.py::REGISTRATION_MAP for wired register functions.
+    # The W0 helper dispatches via the map; if a register_X is in the map,
+    # it's wired. REGISTRATION_MAP keys are group names like ``"core_tools"``
+    # (not ``"register_core_tools"``); values reference the actual
+    # ``register_X`` functions.
+    profiles_path = TOOLS_DIR / "profiles.py"
+    registration_map_targets: set[str] = set()
+    if profiles_path.exists():
+        profiles_source = _read_text(profiles_source := profiles_path)
+        # Match values like:    "core_tools": register_core_tools,
+        # (the trailing comma is optional).
+        for match in re.finditer(
+            r'"[A-Za-z0-9_]+_tools":\s*(register_[A-Za-z0-9_]+)',
+            profiles_source,
+        ):
+            registration_map_targets.add(match.group(1))
+        # Also catch non-tool group keys like ``"health_tools"`` → ``register_crackerjack_health``
+        for match in re.finditer(
+            r'"[A-Za-z0-9_]+":\s*(register_[A-Za-z0-9_]+)',
+            profiles_source,
+        ):
+            registration_map_targets.add(match.group(1))
+
+    wired_names = called_register_names | registration_map_targets
+
+    # W2a: wrappers call ``register_X(...)`` transitively. Scan wrapper
+    # files for inner register_X calls so transitive wiring is counted.
+    wrapper_files = {"health_tools_wrapper.py", "eventbridge_tools_wrapper.py"}
     for module_path in tool_module_paths:
+        if module_path.name not in wrapper_files:
+            continue
+        for match in re.finditer(
+            r"\b(register_[A-Za-z0-9_]+)\s*\(",
+            _read_text(module_path),
+        ):
+            wired_names.add(match.group(1))
+
+    for module_path in tool_module_paths:
+        # W2a: profiles.py is the W0 dispatcher — skip it (its register_*
+        # names are internal aliases, not module surface).
+        if module_path.name == "profiles.py":
+            continue
         module_register_names = _register_function_names_in_module(module_path)
         if not module_register_names:
             modules_without_register.append(module_path.name)
             continue
         for register_name in sorted(module_register_names):
-            if register_name not in called_register_names:
+            if register_name not in wired_names:
                 if register_name in INTENTIONAL_DEFERRED_REGISTERS:
                     continue
                 orphans.append(f"{module_path.name}::{register_name}")

@@ -628,15 +628,25 @@ once the tool is added; it should mirror the
 `test_full_profile_registers_all_tools`-style count assertion
 across the 11 tool groups.
 
-**Status (2026-07-30)**: ✅ **Resolved.** `register_discover_tools` added in
+**Status (2026-07-30)**: ✅ **Resolved (initial).** `register_discover_tools` added in
 `crackerjack/mcp/tools/discover_tools.py`; wired into
 `server_core.py::create_mcp_server` after `register_intelligence_tools`.
 Tool data mirrors `docs/MCP_TOOLS_SPECIFICATION.md` Section 1-9 — if
-you update the spec, update `TOOL_REGISTRY` in the same commit. Covered
+you update the spec, update the registry in the same commit. Covered
 by `tests/unit/mcp/test_mcp_tool_drift.py` (the
-`test_docs_match_registered_tools` test confirms `register_discover_tools`
+`test_docs_match_registered_tools` test confirms the discover helper
 is in the spec; `test_no_unused_register_imports` confirms it is
 called). Modeled after Akosha's `_register_discovery_tool`.
+
+**Status (2026-08-18)**: 🔁 **Re-implemented via W0 helper.** The legacy
+`crackerjack/mcp/tools/discover_tools.py` module (TOOL_REGISTRY +
+DEFERRED_TOOLS + register_discover_tools, 236 lines) was deleted in
+W2a of the MCP tool-profile adoption plan. The meta-tool is now
+registered automatically by `mcp_common.tools.dispatch._apply_tool_profile`,
+with `crackerjack_discovery` (in `crackerjack/mcp/tools/discover_query.py`)
+providing the historical query-filter behavior. The captured group
+mapping lives in `tests/fixtures/_tool_groups_mapping.json`. Coverage
+moved to `tests/unit/test_tool_profile.py::test_discover_fn_wired`.
 
 ### Contract 5.6 — `analyze_crackerjack` is mocked
 

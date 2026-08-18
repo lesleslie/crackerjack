@@ -1,3 +1,4 @@
+import asyncio
 import os
 import signal
 import time
@@ -13,7 +14,6 @@ try:
 except Exception:
     __version__ = "0.0.0-unknown"
 
-from mcp_common.health import DependencyConfig, register_health_tools
 from mcp_common.ui import ServerPanels
 from rich.console import Console
 
@@ -48,22 +48,6 @@ except ImportError:
     RATE_LIMITING_AVAILABLE = False
 
 MCP_AVAILABLE: Final[bool] = _mcp_available
-SERVICE_START_TIME = time.time()
-
-_HEALTH_DEPENDENCIES: dict[str, DependencyConfig] = {
-    "session_buddy": DependencyConfig(
-        host="localhost",
-        port=8678,
-        required=False,
-        timeout_seconds=10,
-    ),
-    "mahavishnu": DependencyConfig(
-        host="localhost",
-        port=8680,
-        required=False,
-        timeout_seconds=10,
-    ),
-}
 
 from .context import (
     MCPServerConfig,
@@ -72,20 +56,6 @@ from .context import (
     set_context,
 )
 from .rate_limiter import RateLimitConfig
-from .tools import (
-    register_core_tools,
-    register_discover_tools,
-    register_doc_tools,
-    register_eventbridge_tools,
-    register_execution_tools,
-    register_monitoring_tools,
-    register_otel_tools,
-    register_proactive_tools,
-    register_progress_tools,
-    register_pycharm_tools,
-    register_semantic_tools,
-    register_utility_tools,
-)
 
 
 def _load_mcp_config(project_path: Path) -> dict[str, t.Any]:
@@ -153,7 +123,7 @@ def _validate_job_id(job_id: str) -> bool:
     return is_valid_job_id(job_id)
 
 
-def create_mcp_server(config: dict[str, t.Any] | None = None) -> t.Any | None:
+async def create_mcp_server(config: dict[str, t.Any] | None = None) -> t.Any | None:
     if not MCP_AVAILABLE or FastMCP is None:
         return None
 
@@ -223,52 +193,57 @@ def create_mcp_server(config: dict[str, t.Any] | None = None) -> t.Any | None:
             msg = f"Failed to read status command: {e}"
             raise ValueError(msg)
 
-    register_core_tools(mcp_app)
-    register_discover_tools(mcp_app)
-    register_doc_tools(mcp_app)
-    register_execution_tools(mcp_app)
-    register_monitoring_tools(mcp_app)
-    register_otel_tools(mcp_app)
-    register_progress_tools(mcp_app)
-    register_proactive_tools(mcp_app)
-    register_semantic_tools(mcp_app)
-    register_utility_tools(mcp_app)
-    register_health_tools(
-        mcp_app,
-        service_name="crackerjack",
-        version=__version__,
-        start_time=SERVICE_START_TIME,
-        dependencies=_HEALTH_DEPENDENCIES,
+    # W2a: Apply ToolProfile dispatch via the W0 helper from mcp-common 0.18.0.
+    #
+    # Replaces the legacy per-group register_* block above. PROFILE_REGISTRATIONS
+    # routes the per-tier lists to per-group callables in REGISTRATION_MAP;
+    # CRACKERJACK_MANDATORY_GROUPS guarantees health probes are reachable from
+    # any profile tier. ``discovery_fn=crackerjack_discovery`` preserves the
+    # historical query-filter behavior from the deleted crackerjack_discovery
+    # module (crackerjack/mcp/tools/discover_tools.py was deleted in W2a).
+    from mcp_common.tools.dispatch import _apply_tool_profile
+
+    from crackerjack.mcp.tools.discover_query import crackerjack_discovery
+    from crackerjack.mcp.tools.profiles import (
+        CRACKERJACK_MANDATORY_GROUPS,
+        PROFILE_REGISTRATIONS,
+        REGISTRATION_MAP,
+        register_all_tool_groups,
     )
-    register_pycharm_tools(mcp_app)
 
-    eventbridge_enabled = False
-    try:
-        from crackerjack.config import CrackerjackSettings
-
-        _settings = CrackerjackSettings()
-        eventbridge_enabled = bool(
-            getattr(
-                getattr(_settings, "eventbridge", None),
-                "enabled",
-                False,
-            )
-        )
-    except Exception:
-        eventbridge_enabled = False
-
-    register_eventbridge_tools(
+    await _apply_tool_profile(
         mcp_app,
-        publisher=None,
-        enabled=eventbridge_enabled,
+        profile_env_var="CRACKERJACK_TOOL_PROFILE",
+        registrations=PROFILE_REGISTRATIONS,
+        registration_map=REGISTRATION_MAP,
+        register_all_fn=register_all_tool_groups,
+        mandatory_groups=CRACKERJACK_MANDATORY_GROUPS,
+        essential_tool_names=set(),
+        discovery_fn=crackerjack_discovery,
+        yaml_loader=None,
     )
 
     return mcp_app
 
 
 _default_config = {"http_port": 8676, "http_host": "127.0.0.1"}
-_default_mcp_app = create_mcp_server(_default_config)
-http_app = _default_mcp_app.http_app if _default_mcp_app else None
+_default_mcp_app: t.Any | None = None
+
+
+def _get_default_mcp_app() -> t.Any | None:
+    """Lazily build the module-level default FastMCP instance.
+
+    Deferred from module-import time so that test runners (which start an
+    event loop during collection) do not collide with ``asyncio.run()``.
+    Callers must NOT assume the result is cached — it is rebuilt each call.
+    """
+    global _default_mcp_app
+    if _default_mcp_app is None:
+        _default_mcp_app = asyncio.run(create_mcp_server(_default_config))
+    return _default_mcp_app
+
+
+http_app = None  # populated lazily via _get_default_mcp_app().http_app
 
 
 def handle_mcp_server_command(
@@ -413,8 +388,6 @@ def _run_mcp_server(
             host = mcp_config.get("http_host", "127.0.0.1")
             port = mcp_config.get("http_port", 8676)
 
-            import asyncio
-
             asyncio.run(mcp_app.run_http_async(host=host, port=port))
         else:
             mcp_app.run()
@@ -438,7 +411,7 @@ def _initialize_project_and_config(
 
 
 def _create_and_validate_server(mcp_config: dict[str, t.Any]) -> t.Any | None:
-    mcp_app = create_mcp_server(mcp_config)
+    mcp_app = asyncio.run(create_mcp_server(mcp_config))
     if not mcp_app:
         console.print("[red]Failed to create MCP server[/ red]")
     return mcp_app
