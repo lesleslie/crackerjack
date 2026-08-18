@@ -7,9 +7,10 @@ auto-registers a ``discover_tools`` meta-tool that delegates to
 filters the registered tools by a case-insensitive substring on the
 tool's name or description.
 
-The ``_TOOL_GROUPS`` map is populated from the deleted ``TOOL_REGISTRY``
-(see ``tests/fixtures/_tool_groups_mapping.json``) so each surfaced tool
-still carries its group label.
+The ``_TOOL_GROUPS`` map is populated from the captured fixture at
+``tests/fixtures/_tool_groups_mapping.json`` (snapshot of the historical
+tool-name → group mapping) so each surfaced tool still carries its
+group label.
 """
 
 from __future__ import annotations
@@ -19,7 +20,7 @@ from pathlib import Path
 
 from fastmcp import FastMCP
 
-_FIXTURE_PATH = Path("tests/fixtures/_tool_groups_mapping.json")
+_FIXTURE_PATH = Path(__file__).resolve().parents[3] / "tests" / "fixtures" / "_tool_groups_mapping.json"
 
 
 def _load_tool_groups() -> dict[str, str]:

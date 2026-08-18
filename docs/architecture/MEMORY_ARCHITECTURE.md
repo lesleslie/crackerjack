@@ -646,7 +646,10 @@ registered automatically by `mcp_common.tools.dispatch._apply_tool_profile`,
 with `crackerjack_discovery` (in `crackerjack/mcp/tools/discover_query.py`)
 providing the historical query-filter behavior. The captured group
 mapping lives in `tests/fixtures/_tool_groups_mapping.json`. Coverage
-moved to `tests/unit/test_tool_profile.py::test_discover_fn_wired`.
+moved to `tests/unit/test_tool_profile.py::test_discover_fn_wired`
+plus `tests/unit/test_discover_query.py` (query-filter contract). Profile
+rationale lives at
+[`docs/architecture/tool-profile-rationale.md`](tool-profile-rationale.md).
 
 ### Contract 5.6 — `analyze_crackerjack` is mocked
 

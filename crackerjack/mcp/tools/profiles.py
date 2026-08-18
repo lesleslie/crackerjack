@@ -15,10 +15,9 @@ CRACKERJACK_MANDATORY_GROUPS) is consumed by
 ``mcp_common.tools.dispatch._apply_tool_profile`` when called from
 ``crackerjack.mcp.server_core.create_mcp_server``.
 
-W2a migration: replaces the legacy ``crackerjack.mcp.tools.discover_tools``
-module (236 lines: TOOL_REGISTRY + DEFERRED_TOOLS + register_discover_tools)
-with the W0 helper. Health probes are mandatory at every profile tier so
-load balancers / orchestrators can always reach them. The
+W2a migration: replaces the legacy discover_tools helper module (236
+lines) with the W0 helper. Health probes are mandatory at every profile
+tier so load balancers / orchestrators can always reach them. The
 ``crackerjack_discovery`` discovery_fn override preserves the historical
 query filter behavior (case-insensitive substring on name + description).
 """
@@ -128,41 +127,14 @@ CRACKERJACK_MANDATORY_GROUPS: set[str] = {"health_tools"}
 
 
 def register_all_tool_groups(server: FastMCP) -> None:
-    """Bulk register all Crackerjack tool groups (called at FULL profile).
+    """Bulk register every Crackerjack tool group (called at FULL profile).
 
-    Used as ``register_all_fn`` for the W0 helper. Iterates every group in
-    REGISTRATION_MAP so adding a new group in profiles.py does not require
-    a separate edit here.
+    Used as ``register_all_fn`` for the W0 helper. Iterates the values of
+    REGISTRATION_MAP so adding a new group in ``_build_registration_map``
+    is enough — no separate edit here.
     """
-    from crackerjack.mcp.tools.core_tools import register_core_tools
-    from crackerjack.mcp.tools.doc_tools import register_doc_tools
-    from crackerjack.mcp.tools.eventbridge_tools_wrapper import (
-        register_crackerjack_eventbridge,
-    )
-    from crackerjack.mcp.tools.execution_tools import register_execution_tools
-    from crackerjack.mcp.tools.health_tools_wrapper import (
-        register_crackerjack_health,
-    )
-    from crackerjack.mcp.tools.monitoring_tools import register_monitoring_tools
-    from crackerjack.mcp.tools.otel_tools import register_otel_tools
-    from crackerjack.mcp.tools.proactive_tools import register_proactive_tools
-    from crackerjack.mcp.tools.progress_tools import register_progress_tools
-    from crackerjack.mcp.tools.pycharm_tools import register_pycharm_tools
-    from crackerjack.mcp.tools.semantic_tools import register_semantic_tools
-    from crackerjack.mcp.tools.utility_tools import register_utility_tools
-
-    register_core_tools(server)
-    register_doc_tools(server)
-    register_crackerjack_eventbridge(server)
-    register_execution_tools(server)
-    register_crackerjack_health(server)
-    register_monitoring_tools(server)
-    register_otel_tools(server)
-    register_proactive_tools(server)
-    register_progress_tools(server)
-    register_pycharm_tools(server)
-    register_semantic_tools(server)
-    register_utility_tools(server)
+    for register_fn in REGISTRATION_MAP.values():
+        register_fn(server)
 
 
 __all__ = [
