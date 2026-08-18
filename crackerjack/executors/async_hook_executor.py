@@ -731,6 +731,10 @@ class AsyncHookExecutor:
                 output,
                 returncode,
             )
+            # Populate structured issues so ``_build_success_result`` does not
+            # fall through to its line-counting raw-fallback, which would
+            # count the ``"Large files detected:"`` header as an extra issue.
+            result["issues"] = self._parse_large_files_issues(output)
             return result
 
         if hook_name == "ty":
@@ -807,6 +811,27 @@ class AsyncHookExecutor:
 
         pattern = r"All files are under size limit"
         return bool(re.search(pattern, clean_output, re.IGNORECASE) and returncode == 0)
+
+    def _parse_large_files_issues(self, output: str) -> list[str]:
+        # Convert the structured ``CheckAddedLargeFilesParser`` output into the
+        # ``list[str]`` shape that ``HookResult.issues_found`` expects.
+        # Returning ``[]`` when parsing fails lets the upstream
+        # ``_build_success_result`` raw-fallback handle truly unstructured output
+        # — we only intervene when we *can* attribute the failure to specific
+        # files, so the panel count reflects one issue per offending file.
+        try:
+            from crackerjack.parsers.regex_parsers import CheckAddedLargeFilesParser
+        except ImportError:
+            return []
+
+        parser = CheckAddedLargeFilesParser()
+        issues = parser.parse_text(output)
+        return [
+            f"{issue.file_path}: {issue.message}"
+            if issue.file_path
+            else issue.message
+            for issue in issues
+        ]
 
     def _extract_file_count_from_output(self, output: str) -> int:
         import re

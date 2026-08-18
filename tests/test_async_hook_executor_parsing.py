@@ -123,3 +123,37 @@ def test_parse_hook_output_check_added_large_files_exact_output() -> None:
 
     # Should return 0 files processed since no files exceeded the size limit
     assert result["files_processed"] == 0
+
+
+def test_parse_hook_output_check_added_large_files_populates_structured_issues() -> None:
+    """Regression: one large file must produce exactly one Issue entry, not two.
+
+    The bug: ``_parse_hook_output`` for ``check-added-large-files`` previously
+    only populated ``files_processed`` (a count). When the hook failed and the
+    parser returned no structured issues, ``_build_success_result`` fell back
+    to counting non-empty lines of output — including the ``"Large files
+    detected:"`` header — so a single 2 MB file surfaced as ``Issues: 2`` in
+    the crackerjack fast-hooks panel.
+
+    Reproduces the actual stderr captured from fastblocks on 2026-08-18.
+    """
+    import logging
+
+    console = Console()
+    logger = logging.getLogger(__name__)
+    executor = AsyncHookExecutor(console=console, pkg_path=Path())
+
+    output = (
+        "Large files detected:\n"
+        " docs/archive/test-artifacts/coverage__20260728-055629.json: 2.0 MB"
+    )
+    result = executor._parse_hook_output(1, output, "check-added-large-files")
+
+    # Exactly one large file was reported — there must be exactly one issue.
+    assert len(result["issues"]) == 1, (
+        f"Expected exactly 1 structured issue for one large file, "
+        f"got {len(result['issues'])}: {result['issues']!r}"
+    )
+    # The issue string must reference the offending file path so the panel
+    # can show operators which file triggered the failure.
+    assert "coverage__20260728-055629.json" in result["issues"][0]
