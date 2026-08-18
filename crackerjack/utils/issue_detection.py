@@ -56,10 +56,27 @@ def should_count_as_issue(
         logger.debug(f"Filtering out summary line: {line_stripped[:100]}")
         return False
 
-    separator_patterns = ("===", "Errors:", "┌", "└", "├", "┼", "┤", "┃", "---", "────")
+    separator_patterns = (
+        "===",
+        "Errors:",
+        "┌",
+        "└",
+        "├",
+        "┼",
+        "┤",
+        "┃",
+        "│",
+        "║",
+        "═",
+        "---",
+        "────",
+    )
     if (
         line_stripped.startswith(separator_patterns)
         or line_stripped.replace("─", "")
+        .replace("═", "")
+        .replace("│", "")
+        .replace("║", "")
         .replace("┼", "")
         .replace("┌", "")
         .replace("└", "")

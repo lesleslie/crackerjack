@@ -948,7 +948,8 @@ def register_regex_parsers(factory: ParserFactory) -> None:
     factory.register_regex_parser("check-ast", CheckAstParser)
 
     logger.info(
-        "Registered regex parsers: codespell, refurb, ruff, ruff-format, complexipy, complexity, "
+        "Registered regex parsers: codespell, refurb, ruff, ruff-check, ruff-format, "
+        "complexipy, complexity, "
         "creosote, mypy, zuban, skylos, check-local-links, lychee, linkcheckmd, check-jsonschema, "
         "check-yaml, check-toml, check-json, "
         "validate-regex-patterns, trailing-whitespace, end-of-file-fixer, format-json, "

@@ -51,6 +51,24 @@ class TestShouldCountAsIssue:
         assert not should_count_as_issue("├─────────┤")
         assert not should_count_as_issue("┃         ┃")
 
+    def test_filters_vertical_box_drawing_separator(self):
+        """Lines of only U+2502 box-drawing vertical chars should be filtered."""
+        assert not should_count_as_issue("│")
+        assert not should_count_as_issue("│         │")
+        assert not should_count_as_issue("│  │  │  │")
+
+    def test_filters_double_horizontal_separator(self):
+        """Lines of only U+2550 box-drawing double horizontal chars should be filtered."""
+        assert not should_count_as_issue("═")
+        assert not should_count_as_issue("══════════")
+        assert not should_count_as_issue("══════")
+
+    def test_filters_double_vertical_separator(self):
+        """Lines of only U+2551 box-drawing double vertical chars should be filtered."""
+        assert not should_count_as_issue("║")
+        assert not should_count_as_issue("║         ║")
+        assert not should_count_as_issue("║  ║  ║  ║")
+
     def test_filters_header_lines(self):
         """Table header lines should not be counted as issues."""
         assert not should_count_as_issue("Path | Function | Complexity")
