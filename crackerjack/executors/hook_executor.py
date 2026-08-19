@@ -930,13 +930,31 @@ class HookExecutor:
     def _parse_lychee_issues(self, json_output: str) -> list[str]:
         import json
 
-        try:
-            obj, _ = json.JSONDecoder().raw_decode(json_output.strip())
-            if not isinstance(obj, dict):
-                return []
-            data = obj
-        except (json.JSONDecodeError, ValueError):
+        text = (json_output or "").strip()
+        if not text:
             return []
+
+        try:
+            obj, _ = json.JSONDecoder().raw_decode(text)
+        except (json.JSONDecodeError, ValueError):
+            obj = None
+
+        if obj is None:
+            # Lychee uses --format json. When config parsing fails (or it
+            # panics) it writes a Rust-formatted error to stderr and exits
+            # non-zero with no JSON. Returning ``[]`` here lets
+            # ``_handle_no_issues_for_failed_hook`` fall back to
+            # ``extract_issue_lines``, which previously over-counted each
+            # Rust traceback frame (``Caused by:``, ASCII ``|`` separators,
+            # caret underlines) as a separate issue — turning 1 config error
+            # into 6+ spurious failures. Detect the lychee-style error and
+            # collapse it into a single summary line.
+            summary = self._summarize_lychee_error(text)
+            return [summary] if summary else []
+
+        if not isinstance(obj, dict):
+            return []
+        data = obj
 
         failure_maps = (
             ("error_map", "errors"),
@@ -975,6 +993,39 @@ class HookExecutor:
             if m and m.group("side") == "prod":
                 prod_count += int(m.group("count"))
         return prod_count
+
+    @staticmethod
+    def _summarize_lychee_error(text: str) -> str | None:
+        """Collapse a non-JSON lychee error into one summary line.
+
+        Returns ``None`` when the text does not look like a lychee-style
+        error (Rust panic, ``[ERROR]`` log line, ``Caused by:`` chain,
+        ``Failed to parse`` config error). Returning ``None`` for
+        unrecognised garbage preserves the existing behaviour where
+        ``_parse_lychee_issues`` returns ``[]`` for plain non-JSON input
+        and lets the upstream ``_handle_no_issues_for_failed_hook`` fall
+        back to ``extract_issue_lines``.
+        """
+        lychee_error_markers = (
+            "[ERROR]",
+            "Caused by:",
+            "panicked at",
+            "Failed to parse",
+        )
+        if not any(marker in text for marker in lychee_error_markers):
+            return None
+
+        for raw in text.splitlines():
+            line = raw.strip()
+            if not line:
+                continue
+            # Strip common Rust log prefixes ([ERROR], [WARN], etc.) so the
+            # summary reads cleanly in the failure panel.
+            line = re.sub(r"^\[[A-Z]+\]\s*", "", line)
+            if len(line) > 200:
+                line = line[:197] + "..."
+            return f"lychee failed: {line}"
+        return "lychee failed (no output)"
 
     @staticmethod
     def _format_lychee_entry(file_path: str, entry: object) -> str:

@@ -198,6 +198,69 @@ class TestParseLycheeIssues:
 
         assert executor._parse_lychee_issues("not json at all") == []
 
+    def test_toml_config_error_collapses_to_single_issue(self) -> None:
+        """Regression: a lychee TOML parse error must report ONE issue, not N.
+
+        When ``lychee.toml`` has an unknown key, lychee writes a Rust-formatted
+        error to stderr and exits non-zero with no JSON. The upstream
+        ``_handle_no_issues_for_failed_hook`` falls back to
+        ``extract_issue_lines``, which previously counted every traceback line
+        (Rust ``Caused by:``, ASCII ``|`` separators, etc.) as a separate
+        issue — turning 1 config error into 6+ spurious failures.
+
+        Reproduces the fastblocks-ui ``retry_limit`` -> ``max_retries`` case.
+        """
+        from crackerjack.executors.hook_executor import HookExecutor
+
+        executor = HookExecutor.__new__(HookExecutor)
+        executor.console = MagicMock()
+
+        output = (
+            " [ERROR] Error while loading config: Cannot load configuration "
+            "file: lychee.toml\n"
+            "\n"
+            "Caused by:\n"
+            "    0: Failed to parse configuration file\n"
+            "    1: TOML parse error at line 30, column 1\n"
+            "          |\n"
+            "       30 | retry_limit = 1\n"
+            "          | ^^^^^^^^^^^\n"
+            "       unknown field `retry_limit`, expected one of `files_from`, "
+            "`max_retries`, `timeout`, ...\n"
+            "       \n"
+            "See: https://github.com/lycheeverse/lychee/blob/lychee-v0.24.2/"
+            "lychee.example.toml\n"
+        )
+
+        issues = executor._parse_lychee_issues(output)
+
+        assert len(issues) == 1, (
+            f"Expected exactly 1 issue for a single config error, got "
+            f"{len(issues)}: {issues!r}"
+        )
+        assert "lychee failed" in issues[0]
+        assert "Cannot load configuration file" in issues[0]
+
+    def test_rust_panic_collapses_to_single_issue(self) -> None:
+        """A Rust panic (no JSON, with ``panicked at``) is one issue, not many."""
+        from crackerjack.executors.hook_executor import HookExecutor
+
+        executor = HookExecutor.__new__(HookExecutor)
+        executor.console = MagicMock()
+
+        output = (
+            "thread 'main' panicked at 'something bad'\n"
+            "Caused by:\n"
+            "    0: inner frame one\n"
+            "    1: inner frame two\n"
+            "note: run with `RUST_BACKTRACE=1`\n"
+        )
+
+        issues = executor._parse_lychee_issues(output)
+
+        assert len(issues) == 1
+        assert "lychee failed" in issues[0]
+
     def test_counter_present_but_map_empty(self) -> None:
         """Defensive: if `timeouts > 0` but the map is empty, still report it."""
         from crackerjack.executors.hook_executor import HookExecutor
