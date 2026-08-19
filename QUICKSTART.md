@@ -352,14 +352,14 @@ crackerjack run --profile
 ### AI Fix Not Working
 
 ```bash
-# Verify API keys
-crackerjack config show ai_fix
+# Verify API keys are set in the environment
+echo "$MINIMAX_API_KEY" | head -c 8 && echo "..."
 
-# Test AI connection
-crackerjack test-ai
+# Run a check with verbose AI output
+python -m crackerjack run -v
 
-# Check AI fix logs
-crackerjack logs --filter ai-fix
+# Tail AI fix events from the latest run
+tail -f .crackerjack/runs/$(ls -t .crackerjack/runs | head -1)/events.jsonl
 ```
 
 ## Quick Reference
