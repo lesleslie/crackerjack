@@ -512,7 +512,7 @@ async def _apply_file_fixes(issue: Issue) -> tuple[list[str], bool]:
     # preserved verbatim from TestSpecialistAgent._apply_file_fixes (which
     # has a `type-ignore` directive on this exact line). See module docstring
     # quirk (1).
-    return file_fixes, bool(file_fixes)
+    return file_fixes, file_fixes if file_fixes else False
 
 
 def _get_failure_recommendations(fixes_applied: list[str]) -> list[str]:
