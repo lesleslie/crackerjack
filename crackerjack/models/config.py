@@ -63,7 +63,7 @@ class HookConfig:
     skip_hooks: bool = False
     experimental_hooks: bool = False
     enable_pyrefly: bool = False
-    enable_ty: bool = False
+    enable_ty: bool = True
     enable_lsp_optimization: bool = False
     skip_offline_pip_audit: bool = True
 
