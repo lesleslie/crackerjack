@@ -197,28 +197,18 @@ Each hybrid skill automatically generates 4 MCP tools:
 
 ## MCP Server Integration
 
-### Skill System Initialization
-
-The skill system is automatically initialized during MCP server startup:
+### Skill System Initialization (legacy)
 
 ```python
-# In crackerjack/mcp/server_core.py:main()
-mcp_app = create_mcp_server(mcp_config)
-
-# Initialize skill system
-initialize_skills(project_path, mcp_app)
-register_skill_tools(mcp_app)
+# REMOVED 2026-08-12 (see commit 907ab860):
+# The skill system is no longer initialized in server_core.py.
+# Use Session-Buddy's `distilled_skill_health` MCP tool and
+# `crackerjack proxy_skills` CLI subcommand instead.
 ```
 
 ### Exposed MCP Tools
 
-The skill system exposes **8 MCP tools** for skill management:
-
-1. **`list_skills`** - List all available skills
-
-   ```python
-   list_skills(skill_type="all")  # "all", "agent", "mcp", "hybrid"
-   ```
+The skill system exposes **8 MCP tools** for skill management (skill_tools module removed 2026-08-12 — use `mcp__session-buddy__distilled_skill_health` and `crackerjack proxy_skills` CLI instead):
 
 1. **`get_skill_info`** - Get detailed skill information
 
@@ -254,21 +244,22 @@ The skill system exposes **8 MCP tools** for skill management:
    )
    ```
 
-1. **`find_best_skill`** - Find the best skill for an issue
-
-   ```python
-   find_best_skill(issue_type="complexity")
-   ```
-
 ## Usage Examples
 
-### Example 1: List All Skills
+> The legacy `list_skills` and `find_best_skill` MCP tools were removed
+> 2026-08-12 (see commit `907ab860`). Use Session-Buddy's
+> `distilled_skill_health` MCP tool and `crackerjack proxy_skills` CLI
+> subcommand instead. The remaining examples below are preserved for
+> reference; check the current surface with
+> `mcp__crackerjack__discover_tools(query="skill")` before relying on them.
+
+### Example 1: List All Skills (legacy)
 
 ```python
-# Via MCP tool
-result = await mcp_app.call_tool("list_skills", {"skill_type": "all"})
+# Legacy example — removed 2026-08-12. Use Session-Buddy instead:
+# result = await session_buddy_app.call_tool("distilled_skill_health", ...)
 
-# Returns:
+# Returns (legacy shape):
 {
     "agent_skills": [...],
     "mcp_skills": [...],

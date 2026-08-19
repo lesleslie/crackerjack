@@ -135,7 +135,7 @@ Crackerjack and pre-commit solve related but different problems. While pre-commi
 | ------------------------ | ---------------------------------------------- | ----------------------------------------- |
 | **Setup Complexity** | Medium (YAML config +`pre-commit install`) | Low (single`python -m crackerjack run`) |
 | **Configuration Format** | YAML with repo URLs and hook IDs | Python settings with intelligent defaults |
-| **Hook Discovery** | Manual (add repos to`.pre-commit-config.yaml`) | Automatic (17 tools pre-configured) |
+| **Hook Discovery** | Manual (add repos to`.pre-commit-config.yaml`) | Automatic (36 hooks pre-configured via `crackerjack.config.hooks`) |
 | **Tool Installation** | Auto (pre-commit manages environments) | UV-based (one virtual environment) |
 | **Learning Curve** | Medium (understand repos, hooks, stages) | Low (unified Python commands) |
 
@@ -1251,7 +1251,7 @@ This pattern management system standardizes regex validation and helps reduce sp
 ## Adapters
 
 ![Adapter Taxonomy](docs/diagrams/adapter-taxonomy.png)
-*33 QA adapters organized by category (Q1 2026 adapter taxonomy) with protocol-based registration*
+*26 QA adapters organized by category (verified 2026-08-19 via `crackerjack/adapters/`) with protocol-based registration. Note: the diagram still references the Q1 2026 taxonomy image; `docs/diagrams/README.md` says "18 QA adapters" — both are stale. Use `python -c "from pathlib import Path; [print(p.parent.name + '/' + p.stem) for p in Path('crackerjack/adapters').rglob('adapter.py') if not p.name.startswith('_')]" | wc -l` to re-derive the count.*
 
 Adapters connect Crackerjack to external tools and subsystems (e.g., Ruff, Zuban, Bandit) using legacy patterns. Each adapter exposes typed settings, async initialization, and standardized results.
 

@@ -52,14 +52,7 @@ separate entry-point call at line 497 for skill tools).
 
 | Tool | Group | Side effects |
 |------|-------|--------------|
-| `list_skills(skill_type="all")` | `skill_tools` | None (read from `_skill_registries`) |
-| `get_skill_info(skill_id, skill_type="agent")` | `skill_tools` | None |
-| `search_skills(query, search_in="all")` | `skill_tools` | None |
-| `get_skills_for_issue(issue_type)` | `skill_tools` | None |
-| `get_skill_statistics()` | `skill_tools` | None — aggregate counts |
-| `execute_skill(skill_id, issue_type, issue_data, timeout=None)` | `skill_tools` | Delegates to skill `execute` (may write `fix_attempts`) |
-| `find_best_skill(issue_type)` | `skill_tools` | None — returns highest-confidence match |
-| `skill_coverage_report(...)` | `skills/coverage.py` | Calls `mcp__session-buddy__distilled_skill_health` — see Contract 5.4 |
+> **Note:** Skill/intelligence tools were removed 2026-08-12 (see commit `907ab860`). Use Session-Buddy's `distilled_skill_health` MCP tool and `crackerjack proxy_skills` CLI subcommand instead.
 
 Skill tools are initialized via `initialize_skills` at server startup,
 which calls `register_all_skills` → `register_agent_skills`. The registries
@@ -85,8 +78,6 @@ in-process; no persistence across restarts.
 
 | Tool | Group | Side effects |
 |------|-------|--------------|
-| `agent_performance_analysis()` | `intelligence_tool_registry` | None — read-only rollup |
-| `execute_smart_task(...)` | `intelligence_tool_registry` | Writes `fix_attempts` (via `_record_fix_attempt`) |
 | `get_comprehensive_status()` | `monitoring_tools` | None |
 | `get_filtered_status(components="jobs")` | `monitoring_tools` | None |
 | `get_server_stats()` | `monitoring_tools` | None |
@@ -130,7 +121,7 @@ deferral is enforced by `INTENTIONAL_DEFERRED_REGISTERS` in
 | **Hot** (`execute_crackerjack`, `run_crackerjack_stage`) | Every Mahavishnu worker dispatch | `dispatch_to_pool` |
 | **Monitoring** (`get_comprehensive_status`, `get_filtered_status`, `get_server_stats`) | Operator dashboards | `mcp__mahavishnu__ecosystem_status`, manual dashboards |
 | **Code intelligence** (`search_code`, `search_semantic`, `search_git_history`, `find_workflow_patterns`) | IDE + semantic | Crackerjack internal + cross-component |
-| **Skill / self-improvement** (`list_skills`, `find_best_skill`, `skill_coverage_report`, `agent_performance_analysis`) | Mahavishnu self-improvement loop | `mcp__crackerjack__get_skill_statistics`, `mcp__crackerjack__agent_performance_analysis` |
+| **Skill / self-improvement** (removed 2026-08-12; use `mcp__session-buddy__distilled_skill_health` + `crackerjack proxy_skills`) | Session-Buddy MCP / CLI | `distilled_skill_health`, `proxy_skills` |
 | **Admin / utility** (`analyze_crackerjack`, `clean_crackerjack`, `config_crackerjack`, `validate_claude_md`) | Operator one-offs | Manual invocation |
 
 ## 8. Tool groups by persistence side-effect
@@ -149,7 +140,6 @@ deferral is enforced by `INTENTIONAL_DEFERRED_REGISTERS` in
 | Tool | Proxies to | Protocol |
 |------|------------|----------|
 | `query_local_traces` | `mcp__akosha__query_local_traces` | HTTP (Mahavishnu MCP cross-server) |
-| `skill_coverage_report` | `mcp__session-buddy__distilled_skill_health` | HTTP (see Contract 5.4) |
 | `get_cross_project_*` / `get_repository_health` | Mahavishnu aggregator | HTTP |
 | `search_code` / `get_ide_diagnostics` | PyCharm MCP | HTTP (returns "not connected" on failure) |
 | `publish_to_eventbridge` | Oneiric EventBridge | In-process when `enabled=true`; no-op otherwise |
@@ -168,14 +158,12 @@ function registers which tool group. It is checked mechanically by
 | `register_execution_tools` | `execution_tools` (`execute_crackerjack`, `init_crackerjack`, `smart_error_analysis`) | `crackerjack/mcp/tools/execution_tools.py` |
 | `register_git_semantic_tools` | `git_semantic_tools` (`index_git_history`, `search_git_history`, `find_workflow_patterns`, `recommend_git_practices`) | `crackerjack/mcp/tools/git_semantic_tools.py` |
 | `register_health_tools` | health tools (`get_liveness`, `get_readiness`, etc.) | `mcp_common.health.register_health_tools` |
-| `register_intelligence_tools` | `intelligence_tool_registry` (`execute_smart_task`, `agent_performance_analysis`, etc.) | `crackerjack/mcp/tools/intelligence_tools.py` |
 | `register_monitoring_tools` | `monitoring_tools` (`get_comprehensive_status`, `get_filtered_status`, `get_server_stats`, `get_stage_status`, `get_next_action`) | `crackerjack/mcp/tools/monitoring_tools.py` |
 | `register_otel_tools` | `otel_tools` (`query_local_traces`) | `crackerjack/mcp/tools/otel_tools.py` |
 | `register_proactive_tools` | proactive tools (auto-suggestion cluster) | `crackerjack/mcp/tools/proactive_tools.py` |
 | `register_progress_tools` | `progress_tools` (`get_job_progress`, `session_management`) | `crackerjack/mcp/tools/progress_tools.py` |
 | `register_pycharm_tools` | `pycharm_tools` (`search_code`, `get_ide_diagnostics`, `pycharm_health`, stubs) | `crackerjack/mcp/tools/pycharm_tools.py` |
 | `register_semantic_tools` | `semantic_tools` (`index_file_semantic`, `remove_file_from_semantic_index`, `search_semantic`, `get_semantic_stats`, `get_embeddings`, `calculate_similarity_semantic`) | `crackerjack/mcp/tools/semantic_tools.py` |
-| `register_skill_tools` | `skill_tools` (`list_skills`, `get_skill_info`, `search_skills`, `get_skills_for_issue`, `get_skill_statistics`, `execute_skill`, `find_best_skill`) | `crackerjack/mcp/tools/skill_tools.py` |
 | `register_utility_tools` | `utility_tools` (`clean_crackerjack`, `config_crackerjack`, `analyze_crackerjack`, `validate_claude_md`, `list_slash_commands`) | `crackerjack/mcp/tools/utility_tools.py` |
 | `register_workspace_tools` | `workspace_tools` (stubbed — Phase 3 deferred, NOT called from `server_core.py`) | `crackerjack/mcp/tools/workspace_tools.py` |
 | `register_mahavishnu_tools` | `mahavishnu_tools` (`get_cross_project_git_dashboard`, `get_repository_health`, `get_velocity_comparison`, `get_cross_project_patterns`) | `crackerjack/mcp/tools/mahavishnu_tools.py` |
