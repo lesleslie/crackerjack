@@ -21,10 +21,6 @@ from rich.console import Console
 # the TYPE_CHECKING block — ruff TC004 would flag it.
 from crackerjack.adapters.factory import DefaultAdapterFactory
 
-# NOTE: Many imports below were deleted by Tasks 25-27 (crackerjack.agents,
-# crackerjack.ai_fix, crackerjack.memory, crackerjack.skills, etc.). The
-# dead-code cleanup that will remove the methods using them is pending
-# Task 24b Step 1. Until then this file will fail to import.
 from crackerjack.core.ai_fix_event_bus import AIFixEventBus
 from crackerjack.core.ai_fix_events import (
     RunStarted,
