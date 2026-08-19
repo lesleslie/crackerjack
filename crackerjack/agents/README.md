@@ -1,10 +1,14 @@
 > Crackerjack Docs: [Main](../../README.md) | [Crackerjack Package](../README.md)
 
-# Agents
+# Agents (Type Stubs Only)
 
-AI agent system for Crackerjack. Provides orchestration, planning, and execution of agent-based workflows.
+The full AI-fix agent runtime was removed in the 2026-08-12 refactor
+(commit 907ab860) and replaced by the external Workflow tool loop at
+`.claude/workflows/ai-fix-loop.js`.
 
-See the [main Crackerjack documentation](../README.md) and project root [`README.md`](../../README.md) for architecture details.
+What remains here is a minimal type-stub module (`base.py`) that exports
+`AgentContext`, `Issue`, `IssueType`, `Priority`, and `FixResult` for the
+handful of fixers/tests that still import these names.
 
 ## Related
 
