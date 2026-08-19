@@ -24,7 +24,6 @@ This directory contains visual documentation for the Crackerjack project, design
 
 | Diagram | Description | Used In |
 |---------|-------------|---------|
-| [decision-framework.png](./decision-framework.png) | "Fix Now or Later?" decision tree (still useful post-removal) | (none — link from CLAUDE.md or remove) |
 | [quality-hooks.png](./quality-hooks.png) | Fast hooks (~5s) vs Comprehensive hooks (~30s) execution flow with retry logic and AI-fix integration | [README.md](../../README.md) |
 
 ### Security & Validation
@@ -38,7 +37,7 @@ This directory contains visual documentation for the Crackerjack project, design
 
 | Diagram | Description | Used In |
 |---------|-------------|---------|
-| [adapter-taxonomy.png](./adapter-taxonomy.png) | 18 QA adapters organized by category (AI, Complexity, Format, Lint, LSP, Refactor, Security, Type, Utility) with protocol-based registration | [README.md](../../README.md) |
+| [adapter-taxonomy.png](./adapter-taxonomy.png) | 26 QA adapters organized by category (AI, Complexity, Format, Lint, LSP, Refactor, Security, Type, Utility, Performance, SAST, Test) with protocol-based registration | [README.md](../../README.md) |
 
 ## Quick Reference
 
@@ -48,7 +47,6 @@ This directory contains visual documentation for the Crackerjack project, design
 1. **Architecture**: ~~`layered-architecture.png`~~ (removed 2026-08-16) - See `docs/architecture/MEMORY_ARCHITECTURE.md` instead
 1. **AI System**: `ai-agent-orchestration.png` - Understand how AI fixing works (pending regeneration)
 1. **Quality**: `quality-hooks.png` - Understand the two-phase quality system
-1. **Decision Making**: `decision-framework.png` - Know when to fix vs defer
 
 ### By Audience
 
@@ -60,7 +58,6 @@ This directory contains visual documentation for the Crackerjack project, design
 **AI Agents (Claude, etc.):**
 
 - `ai-agent-orchestration.png` - How does batch fixing work? (pending regeneration)
-- `decision-framework.png` - Fix now or later?
 
 **Security Reviewers:**
 
