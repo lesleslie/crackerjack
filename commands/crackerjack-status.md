@@ -1,8 +1,10 @@
-______________________________________________________________________
+---
+description: Check comprehensive Crackerjack system status including running jobs, MCP server health, WebSocket connections, and progress monitoring with real-time updates.
+argument-hint: ""
+allowed-tools: mcp__crackerjack__get_comprehensive_status
+---
 
-## description: Check comprehensive Crackerjack system status including running jobs, MCP server health, WebSocket connections, and progress monitoring with real-time updates.
-
-# /crackerjack:status - Comprehensive System Status
+# /crackerjack-status
 
 Check the comprehensive status of the Crackerjack system including running jobs, MCP server health, WebSocket server status, and progress monitoring. This command provides real-time status from all system components.
 

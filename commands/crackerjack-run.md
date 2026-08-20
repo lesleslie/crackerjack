@@ -1,8 +1,10 @@
-______________________________________________________________________
+---
+description: Run crackerjack with AI-powered auto-fixing using intelligent session integration. Automatically tries enhanced session-mgmt execution first, then gracefully falls back to standard crackerjack execution if unavailable. Perfect for comprehensive code quality enforcement with zero configuration required.
+argument-hint: "[--debug]"
+allowed-tools: mcp__crackerjack__execute_crackerjack
+---
 
-## description: Run crackerjack with AI-powered auto-fixing using intelligent session integration. Automatically tries enhanced session-mgmt execution first, then gracefully falls back to standard crackerjack execution if unavailable. Perfect for comprehensive code quality enforcement with zero configuration required.
-
-# /run
+# /crackerjack-run
 
 Intelligent crackerjack runner that tries session-mgmt:crackerjack-run first with fallback to crackerjack:run for optimal integration with session management systems.
 

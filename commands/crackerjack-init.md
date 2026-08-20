@@ -1,6 +1,8 @@
-______________________________________________________________________
-
-## description: Initialize or update crackerjack configuration for a Python project with best practices, quality hooks, AI guidelines, and skill system integration.
+---
+description: Initialize or update crackerjack configuration for a Python project with best practices, quality hooks, AI guidelines, and skill system integration.
+argument-hint: "[--force] [--template {minimal,library,full}]"
+allowed-tools: mcp__crackerjack__init_crackerjack
+---
 
 # /crackerjack:init
 
