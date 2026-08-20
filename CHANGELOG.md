@@ -1,5 +1,51 @@
 ______________________________________________________________________
 
+## [0.74.0] - 2026-08-20
+
+### Added
+
+- Standardize bootstrap_baseline_tools at crackerjack/mcp/server_core.py
+
+### Changed
+
+- Adopt mcp_common apply_tool_profile with CRACKERJACK_TOOL_PROFILE
+
+### Fixed
+
+- crackerjack: Add trailing newline to tool-profile-rationale.md
+- crackerjack: Align enable_ty default to True across cli/models
+- crackerjack: Collapse lychee Rust traceback frames into single issue
+- crackerjack: Create annotated git tag in create_git_tag_local
+- crackerjack: Remove stale 'will fail to import' NOTE from autofix_coordinator
+- crackerjack: Repair broken YAML frontmatter in commands/*.md
+- crackerjack: Resolve 2 pre-existing test failures in fixer return-value-contract
+- crackerjack: Rewrite type-ignore mentions in comments to satisfy ty
+- crackerjack: Round 1 reviewer fixes for W2a MCP tool-profile retrofit
+- crackerjack: Skip_hooks + adapter_observability — 2 tests
+- crackerjack: Sync version stamps (2026-08-19)
+- crackerjack: Test_models_focused + test_config + test_validate — 4 tests
+- crackerjack: Ty + refurb errors in test_creation/test_specialist/hook_executor
+- executors: Dispatch ParserFactory as default fallthrough in async _parse_hook_output
+- executors: Populate structured issues in check-added-large-files parser path
+- executors: Use extract_issue_lines filter in async raw-fallback
+- executors: Use extract_issue_lines in sync path raw-fallback
+- parsers: Extend extract_issue_lines separator coverage + log ruff-check alias
+
+### Documentation
+
+- crackerjack: Add Tool Profile System subsection to CLAUDE.md (W2a backfill)
+- crackerjack: Fix documented-but-not-wired audit findings (2026-08-19)
+- crackerjack: Refresh stale hook and adapter counts (2026-08-19)
+- crackerjack: Remove orphan decision-framework diagram (2026-08-19)
+
+### Testing
+
+- crackerjack: Add doc-drift CI guard (2026-08-19)
+
+### Internal
+
+- crackerjack: Remove orphan .backup files from agents/ + update README
+
 ## [0.73.5] - 2026-08-17
 
 ### Added
