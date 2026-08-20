@@ -2084,11 +2084,12 @@ def _create_test_creation_result(
 ) -> FixResult:
     # `_create_test_creation_result` was preserved verbatim from
     # ``TestCreationAgent._create_test_creation_result`` which assigned the
-    # *list* ``fixes_applied`` to ``success`` (with ``# type: ignore``
-    # directives). Coerce to ``bool`` here so the downstream calls to
-    # ``_calculate_confidence``, ``_generate_recommendations``, and
-    # ``FixResult(success=...)`` type-check; runtime semantics are unchanged
-    # because list-truthiness matches bool semantics.
+    # *list* ``fixes_applied`` to ``success`` (the original used ty-ignore
+    # directives on the downstream call sites). Coerce to ``bool`` here so
+    # the downstream calls to ``_calculate_confidence``,
+    # ``_generate_recommendations``, and ``FixResult(success=...)``
+    # type-check; runtime semantics are unchanged because list-truthiness
+    # matches bool semantics.
     success = bool(fixes_applied)
 
     confidence = _calculate_confidence(success, fixes_applied, files_modified)

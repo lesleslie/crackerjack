@@ -503,9 +503,9 @@ async def _apply_file_fixes(issue: Issue) -> tuple[list[str], bool]:
     file_fixes = await _fix_test_file_issues(issue.file_path)
     # Second element is coerced to ``bool`` here so the ``tuple[list[str], bool]``
     # return annotation on ``_apply_file_fixes`` type-checks; the original
-    # ``TestSpecialistAgent._apply_file_fixes`` used ``file_fixes if file_fixes
-    # else False`` with a ``# type: ignore`` directive. Runtime semantics are
-    # unchanged because list-truthiness matches bool semantics.
+    # ``TestSpecialistAgent._apply_file_fixes`` used the ``file_fixes if file_fixes
+    # else False`` form with a ty-ignore directive on the return. Runtime
+    # semantics are unchanged because list-truthiness matches bool semantics.
     return file_fixes, bool(file_fixes)
 
 
