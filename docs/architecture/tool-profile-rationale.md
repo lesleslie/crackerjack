@@ -80,8 +80,7 @@ Both share the **filter** behavior (case-insensitive substring on
 `name` OR `description`). They differ on the **response shape**:
 
 - **OLD** (`discover_tools.py:189-229`): wrapped dict
-  `{"status": "success", "matched": [...], "matched_count": N,
-  "total_count": N, "groups": [...], "deferred": [...], "deferred_count": N, "hint": "..."}`
+  `{"status": "success", "matched": [...], "matched_count": N, "total_count": N, "groups": [...], "deferred": [...], "deferred_count": N, "hint": "..."}`
 - **NEW** (`crackerjack_discovery`): flat `list[dict]` per the W0 helper
   default — `[{"name": ..., "description": ..., "inputSchema": ..., "group": ...}, ...]`
 

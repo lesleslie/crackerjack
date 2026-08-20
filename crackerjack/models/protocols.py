@@ -13,8 +13,8 @@ from typing import TYPE_CHECKING
 # shadows the real ``mcp`` package (e.g.
 # ``tests/unit/test_adapter_observability.py``).
 if TYPE_CHECKING:
-    from crackerjack.config.settings import CrackerjackSettings
     from crackerjack.agents.base import AgentContext
+    from crackerjack.config.settings import CrackerjackSettings
     from crackerjack.models.issues import FixResult, Issue
     from crackerjack.models.qa_config import QACheckConfig
     from crackerjack.models.qa_results import QAResult

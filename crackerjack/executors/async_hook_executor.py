@@ -834,9 +834,7 @@ class AsyncHookExecutor:
         parser = CheckAddedLargeFilesParser()
         issues = parser.parse_text(output)
         return [
-            f"{issue.file_path}: {issue.message}"
-            if issue.file_path
-            else issue.message
+            f"{issue.file_path}: {issue.message}" if issue.file_path else issue.message
             for issue in issues
         ]
 

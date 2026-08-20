@@ -20,7 +20,12 @@ from pathlib import Path
 
 from fastmcp import FastMCP
 
-_FIXTURE_PATH = Path(__file__).resolve().parents[3] / "tests" / "fixtures" / "_tool_groups_mapping.json"
+_FIXTURE_PATH = (
+    Path(__file__).resolve().parents[3]
+    / "tests"
+    / "fixtures"
+    / "_tool_groups_mapping.json"
+)
 
 
 def _load_tool_groups() -> dict[str, str]:

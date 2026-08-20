@@ -930,7 +930,7 @@ class HookExecutor:
     def _parse_lychee_issues(self, json_output: str) -> list[str]:
         import json
 
-        text = (json_output or "").strip()
+        text = json_output.strip()
         if not text:
             return []
 

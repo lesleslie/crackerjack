@@ -66,18 +66,11 @@ What was intentionally dropped versus the original ``TestSpecialistAgent``:
 identify/dispatch/apply-additional-fixes flow, minus the ``self``/
 ``AgentContext`` plumbing).
 
-Two pre-existing behavioral quirks are preserved verbatim, not fixed, per
+One pre-existing behavioral quirk is preserved verbatim, not fixed, per
 CLAUDE.md Rule 7 ("preserve functional requirements... fix the technical
 issue, not the requirements"):
 
-1. ``_apply_file_fixes`` is annotated to return ``tuple[list[str], bool]``
-   but its second element is actually the ``file_fixes`` list itself, not a
-   ``bool`` (the original has a ``# type: ignore`` on this exact line). The
-   caller (``_apply_issue_fixes``) only ever uses this value in an
-   ``if file_modified and issue.file_path:`` truthiness check, so a
-   non-empty list behaves identically to ``True`` there -- but the returned
-   value is not actually the ``bool`` its signature promises.
-2. ``_fix_test_file_issues`` only appends a "fixes" message when it inserts
+1. ``_fix_test_file_issues`` only appends a "fixes" message when it inserts
    a missing ``import pytest`` line. If ``apply_test_fixes`` (assert-spacing
    normalization) changes the content on its own -- with no missing pytest
    import -- the file is still written to disk, but the returned fix list is
@@ -508,11 +501,12 @@ async def _apply_file_fixes(issue: Issue) -> tuple[list[str], bool]:
         return [], False
 
     file_fixes = await _fix_test_file_issues(issue.file_path)
-    # NOTE: second element is actually `file_fixes` (a list), not a bool --
-    # preserved verbatim from TestSpecialistAgent._apply_file_fixes (which
-    # has a `type-ignore` directive on this exact line). See module docstring
-    # quirk (1).
-    return file_fixes, file_fixes if file_fixes else False
+    # Second element is coerced to ``bool`` here so the ``tuple[list[str], bool]``
+    # return annotation on ``_apply_file_fixes`` type-checks; the original
+    # ``TestSpecialistAgent._apply_file_fixes`` used ``file_fixes if file_fixes
+    # else False`` with a ``# type: ignore`` directive. Runtime semantics are
+    # unchanged because list-truthiness matches bool semantics.
+    return file_fixes, bool(file_fixes)
 
 
 def _get_failure_recommendations(fixes_applied: list[str]) -> list[str]:

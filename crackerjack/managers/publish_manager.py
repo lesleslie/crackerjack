@@ -673,7 +673,9 @@ class PublishManagerImpl:
                     f"[yellow]🔍[/ yellow] Would create git tag: v{version}",
                 )
                 return True
-            result = self._run_command(["git", "tag", "-a", f"v{version}", "-m", f"Release v{version}"])
+            result = self._run_command(
+                ["git", "tag", "-a", f"v{version}", "-m", f"Release v{version}"]
+            )
             if result.returncode == 0:
                 self.console.print(f"[green]🏷️[/ green] Created git tag: v{version}")
                 return True

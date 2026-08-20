@@ -20,7 +20,6 @@ from rich.console import Console
 # _create_type_tool_adapter (see line ~1502), so it cannot live in
 # the TYPE_CHECKING block — ruff TC004 would flag it.
 from crackerjack.adapters.factory import DefaultAdapterFactory
-
 from crackerjack.core.ai_fix_event_bus import AIFixEventBus
 from crackerjack.core.ai_fix_events import (
     RunStarted,

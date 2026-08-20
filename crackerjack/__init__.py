@@ -27,7 +27,6 @@ if not _EARLY_DEBUG_MODE:
 
 from importlib.metadata import version
 
-
 # Lazily-loaded submodules. Keeping these out of the eager import chain means
 # that ``import crackerjack.core.timeout_manager`` (or any other submodule)
 # does NOT trigger ``crackerjack.api`` -> ``crackerjack.models.protocols`` ->

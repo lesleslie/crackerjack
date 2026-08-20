@@ -273,8 +273,7 @@ def _run_validator_subprocess(
         ) from e
     except subprocess.TimeoutExpired as e:
         raise RuntimeError(
-            f"validate-mermaid.mjs timed out after {timeout}s on "
-            f"{block_count} blocks"
+            f"validate-mermaid.mjs timed out after {timeout}s on {block_count} blocks"
         ) from e
     if completed.returncode != 0:
         raise RuntimeError(
@@ -290,8 +289,7 @@ def _decode_validator_output(stdout: str) -> list[dict[str, object]]:
         decoded = json.loads(stdout)
     except json.JSONDecodeError as e:
         raise RuntimeError(
-            f"validate-mermaid.mjs returned invalid JSON: {e}; "
-            f"stdout={stdout[:200]!r}"
+            f"validate-mermaid.mjs returned invalid JSON: {e}; stdout={stdout[:200]!r}"
         ) from e
     return decoded if isinstance(decoded, list) else []
 
