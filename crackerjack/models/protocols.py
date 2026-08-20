@@ -6,9 +6,14 @@ import typing as t
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from crackerjack.config.settings import CrackerjackSettings
-
-if t.TYPE_CHECKING:
+# ``CrackerjackSettings`` is only referenced as a string annotation below; keep
+# the import under ``TYPE_CHECKING`` so importing ``crackerjack.models.protocols``
+# does not eagerly trigger ``crackerjack.config`` -> ``mcp_common`` -> ``fastmcp``
+# -> ``mcp.types``. That chain fails when the test runner's ``sys.path`` shim
+# shadows the real ``mcp`` package (e.g.
+# ``tests/unit/test_adapter_observability.py``).
+if TYPE_CHECKING:
+    from crackerjack.config.settings import CrackerjackSettings
     from crackerjack.agents.base import AgentContext
     from crackerjack.models.issues import FixResult, Issue
     from crackerjack.models.qa_config import QACheckConfig

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import typing as t
 from contextlib import suppress
 
 from .hooks import (
@@ -13,7 +14,6 @@ from .hooks import (
     RetryPolicy,
 )
 from .loader import load_settings, load_settings_async
-from .mcp_settings_adapter import CrackerjackMCPSettings
 from .profile_loader import (
     ProfileConfig,
     ProfileLoader,
@@ -56,6 +56,32 @@ settings_instance = load_settings(CrackerjackSettings)
 
 def register_services() -> None:
     logger.info("register_services skipped (legacy DI removed)")
+
+
+# Lazily-loaded attribute: ``CrackerjackMCPSettings`` requires ``mcp_common``
+# (and transitively ``fastmcp`` + ``mcp.types``). The test runner's ``sys.path``
+# shim can shadow the real ``mcp`` package, which breaks ``import mcp.types``
+# during collection. Keep this attribute lazy so importing any submodule of
+# ``crackerjack.config`` does not fail at module load.
+_LAZY_EXPORTS: dict[str, str] = {
+    "CrackerjackMCPSettings": "crackerjack.config.mcp_settings_adapter",
+}
+
+
+def __getattr__(name: str) -> t.Any:
+    module_name = _LAZY_EXPORTS.get(name)
+    if module_name is None:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    import importlib
+
+    module = importlib.import_module(module_name)
+    value = getattr(module, name)
+    globals()[name] = value
+    return value
+
+
+def __dir__() -> list[str]:
+    return sorted(set(__all__) | set(globals().keys()))
 
 
 __all__ = [
