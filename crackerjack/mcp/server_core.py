@@ -223,6 +223,25 @@ async def create_mcp_server(config: dict[str, t.Any] | None = None) -> t.Any | N
         yaml_loader=None,
     )
 
+    # Bodai canonical baseline tools (discover_tools, get_liveness,
+    # get_readiness, health_check_all) are already registered at every
+    # profile tier by the wiring above:
+    #   - discover_tools: registered by _apply_tool_profile using
+    #     crackerjack_discovery (preserves the `group` field per
+    #     tests/fixtures/_tool_groups_mapping.json).
+    #   - get_liveness / get_readiness / health_check_all: registered
+    #     by register_crackerjack_health via mcp_common.register_health_tools,
+    #     invoked from CRACKERJACK_MANDATORY_GROUPS = {"health_tools"}.
+    # `bootstrap_baseline_tools(mcp)` is intentionally NOT called here:
+    # adding it would either double-register get_liveness/get_readiness/
+    # health_check_all (shadowing the more comprehensive health tools
+    # also registered by register_health_tools) or replace the custom
+    # crackerjack_discovery-backed discover_tools with the default
+    # discovery, losing the per-tool `group` label that load balancers
+    # and orchestrators rely on. See
+    # docs/plans/2026-08-20-bodai-mcp-surface-standardization.md for
+    # the full audit.
+
     return mcp_app
 
 
