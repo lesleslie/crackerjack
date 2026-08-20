@@ -98,7 +98,7 @@ class Options(BaseModel):
     all_files: bool = False
     experimental_hooks: bool = False
     enable_pyrefly: bool = False
-    enable_ty: bool = True
+    enable_ty: bool = False
     enable_zuban: bool = False
     cleanup: t.Any | None = None
     no_git_tags: bool = False
@@ -1009,7 +1009,7 @@ def create_options(
     create_pr: bool = False,
     experimental_hooks: bool = False,
     enable_pyrefly: bool = False,
-    enable_ty: bool = True,
+    enable_ty: bool = False,
     enable_zuban: bool = False,
     start_zuban_lsp: bool = False,
     stop_zuban_lsp: bool = False,
