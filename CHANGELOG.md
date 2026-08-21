@@ -1,5 +1,11 @@
 ______________________________________________________________________
 
+## [0.74.1] - 2026-08-21
+
+### Fixed
+
+- types: Resolve unused ty:ignore directives and None callable error
+
 ## [0.74.0] - 2026-08-20
 
 ### Added
