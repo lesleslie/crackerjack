@@ -1,5 +1,11 @@
 ______________________________________________________________________
 
+## [0.74.2] - 2026-08-21
+
+### Added
+
+- security: Betterleaks scans from git root and auto-discovers config
+
 ## [0.74.1] - 2026-08-21
 
 ### Fixed
