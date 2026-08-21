@@ -83,10 +83,16 @@ class BetterleaksAdapter(BaseToolAdapter):
             if report_path.exists():
                 report_path.unlink()
 
+        # Resolve scan root to the git toplevel so betterleaks can locate
+        # a project-level ``.betterleaks.toml`` (precedence #4 per the
+        # betterleaks CLI). Falling back to the cwd preserves existing
+        # behaviour for non-git directories (tests, sandboxes).
+        scan_root = self._find_git_root() or Path.cwd()
+
         cmd = [
             self.tool_name,
             self.settings.scan_mode,
-            ".",
+            str(scan_root),
             "--report-path",
             str(report_path),
             "--report-format",
@@ -96,12 +102,53 @@ class BetterleaksAdapter(BaseToolAdapter):
         if self.settings.redact:
             cmd.append("--redact")
 
+        # Config precedence per the betterleaks CLI: an explicit
+        # ``config_file`` setting wins over auto-discovery, which wins
+        # over BETTERLEAKS_CONFIG env var. We only auto-discover a
+        # project-local ``.betterleaks.toml`` when no explicit setting
+        # is provided so operators can still pin a global config.
         if self.settings.config_file:
             cfg = Path(self.settings.config_file)
             if cfg.exists() and cfg.is_file():
                 cmd.extend(["--config", str(cfg)])
+        else:
+            for candidate in (".betterleaks.toml", ".gitleaks.toml"):
+                auto = scan_root / candidate
+                if auto.exists() and auto.is_file():
+                    cmd.extend(["--config", str(auto)])
+                    break
 
         return cmd
+
+    @staticmethod
+    def _find_git_root(start: Path | None = None) -> Path | None:
+        """Walk up from ``start`` (default cwd) to find the git toplevel.
+
+        Returns ``None`` if no git repo is found, or if the lookup fails
+        for any reason (missing ``git`` binary, permission errors, etc.).
+        Tests rely on the silent-failure contract: a non-git working
+        directory must not break command construction.
+        """
+        import subprocess
+
+        cwd = start or Path.cwd()
+        try:
+            result = subprocess.run(
+                ["git", "rev-parse", "--show-toplevel"],
+                cwd=cwd,
+                capture_output=True,
+                text=True,
+                timeout=5,
+                check=False,
+            )
+        except (OSError, subprocess.TimeoutExpired):
+            return None
+        if result.returncode != 0:
+            return None
+        toplevel = result.stdout.strip()
+        if not toplevel:
+            return None
+        return Path(toplevel)
 
     async def parse_output(
         self,
@@ -224,11 +271,25 @@ class BetterleaksAdapter(BaseToolAdapter):
             enabled=True,
             file_patterns=["**/*"],
             exclude_patterns=[
+                # VCS / package managers
                 "**/.git/**",
                 "**/node_modules/**",
+                # Python environments
                 "**/.venv/**",
                 "**/venv/**",
                 "**/__pycache__/**",
+                "**/*.pyc",
+                # Build artifacts (Python wheels/sdists + extracted sources)
+                "**/build/**",
+                "**/dist/**",
+                "**/*.egg-info/**",
+                # Tool caches (crackerjack, uv, ruff, mypy, pytest)
+                "**/.crackerjack/**",
+                "**/.ruff_cache/**",
+                "**/.mypy_cache/**",
+                "**/.pytest_cache/**",
+                "**/.cache/**",
+                "**/htmlcov/**",
             ],
             timeout_seconds=120,
             parallel_safe=True,

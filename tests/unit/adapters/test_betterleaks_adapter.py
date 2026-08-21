@@ -32,6 +32,42 @@ class TestBetterleaksHooksRegistration:
             "gitleaks must be disabled=True now that betterleaks is the primary gate"
         )
 
+    def test_default_excludes_cover_build_artifacts_and_tool_caches(self) -> None:
+        """Default QACheckConfig.exclude_patterns must include build/, dist/, and caches.
+
+        betterleaks scans the filesystem in git mode and finds secrets in
+        sdist tarballs (``dist/*.tar.gz!``), build copies
+        (``build/lib/...``), and tool caches (``.crackerjack/uv/cache/...``).
+        These never hold real source secrets; adding them as default
+        excludes silences them for every project.
+        """
+        from crackerjack.adapters.security.betterleaks import BetterleaksAdapter
+
+        cfg = BetterleaksAdapter().get_default_config()
+        excludes = set(cfg.exclude_patterns)
+
+        # Build / sdist
+        assert "**/build/**" in excludes
+        assert "**/dist/**" in excludes
+        assert "**/*.egg-info/**" in excludes
+        # Crackerjack / uv cache (the source of the false-positive cluster
+        # that prompted this change).
+        assert "**/.crackerjack/**" in excludes
+        assert "**/__pycache__/**" in excludes
+        assert "**/*.pyc" in excludes
+        # Other tool caches that frequently show up in scans.
+        for cache_dir in (
+            "**/.ruff_cache/**",
+            "**/.mypy_cache/**",
+            "**/.pytest_cache/**",
+            "**/.cache/**",
+            "**/htmlcov/**",
+        ):
+            assert cache_dir in excludes, (
+                f"{cache_dir} should be in default excludes; "
+                "add it to BetterleaksAdapter.get_default_config()"
+            )
+
 
 @pytest.mark.unit
 class TestBetterleaksBuildCommand:
@@ -54,15 +90,21 @@ class TestBetterleaksBuildCommand:
         return adapter
 
     async def test_betterleaks_build_command_git_mode(self, adapter) -> None:
-        """Default scan_mode='git' produces 'betterleaks git .' command."""
+        """Default scan_mode='git' produces 'betterleaks git <git-root>' command."""
         cmd = adapter.build_command(files=[])
         assert "betterleaks" in cmd
         assert "git" in cmd
         assert "--report-format" in cmd
         assert "json" in cmd
+        # Scan root is the git toplevel (so .betterleaks.toml can be
+        # discovered), not a literal ".". The crackerjack repo itself is
+        # inside a git checkout, so this path must be populated.
+        assert "." not in cmd[2:4], (
+            f"Scan root should be the git toplevel, got {cmd[2]!r}"
+        )
 
     async def test_betterleaks_build_command_dir_mode(self, adapter) -> None:
-        """scan_mode='dir' produces 'betterleaks dir .' command."""
+        """scan_mode='dir' produces 'betterleaks dir <git-root>' command."""
         from crackerjack.adapters.security.betterleaks import BetterleaksSettings
 
         adapter.settings = BetterleaksSettings(
@@ -71,6 +113,98 @@ class TestBetterleaksBuildCommand:
         cmd = adapter.build_command(files=[])
         assert "dir" in cmd
         assert "git" not in cmd
+
+    async def test_betterleaks_auto_discovers_betterleaks_toml(
+        self, adapter, tmp_path, monkeypatch
+    ) -> None:
+        """When .betterleaks.toml exists at the git root it is passed via --config.
+
+        Patches ``_find_git_root`` to point at ``tmp_path`` so the test
+        doesn't depend on the real git layout of the test runner.
+        """
+        from crackerjack.adapters.security.betterleaks import BetterleaksAdapter
+
+        config = tmp_path / ".betterleaks.toml"
+        config.write_text("[extend]\nuseDefault = true\n")
+        monkeypatch.setattr(
+            BetterleaksAdapter, "_find_git_root", staticmethod(lambda: tmp_path)
+        )
+        # Ensure the explicit setting stays None so auto-discovery runs.
+        adapter.settings.config_file = None
+
+        cmd = adapter.build_command(files=[])
+
+        assert "--config" in cmd, "expected --config when .betterleaks.toml exists"
+        assert str(config) in cmd
+
+    async def test_betterleaks_falls_back_to_gitleaks_toml(
+        self, adapter, tmp_path, monkeypatch
+    ) -> None:
+        """When only .gitleaks.toml exists (no .betterleaks.toml), use it."""
+        from crackerjack.adapters.security.betterleaks import BetterleaksAdapter
+
+        gitleaks_cfg = tmp_path / ".gitleaks.toml"
+        gitleaks_cfg.write_text("[extend]\nuseDefault = true\n")
+        monkeypatch.setattr(
+            BetterleaksAdapter, "_find_git_root", staticmethod(lambda: tmp_path)
+        )
+        adapter.settings.config_file = None
+
+        cmd = adapter.build_command(files=[])
+
+        assert "--config" in cmd
+        assert str(gitleaks_cfg) in cmd
+
+    async def test_betterleaks_explicit_config_wins_over_auto_discovery(
+        self, adapter, tmp_path, monkeypatch
+    ) -> None:
+        """An explicit config_file setting overrides .betterleaks.toml auto-discovery."""
+        from crackerjack.adapters.security.betterleaks import BetterleaksAdapter
+
+        auto_cfg = tmp_path / ".betterleaks.toml"
+        auto_cfg.write_text("[extend]\nuseDefault = true\n")
+        explicit_cfg = tmp_path / "explicit.toml"
+        explicit_cfg.write_text("[extend]\nuseDefault = false\n")
+        monkeypatch.setattr(
+            BetterleaksAdapter, "_find_git_root", staticmethod(lambda: tmp_path)
+        )
+        adapter.settings.config_file = explicit_cfg
+
+        cmd = adapter.build_command(files=[])
+
+        assert "--config" in cmd
+        config_idx = cmd.index("--config")
+        assert cmd[config_idx + 1] == str(explicit_cfg)
+        assert str(auto_cfg) not in cmd
+
+    async def test_betterleaks_omits_config_flag_when_no_config_exists(
+        self, adapter, tmp_path, monkeypatch
+    ) -> None:
+        """No .betterleaks.toml and no explicit config -> no --config flag."""
+        from crackerjack.adapters.security.betterleaks import BetterleaksAdapter
+
+        # tmp_path has no .betterleaks.toml or .gitleaks.toml
+        monkeypatch.setattr(
+            BetterleaksAdapter, "_find_git_root", staticmethod(lambda: tmp_path)
+        )
+        adapter.settings.config_file = None
+
+        cmd = adapter.build_command(files=[])
+
+        assert "--config" not in cmd
+
+    async def test_find_git_root_returns_none_for_non_git_path(
+        self, tmp_path
+    ) -> None:
+        """``_find_git_root`` silently returns None for non-git directories."""
+        from crackerjack.adapters.security.betterleaks import BetterleaksAdapter
+
+        result = BetterleaksAdapter._find_git_root(tmp_path)
+
+        assert result is None, (
+            "_find_git_root must not raise on non-git paths; the adapter "
+            "falls back to cwd in build_command"
+        )
 
 
 @pytest.mark.unit
