@@ -15,7 +15,7 @@ from crackerjack.services.lsp_client import LSPClient
 try:
     from crackerjack.executors.tool_proxy import ToolProxy
 except ImportError:
-    ToolProxy = None  # type: ignore
+    ToolProxy = None  # type: ignore[misc, assignment]
 
 
 class LSPAwareHookExecutor(HookExecutor):
@@ -49,7 +49,10 @@ class LSPAwareHookExecutor(HookExecutor):
         )
         self.lsp_client = LSPClient()
         self.use_tool_proxy = use_tool_proxy and ToolProxy is not None
-        self.tool_proxy = ToolProxy() if self.use_tool_proxy else None
+        if self.use_tool_proxy and ToolProxy is not None:
+            self.tool_proxy = ToolProxy()
+        else:
+            self.tool_proxy = None
         self.debug = debug
 
     def execute_strategy(self, strategy: HookStrategy) -> HookExecutionResult:
