@@ -1,5 +1,11 @@
 ______________________________________________________________________
 
+## [0.74.3] - 2026-08-22
+
+### Performance
+
+- link-checker: Bypass python-side gitignore filter (~62x speedup)
+
 ## [0.74.2] - 2026-08-21
 
 ### Added
