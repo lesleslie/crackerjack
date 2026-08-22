@@ -56,19 +56,47 @@ def test_extract_markdown_links_skips_code_blocks():
 
 
 def test_extract_markdown_links_skips_inline_code():
-    """Test that links in inline code are not extracted."""
-    # Note: The function skips the ENTIRE line when it detects backticks
-    # So even the real link won't be extracted if it's on a line with backticks
+    """Inline-code spans are stripped before link extraction.
+
+    The function no longer skips the entire line when backticks are
+    present; instead it strips inline-code spans and extracts any real
+    links on the same line. ``[name](server)`` inside a backtick span
+    is therefore ignored (not flagged as a broken link), but real
+    links on the same line are still extracted.
+    """
     content = """
-Text with [real link](real.md)
-And more [text](other.md)
+Text with [real link](real.md) and `code with [name](server) link-shape`
+And more [text](other.md) inline alongside `more code`
 """
     links = extract_markdown_links(content)
 
-    # Both links should be extracted from lines without backticks
+    # Real links on lines with inline code are still extracted; the
+    # bracketed text inside the inline-code span is not.
     assert len(links) == 2
     assert links[0][0] == "real.md"
     assert links[1][0] == "other.md"
+
+
+def test_extract_markdown_links_skips_table_row_brackets():
+    """Markdown table cells with backtick-wrapped code are not flagged.
+
+    Regression for mahavishnu's docs/superpowers/specs/2026-08-18
+    -mcp-tool-profile-adoption-design.md line 146, where
+    ``| ... dispatch `registration_map[name](server)` for each |``
+    was incorrectly extracted as a broken local link to ``server``.
+    """
+    content = """
+| Case | `registrations[STANDARD]` | `registrations[FULL]` | Behavior at STANDARD | Behavior at FULL |
+|------|---------------------------|------------------------|----------------------|------------------|
+| **A** callable-only | list of group names | `ALL_TOOLS` | dispatch `registration_map[name](server)` for each | call `register_all_fn(server)` once |
+| **B** decorator-mode | list of group names | list of group names | see [real link](docs/foo.md) for details | dispatch every group in `FULL` list |
+"""
+    links = extract_markdown_links(content)
+
+    # The bracket-within-backtick patterns inside the table cells
+    # must not be reported as broken local links. The single real link
+    # on the **B** row IS extracted.
+    assert links == [("docs/foo.md", 5)]
 
 
 def test_is_local_link_local():

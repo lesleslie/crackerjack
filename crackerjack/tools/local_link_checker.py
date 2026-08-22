@@ -29,6 +29,7 @@ def extract_markdown_links(content: str) -> list[tuple[str, int]]:
     links = []
 
     pattern = r"\[([^\]]+)\]\(([^\s)<>]+)(?:\s+[\"'][^\"']*[\"'])?\)"
+    inline_code = re.compile(r"`[^`]*`")
 
     in_code_block = False
 
@@ -40,10 +41,16 @@ def extract_markdown_links(content: str) -> list[tuple[str, int]]:
         if in_code_block:
             continue
 
-        if "`]" in line or "`[" in line or "``" in line:
-            continue
+        # Strip inline code spans (single-backtick delimited) so we don't
+        # mistake `` `[name](server)` `` for a markdown link. We preserve
+        # the line's column positions for accurate error reporting by
+        # replacing the span with the same number of space characters.
+        stripped_line = inline_code.sub(
+            lambda m: " " * len(m.group(0)),
+            line,
+        )
 
-        for match in re.finditer(pattern, line):
+        for match in re.finditer(pattern, stripped_line):
             url = match.group(2)
 
             if "<" in url or ">" in url:
