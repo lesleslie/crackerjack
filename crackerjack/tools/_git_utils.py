@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import os
 import subprocess
+from collections.abc import Iterable
 from functools import lru_cache
 from pathlib import Path
 
@@ -21,12 +23,52 @@ def get_git_root(start: Path | None = None) -> Path | None:
         current = parent
 
 
+# Directory names whose nested ``.gitignore`` files should NOT contribute
+# patterns to the active repo's PathSpec. These are runtime/build artifacts
+# (worktrees, virtualenvs, caches, backups) that carry their own ``.gitignore``
+# but are not part of the source the user is linting. Without this filter,
+# projects with many worktrees (e.g. 300+ ``.gitignore`` files in
+# ``.claude/worktrees/``, ``.worktrees/``, ``.backups/``) blow up
+# ``PathSpec.from_lines`` compilation time AND (more importantly) make
+# ``Path.rglob`` spend tens of seconds traversing trees it then ignores,
+# exceeding the 60s crackerjack fast-hook timeout on ``check-yaml``.
+_GITIGNORE_SKIP_PARTS: frozenset[str] = frozenset({
+    ".venv", "venv", "env", ".env",
+    "node_modules",
+    "__pycache__",
+    ".worktrees", ".claude", ".backups",
+    ".crackerjack", ".superpowers",
+    "dist", "build",
+    ".pytest_cache", ".mypy_cache", ".ruff_cache",
+    ".complexipy_cache", ".hypothesis", ".tox",
+    "htmlcov", ".coverage", ".idea", ".vscode",
+})
+
+
+def _iter_gitignore_files(root: Path) -> Iterable[Path]:
+    """Yield ``.gitignore`` files under ``root``, pruning noise directories.
+
+    Uses :func:`os.walk` with in-place ``dirnames`` pruning so the traversal
+    never descends into known runtime/build directories. This is much faster
+    than :meth:`pathlib.Path.rglob` on trees that contain many worktrees or
+    a populated virtualenv — ``rglob`` spends seconds enumerating files
+    that are then filtered out, while ``os.walk`` skips the subtree
+    entirely.
+    """
+    for dirpath, dirnames, filenames in os.walk(root):
+        # Prune noise directories so os.walk doesn't descend into them.
+        # This is the equivalent of telling rglob to ignore the subtree.
+        dirnames[:] = [d for d in dirnames if d not in _GITIGNORE_SKIP_PARTS]
+        if ".gitignore" in filenames:
+            yield Path(dirpath) / ".gitignore"
+
+
 @lru_cache(maxsize=8)
 def _load_gitignore_spec(root: str | None = None) -> PathSpec | None:
     root_path = Path(root or Path.cwd()).resolve()
     patterns: list[str] = []
 
-    for gitignore_path in root_path.rglob(".gitignore"):
+    for gitignore_path in _iter_gitignore_files(root_path):
         if not gitignore_path.is_file():
             continue
 
