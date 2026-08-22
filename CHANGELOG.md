@@ -1,5 +1,12 @@
 ______________________________________________________________________
 
+## [0.74.4] - 2026-08-22
+
+### Fixed
+
+- link-checker: Strip inline-code spans before extracting markdown links
+- tools: Prune noise dirs when loading .gitignore spec
+
 ## [0.74.3] - 2026-08-22
 
 ### Performance
