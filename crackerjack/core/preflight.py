@@ -24,7 +24,7 @@ from .ai_fix_events import PreflightFinished, PreflightStarted
 class PreflightConfig(BaseModel):
     ruff_check: bool = True
     ruff_format: bool = True
-    ruff_unsafe_fixes: bool = True
+    ruff_unsafe_fixes: bool = False
     ruff_select_extra: list[str] = []
     autoflake_unused: bool = True
     refurb_safe_policies: bool = True
