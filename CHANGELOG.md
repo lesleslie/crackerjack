@@ -1,5 +1,78 @@
 ______________________________________________________________________
 
+## [0.75.2] - 2026-08-24
+
+### Added
+
+- security: Betterleaks scans from git root and auto-discovers config
+- Standardize bootstrap_baseline_tools at crackerjack/mcp/server_core.py
+
+### Changed
+
+- Adopt mcp_common apply_tool_profile with CRACKERJACK_TOOL_PROFILE
+
+### Fixed
+
+- crackerjack: Add trailing newline to tool-profile-rationale.md
+- crackerjack: Align enable_ty default to True across cli/models
+- crackerjack: Collapse lychee Rust traceback frames into single issue
+- crackerjack: Create annotated git tag in create_git_tag_local
+- crackerjack: Escape entry content in changelog preview + add bump rollback
+- crackerjack: Gate pytest-snob behind a 'snob' dependency group
+- crackerjack: Handle list-typed error["type"] in semgrep PartialParsing events
+- crackerjack: Mirror unhashable-path fix on async semgrep parser
+- crackerjack: Remove stale 'will fail to import' NOTE from autofix_coordinator
+- crackerjack: Repair broken YAML frontmatter in commands/*.md
+- crackerjack: Resolve 2 pre-existing test failures in fixer return-value-contract
+- crackerjack: Rewrite type-ignore mentions in comments to satisfy ty
+- crackerjack: Round 1 reviewer fixes for W2a MCP tool-profile retrofit
+- crackerjack: Skip non-string paths in semgrep JSON line parser
+- crackerjack: Skip_hooks + adapter_observability — 2 tests
+- crackerjack: Sync version stamps (2026-08-19)
+- crackerjack: Test_models_focused + test_config + test_validate — 4 tests
+- crackerjack: Ty + refurb errors in test_creation/test_specialist/hook_executor
+- executors: Dispatch ParserFactory as default fallthrough in async _parse_hook_output
+- executors: Populate structured issues in check-added-large-files parser path
+- executors: Use extract_issue_lines filter in async raw-fallback
+- executors: Use extract_issue_lines in sync path raw-fallback
+- link-checker: Strip inline-code spans before extracting markdown links
+- parsers: Extend extract_issue_lines separator coverage + log ruff-check alias
+- tools: Prune noise dirs when loading .gitignore spec
+- types: Resolve unused ty:ignore directives and None callable error
+
+### Performance
+
+- link-checker: Bypass python-side gitignore filter (~62x speedup)
+
+### Documentation
+
+- crackerjack: Add Tool Profile System subsection to CLAUDE.md (W2a backfill)
+- crackerjack: Fix documented-but-not-wired audit findings (2026-08-19)
+- crackerjack: Refresh stale hook and adapter counts (2026-08-19)
+- crackerjack: Remove orphan decision-framework diagram (2026-08-19)
+
+### Testing
+
+- crackerjack: Add doc-drift CI guard (2026-08-19)
+
+### Internal
+
+- Bump requires-python to >=3.14
+- Bump version to 0.73.5
+- Bump version to 0.74.0
+- Bump version to 0.74.1
+- Bump version to 0.74.2
+- Bump version to 0.74.3
+- Bump version to 0.74.4
+- Bump version to 0.75.0
+- claude-md: Add oneiric action-kit discovery breadcrumb
+- crackerjack: Bump tool-config pins from 3.13 to 3.14
+- crackerjack: Dedupe PyPI auth message + match paren colors
+- crackerjack: Fix malformed Rich closing tags `[/ color]` → `[/color]`
+- crackerjack: Fix Rich markup typos for multi-word tags `[/ bold red]`
+- crackerjack: Fix Rich markup typos in tests/ (single-word tags)
+- crackerjack: Remove orphan .backup files from agents/ + update README
+
 ## [0.75.0] - 2026-08-24
 
 ### Fixed
