@@ -633,10 +633,22 @@ class AsyncHookExecutor:
         try:
             json_data = json.loads(json_str)
             if "results" in json_data:
+                # Filter to string paths only. Semgrep's findings schema uses
+                # strings, but other JSON events with a ``results`` key
+                # (telemetry, progress, supply-chain findings) may use lists
+                # or dicts — building a set from those raises TypeError:
+                # unhashable type. Mirror of the same fix in
+                # ``hook_executor._parse_json_line`` (commit 1fd8a791); both
+                # paths share the bug, both need the filter.
                 file_paths = {
-                    result.get("path") for result in json_data.get("results", [])
+                    path
+                    for path in (
+                        result.get("path")
+                        for result in json_data.get("results", [])
+                    )
+                    if isinstance(path, str)
                 }
-                return len([p for p in file_paths if p])
+                return len(file_paths)
         except json.JSONDecodeError:
             pass
         return None

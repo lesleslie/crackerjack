@@ -764,6 +764,35 @@ class TestParsingHelpers:
     ) -> None:
         assert executor._extract_file_count_from_json("{not json") is None
 
+    def test_extract_file_count_from_json_unhashable_path(
+        self,
+        executor: AsyncHookExecutor,
+    ) -> None:
+        """Regression: semgrep emits JSON events with a ``results`` key whose
+        entries have non-string ``path`` values (telemetry / progress /
+        supply-chain findings). Building a set from those used to crash with
+        ``TypeError: cannot use 'list' as a set element``.
+
+        Mirror of the sync-path regression test in
+        ``TestParseSemgrepOutput.test_unhashable_path_does_not_crash``
+        (commit 1fd8a791). Same fix, async executor.
+        """
+        cases = {
+            "list path": '{"results":[{"path": ["nested", "list"]}]}',
+            "dict path": '{"results":[{"path": {"k": "v"}}]}',
+            "telemetry event": (
+                '{"level": "info", "results": [{"path": ["n", "ested"]}]}'
+            ),
+            "mix of string and list": (
+                '{"results":[{"path": "ok.py"}, {"path": ["bad"]}]}'
+            ),
+        }
+        for name, payload in cases.items():
+            result = executor._extract_file_count_from_json(payload)
+            assert result is None or isinstance(result, int), (
+                f"{name}: expected int | None, got {result!r}"
+            )
+
     def test_parse_semgrep_json_lines_picks_results(
         self,
         executor: AsyncHookExecutor,
