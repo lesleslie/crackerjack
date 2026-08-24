@@ -639,7 +639,7 @@ class InteractiveCLI:
         )
         self.create_dynamic_workflow(options)
 
-        self.console.print("[bold blue]🚀 Starting Interactive Workflow[/ bold blue]")
+        self.console.print("[bold blue]🚀 Starting Interactive Workflow[/bold blue]")
         self.workflow.display_task_tree()
 
         if not Confirm.ask("Continue with workflow?"):

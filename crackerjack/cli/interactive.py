@@ -398,11 +398,11 @@ class InteractiveWorkflowManager:
         self.console.print(Panel(table, border_style="magenta"))
         if failed_count == 0:
             self.console.print(
-                f"\n[bold green]🎉 Workflow completed ! {success_count} / {len(self.tasks)} tasks successful[/ bold green]",
+                f"\n[bold green]🎉 Workflow completed ! {success_count} / {len(self.tasks)} tasks successful[/bold green]",
             )
         else:
             self.console.print(
-                f"\n[bold yellow]⚠️ Workflow completed with issues: {failed_count} failed, {skipped_count} skipped[/ bold yellow]",
+                f"\n[bold yellow]⚠️ Workflow completed with issues: {failed_count} failed, {skipped_count} skipped[/bold yellow]",
             )
 
 
@@ -439,7 +439,7 @@ class InteractiveCLI:
 
     def _show_welcome(self) -> None:
         welcome_panel = Panel(
-            f"[bold cyan]Welcome to Crackerjack Interactive Mode ! [/ bold cyan]\n\n"
+            f"[bold cyan]Welcome to Crackerjack Interactive Mode ! [/bold cyan]\n\n"
             f"Version: {self.pkg_version}\n"
             f"This interactive interface will guide you through the crackerjack workflow\n"
             f"with real-time feedback and customizable options.",

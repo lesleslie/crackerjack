@@ -256,7 +256,7 @@ def restart_mcp_server() -> bool:
 
 
 def restart_zuban_lsp() -> bool:
-    console.print("[bold cyan]🔄 Restarting Zuban LSP server...[/ bold cyan]")
+    console.print("[bold cyan]🔄 Restarting Zuban LSP server...[/bold cyan]")
 
     stop_zuban_lsp()
 
@@ -291,14 +291,14 @@ def restart_zuban_lsp() -> bool:
 
 
 def list_server_status() -> None:
-    console.print("[bold cyan]📊 Crackerjack Server Status[/ bold cyan]")
+    console.print("[bold cyan]📊 Crackerjack Server Status[/bold cyan]")
 
     mcp_processes = find_mcp_server_processes()
 
     zuban_lsp_processes = find_zuban_lsp_processes()
 
     if mcp_processes:
-        console.print("\n[bold green]MCP Servers: [/ bold green]")
+        console.print("\n[bold green]MCP Servers: [/bold green]")
         for proc in mcp_processes:
             console.print(
                 f" • PID {proc['pid']} - CPU: {proc['cpu']}%-Memory: {proc['mem']}%",
@@ -308,7 +308,7 @@ def list_server_status() -> None:
         console.print("\n[yellow]MCP Servers: None running[/yellow]")
 
     if zuban_lsp_processes:
-        console.print("\n[bold green]Zuban LSP Servers: [/ bold green]")
+        console.print("\n[bold green]Zuban LSP Servers: [/bold green]")
         for proc in zuban_lsp_processes:
             console.print(
                 f" • PID {proc['pid']} - CPU: {proc['cpu']}%-Memory: {proc['mem']}%",

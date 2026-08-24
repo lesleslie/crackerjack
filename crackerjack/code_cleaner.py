@@ -237,7 +237,7 @@ class CleaningErrorHandler(BaseModel):
 
     def handle_file_error(self, file_path: Path, error: Exception, step: str) -> None:
         self.console.print(
-            f"[bold bright_yellow]⚠️ Warning: {step} failed for {file_path}: {error}[/ bold bright_yellow]",
+            f"[bold bright_yellow]⚠️ Warning: {step} failed for {file_path}: {error}[/bold bright_yellow]",
         )
 
         self.logger.warning(

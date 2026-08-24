@@ -108,7 +108,7 @@ class CrackerjackCLIFacade:
             from crackerjack.mcp.server_core import main as start_mcp_main
 
             self.console.print(
-                "[bold cyan]🤖 Starting Crackerjack MCP Server...[/ bold cyan]",
+                "[bold cyan]🤖 Starting Crackerjack MCP Server...[/bold cyan]",
             )
             start_mcp_main(str(self.pkg_path))
         except ImportError:

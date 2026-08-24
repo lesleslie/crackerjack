@@ -131,7 +131,7 @@ class AIAgentDebugger:
             else "Debug Log: None (disabled)"
         )
         header = Panel(
-            f"[bold cyan]🐛 AI Agent Debug Mode Active[/ bold cyan]\n"
+            f"[bold cyan]🐛 AI Agent Debug Mode Active[/bold cyan]\n"
             f"Session ID: {self.session_id}\n"
             f"{debug_log_info}\n"
             f"Verbose Mode: {'✅' if self.verbose else '❌'}",
@@ -167,7 +167,7 @@ class AIAgentDebugger:
             )
 
             self._print_verbose(
-                f"[dim green]✅ {operation} completed ({duration:.2f}s)[/ dim green]",
+                f"[dim green]✅ {operation} completed ({duration:.2f}s)[/dim green]",
                 level="debug",
             )
 
@@ -179,7 +179,7 @@ class AIAgentDebugger:
             )
 
             self._print_verbose(
-                f"[dim red]❌ {operation} failed ({duration:.2f}s): {e}[/ dim red]",
+                f"[dim red]❌ {operation} failed ({duration:.2f}s): {e}[/dim red]",
                 level="error",
             )
             raise

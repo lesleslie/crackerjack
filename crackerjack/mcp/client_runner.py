@@ -69,7 +69,7 @@ async def run_with_mcp_server(command: str = "/ crackerjack: run") -> None:
                     f"[yellow]Command '{command}' - WebSocket monitoring removed in Phase 1[/yellow]",
                 )
             except Exception as e:
-                console.print(f"[bold red]Error: {e}[/ bold red]")
+                console.print(f"[bold red]Error: {e}[/bold red]")
                 sys.exit(1)
     finally:
         if server_process:

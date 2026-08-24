@@ -682,8 +682,8 @@ class IndividualHookExecutor:
     def _print_strategy_header(self, strategy: HookStrategy) -> None:
         self.console.print("\n" + "=" * 80)
         self.console.print(
-            f"[bold bright_cyan]🔍 INDIVIDUAL HOOK EXECUTION[/ bold bright_cyan] "
-            f"[bold bright_white]{strategy.name.upper()} HOOKS[/ bold bright_white]",
+            f"[bold bright_cyan]🔍 INDIVIDUAL HOOK EXECUTION[/bold bright_cyan] "
+            f"[bold bright_white]{strategy.name.upper()} HOOKS[/bold bright_white]",
         )
         self.console.print(
             f"[dim]Running {len(strategy.hooks)} hooks individually with real-time streaming[/dim]",
@@ -733,7 +733,7 @@ class IndividualHookExecutor:
         self.console.print(f"⏱️ Total Duration: {total_duration:.1f}s")
 
         if failed > 0:
-            self.console.print("\n[bold red]Failed Hooks: [/ bold red]")
+            self.console.print("\n[bold red]Failed Hooks: [/bold red]")
             for progress in progress_list:
                 if progress.status == "failed":
                     error_summary = (

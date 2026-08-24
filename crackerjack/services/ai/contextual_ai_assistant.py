@@ -448,7 +448,7 @@ class ContextualAIAssistant:
             )
             return
 
-        self.console.print("\n[bold cyan]🤖 AI Assistant Recommendations[/ bold cyan]")
+        self.console.print("\n[bold cyan]🤖 AI Assistant Recommendations[/bold cyan]")
         self.console.print("[dim]Based on your current project context[/dim]\n")
 
         for i, rec in enumerate(recommendations, 1):
@@ -479,7 +479,7 @@ class ContextualAIAssistant:
                 )
 
             if rec.reasoning:
-                self.console.print(f" [dim italic]💭 {rec.reasoning}[/ dim italic]")
+                self.console.print(f" [dim italic]💭 {rec.reasoning}[/dim italic]")
 
             confidence_bar = "█" * int(rec.confidence * 10) + "▒" * (
                 10 - int(rec.confidence * 10)
