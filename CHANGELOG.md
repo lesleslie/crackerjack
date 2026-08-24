@@ -1,5 +1,15 @@
 ______________________________________________________________________
 
+## [0.75.4] - 2026-08-24
+
+### Changed
+
+- **Default `ruff_unsafe_fixes` to `True`** in both ``HookSettings`` and ``PreflightConfig``. The flag now both adds ``--unsafe-fixes`` to the ruff-check command and bypasses the working-tree guard. Net effect: ``crackerjack run`` on a dirty tree will auto-apply ruff fixes (including the safe-by-default TC001/TC002/TC003 import-moves and any flagged-unsafe rule). The opt-out is to set ``ruff_unsafe_fixes = False`` explicitly. Per the existing preflight.py:270 docstring: "the user has explicitly opted in to dangerous rewrites" — the opt-in is now on-by-default with an opt-out path for projects that want the strict working-tree-clean contract.
+
+### Migration
+
+- Projects that previously relied on the working-tree guard to *prevent* auto-fixes during development on dirty trees should now set ``ruff_unsafe_fixes = False`` in their crackerjack settings to retain the prior behavior.
+
 ## [0.75.2] - 2026-08-24
 
 ### Added
