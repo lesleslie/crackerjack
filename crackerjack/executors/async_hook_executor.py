@@ -714,7 +714,15 @@ class AsyncHookExecutor:
 
             if "errors" in json_data:
                 for error in json_data.get("errors", []):
-                    error_type = error.get("type", "SemgrepError")
+                    # Mirror of hook_executor._extract_semgrep_errors: when
+                    # ``error["type"]`` is a list (e.g. PartialParsing's
+                    # ``["PartialParsing", [matches]]``), ``f"{error_type}"``
+                    # would render the list repr. Coerce to "SemgrepError" so
+                    # the message field stays the source of truth.
+                    raw_type = error.get("type", "SemgrepError")
+                    error_type = (
+                        raw_type if isinstance(raw_type, str) else "SemgrepError"
+                    )
                     error_msg = error.get("message", str(error))
                     issues.append(f"{error_type}: {error_msg}")
 

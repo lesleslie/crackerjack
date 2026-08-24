@@ -1347,7 +1347,13 @@ class HookExecutor:
         }
 
         for error in json_data.get("errors", []):
-            error_type = error.get("type", "SemgrepError")
+            # ``error["type"]`` is documented as a string, but PartialParsing
+            # errors emit ``type`` as a 2-tuple ``["PartialParsing", [matches]]``
+            # which is a list — unhashable. Falling back to "SemgrepError"
+            # keeps the membership check safe; the matching ``error_msg``
+            # still surfaces the parse failure to the user.
+            raw_type = error.get("type", "SemgrepError")
+            error_type = raw_type if isinstance(raw_type, str) else "SemgrepError"
             error_msg = error.get("message", str(error))
 
             if error_type in INFRA_ERROR_TYPES:

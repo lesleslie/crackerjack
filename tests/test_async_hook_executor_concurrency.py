@@ -850,6 +850,43 @@ class TestParsingHelpers:
         assert "rule.x" in joined
         assert "SemgrepError" in joined
 
+    def test_parse_semgrep_issues_async_partial_parsing_list_type(
+        self,
+        executor: AsyncHookExecutor,
+    ) -> None:
+        """``error["type"]`` for PartialParsing events is a 2-element list
+        ``["PartialParsing", [matches]]``. The async parser should coerce it to
+        ``"SemgrepError"`` rather than rendering the list repr. Mirror of
+        ``TestParseSemgrep.test_partial_parsing_list_type_does_not_crash`` on
+        the sync side."""
+        output = json.dumps(
+            {
+                "results": [],
+                "errors": [
+                    {
+                        "type": [
+                            "PartialParsing",
+                            [
+                                {
+                                    "path": "x.py",
+                                    "start": {"line": 1, "col": 1},
+                                    "end": {"line": 1, "col": 2},
+                                },
+                            ],
+                        ],
+                        "message": "Syntax error at line x.py:1",
+                    }
+                ],
+            }
+        )
+        issues = executor._parse_semgrep_issues_async(output)
+        joined = "\n".join(issues)
+        assert "SemgrepError" in joined
+        assert "Syntax error at line x.py:1" in joined
+        # Specifically: the list repr must NOT leak into the user-facing
+        # output (no ``[PartialParsing`` substring).
+        assert "[PartialParsing" not in joined
+
     def test_parse_semgrep_issues_async_plain_text(
         self,
         executor: AsyncHookExecutor,

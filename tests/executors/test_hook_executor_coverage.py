@@ -866,6 +866,64 @@ class TestParseSemgrep:
         assert "OtherError" in out[0]
         assert "boom" in out[0]
 
+    def test_partial_parsing_list_type_does_not_crash(
+        self, executor: HookExecutor
+    ) -> None:
+        """``error["type"]`` for PartialParsing events is a 2-element list
+        ``["PartialParsing", [matches]]`` rather than a string. Without the
+        defensive isinstance check, ``error_type in INFRA_ERROR_TYPES`` triggers
+        Python 3.13+'s ``TypeError: cannot use 'list' as a set element`` because
+        the RHS is a set. Regression test for the third code path that crashed
+        the comprehensive semgrep hook (after 1fd8a791 + 82ddab86 already fixed
+        the ``results`` array paths)."""
+        data = {
+            "results": [],
+            "errors": [
+                {
+                    "type": [
+                        "PartialParsing",
+                        [
+                            {
+                                "path": "crackerjack/adapters/_tool_adapter_base.py",
+                                "start": {"line": 259, "col": 61},
+                                "end": {"line": 259, "col": 70},
+                            },
+                        ],
+                    ],
+                    "message": (
+                        "Syntax error at line "
+                        "crackerjack/adapters/_tool_adapter_base.py:259:\n"
+                        " `, OSError` was unexpected"
+                    ),
+                    "path": "crackerjack/adapters/_tool_adapter_base.py",
+                }
+            ],
+        }
+        # Must not raise. The error becomes a non-infra issue carrying the
+        # original message so the user still sees the parse failure.
+        out = executor._parse_semgrep_issues(json.dumps(data))
+        assert len(out) == 1
+        assert "SemgrepError" in out[0]
+        assert "Syntax error" in out[0]
+        assert ", OSError" in out[0]
+
+    def test_dict_type_does_not_crash(self, executor: HookExecutor) -> None:
+        """Defensive: even weirder type shapes (a dict instead of a list) must
+        not crash the parser."""
+        data = {
+            "results": [],
+            "errors": [
+                {
+                    "type": {"category": "weird", "code": 42},
+                    "message": "schema drift",
+                }
+            ],
+        }
+        out = executor._parse_semgrep_issues(json.dumps(data))
+        assert len(out) == 1
+        assert "SemgrepError" in out[0]
+        assert "schema drift" in out[0]
+
     def test_invalid_json_falls_back_to_lines(self, executor: HookExecutor) -> None:
         text = "first line\nsecond line\n"
         out = executor._parse_semgrep_issues(text)
