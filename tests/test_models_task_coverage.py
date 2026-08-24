@@ -257,7 +257,7 @@ class TestSessionTracker:
         assert session_tracker.current_task == "task1"
 
         session_tracker.console.print.assert_called_with(
-            "[yellow]⏳[/ yellow] Started: Test Task",
+            "[yellow]⏳[/yellow] Started: Test Task",
         )
 
     def test_start_task_with_details(self, session_tracker) -> None:
@@ -281,7 +281,7 @@ class TestSessionTracker:
         assert session_tracker.current_task is None
 
         session_tracker.console.print.assert_called_with(
-            "[green]✅[/ green] Completed: Test Task",
+            "[green]✅[/green] Completed: Test Task",
         )
 
     def test_complete_task_with_files_changed(self, session_tracker) -> None:
@@ -324,7 +324,7 @@ class TestSessionTracker:
         assert session_tracker.current_task is None
 
         session_tracker.console.print.assert_called_with(
-            "[red]❌[/ red] Failed: Test Task - Task failed",
+            "[red]❌[/red] Failed: Test Task - Task failed",
         )
 
     def test_fail_task_nonexistent(self, session_tracker) -> None:

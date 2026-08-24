@@ -71,7 +71,7 @@ class TestSessionCoordinator:
             assert coordinator.session_tracker is not None
             assert isinstance(coordinator.session_tracker, SessionTracker)
             coordinator.console.print.assert_called_with(
-                "[cyan]📊[/ cyan] Session tracking enabled",
+                "[cyan]📊[/cyan] Session tracking enabled",
             )
 
     def test_initialize_session_tracking_disabled(
