@@ -56,7 +56,6 @@ dependencies = [
     "pytest-benchmark>=5.2.3",
     "pytest-cov>=7.1.0",
     "pytest-mock>=3.15.1",
-    "pytest-snob>=0.1.14",
     "pytest-timeout>=2.4.0",
     "pytest-xdist>=3.8.0",
     "redbaron>=0.9.2",
@@ -135,6 +134,17 @@ type-checking = [
 # scikit-learn which is already a main dependency.
 # No torch or sentence-transformers needed.
 neural = []
+
+# snob group: pytest-snob + its Rust extension snob-lib. Gated because
+# snob-lib is a maturin-built Rust extension that doesn't yet have a
+# Python 3.14 wheel (cpython-314-darwin.so linker error in maturin).
+# pytest-snob auto-registers via pytest11 entry points when installed,
+# so omitting the group leaves the test suite fully functional minus
+# the snob-specific analysis pass. Install via:
+#   uv sync --group snob
+snob = [
+    "pytest-snob>=0.1.14",
+]
 
 [tool.hatch.build.targets.wheel]
 include = [
