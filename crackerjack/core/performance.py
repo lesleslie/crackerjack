@@ -174,7 +174,7 @@ class OptimizedFileWatcher:
             try:
                 if py_file.stat().st_mtime > since:
                     modified_files.append(py_file)
-            except (OSError, FileNotFoundError):
+            except OSError, FileNotFoundError:
                 continue
         self._file_cache.set(cache_key, modified_files)
         return modified_files

@@ -49,7 +49,7 @@ def load_merged_ignores(project_dir: Path | None = None) -> list[str]:
 
                 with pyproject.open("rb") as f:
                     data = tomllib.load(f)
-            except (OSError, tomllib.TOMLDecodeError):
+            except OSError, tomllib.TOMLDecodeError:
                 return sorted(ids)
 
             project_ignores = (

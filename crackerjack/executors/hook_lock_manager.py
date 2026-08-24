@@ -598,7 +598,7 @@ class HookLockManager:
                 )
                 return 1
 
-        except (json.JSONDecodeError, KeyError):
+        except json.JSONDecodeError, KeyError:
             lock_file.unlink()
             self.logger.warning(f"Cleaned corrupted lock file: {lock_file}")
             return 1

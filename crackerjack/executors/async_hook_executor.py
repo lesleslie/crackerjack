@@ -289,7 +289,7 @@ class AsyncHookExecutor:
         try:
             task.cancel()
             await asyncio.wait_for(task, timeout=0.1)
-        except (TimeoutError, asyncio.CancelledError):
+        except TimeoutError, asyncio.CancelledError:
             pass
         except RuntimeError as e:
             if "Event loop is closed" in str(e):
@@ -643,8 +643,7 @@ class AsyncHookExecutor:
                 file_paths = {
                     path
                     for path in (
-                        result.get("path")
-                        for result in json_data.get("results", [])
+                        result.get("path") for result in json_data.get("results", [])
                     )
                     if isinstance(path, str)
                 }

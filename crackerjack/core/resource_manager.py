@@ -228,7 +228,7 @@ class ManagedTask(ManagedResource):
 
             try:
                 await asyncio.wait_for(self.task, timeout=self.timeout)
-            except (TimeoutError, asyncio.CancelledError):
+            except TimeoutError, asyncio.CancelledError:
                 pass
             except Exception as e:
                 logging.getLogger(__name__).warning(f"Error cleaning up task: {e}")

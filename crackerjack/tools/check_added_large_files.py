@@ -10,7 +10,7 @@ from crackerjack.tools._git_utils import get_git_tracked_files
 def get_file_size(file_path: Path) -> int:
     try:
         return file_path.stat().st_size
-    except (FileNotFoundError, OSError):
+    except FileNotFoundError, OSError:
         return 0
 
 

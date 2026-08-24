@@ -65,7 +65,7 @@ def _iter_real_comments(text: str) -> list[tuple[int, str]]:
                 io.BytesIO(text.encode("utf-8")).readline,
             )
         )
-    except (tokenize.TokenError, IndentationError, SyntaxError):
+    except tokenize.TokenError, IndentationError, SyntaxError:
         return comments
 
     for tok in tokens:

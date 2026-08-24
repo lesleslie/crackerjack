@@ -243,7 +243,7 @@ class PyrightAdapter(BaseToolAdapter):
                 severity=severity,
             )
 
-        except (ValueError, IndexError):
+        except ValueError, IndexError:
             return None
 
     def _get_check_type(self) -> QACheckType:

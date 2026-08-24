@@ -1,5 +1,20 @@
 ______________________________________________________________________
 
+## [0.75.0] - 2026-08-24
+
+### Fixed
+
+- crackerjack: Gate pytest-snob behind a 'snob' dependency group
+- crackerjack: Handle list-typed error["type"] in semgrep PartialParsing events
+- crackerjack: Mirror unhashable-path fix on async semgrep parser
+- crackerjack: Skip non-string paths in semgrep JSON line parser
+
+### Internal
+
+- Bump requires-python to >=3.14
+- claude-md: Add oneiric action-kit discovery breadcrumb
+- crackerjack: Bump tool-config pins from 3.13 to 3.14
+
 ## [0.74.4] - 2026-08-22
 
 ### Fixed

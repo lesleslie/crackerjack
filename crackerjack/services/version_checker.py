@@ -171,7 +171,7 @@ class VersionChecker:
                 normalized_latest,
             )
 
-        except (ValueError, AttributeError):
+        except ValueError, AttributeError:
             return 0
 
     def _parse_version_parts(self, version: str) -> tuple[list[int], int]:

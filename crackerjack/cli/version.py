@@ -6,7 +6,7 @@ def get_package_version() -> str:
         from importlib.metadata import version
 
         return version("crackerjack")
-    except (ImportError, ModuleNotFoundError):
+    except ImportError, ModuleNotFoundError:
         try:
             import tomllib
 

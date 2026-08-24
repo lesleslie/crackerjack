@@ -57,7 +57,7 @@ def enumerate_suppressions(tests_dir: Path) -> list[SuppressionRef]:
     for path in sorted(tests_dir.rglob("*.py")):
         try:
             text = path.read_text(encoding="utf-8")
-        except (UnicodeDecodeError, OSError):
+        except UnicodeDecodeError, OSError:
             continue
 
         for line_no, line in enumerate(text.splitlines(), start=1):
@@ -108,7 +108,7 @@ def group_by_age(
                 text=True,
                 check=False,
             )
-        except (FileNotFoundError, OSError):
+        except FileNotFoundError, OSError:
             return buckets
 
         if result.returncode != 0 or not result.stdout:
@@ -153,7 +153,7 @@ def detect_unused(
     for file_path, file_refs in by_file.items():
         try:
             original = file_path.read_text(encoding="utf-8")
-        except (UnicodeDecodeError, OSError):
+        except UnicodeDecodeError, OSError:
             continue
 
         modified, line_map = _comment_out_suppressions(original, file_refs)

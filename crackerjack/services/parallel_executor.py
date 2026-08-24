@@ -81,7 +81,7 @@ class ParallelHookExecutor(ParallelHookExecutorProtocol, ServiceProtocol):
                     try:
                         task.cancel()
                         await asyncio.wait_for(task, timeout=0.1)
-                    except (TimeoutError, asyncio.CancelledError):
+                    except TimeoutError, asyncio.CancelledError:
                         pass
                     except RuntimeError as e:
                         if "Event loop is closed" in str(e):
@@ -377,7 +377,7 @@ class AsyncCommandExecutor(AsyncCommandExecutorProtocol, ServiceProtocol):
                     try:
                         task.cancel()
                         await asyncio.wait_for(task, timeout=0.1)
-                    except (TimeoutError, asyncio.CancelledError):
+                    except TimeoutError, asyncio.CancelledError:
                         pass
                     except RuntimeError as e:
                         if "Event loop is closed" in str(e):

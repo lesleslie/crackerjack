@@ -280,7 +280,7 @@ class SecureStatusFormatter(SecureStatusFormatterProtocol, ServiceProtocol):
             abs_path = Path(match)
             if abs_path.is_absolute():
                 return self._convert_to_relative_or_redact(text, match, abs_path)
-        except (ValueError, OSError):
+        except ValueError, OSError:
             text = text.replace(match, "[REDACTED_PATH]")
 
         return text
@@ -294,7 +294,7 @@ class SecureStatusFormatter(SecureStatusFormatterProtocol, ServiceProtocol):
         try:
             rel_path = abs_path.relative_to(self.project_root)
             return text.replace(match, f"./{rel_path}")
-        except (ValueError, OSError):
+        except ValueError, OSError:
             return text.replace(match, "[REDACTED_PATH]")
 
     def _sanitize_internal_urls(self, text: str) -> str:

@@ -40,7 +40,7 @@ def read_runtime_health(path: Path) -> RuntimeHealthSnapshot | None:
         with path.open() as f:
             data = json.load(f)
         return RuntimeHealthSnapshot.from_dict(data)
-    except (json.JSONDecodeError, KeyError, TypeError):
+    except json.JSONDecodeError, KeyError, TypeError:
         return None
 
 
@@ -55,7 +55,7 @@ def read_pid_file(path: Path) -> int | None:
 
     try:
         return int(path.read_text().strip())
-    except (ValueError, OSError):
+    except ValueError, OSError:
         return None
 
 

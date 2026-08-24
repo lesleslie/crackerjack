@@ -89,7 +89,7 @@ class ValidationIssue(BaseModel):
         if line_number is not None:
             try:
                 line_number = int(line_number)
-            except (TypeError, ValueError):
+            except TypeError, ValueError:
                 line_number = None
 
         details = data.get("details")
@@ -222,21 +222,21 @@ class QualityGateCheck(BaseModel):
         if score is not None:
             try:
                 score = float(score)
-            except (TypeError, ValueError):
+            except TypeError, ValueError:
                 score = None
 
         threshold = data.get("threshold")
         if threshold is not None:
             try:
                 threshold = float(threshold)
-            except (TypeError, ValueError):
+            except TypeError, ValueError:
                 threshold = None
 
         duration_ms = data.get("duration_ms")
         if duration_ms is not None:
             try:
                 duration_ms = float(duration_ms)
-            except (TypeError, ValueError):
+            except TypeError, ValueError:
                 duration_ms = None
 
         return cls(
@@ -378,7 +378,7 @@ class QualityGateReport(BaseModel):
         coverage_value = data.get("coverage", data.get("overall_score", 0.0))
         try:
             coverage = float(coverage_value)
-        except (TypeError, ValueError):
+        except TypeError, ValueError:
             coverage = 0.0
 
         return cls(

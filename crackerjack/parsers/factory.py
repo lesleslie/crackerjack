@@ -132,7 +132,7 @@ class ParserFactory:
             try:
                 json.loads(stripped)
                 return True
-            except (json.JSONDecodeError, ValueError):
+            except json.JSONDecodeError, ValueError:
                 pass
 
         for i, line in enumerate(lines):

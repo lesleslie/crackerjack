@@ -488,7 +488,7 @@ class TyRegexParser(RegexParser):
             return None
         try:
             line_number = int(match.group("line"))
-        except (TypeError, ValueError):
+        except TypeError, ValueError:
             return None
         severity = self._normalize_ty_severity(match.group("severity"))
         code = match.group("code")
@@ -818,7 +818,7 @@ class CohesionRegexParser(RegexParser):
                 current_class = class_match.group(1)
                 try:
                     current_line = int(class_match.group(2))
-                except (TypeError, ValueError):
+                except TypeError, ValueError:
                     current_line = None
                 continue
 
@@ -1186,7 +1186,7 @@ class RuffRegexParser(RegexParser):
                 stage="ruff-check",
                 details=[f"code: {code}"],
             )
-        except (ValueError, IndexError):
+        except ValueError, IndexError:
             return None
 
     def _parse_concise_format(self, line: str) -> Issue | None:
@@ -1209,7 +1209,7 @@ class RuffRegexParser(RegexParser):
         try:
             file_path = Path(parts[0].strip())
             line_number = int(parts[1].strip())
-        except (ValueError, IndexError):
+        except ValueError, IndexError:
             return None
 
         issue_type = self._issue_type_for_code(code)

@@ -198,7 +198,7 @@ class RefurbAdapter(BaseToolAdapter):
                 severity="warning",
             )
 
-        except (ValueError, IndexError):
+        except ValueError, IndexError:
             return None
 
     def _extract_column_number(self, remaining: str) -> int | None:

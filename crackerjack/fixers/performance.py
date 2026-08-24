@@ -614,7 +614,7 @@ def _estimate_range_impact_factor(line: str) -> int:
         range_size = _extract_range_size_from_string(range_str)
 
         return _calculate_impact_from_range_size(range_size)
-    except (ValueError, AttributeError):
+    except ValueError, AttributeError:
         return 2
 
 

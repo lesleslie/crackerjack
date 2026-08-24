@@ -2470,7 +2470,7 @@ def _scan_stale_branches(repo_path: Path) -> list[dict]:
                             "severity": "critical" if days_since > 180 else "warning",
                         }
                     )
-            except (ValueError, IndexError):
+            except ValueError, IndexError:
                 continue
 
     except Exception as e:

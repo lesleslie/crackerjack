@@ -238,7 +238,7 @@ async def _parse_and_analyze_file(
         with file_path.open(encoding="utf-8") as f:
             content = f.read()
             tree = ast.parse(content)
-    except (SyntaxError, OSError):
+    except SyntaxError, OSError:
         return _handle_parse_error(file_path)
 
     unused_imports = await _detect_unused_imports(file_path, project_root)
@@ -1333,7 +1333,7 @@ def _find_project_symbol_import(symbol: str, project_root: Path) -> str | None:
             continue
         try:
             text = path.read_text(encoding="utf-8")
-        except (OSError, UnicodeDecodeError):
+        except OSError, UnicodeDecodeError:
             continue
         if any(
             re.search(pattern, text, re.MULTILINE) for pattern in definition_patterns
@@ -1388,7 +1388,7 @@ def _find_project_symbol_imports(
             continue
         try:
             text = path.read_text(encoding="utf-8")
-        except (OSError, UnicodeDecodeError):
+        except OSError, UnicodeDecodeError:
             continue
 
         module_name = _path_to_module_name(path, project_root)

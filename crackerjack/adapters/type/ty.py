@@ -187,7 +187,7 @@ class TyAdapter(BaseToolAdapter):
                 code=code,
                 severity=severity,
             )
-        except (TypeError, ValueError):
+        except TypeError, ValueError:
             return None
 
     def _normalize_severity(self, severity: str | None) -> str:

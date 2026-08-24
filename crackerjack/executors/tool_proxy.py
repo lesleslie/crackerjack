@@ -180,7 +180,7 @@ class ToolProxy:
 
                 return result.returncode in (0, 1)
 
-        except (subprocess.TimeoutExpired, subprocess.CalledProcessError):
+        except subprocess.TimeoutExpired, subprocess.CalledProcessError:
             return False
         except Exception:
             return False
@@ -307,7 +307,7 @@ class ToolProxy:
             options = _adapt_settings_to_protocol(settings)
             context = ExecutionContext(pkg_path=Path.cwd(), options=options)
             return ZubanAdapter(context)
-        except (ImportError, Exception):
+        except ImportError, Exception:
             return None
 
     def _create_skylos_adapter(self) -> t.Any | None:
@@ -323,7 +323,7 @@ class ToolProxy:
             options = _adapt_settings_to_protocol(settings)
             context = ExecutionContext(pkg_path=Path.cwd(), options=options)
             return SkylosAdapter(context)
-        except (ImportError, Exception):
+        except ImportError, Exception:
             return None
 
     def _create_ruff_adapter(self) -> t.Any | None:

@@ -410,7 +410,7 @@ class InitializationService:
                 check=False,
             )
             return result.returncode == 0
-        except (FileNotFoundError, subprocess.TimeoutExpired):
+        except FileNotFoundError, subprocess.TimeoutExpired:
             return False
 
     def _process_mcp_config(

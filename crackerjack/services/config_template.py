@@ -312,7 +312,7 @@ class ConfigTemplateService:
         try:
             response = input("\nApply this update? [y/N]: ").strip().lower()
             return response in ("y", "yes")
-        except (EOFError, KeyboardInterrupt):
+        except EOFError, KeyboardInterrupt:
             return False
 
     def _update_version_tracking(

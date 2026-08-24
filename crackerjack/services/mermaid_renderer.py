@@ -85,7 +85,7 @@ def extract_mermaid_blocks(path: Path) -> list[MermaidBlock]:
     """Parse a `.md` file and return every fenced ```mermaid block."""
     try:
         text = path.read_text(encoding="utf-8")
-    except (OSError, UnicodeDecodeError):
+    except OSError, UnicodeDecodeError:
         return []
     blocks: list[MermaidBlock] = []
     for match in MERMAID_FENCE_RE.finditer(text):

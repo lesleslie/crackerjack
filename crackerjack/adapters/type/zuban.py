@@ -223,7 +223,7 @@ class ZubanAdapter(BaseToolAdapter):
                     )
                 return None
             return self._parse_standard_format(file_path_str, line_str, parts)
-        except (ValueError, IndexError):
+        except ValueError, IndexError:
             return None
 
     def _extract_message_and_code(self, message_and_code_str: str) -> tuple[str, str]:

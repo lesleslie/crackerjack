@@ -87,7 +87,7 @@ class CloneRefactorEngine:
                 ["pycharm", "--version"], capture_output=True, timeout=2, check=False
             )
             return result.returncode == 0
-        except (FileNotFoundError, subprocess.TimeoutExpired):
+        except FileNotFoundError, subprocess.TimeoutExpired:
             return False
 
     async def _pycharm_refactor_symbol(self, group: CloneGroup) -> str:

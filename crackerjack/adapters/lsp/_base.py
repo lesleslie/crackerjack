@@ -122,7 +122,7 @@ class BaseRustToolAdapter(ABC):
                 check=False,
             )
             return result.returncode == 0
-        except (subprocess.SubprocessError, FileNotFoundError):
+        except subprocess.SubprocessError, FileNotFoundError:
             return False
 
     def _fetch_tool_version(self) -> str | None:

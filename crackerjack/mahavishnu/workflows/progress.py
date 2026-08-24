@@ -24,7 +24,7 @@ class ProgressSnapshot(BaseModel):
     def _clamp_percent(cls, value: Any) -> Any:
         try:
             ivalue = int(value)
-        except (TypeError, ValueError):
+        except TypeError, ValueError:
             return value
         return max(0, min(100, ivalue))
 

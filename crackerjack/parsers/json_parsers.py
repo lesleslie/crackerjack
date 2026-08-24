@@ -956,7 +956,7 @@ class GitleaksJSONParser(JSONParser):
                 if report_text.strip():
                     data = json.loads(report_text)
                     return data
-            except (OSError, json.JSONDecodeError):
+            except OSError, json.JSONDecodeError:
                 pass
 
         import re
@@ -1077,7 +1077,7 @@ class BetterleaksJSONParser(GitleaksJSONParser):
                     data = json.loads(report_text)
                     if data is not None:
                         return self.parse_json(data)
-            except (OSError, json.JSONDecodeError):
+            except OSError, json.JSONDecodeError:
                 pass
 
         if not output.strip():

@@ -24,7 +24,7 @@ def setup_changelog_services() -> dict[str, t.Any]:
 
 
 def handle_changelog_dry_run(
-    generator: "ChangelogGenerator",
+    generator: ChangelogGenerator,
     changelog_since: str | None,
     options: t.Any,
     console: ConsoleInterface,
@@ -74,7 +74,7 @@ def handle_changelog_generation(
 
 
 def determine_changelog_version(
-    git_service: "GitService",
+    git_service: GitService,
     changelog_version: str | None,
     changelog_since: str | None,
     options: t.Any,

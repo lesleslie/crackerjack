@@ -37,7 +37,7 @@ def _load_tool_groups() -> dict[str, str]:
     """
     try:
         return json.loads(_FIXTURE_PATH.read_text(encoding="utf-8"))
-    except (FileNotFoundError, json.JSONDecodeError):
+    except FileNotFoundError, json.JSONDecodeError:
         return {}
 
 

@@ -100,7 +100,7 @@ class HealthCheckMixin:
             _ = self.config.name
             _ = self.config.enabled
             return True
-        except (AttributeError, TypeError):
+        except AttributeError, TypeError:
             return False
 
     def _check_package_path(self) -> bool:

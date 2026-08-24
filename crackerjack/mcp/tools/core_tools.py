@@ -165,7 +165,7 @@ def _configure_stage_options(stage: str) -> CrackerjackSettings:
 
 
 async def _execute_stage(
-    orchestrator: "WorkflowPipeline",
+    orchestrator: WorkflowPipeline,
     stage: str,
     settings: CrackerjackSettings,
 ) -> bool:
@@ -308,7 +308,7 @@ from crackerjack.services.git import GitService
 from crackerjack.services.initialization import InitializationService
 
 
-def _execute_init_stage(orchestrator: "WorkflowPipeline") -> bool:
+def _execute_init_stage(orchestrator: WorkflowPipeline) -> bool:
     try:
         from pathlib import Path
 

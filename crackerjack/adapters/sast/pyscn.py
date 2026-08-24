@@ -178,7 +178,7 @@ class PyscnAdapter(BaseToolAdapter):
                 severity=severity,
             )
 
-        except (ValueError, IndexError):
+        except ValueError, IndexError:
             return None
 
     def _parse_severity(self, severity_and_message: str, message: str) -> str:

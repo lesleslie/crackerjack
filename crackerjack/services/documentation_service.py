@@ -117,7 +117,7 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
     ) -> str:
         try:
             return self.doc_generator.render_template(Path(template_name), context)
-        except (FileNotFoundError, ValueError):
+        except FileNotFoundError, ValueError:
             return self.doc_generator.generate_api_reference(context)
 
     def validate_documentation(self, doc_paths: list[Path]) -> list[dict[str, t.Any]]:

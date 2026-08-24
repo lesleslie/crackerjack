@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "crackerjack"
-version = "0.74.4"
+version = "0.75.0"
 description = "Crackerjack Python project management tool"
 readme = "README.md"
 authors = [
@@ -142,9 +142,7 @@ neural = []
 # so omitting the group leaves the test suite fully functional minus
 # the snob-specific analysis pass. Install via:
 #   uv sync --group snob
-snob = [
-    "pytest-snob>=0.1.14",
-]
+snob = []
 
 [tool.hatch.build.targets.wheel]
 include = [

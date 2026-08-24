@@ -32,17 +32,33 @@ def get_git_root(start: Path | None = None) -> Path | None:
 # ``PathSpec.from_lines`` compilation time AND (more importantly) make
 # ``Path.rglob`` spend tens of seconds traversing trees it then ignores,
 # exceeding the 60s crackerjack fast-hook timeout on ``check-yaml``.
-_GITIGNORE_SKIP_PARTS: frozenset[str] = frozenset({
-    ".venv", "venv", "env", ".env",
-    "node_modules",
-    "__pycache__",
-    ".worktrees", ".claude", ".backups",
-    ".crackerjack", ".superpowers",
-    "dist", "build",
-    ".pytest_cache", ".mypy_cache", ".ruff_cache",
-    ".complexipy_cache", ".hypothesis", ".tox",
-    "htmlcov", ".coverage", ".idea", ".vscode",
-})
+_GITIGNORE_SKIP_PARTS: frozenset[str] = frozenset(
+    {
+        ".venv",
+        "venv",
+        "env",
+        ".env",
+        "node_modules",
+        "__pycache__",
+        ".worktrees",
+        ".claude",
+        ".backups",
+        ".crackerjack",
+        ".superpowers",
+        "dist",
+        "build",
+        ".pytest_cache",
+        ".mypy_cache",
+        ".ruff_cache",
+        ".complexipy_cache",
+        ".hypothesis",
+        ".tox",
+        "htmlcov",
+        ".coverage",
+        ".idea",
+        ".vscode",
+    }
+)
 
 
 def _iter_gitignore_files(root: Path) -> Iterable[Path]:
@@ -148,7 +164,7 @@ def get_git_tracked_files(
 
         return filter_gitignored_files(existing, root=cwd)
 
-    except (subprocess.CalledProcessError, FileNotFoundError):
+    except subprocess.CalledProcessError, FileNotFoundError:
         return []
 
 

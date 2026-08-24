@@ -102,7 +102,7 @@ class FailureMetricsRepository:
                     ts = datetime.fromisoformat(ts_str).replace(tzinfo=UTC)
                     if ts <= cutoff:
                         filtered.append(_sanitize_record(r))
-                except (ValueError, TypeError):
+                except ValueError, TypeError:
                     filtered.append(_sanitize_record(r))
             return filtered
         except Exception:

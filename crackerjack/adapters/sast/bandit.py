@@ -186,7 +186,7 @@ class BanditAdapter(BaseToolAdapter):
                 try:
                     file_str = line.split(">>")[1].strip()
                     current_file = Path(file_str)
-                except (IndexError, ValueError):
+                except IndexError, ValueError:
                     continue
 
             elif line.startswith("Issue:") and current_file:

@@ -90,7 +90,7 @@ class GitService(GitInterface):
         try:
             result = self._run_git_command(GIT_COMMANDS["git_dir"])
             return result.returncode == 0
-        except (subprocess.SubprocessError, OSError, FileNotFoundError):
+        except subprocess.SubprocessError, OSError, FileNotFoundError:
             return False
 
     def get_changed_files(self) -> list[str]:
@@ -417,14 +417,14 @@ class GitService(GitInterface):
                     )
             else:
                 self.console.print("[green]✅[/ green] Successfully pushed to remote")
-        except (ValueError, Exception):
+        except ValueError, Exception:
             self.console.print("[green]✅[/ green] Successfully pushed to remote")
 
     def get_current_branch(self) -> str | None:
         try:
             result = self._run_git_command(GIT_COMMANDS["current_branch"])
             return result.stdout.strip() if result.returncode == 0 else None
-        except (subprocess.SubprocessError, OSError, FileNotFoundError):
+        except subprocess.SubprocessError, OSError, FileNotFoundError:
             return None
 
     def get_commit_message_suggestions(self, changed_files: list[str]) -> list[str]:

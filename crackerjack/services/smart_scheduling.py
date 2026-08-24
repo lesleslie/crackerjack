@@ -156,7 +156,7 @@ class SmartSchedulingService(SmartSchedulingServiceProtocol, ServiceProtocol):
 
             return result.returncode == 0 and bool(result.stdout.strip())
 
-        except (FileNotFoundError, subprocess.TimeoutExpired):
+        except FileNotFoundError, subprocess.TimeoutExpired:
             return False
 
     def _days_since_init(self) -> int:

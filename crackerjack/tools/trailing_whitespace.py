@@ -46,7 +46,7 @@ def fix_trailing_whitespace(file_path: Path) -> bool:
 
         return modified
 
-    except (UnicodeDecodeError, PermissionError, OSError):
+    except UnicodeDecodeError, PermissionError, OSError:
         return False
     except Exception as e:
         print(f"Error processing {file_path}: {e}", file=sys.stderr)

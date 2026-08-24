@@ -73,7 +73,7 @@ class ZubanAdapter(BaseRustToolAdapter):
 
             return result.returncode == 0
 
-        except (subprocess.TimeoutExpired, subprocess.CalledProcessError, Exception):
+        except subprocess.TimeoutExpired, subprocess.CalledProcessError, Exception:
             return False
 
     def supports_json_output(self) -> bool:
@@ -273,7 +273,7 @@ class ZubanAdapter(BaseRustToolAdapter):
 
             return tool_result
 
-        except (subprocess.TimeoutExpired, TimeoutError):
+        except subprocess.TimeoutExpired, TimeoutError:
             return self._create_error_result("Zuban execution timed out")
         except Exception as e:
             return self._create_error_result(f"Zuban execution failed: {e}")
@@ -376,7 +376,7 @@ class ZubanAdapter(BaseRustToolAdapter):
                 error_code=message_data["error_code"],
             )
 
-        except (IndexError, ValueError):
+        except IndexError, ValueError:
             return None
 
     def _extract_line_components(self, line: str) -> tuple[Path, int, str] | None:

@@ -147,7 +147,7 @@ class SecurePathValidator:
             resolved_path.relative_to(resolved_directory)
             return True
 
-        except (ValueError, OSError):
+        except ValueError, OSError:
             return False
 
     @classmethod

@@ -81,7 +81,7 @@ def _extract_process_info(line: str) -> dict[str, t.Any] | None:
             "cpu": parts[2],
             "mem": parts[3],
         }
-    except (ValueError, IndexError):
+    except ValueError, IndexError:
         return None
 
 
@@ -149,7 +149,7 @@ def stop_process(pid: int, force: bool = False) -> bool:
 
         return True
 
-    except (OSError, ProcessLookupError):
+    except OSError, ProcessLookupError:
         return True
 
 

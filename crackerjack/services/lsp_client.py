@@ -489,7 +489,7 @@ class LSPClient:
                 "message": message,
                 "code": "type-error",
             }
-        except (ValueError, IndexError):
+        except ValueError, IndexError:
             return None
 
     def format_diagnostics(self, diagnostics: dict[str, list[dict[str, t.Any]]]) -> str:

@@ -276,7 +276,7 @@ class RuffAdapter(BaseToolAdapter):
                 severity="error" if code and code.startswith("E") else "warning",
             )
 
-        except (ValueError, IndexError):
+        except ValueError, IndexError:
             return None
 
     def _extract_check_code_and_message(

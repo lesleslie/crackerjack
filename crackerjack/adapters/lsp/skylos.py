@@ -306,7 +306,7 @@ class SkylosAdapter(BaseRustToolAdapter):
                 confidence=confidence,
             )
 
-        except (IndexError, ValueError):
+        except IndexError, ValueError:
             return None
 
     def _extract_basic_line_info(self, line: str) -> tuple[Path, int, str] | None:
@@ -357,5 +357,5 @@ class SkylosAdapter(BaseRustToolAdapter):
         try:
             conf_part = message_part.split("(confidence:")[1].split(")")[0]
             return float(conf_part.strip().replace("%", ""))
-        except (ValueError, IndexError):
+        except ValueError, IndexError:
             return float(self.confidence_threshold)

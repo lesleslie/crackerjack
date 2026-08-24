@@ -181,7 +181,7 @@ class AbstractProcessResource(AbstractManagedResource):
 
             os.kill(self._pid, 0)
             return True
-        except (OSError, ProcessLookupError):
+        except OSError, ProcessLookupError:
             return False
 
 

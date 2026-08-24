@@ -180,7 +180,7 @@ class CommandExecutionService:
             )
 
             return result.returncode == 0
-        except (subprocess.CalledProcessError, FileNotFoundError):
+        except subprocess.CalledProcessError, FileNotFoundError:
             return False
 
     async def run_command_with_retries(

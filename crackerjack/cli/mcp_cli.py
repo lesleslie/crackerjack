@@ -46,7 +46,7 @@ def _read_pid() -> int | None:
         return None
     try:
         return int(PID_FILE_PATH.read_text().strip())
-    except (ValueError, OSError):
+    except ValueError, OSError:
         return None
 
 
@@ -62,7 +62,7 @@ def _is_process_alive(pid: int) -> bool:
     try:
         os.kill(pid, 0)
         return True
-    except (ProcessLookupError, PermissionError):
+    except ProcessLookupError, PermissionError:
         return False
 
 

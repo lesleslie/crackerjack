@@ -387,7 +387,7 @@ class StateManager:
         try:
             with state_file.open("w") as f:
                 json.dump(self.session_state.to_dict(), f, indent=2)
-        except (OSError, json.JSONDecodeError):
+        except OSError, json.JSONDecodeError:
             pass
         except Exception:
             pass

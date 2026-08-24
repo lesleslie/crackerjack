@@ -1548,7 +1548,7 @@ class AutofixCoordinator:
 
         try:
             cfg.fix_enabled = True
-        except (AttributeError, TypeError):
+        except AttributeError, TypeError:
             return
         if hasattr(settings, "add_ignore_enabled"):
             cfg.add_ignore_enabled = False
@@ -1661,7 +1661,7 @@ def _extract_issue_count_from_json(output: str, tool_name: str) -> int | None:
     try:
         data = json.loads(output)
         return _count_issues_for_tool(data, tool_name)
-    except (json.JSONDecodeError, TypeError):
+    except json.JSONDecodeError, TypeError:
         return None
 
 

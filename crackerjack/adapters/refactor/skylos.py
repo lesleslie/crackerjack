@@ -427,7 +427,7 @@ class SkylosAdapter(BaseToolAdapter):
                 suggestion=f"Confidence: {confidence}",
             )
 
-        except (ValueError, IndexError):
+        except ValueError, IndexError:
             return None
 
     def _parse_line_number(self, line_part: str) -> int | None:

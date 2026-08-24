@@ -109,7 +109,7 @@ class IncrementalExecutor:
 
                 key = self._cache_key(entry.tool_name, file_hash)
                 self._cache[key] = entry
-        except (json.JSONDecodeError, KeyError, OSError):
+        except json.JSONDecodeError, KeyError, OSError:
             self._cache = {}
 
     def _save_cache(self) -> None:

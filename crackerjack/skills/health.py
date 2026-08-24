@@ -86,7 +86,7 @@ async def fetch_skill_health(
             resp = await client.post(url, json=_build_payload(threshold_days))
             resp.raise_for_status()
             body: Any = resp.json()
-    except (httpx.HTTPError, OSError, ValueError):
+    except httpx.HTTPError, OSError, ValueError:
         return SkillHealthReport(status="unavailable", stale_count=0)
 
     text = _extract_text(body.get("result") if isinstance(body, dict) else None)
@@ -94,7 +94,7 @@ async def fetch_skill_health(
         return SkillHealthReport(status="fresh", stale_count=0)
     try:
         rows = json.loads(text)
-    except (TypeError, ValueError):
+    except TypeError, ValueError:
         return SkillHealthReport(status="unavailable", stale_count=0)
     return _summarize(rows)
 

@@ -141,7 +141,7 @@ class BetterleaksAdapter(BaseToolAdapter):
                 timeout=5,
                 check=False,
             )
-        except (OSError, subprocess.TimeoutExpired):
+        except OSError, subprocess.TimeoutExpired:
             return None
         if result.returncode != 0:
             return None

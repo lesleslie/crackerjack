@@ -198,7 +198,7 @@ class TemplateDetector:
         else:
             try:
                 choice = input("\nSelect template (1-4) [4]: ").strip() or "4"
-            except (EOFError, OSError):
+            except EOFError, OSError:
                 self.console.print(
                     "[yellow]⚠️ Input unavailable, using auto-detected template[/yellow]",
                 )

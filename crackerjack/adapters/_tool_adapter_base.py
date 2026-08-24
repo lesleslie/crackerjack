@@ -256,7 +256,7 @@ class BaseToolAdapter(QAAdapterBase):
                 timeout=1,
             )
             return result.returncode == 0
-        except (subprocess.SubprocessError, FileNotFoundError, OSError):
+        except subprocess.SubprocessError, FileNotFoundError, OSError:
             return False
 
     async def _get_target_files(
@@ -436,7 +436,7 @@ class BaseToolAdapter(QAAdapterBase):
             self._tool_version = version
             return version
 
-        except (TimeoutError, FileNotFoundError, Exception):
+        except TimeoutError, FileNotFoundError, Exception:
             return None
 
     async def health_check(self) -> dict[str, t.Any]:

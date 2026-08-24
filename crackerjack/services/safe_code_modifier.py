@@ -417,7 +417,7 @@ class SafeCodeModifier:
                                     line_number=line_number,
                                 )
                             )
-                        except (ValueError, IndexError):
+                        except ValueError, IndexError:
                             continue
 
         except subprocess.TimeoutExpired:

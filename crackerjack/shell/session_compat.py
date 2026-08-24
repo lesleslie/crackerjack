@@ -72,7 +72,7 @@ try:
 
     _session_impl: type = _tracker_mod.SessionEventEmitter
     logger.debug("Using Oneiric SessionEventEmitter")
-except (ImportError, AttributeError):
+except ImportError, AttributeError:
     _session_impl = _FallbackSessionEventEmitter
     logger.debug(
         "Using fallback SessionEventEmitter (Oneiric session tracker unavailable)"

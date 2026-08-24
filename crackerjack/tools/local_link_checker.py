@@ -165,7 +165,7 @@ def _list_markdown_via_git(repo_root: Path) -> list[Path]:
             check=True,
             cwd=repo_root,
         )
-    except (subprocess.CalledProcessError, FileNotFoundError):
+    except subprocess.CalledProcessError, FileNotFoundError:
         return []
 
     raw = result.stdout

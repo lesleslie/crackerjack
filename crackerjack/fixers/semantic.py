@@ -139,7 +139,7 @@ from crackerjack.services.vector_store import VectorStore
 def _read_file(file_path: str | Path) -> str | None:
     try:
         return Path(file_path).read_text(encoding="utf-8")
-    except (Exception, OSError):
+    except Exception, OSError:
         return None
 
 

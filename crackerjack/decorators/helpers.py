@@ -62,5 +62,5 @@ def get_callable_params(func: t.Callable[..., t.Any]) -> list[inspect.Parameter]
     try:
         sig = inspect.signature(func)
         return list(sig.parameters.values())
-    except (ValueError, TypeError):
+    except ValueError, TypeError:
         return []

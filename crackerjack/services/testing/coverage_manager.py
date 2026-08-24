@@ -118,7 +118,7 @@ class CoverageManager:
             with coverage_json_path.open() as f:
                 data = json.load(f)
                 return data.get("totals", {}).get("percent_covered")
-        except (OSError, json.JSONDecodeError, KeyError):
+        except OSError, json.JSONDecodeError, KeyError:
             return None
 
     def _try_service_coverage(self) -> float | None:
@@ -133,7 +133,7 @@ class CoverageManager:
                 )
                 return current_coverage
             return None
-        except (AttributeError, Exception):
+        except AttributeError, Exception:
             return None
 
     def _handle_zero_coverage_fallback(self, current_coverage: float | None) -> None:

@@ -279,7 +279,7 @@ def plan_edits(
         if site.file not in cache:
             try:
                 content = site.file.read_text(encoding="utf-8")
-            except (UnicodeDecodeError, OSError):
+            except UnicodeDecodeError, OSError:
                 continue
             cache[site.file] = (content, _line_starts(content))
 

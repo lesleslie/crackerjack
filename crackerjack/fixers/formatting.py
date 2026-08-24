@@ -168,7 +168,7 @@ from crackerjack.services.regex_patterns import apply_formatting_fixes
 def _read_file(file_path: str | Path) -> str | None:
     try:
         return Path(file_path).read_text(encoding="utf-8")
-    except (Exception, OSError):
+    except Exception, OSError:
         return None
 
 

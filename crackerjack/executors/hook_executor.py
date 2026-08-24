@@ -936,7 +936,7 @@ class HookExecutor:
 
         try:
             obj, _ = json.JSONDecoder().raw_decode(text)
-        except (json.JSONDecodeError, ValueError):
+        except json.JSONDecodeError, ValueError:
             obj = None
 
         if obj is None:
@@ -1412,7 +1412,7 @@ class HookExecutor:
         try:
             obj, _ = json.JSONDecoder().raw_decode(json_str.strip())
             return obj if isinstance(obj, dict) else None
-        except (json.JSONDecodeError, ValueError):
+        except json.JSONDecodeError, ValueError:
             return None
 
     def _extract_vulnerability_issues(
@@ -1676,8 +1676,7 @@ class HookExecutor:
                 file_paths = {
                     path
                     for path in (
-                        result.get("path")
-                        for result in json_data.get("results", [])
+                        result.get("path") for result in json_data.get("results", [])
                     )
                     if isinstance(path, str)
                 }

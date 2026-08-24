@@ -834,7 +834,7 @@ class SafeRefurbFixer:
                 new_text = str(value)
                 new_content = new_content.replace(old_text, new_text, 1)
                 total_fixes += 1
-            except (ValueError, OverflowError):
+            except ValueError, OverflowError:
                 continue
 
         return new_content, total_fixes

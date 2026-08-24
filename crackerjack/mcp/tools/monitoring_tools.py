@@ -180,7 +180,7 @@ def _get_active_jobs(context: t.Any) -> list[dict[str, t.Any]]:
                         "error_counts": progress_data.get("error_counts", {}),
                     },
                 )
-            except (json.JSONDecodeError, KeyError):
+            except json.JSONDecodeError, KeyError:
                 continue
 
     return jobs
