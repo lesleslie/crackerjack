@@ -375,13 +375,22 @@ def _print_project_line(
     project_name: str | None, git_remote: str | None, branch_suffix: str
 ) -> None:
     if project_name and git_remote:
+        # `highlight=False` disables Rich's auto-link detection, which would
+        # otherwise drag the closing `)` into the hyperlink range while
+        # leaving the opening `(` in plain dim — producing mismatched
+        # colors for the two parens. Plain URL text is more compatible
+        # across terminals anyway.
         console.print(
-            f"[dim]project:[/dim] {project_name}{branch_suffix} [dim]({git_remote})[/dim]"
+            f"[dim]project:[/dim] {project_name}{branch_suffix} [dim]({git_remote})[/dim]",
+            highlight=False,
         )
     elif project_name:
         console.print(f"[dim]project:[/dim] {project_name}{branch_suffix}")
     elif git_remote:
-        console.print(f"[dim]project:[/dim] [dim]({git_remote})[/dim]")
+        console.print(
+            f"[dim]project:[/dim] [dim]({git_remote})[/dim]",
+            highlight=False,
+        )
 
 
 def _print_run_context() -> None:

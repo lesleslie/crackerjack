@@ -434,23 +434,19 @@ class PublishManagerImpl:
             )
 
     def validate_auth(self) -> bool:
-        return self._resolve_pypi_auth() is not None
+        return self._resolve_pypi_auth(silent=True) is not None
 
-    def _resolve_pypi_auth(self) -> PyPIAuth | None:
+    def _resolve_pypi_auth(self, *, silent: bool = False) -> PyPIAuth | None:
         auth, providers = discover_auth()
         if auth is not None:
-            self.console.print(
-                f"[green]✅[/ green] PyPI authentication available: {auth.source()}"
-                + (
-                    f" (checked: {', '.join(p.name for p in providers)})"
-                    if providers
-                    else ""
-                ),
-            )
+            if not silent:
+                self.console.print(
+                    f"[green]✅[/green] PyPI authentication available: {auth.source()}",
+                )
             return auth
 
         self.console.print(
-            "[yellow]⚠️[/ yellow] No PyPI auth found. Checked: "
+            "[yellow]⚠️[/yellow] No PyPI auth found. Checked: "
             + ", ".join(p.name for p in providers),
         )
         self._display_auth_setup_instructions()
