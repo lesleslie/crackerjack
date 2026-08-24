@@ -26,7 +26,7 @@ class HookSettings(OneiricMCPConfig):
     enable_ty_ignore_syntax: bool = False
     enable_lsp_optimization: bool = False
     skip_offline_pip_audit: bool = True
-    ruff_unsafe_fixes: bool = True
+    ruff_unsafe_fixes: bool = False
 
 
 class TestSettings(OneiricMCPConfig):
