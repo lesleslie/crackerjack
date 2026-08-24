@@ -1660,10 +1660,22 @@ class HookExecutor:
         try:
             json_data = json.loads(line)
             if "results" in json_data:
+                # Filter to string paths only. Semgrep's findings schema uses
+                # strings, but other JSON events with a ``results`` key
+                # (telemetry, progress, supply-chain findings) may use lists
+                # or dicts — building a set from those raises TypeError:
+                # unhashable type. The original bug crashed the comprehensive
+                # semgrep hook with ``cannot use 'list' as a set element`` on
+                # those lines.
                 file_paths = {
-                    result.get("path") for result in json_data.get("results", [])
+                    path
+                    for path in (
+                        result.get("path")
+                        for result in json_data.get("results", [])
+                    )
+                    if isinstance(path, str)
                 }
-                return len([p for p in file_paths if p])
+                return len(file_paths)
         except json.JSONDecodeError:
             pass
         return None

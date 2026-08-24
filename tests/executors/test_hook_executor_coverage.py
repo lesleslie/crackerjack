@@ -1289,6 +1289,44 @@ class TestParseSemgrepOutput:
         assert executor._contains_json_results('"results":1') is True
         assert executor._contains_json_results("nope") is False
 
+    def test_unhashable_path_does_not_crash(
+        self, executor: HookExecutor
+    ) -> None:
+        """Regression: semgrep emits JSON events with a ``results`` key whose
+        entries have non-string ``path`` values (telemetry / progress /
+        supply-chain findings). Building a set from those used to crash the
+        comprehensive semgrep hook with
+        ``TypeError: cannot use 'list' as a set element``.
+
+        The parser must now skip unhashable values rather than raise.
+        """
+        cases = {
+            "list path": '{"results":[{"path": ["nested", "list"]}]}',
+            "dict path": '{"results":[{"path": {"k": "v"}}]}',
+            "telemetry event": (
+                '{"level": "info", "results": [{"path": ["n", "ested"]}]}'
+            ),
+            "mix of string and list": (
+                '{"results":[{"path": "ok.py"}, {"path": ["bad"]}]}'
+            ),
+        }
+        for name, line in cases.items():
+            result = executor._try_parse_line_json(line)
+            assert result is None or isinstance(result, int), (
+                f"{name}: expected int | None, got {result!r}"
+            )
+
+    def test_string_paths_still_counted(
+        self, executor: HookExecutor
+    ) -> None:
+        """Regression guard: the unhashable fix must not change the string-path
+        behavior — unique paths are still counted.
+        """
+        line = json.dumps(
+            {"results": [{"path": "a.py"}, {"path": "b.py"}, {"path": "a.py"}]}
+        )
+        assert executor._try_parse_line_json(line) == 2
+
 
 # ---------------------------------------------------------------------------
 # _parse_hook_output
