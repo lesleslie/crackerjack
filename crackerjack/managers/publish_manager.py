@@ -338,7 +338,19 @@ class PublishManagerImpl:
                 self.console.print(
                     f"[yellow]🔍[/yellow] Would bump {version_type} version: {current_version} → {new_version}",
                 )
-            elif self._update_version_in_file(new_version):
+                return new_version
+
+            # Snapshot the file contents before any mutation so we can roll
+            # back the version edits if the changelog (or anything else)
+            # raises after the bump is written. Mirrors the rollback pattern
+            # used by the phase_coordinator when the post-bump commit fails.
+            bump_snapshot = self._snapshot_bump_files()
+
+            try:
+                if not self._update_version_in_file(new_version):
+                    msg = "Failed to update version in file"
+                    raise ValueError(msg)
+
                 self.console.print(
                     f"[green]🚀[/green] Bumped {version_type} version: {current_version} → {new_version}",
                 )
@@ -346,14 +358,64 @@ class PublishManagerImpl:
                 self._update_python_version_files(new_version)
 
                 self._update_changelog_for_version(current_version, new_version)
-            else:
-                msg = "Failed to update version in file"
-                raise ValueError(msg)
+            except Exception:
+                self._restore_bump_files(bump_snapshot)
+                raise
 
             return new_version
         except Exception as e:
             self.console.print(f"[red]❌[/red] Version bump failed: {e}")
             raise
+
+    def _snapshot_bump_files(self) -> dict[Path, str | None]:
+        """Read the version-bearing files before mutation.
+
+        Returns ``{path: content_or_None}`` where ``None`` means the file
+        didn't exist at snapshot time (so restore will delete it instead of
+        writing back stale content)."""
+        package_root = self.pkg_path
+        pyproject_path = package_root / "pyproject.toml"
+        candidates = [
+            pyproject_path,
+            package_root / "__init__.py",
+            package_root / "__version__.py",
+        ]
+        snapshot: dict[Path, str | None] = {}
+        for path in candidates:
+            try:
+                snapshot[path] = self.filesystem.read_file(path)
+            except Exception:
+                snapshot[path] = None
+        return snapshot
+
+    def _restore_bump_files(self, snapshot: dict[Path, str | None]) -> None:
+        """Restore the version-bearing files from a pre-bump snapshot.
+
+        Called when a step after the version bump (e.g. changelog
+        generation) raises. Writes back the original content for files
+        that existed; deletes files that didn't. Failures are logged but
+        do not raise — the outer exception is the one the caller needs to
+        see.
+        """
+        for path, original in snapshot.items():
+            try:
+                if original is None:
+                    if path.exists():
+                        path.unlink()
+                        self.console.print(
+                            f"[yellow]🔄[/yellow] Removed unexpected file {path.name}",
+                        )
+                    continue
+                if path.exists() and self.filesystem.read_file(path) == original:
+                    continue
+                self.filesystem.write_file(path, original)
+                self.console.print(
+                    f"[yellow]🔄[/yellow] Restored {path.name}",
+                )
+            except Exception as e:
+                self.console.print(
+                    f"[red]❌[/red] Could not restore {path.name}: {e}",
+                )
 
     def _prompt_for_version_type(self, recommendation: t.Any = None) -> str:
         try:
@@ -534,9 +596,15 @@ class PublishManagerImpl:
             if not self._validate_prerequisites():
                 return False
             self.console.print("[yellow]🚀[/yellow] Publishing to PyPI")
-            return self._perform_publish_workflow()
+            success = self._perform_publish_workflow()
+            if not success:
+                # Clean up stale build artifacts so the next attempt
+                # rebuilds from the (un-bumped) source state.
+                self._clean_dist_directory()
+            return success
         except Exception as e:
             self.console.print(f"[red]❌[/red] Publish error: {e}")
+            self._clean_dist_directory()
             return False
 
     def _validate_prerequisites(self) -> bool:

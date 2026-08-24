@@ -6,6 +6,7 @@ from datetime import datetime
 from pathlib import Path
 
 from rich.console import Console
+from rich.markup import escape as _rich_escape
 
 _VETO_TO_FIXED: frozenset[str] = frozenset(
     {
@@ -391,7 +392,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
             if entries:
                 self.console.print(f"[bold]{section_name}:[/bold]")
                 for entry in entries[:3]:
-                    self.console.print(f" {entry.to_markdown()}")
+                    # Entry descriptions come from commit messages (user-written
+                    # or AI-generated). If they contain literal text that LOOKS
+                    # like Rich markup (e.g. a commit message body with
+                    # `[/ bold red]`), Rich tries to parse it and crashes with
+                    # `closing tag ... doesn't match any open tag`. Escape
+                    # the content so Rich renders the text verbatim.
+                    self.console.print(f" {_rich_escape(entry.to_markdown())}")
                 if len(entries) > 3:
                     self.console.print(f" [dim]... and {len(entries) - 3} more[/dim]")
                 self.console.print()
