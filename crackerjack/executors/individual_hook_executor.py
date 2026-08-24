@@ -508,7 +508,7 @@ class IndividualHookExecutor:
         except TimeoutError:
             progress.status = "failed"
             error_msg = f"Hook {hook.name} timed out after {hook.timeout}s"
-            self.console.print(f"[red]⏰ {error_msg}[/ red]")
+            self.console.print(f"[red]⏰ {error_msg}[/red]")
 
             return HookResult(
                 id=hook.name,
@@ -520,7 +520,7 @@ class IndividualHookExecutor:
         except FileNotFoundError:
             progress.status = "skipped"
             error_msg = f"Hook {hook.name} skipped: tool not installed"
-            self.console.print(f"[yellow]⚠️ {error_msg}[/ yellow]")
+            self.console.print(f"[yellow]⚠️ {error_msg}[/yellow]")
 
             return HookResult(
                 id=hook.name,
@@ -532,7 +532,7 @@ class IndividualHookExecutor:
         except Exception as e:
             progress.status = "failed"
             error_msg = f"Hook {hook.name} failed with error: {e}"
-            self.console.print(f"[red]❌ {error_msg}[/ red]")
+            self.console.print(f"[red]❌ {error_msg}[/red]")
 
             return HookResult(
                 id=hook.name,
@@ -639,7 +639,7 @@ class IndividualHookExecutor:
 
     def _maybe_print_line(self, line_str: str) -> None:
         if not self.suppress_realtime_output and line_str.strip():
-            self.console.print(f"[dim] {line_str}[/ dim]")
+            self.console.print(f"[dim] {line_str}[/dim]")
 
     def _maybe_callback_progress(self, progress: HookProgress, line_count: int) -> None:
         if self.progress_callback and (
@@ -686,7 +686,7 @@ class IndividualHookExecutor:
             f"[bold bright_white]{strategy.name.upper()} HOOKS[/ bold bright_white]",
         )
         self.console.print(
-            f"[dim]Running {len(strategy.hooks)} hooks individually with real-time streaming[/ dim]",
+            f"[dim]Running {len(strategy.hooks)} hooks individually with real-time streaming[/dim]",
         )
         self.console.print("=" * 80)
 
@@ -723,7 +723,7 @@ class IndividualHookExecutor:
 
         self.console.print("\n" + make_separator("-", get_console_width()))
         self.console.print(
-            f"[bold]📊 INDIVIDUAL EXECUTION SUMMARY[/ bold]-{strategy.name.upper()}",
+            f"[bold]📊 INDIVIDUAL EXECUTION SUMMARY[/bold]-{strategy.name.upper()}",
         )
         self.console.print(f"✅ Passed: {passed} | ❌ Failed: {failed}")
         if total_errors > 0:

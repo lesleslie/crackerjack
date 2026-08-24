@@ -253,18 +253,18 @@ class CleaningErrorHandler(BaseModel):
     def log_cleaning_result(self, result: CleaningResult) -> None:
         if result.success:
             self.console.print(
-                f"[green]✅ Cleaned {result.file_path}[/ green] "
+                f"[green]✅ Cleaned {result.file_path}[/green] "
                 f"({result.original_size} → {result.cleaned_size} bytes)",
             )
         else:
             self.console.print(
-                f"[red]❌ Failed to clean {result.file_path}[/ red] "
+                f"[red]❌ Failed to clean {result.file_path}[/red] "
                 f"({len(result.steps_failed)} steps failed)",
             )
 
         if result.warnings:
             for warning in result.warnings:
-                self.console.print(f"[yellow]⚠️ {warning}[/ yellow]")
+                self.console.print(f"[yellow]⚠️ {warning}[/yellow]")
 
         self.logger.info(
             "File cleaning completed",

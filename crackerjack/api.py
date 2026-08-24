@@ -147,9 +147,9 @@ class CrackerjackAPI:
         target_dir: Path,
     ) -> None:
         todo_count = len(todos_found)
-        self.console.print(f"[red]❌ Found {todo_count} TODO(s) in codebase[/ red]")
+        self.console.print(f"[red]❌ Found {todo_count} TODO(s) in codebase[/red]")
         self.console.print(
-            "[yellow]Please resolve all TODOs before running code cleaning (-x)[/ yellow]",
+            "[yellow]Please resolve all TODOs before running code cleaning (-x)[/yellow]",
         )
 
         self._display_todo_summary(todos_found, target_dir, todo_count)
@@ -174,7 +174,7 @@ class CrackerjackAPI:
 
     def _notify_backup_status(self, backup: bool) -> None:
         if backup:
-            self.console.print("[yellow]Note: Backup files will be created[/ yellow]")
+            self.console.print("[yellow]Note: Backup files will be created[/yellow]")
 
     def _execute_safe_code_cleaning(self, target_dir: Path) -> PackageCleaningResult:
         try:
@@ -225,10 +225,10 @@ class CrackerjackAPI:
 
         if successful > 0:
             self.console.print(
-                f"[green]✅ Successfully cleaned {successful} files[/ green]",
+                f"[green]✅ Successfully cleaned {successful} files[/green]",
             )
         if failed > 0:
-            self.console.print(f"[red]❌ Failed to clean {failed} files[/ red]")
+            self.console.print(f"[red]❌ Failed to clean {failed} files[/red]")
 
     def _handle_cleaning_error(self, error: Exception) -> t.NoReturn:
         self.logger.error(f"Code cleaning failed: {error}")
@@ -315,7 +315,7 @@ class CrackerjackAPI:
             return self.interactive_cli.run_interactive_workflow(options)
         except Exception as e:
             self.logger.exception(f"Interactive workflow failed: {e}")
-            self.console.print(f"[red]❌ Interactive workflow failed: {e}[/ red]")
+            self.console.print(f"[red]❌ Interactive workflow failed: {e}[/red]")
             return False
 
     def create_workflow_options(

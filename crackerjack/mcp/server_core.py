@@ -283,13 +283,13 @@ def handle_mcp_server_command(
 
 
 def _stop_mcp_servers() -> None:
-    console.print("[yellow]Stopping MCP servers...[/ yellow]")
+    console.print("[yellow]Stopping MCP servers...[/yellow]")
 
     pid_file = Path(".oneiric_cache") / "server.pid"
     pid = read_pid_file(pid_file)
 
     if pid is None:
-        console.print("[dim]No MCP servers were running (no PID file)[/ dim]")
+        console.print("[dim]No MCP servers were running (no PID file)[/dim]")
         return
 
     _terminate_mcp_process(pid)
@@ -298,14 +298,14 @@ def _stop_mcp_servers() -> None:
 def _terminate_mcp_process(pid: int) -> None:
     try:
         os.kill(pid, signal.SIGTERM)
-        console.print(f"[yellow]Sent SIGTERM to MCP server (PID: {pid})[/ yellow]")
+        console.print(f"[yellow]Sent SIGTERM to MCP server (PID: {pid})[/yellow]")
         _wait_for_process_termination(pid)
     except ProcessLookupError:
-        console.print("[dim]MCP server was not running[/ dim]")
+        console.print("[dim]MCP server was not running[/dim]")
     except PermissionError:
-        console.print(f"[red]Permission denied stopping MCP server (PID: {pid})[/ red]")
+        console.print(f"[red]Permission denied stopping MCP server (PID: {pid})[/red]")
     except Exception as e:
-        console.print(f"[red]Error stopping MCP server: {e}[/ red]")
+        console.print(f"[red]Error stopping MCP server: {e}[/red]")
 
 
 def _wait_for_process_termination(pid: int) -> None:
@@ -314,25 +314,25 @@ def _wait_for_process_termination(pid: int) -> None:
         try:
             os.kill(pid, 0)
         except ProcessLookupError:
-            console.print("[green]✅ MCP servers stopped gracefully[/ green]")
+            console.print("[green]✅ MCP servers stopped gracefully[/green]")
             return
 
     _force_kill_process(pid)
 
 
 def _force_kill_process(pid: int) -> None:
-    console.print("[yellow]Server did not stop gracefully, forcing...[/ yellow]")
+    console.print("[yellow]Server did not stop gracefully, forcing...[/yellow]")
     os.kill(pid, signal.SIGKILL)
     time.sleep(0.5)
-    console.print("[green]✅ MCP servers stopped (forced)[/ green]")
+    console.print("[green]✅ MCP servers stopped (forced)[/green]")
 
 
 def _start_mcp_server(http_mode: bool, http_port: int | None) -> None:
-    console.print("[green]Starting MCP server...[/ green]")
+    console.print("[green]Starting MCP server...[/green]")
     try:
         main(".", http_mode, http_port)
     except Exception as e:
-        console.print(f"[red]Failed to start MCP server: {e}[/ red]")
+        console.print(f"[red]Failed to start MCP server: {e}[/red]")
 
 
 def _initialize_context(context: MCPServerContext) -> None:
@@ -400,7 +400,7 @@ def _run_mcp_server(
     mcp_config: dict[str, t.Any],
     http_mode: bool,
 ) -> None:
-    console.print("[yellow]MCP app created, about to run...[/ yellow]")
+    console.print("[yellow]MCP app created, about to run...[/yellow]")
 
     try:
         if mcp_config.get("http_enabled", False) or http_mode:
@@ -411,7 +411,7 @@ def _run_mcp_server(
         else:
             mcp_app.run()
     except Exception as e:
-        console.print(f"[red]MCP run failed: {e}[/ red]")
+        console.print(f"[red]MCP run failed: {e}[/red]")
         import traceback
 
         traceback.print_exc()
@@ -432,7 +432,7 @@ def _initialize_project_and_config(
 def _create_and_validate_server(mcp_config: dict[str, t.Any]) -> t.Any | None:
     mcp_app = asyncio.run(create_mcp_server(mcp_config))
     if not mcp_app:
-        console.print("[red]Failed to create MCP server[/ red]")
+        console.print("[red]Failed to create MCP server[/red]")
     return mcp_app
 
 

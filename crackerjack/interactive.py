@@ -335,12 +335,12 @@ class WorkflowManager:
 
     def _handle_task_without_executor(self, task: Task) -> bool:
         task.skip()
-        self.console.print(f"[yellow]⏭️ Skipped {task.name} (no executor)[/ yellow]")
+        self.console.print(f"[yellow]⏭️ Skipped {task.name} (no executor)[/yellow]")
         return True
 
     def _execute_task_with_executor(self, task: Task) -> bool:
         task.start()
-        self.console.print(f"[blue]🔄 Running {task.name}...[/ blue]")
+        self.console.print(f"[blue]🔄 Running {task.name}...[/blue]")
 
         try:
             return self._try_execute_task(task)
@@ -358,9 +358,9 @@ class WorkflowManager:
     def _display_task_result(self, task: Task, success: bool) -> None:
         if success:
             duration_str = f" ({task.duration:.1f}s)" if task.duration else ""
-            self.console.print(f"[green]✅ {task.name}{duration_str}[/ green]")
+            self.console.print(f"[green]✅ {task.name}{duration_str}[/green]")
         else:
-            self.console.print(f"[red]❌ {task.name} failed[/ red]")
+            self.console.print(f"[red]❌ {task.name} failed[/red]")
 
     def _handle_task_exception(self, task: Task, e: Exception) -> bool:
         error = CrackerjackError(
@@ -368,7 +368,7 @@ class WorkflowManager:
             error_code=ErrorCode.COMMAND_EXECUTION_ERROR,
         )
         task.fail(error)
-        self.console.print(f"[red]💥 {task.name} crashed: {e}[/ red]")
+        self.console.print(f"[red]💥 {task.name} crashed: {e}[/red]")
         return False
 
     def display_task_tree(self) -> None:
@@ -643,7 +643,7 @@ class InteractiveCLI:
         self.workflow.display_task_tree()
 
         if not Confirm.ask("Continue with workflow?"):
-            self.console.print("[yellow]Workflow cancelled by user[/ yellow]")
+            self.console.print("[yellow]Workflow cancelled by user[/yellow]")
             return False
 
         return self._execute_workflow_loop()
@@ -678,7 +678,7 @@ class InteractiveCLI:
         ]
 
         if pending_tasks:
-            self.console.print("[red]❌ Workflow stuck-unresolved dependencies[/ red]")
+            self.console.print("[red]❌ Workflow stuck-unresolved dependencies[/red]")
             return False
         return True
 
@@ -697,7 +697,7 @@ class InteractiveCLI:
     def _display_workflow_summary(self) -> None:
         summary = self.workflow.get_workflow_summary()
 
-        self.console.print("\n[bold]📊 Workflow Summary[/ bold]")
+        self.console.print("\n[bold]📊 Workflow Summary[/bold]")
 
         from rich.panel import Panel
 

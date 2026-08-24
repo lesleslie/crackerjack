@@ -1053,6 +1053,6 @@ class AsyncHookExecutor:
     ) -> None:
         if success:
             self.console.print(
-                f"[green]✅[/ green] {strategy.name.title()} hooks passed: {len(results)} / {len(results)} "
+                f"[green]✅[/green] {strategy.name.title()} hooks passed: {len(results)} / {len(results)} "
                 f"(async, {performance_gain:.1f} % faster)",
             )

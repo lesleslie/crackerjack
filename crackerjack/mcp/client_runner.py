@@ -22,10 +22,10 @@ async def ensure_mcp_server_running() -> subprocess.Popen[bytes] | None:
     console = Console()
 
     if is_mcp_server_running():
-        console.print("[green]✅ MCP server already running[/ green]")
+        console.print("[green]✅ MCP server already running[/green]")
         return None
 
-    console.print("[yellow]🚀 Starting MCP server...[/ yellow]")
+    console.print("[yellow]🚀 Starting MCP server...[/yellow]")
     server_process = subprocess.Popen(
         [sys.executable, "-m", "crackerjack", "--start-mcp-server"],
         stdout=subprocess.PIPE,
@@ -35,11 +35,11 @@ async def ensure_mcp_server_running() -> subprocess.Popen[bytes] | None:
 
     for _i in range(20):
         if is_mcp_server_running():
-            console.print("[green]✅ MCP server started successfully[/ green]")
+            console.print("[green]✅ MCP server started successfully[/green]")
             return server_process
         await asyncio.sleep(0.5)
 
-    console.print("[red]❌ Failed to start MCP server[/ red]")
+    console.print("[red]❌ Failed to start MCP server[/red]")
     server_process.terminate()
     msg = "Failed to start MCP server within timeout period"
     raise RuntimeError(msg)
@@ -74,7 +74,7 @@ async def run_with_mcp_server(command: str = "/ crackerjack: run") -> None:
     finally:
         if server_process:
             console.print(
-                "[yellow]Note: MCP server continues running in background[/ yellow]",
+                "[yellow]Note: MCP server continues running in background[/yellow]",
             )
 
 
@@ -95,7 +95,7 @@ def main() -> None:
     try:
         asyncio.run(run_with_mcp_server(args.command))
     except KeyboardInterrupt:
-        Console().print("\n[yellow]Operation cancelled by user[/ yellow]")
+        Console().print("\n[yellow]Operation cancelled by user[/yellow]")
         sys.exit(1)
 
 

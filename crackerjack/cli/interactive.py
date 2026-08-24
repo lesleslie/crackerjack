@@ -303,7 +303,7 @@ class InteractiveWorkflowManager:
         self.console.print(self.layout)
 
         if not Confirm.ask("\n🚀 Start workflow?", default=True):
-            self.console.print("[yellow]⏹️ Workflow cancelled[/ yellow]")
+            self.console.print("[yellow]⏹️ Workflow cancelled[/yellow]")
             return False
 
         return True
@@ -339,7 +339,7 @@ class InteractiveWorkflowManager:
         )
 
         if not retry:
-            self.console.print("[red]⏹️ Workflow stopped due to task failure[/ red]")
+            self.console.print("[red]⏹️ Workflow stopped due to task failure[/red]")
             return False
 
         failed_task.skip()
@@ -427,7 +427,7 @@ class InteractiveCLI:
             if not success:
                 raise SystemExit(1)
         except KeyboardInterrupt:
-            self.console.print("\n[yellow]⏹️ Interactive session cancelled[/ yellow]")
+            self.console.print("\n[yellow]⏹️ Interactive session cancelled[/yellow]")
             raise SystemExit(130)
         except Exception as e:
             error = CrackerjackError(
@@ -450,7 +450,7 @@ class InteractiveCLI:
         self.console.print()
 
     def _get_user_preferences(self, options: OptionsProtocol) -> OptionsProtocol:
-        self.console.print("[bold]🔧 Workflow Configuration[/ bold]")
+        self.console.print("[bold]🔧 Workflow Configuration[/bold]")
         self.console.print("Configure your crackerjack workflow: \n")
         updated_options = type(options)(**vars(options))
         updated_options.strip_code = Confirm.ask(

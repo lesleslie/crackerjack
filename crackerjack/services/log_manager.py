@@ -122,7 +122,7 @@ class LogManager:
                     log_file.unlink()
                     removed_count += 1
                     console.print(
-                        f"[dim]🗑️ Removed old log: {log_file.name} ({reason})[/ dim]",
+                        f"[dim]🗑️ Removed old log: {log_file.name} ({reason})[/dim]",
                     )
 
         return removed_count
@@ -173,11 +173,11 @@ class LogManager:
         results = {"found": len(legacy_files), "moved": 0, "failed": 0}
 
         if not legacy_files:
-            console.print("[green]✅ No legacy log files found to migrate[/ green]")
+            console.print("[green]✅ No legacy log files found to migrate[/green]")
             return results
 
         console.print(
-            f"[yellow]📦 Found {len(legacy_files)} legacy debug log files to migrate[/ yellow]",
+            f"[yellow]📦 Found {len(legacy_files)} legacy debug log files to migrate[/yellow]",
         )
 
         for legacy_file in legacy_files:
@@ -193,20 +193,20 @@ class LogManager:
 
                 if dry_run:
                     console.print(
-                        f"[cyan]📋 Would move: {legacy_file.name} → {new_filename}[/ cyan]",
+                        f"[cyan]📋 Would move: {legacy_file.name} → {new_filename}[/cyan]",
                     )
                     results["moved"] += 1
                 else:
                     shutil.move(str(legacy_file), new_path)
                     results["moved"] += 1
                     console.print(
-                        f"[green]✅ Moved: {legacy_file.name} → {new_filename}[/ green]",
+                        f"[green]✅ Moved: {legacy_file.name} → {new_filename}[/green]",
                     )
 
             except (OSError, ValueError) as e:
                 results["failed"] += 1
                 console.print(
-                    f"[red]❌ Failed to migrate {legacy_file.name}: {e}[/ red]",
+                    f"[red]❌ Failed to migrate {legacy_file.name}: {e}[/red]",
                 )
 
         return results
@@ -274,8 +274,8 @@ class LogManager:
     def print_log_summary(self) -> None:
         stats = self.get_log_stats()
 
-        console.print("\n[bold]📊 Log File Summary[/ bold]")
-        console.print(f"[dim]Location: {self.log_dir}[/ dim]")
+        console.print("\n[bold]📊 Log File Summary[/bold]")
+        console.print(f"[dim]Location: {self.log_dir}[/dim]")
 
         total_files: int = 0
         total_size: float = 0.0
@@ -300,10 +300,10 @@ class LogManager:
 
         if total_files > 0:
             console.print(
-                f"\n[bold]Total: {total_files} files, {total_size:.2f}MB[/ bold]",
+                f"\n[bold]Total: {total_files} files, {total_size:.2f}MB[/bold]",
             )
         else:
-            console.print("\n[dim]No log files found[/ dim]")
+            console.print("\n[dim]No log files found[/dim]")
 
 
 log_manager = LogManager()

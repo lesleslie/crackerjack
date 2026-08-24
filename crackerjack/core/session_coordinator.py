@@ -78,7 +78,7 @@ class SessionCoordinator:
         )
         self.tasks = self.session_tracker.tasks
         self.start_session("workflow")
-        self.console.print("[cyan]📊[/ cyan] Session tracking enabled")
+        self.console.print("[cyan]📊[/cyan] Session tracking enabled")
 
     def start_session(self, task_name: str) -> None:
         self.current_task = task_name
@@ -356,7 +356,7 @@ class SessionCoordinator:
                 handler()
             except Exception as exc:  # pragma: no cover - defensive
                 self.console.print(
-                    f"[red]Cleanup handler error:[/ red] {type(exc).__name__}: {exc}",
+                    f"[red]Cleanup handler error:[/red] {type(exc).__name__}: {exc}",
                 )
 
         with suppress(Exception):

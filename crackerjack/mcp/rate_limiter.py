@@ -165,7 +165,7 @@ class ResourceMonitor:
                 and len(self.active_jobs) >= self.config.max_concurrent_jobs
             ):
                 console.print(
-                    f"[yellow]🚫 Job {job_id} rejected: max concurrent jobs ({self.config.max_concurrent_jobs}) reached[/ yellow]",
+                    f"[yellow]🚫 Job {job_id} rejected: max concurrent jobs ({self.config.max_concurrent_jobs}) reached[/yellow]",
                 )
                 return False
 
@@ -173,7 +173,7 @@ class ResourceMonitor:
                 await asyncio.wait_for(self.job_locks.acquire(), timeout=0.1)
             except TimeoutError:
                 console.print(
-                    f"[yellow]🚫 Job {job_id} rejected: max concurrent jobs ({self.config.max_concurrent_jobs}) reached[/ yellow]",
+                    f"[yellow]🚫 Job {job_id} rejected: max concurrent jobs ({self.config.max_concurrent_jobs}) reached[/yellow]",
                 )
                 return False
 
@@ -181,12 +181,12 @@ class ResourceMonitor:
                 self.active_jobs[job_id] = time.time()
 
             console.print(
-                f"[green]🎯 Job {job_id} acquired slot ({len(self.active_jobs)} / {self.config.max_concurrent_jobs})[/ green]",
+                f"[green]🎯 Job {job_id} acquired slot ({len(self.active_jobs)} / {self.config.max_concurrent_jobs})[/green]",
             )
             return True
 
         except Exception as e:
-            console.print(f"[red]Error acquiring job slot for {job_id}: {e}[/ red]")
+            console.print(f"[red]Error acquiring job slot for {job_id}: {e}[/red]")
             return False
 
     async def release_job_slot(self, job_id: str) -> None:
@@ -195,7 +195,7 @@ class ResourceMonitor:
                 start_time = self.active_jobs.pop(job_id)
                 duration = time.time() - start_time
                 console.print(
-                    f"[blue]🏁 Job {job_id} completed in {duration:.1f}s ({len(self.active_jobs)} / {self.config.max_concurrent_jobs} active)[/ blue]",
+                    f"[blue]🏁 Job {job_id} completed in {duration:.1f}s ({len(self.active_jobs)} / {self.config.max_concurrent_jobs} active)[/blue]",
                 )
 
         self.job_locks.release()
@@ -214,7 +214,7 @@ class ResourceMonitor:
 
         if stale_jobs:
             console.print(
-                f"[yellow]🧹 Cleaned up {len(stale_jobs)} stale jobs (exceeded {self.config.max_job_duration_minutes}m)[/ yellow]",
+                f"[yellow]🧹 Cleaned up {len(stale_jobs)} stale jobs (exceeded {self.config.max_job_duration_minutes}m)[/yellow]",
             )
 
         return len(stale_jobs)
@@ -227,7 +227,7 @@ class ResourceMonitor:
             size_mb = file_path.stat().st_size / (1024 * 1024)
             if size_mb > self.config.max_file_size_mb:
                 console.print(
-                    f"[red]🚫 File {file_path} ({size_mb:.1f}MB) exceeds limit ({self.config.max_file_size_mb}MB)[/ red]",
+                    f"[red]🚫 File {file_path} ({size_mb:.1f}MB) exceeds limit ({self.config.max_file_size_mb}MB)[/red]",
                 )
                 return False
 
@@ -243,7 +243,7 @@ class ResourceMonitor:
             file_count = len(list[t.Any](progress_dir.glob("job-* .json")))
             if file_count > self.config.max_progress_files:
                 console.print(
-                    f"[red]🚫 Progress files ({file_count}) exceed limit ({self.config.max_progress_files})[/ red]",
+                    f"[red]🚫 Progress files ({file_count}) exceed limit ({self.config.max_progress_files})[/red]",
                 )
                 return False
 
@@ -284,7 +284,7 @@ class RateLimitMiddleware:
     async def start(self) -> None:
         self._running = True
         self._cleanup_task = asyncio.create_task(self._cleanup_loop())
-        console.print("[green]🛡️ Rate limiting middleware started[/ green]")
+        console.print("[green]🛡️ Rate limiting middleware started[/green]")
 
     async def stop(self) -> None:
         self._running = False
@@ -292,7 +292,7 @@ class RateLimitMiddleware:
             self._cleanup_task.cancel()
             with contextlib.suppress(asyncio.CancelledError):
                 await self._cleanup_task
-        console.print("[yellow]🛡️ Rate limiting middleware stopped[/ yellow]")
+        console.print("[yellow]🛡️ Rate limiting middleware stopped[/yellow]")
 
     async def check_request_allowed(
         self,
@@ -320,7 +320,7 @@ class RateLimitMiddleware:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                console.print(f"[red]Error in cleanup loop: {e}[/ red]")
+                console.print(f"[red]Error in cleanup loop: {e}[/red]")
                 await self._sleep_with_guard(60)
 
     async def _sleep_with_guard(self, delay: float) -> None:

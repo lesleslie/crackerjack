@@ -68,7 +68,7 @@ class ConfigIntegrityService(ConfigIntegrityServiceProtocol, ServiceProtocol):
                         drift_detected = True
                 except ConfigIntegrityError as e:
                     self.console.print(
-                        f"[red]❌ Error checking {file_path.name}: {e}[/ red]",
+                        f"[red]❌ Error checking {file_path.name}: {e}[/red]",
                     )
                     drift_detected = True
 
@@ -76,7 +76,7 @@ class ConfigIntegrityService(ConfigIntegrityServiceProtocol, ServiceProtocol):
             if not self._has_required_config_sections():
                 drift_detected = True
         except ConfigIntegrityError as e:
-            self.console.print(f"[red]❌ Configuration integrity error: {e}[/ red]")
+            self.console.print(f"[red]❌ Configuration integrity error: {e}[/red]")
             drift_detected = True
 
         return drift_detected
@@ -92,7 +92,7 @@ class ConfigIntegrityService(ConfigIntegrityServiceProtocol, ServiceProtocol):
                 cached_hash = int(cache_file.read_text().strip())
                 if current_hash != cached_hash:
                     self.console.print(
-                        f"[yellow]⚠️ {file_path.name} has been modified manually[/ yellow]",
+                        f"[yellow]⚠️ {file_path.name} has been modified manually[/yellow]",
                     )
                     return True
 

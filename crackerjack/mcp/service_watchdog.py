@@ -85,7 +85,7 @@ class ServiceWatchdog:
 
         for service in self.services:
             if service.process:
-                self.console.print(f"[yellow]🛑 Stopping {service.name}...[/ yellow]")
+                self.console.print(f"[yellow]🛑 Stopping {service.name}...[/yellow]")
                 service.process.terminate()
                 try:
                     service.process.wait(timeout=10)
@@ -227,7 +227,7 @@ class ServiceWatchdog:
         error: Exception,
     ) -> None:
         service.last_error = str(error)
-        self.console.print(f"[red]❌ Error monitoring {service.name}: {error}[/ red]")
+        self.console.print(f"[red]❌ Error monitoring {service.name}: {error}[/red]")
         await asyncio.sleep(10.0)
 
     async def _health_check(self, service: ServiceConfig) -> bool:
@@ -275,7 +275,7 @@ class ServiceWatchdog:
 
         if len(service.restart_timestamps) >= service.max_restarts:
             self.console.print(
-                f"[red]🚨 {service.name} exceeded restart limit ({service.max_restarts} in {service.restart_window}s)[/ red]",
+                f"[red]🚨 {service.name} exceeded restart limit ({service.max_restarts} in {service.restart_window}s)[/red]",
             )
             service.last_error = "Restart rate limit exceeded"
             await asyncio.sleep(60)
@@ -288,21 +288,21 @@ class ServiceWatchdog:
 
         try:
             self.console.print(
-                f"[yellow]🔪 Terminating existing {service.name} process (PID: {service.process.pid})[/ yellow]",
+                f"[yellow]🔪 Terminating existing {service.name} process (PID: {service.process.pid})[/yellow]",
             )
             service.process.terminate()
             service.process.wait(timeout=10)
         except subprocess.TimeoutExpired:
-            self.console.print(f"[red]💀 Force killing {service.name} process[/ red]")
+            self.console.print(f"[red]💀 Force killing {service.name} process[/red]")
             service.process.kill()
         except Exception as e:
             self.console.print(
-                f"[yellow]⚠️ Error terminating {service.name}: {e}[/ yellow]",
+                f"[yellow]⚠️ Error terminating {service.name}: {e}[/yellow]",
             )
 
     async def _wait_before_restart(self, service: ServiceConfig) -> None:
         self.console.print(
-            f"[yellow]⏳ Waiting {service.restart_delay}s before restarting {service.name}...[/ yellow]",
+            f"[yellow]⏳ Waiting {service.restart_delay}s before restarting {service.name}...[/yellow]",
         )
         await asyncio.sleep(service.restart_delay)
 
@@ -325,7 +325,7 @@ class ServiceWatchdog:
                 await asyncio.sleep(10.0)
 
             except Exception as e:
-                self.console.print(f"[red]Error updating display: {e}[/ red]")
+                self.console.print(f"[red]Error updating display: {e}[/red]")
                 await asyncio.sleep(5.0)
 
     async def _update_status_display(self) -> None:
@@ -343,7 +343,7 @@ class ServiceWatchdog:
         self.console.print(
             Panel(table, title="Crackerjack Service Watchdog", border_style="cyan"),
         )
-        self.console.print("\n[dim]Press Ctrl + C to stop monitoring[/ dim]")
+        self.console.print("\n[dim]Press Ctrl + C to stop monitoring[/dim]")
 
     def _create_status_table(self) -> Table:
         table = Table(title="🔍 Crackerjack Service Watchdog")
@@ -356,20 +356,20 @@ class ServiceWatchdog:
 
     def _get_service_status(self, service: ServiceConfig) -> str:
         if service.process and service.process.poll() is None:
-            return "[green]✅ Running[/ green]"
-        return "[red]❌ Stopped[/ red]"
+            return "[green]✅ Running[/green]"
+        return "[red]❌ Stopped[/red]"
 
     def _get_service_health(self, service: ServiceConfig) -> str:
         if service.health_check_url:
             return (
-                "[green]🟢 Healthy[/ green]"
+                "[green]🟢 Healthy[/green]"
                 if service.is_healthy
-                else "[red]🔴 Unhealthy[/ red]"
+                else "[red]🔴 Unhealthy[/red]"
             )
-        return "[dim]N / A[/ dim]"
+        return "[dim]N / A[/dim]"
 
     def _format_error_message(self, error_message: str | None) -> str:
-        error = error_message or "[dim]None[/ dim]"
+        error = error_message or "[dim]None[/dim]"
         if len(error) > 30:
             error = error[:27] + "..."
         return error
@@ -421,7 +421,7 @@ async def main() -> None:
     try:
         await watchdog.start()
     except KeyboardInterrupt:
-        console.print("\n[yellow]🛑 Shutting down watchdog...[/ yellow]")
+        console.print("\n[yellow]🛑 Shutting down watchdog...[/yellow]")
     finally:
         await watchdog.stop()
 

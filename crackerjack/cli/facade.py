@@ -77,14 +77,14 @@ class CrackerjackCLIFacade:
             if not success:
                 raise SystemExit(1)
         except KeyboardInterrupt:
-            self.console.print("\n[yellow]⏹️ Operation cancelled by user[/ yellow]")
+            self.console.print("\n[yellow]⏹️ Operation cancelled by user[/yellow]")
             raise SystemExit(130)
         except Exception as e:
-            self.console.print(f"[red]💥 Unexpected error: {e}[/ red]")
+            self.console.print(f"[red]💥 Unexpected error: {e}[/red]")
             if options.verbose:
                 import traceback
 
-                self.console.print(f"[dim]{traceback.format_exc()}[/ dim]")
+                self.console.print(f"[dim]{traceback.format_exc()}[/dim]")
             raise SystemExit(1)
 
     async def process_async(self, options: OptionsProtocol) -> None:
@@ -113,17 +113,17 @@ class CrackerjackCLIFacade:
             start_mcp_main(str(self.pkg_path))
         except ImportError:
             self.console.print(
-                "[red]❌ MCP server requires additional dependencies[/ red]",
+                "[red]❌ MCP server requires additional dependencies[/red]",
             )
-            self.console.print("[yellow]Install with: uv sync --group mcp[/ yellow]")
+            self.console.print("[yellow]Install with: uv sync --group mcp[/yellow]")
             raise SystemExit(1)
         except Exception as e:
-            self.console.print(f"[red]❌ Failed to start MCP server: {e}[/ red]")
+            self.console.print(f"[red]❌ Failed to start MCP server: {e}[/red]")
             raise SystemExit(1)
 
     def _handle_advanced_batch(self, options: OptionsProtocol) -> None:
         self.console.print(
-            "[red]❌ Advanced batch processing is not yet implemented[/ red]",
+            "[red]❌ Advanced batch processing is not yet implemented[/red]",
         )
         raise SystemExit(1)
 

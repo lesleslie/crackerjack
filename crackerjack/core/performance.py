@@ -81,7 +81,7 @@ class PerformanceMonitor:
             stats = self.get_stats(name)
             if stats:
                 self.console.print(
-                    f"[cyan]📊 {name}: [/ cyan] "
+                    f"[cyan]📊 {name}: [/cyan] "
                     f"avg={stats['avg']:.3f}s, "
                     f"min={stats['min']:.3f}s, "
                     f"max={stats['max']:.3f}s, "

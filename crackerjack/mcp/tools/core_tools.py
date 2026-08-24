@@ -330,7 +330,7 @@ def _execute_init_stage(orchestrator: WorkflowPipeline) -> bool:
 
     except Exception as e:
         if hasattr(orchestrator, "console"):
-            orchestrator.console.print(f"[red]❌[/ red] Initialization failed: {e}")
+            orchestrator.console.print(f"[red]❌[/red] Initialization failed: {e}")
         return False
 
 

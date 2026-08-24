@@ -444,12 +444,12 @@ class ContextualAIAssistant:
     def display_recommendations(self, recommendations: list[AIRecommendation]) -> None:
         if not recommendations:
             self.console.print(
-                "[green]✨ Great job ! No immediate recommendations.[/ green]",
+                "[green]✨ Great job ! No immediate recommendations.[/green]",
             )
             return
 
         self.console.print("\n[bold cyan]🤖 AI Assistant Recommendations[/ bold cyan]")
-        self.console.print("[dim]Based on your current project context[/ dim]\n")
+        self.console.print("[dim]Based on your current project context[/dim]\n")
 
         for i, rec in enumerate(recommendations, 1):
             priority_color = {"high": "red", "medium": "yellow", "low": "blue"}.get(
@@ -469,13 +469,13 @@ class ContextualAIAssistant:
             }.get(rec.category, "💡")
 
             self.console.print(
-                f"[bold]{i}. {category_emoji} {rec.title}[/ bold] [{priority_color}]({rec.priority})[/{priority_color}]",
+                f"[bold]{i}. {category_emoji} {rec.title}[/bold] [{priority_color}]({rec.priority})[/{priority_color}]",
             )
             self.console.print(f" {rec.description}")
 
             if rec.action_command:
                 self.console.print(
-                    f" [dim]Run: [/ dim] [cyan]{rec.action_command}[/ cyan]",
+                    f" [dim]Run: [/dim] [cyan]{rec.action_command}[/cyan]",
                 )
 
             if rec.reasoning:
@@ -485,7 +485,7 @@ class ContextualAIAssistant:
                 10 - int(rec.confidence * 10)
             )
             self.console.print(
-                f" [dim]Confidence: [{confidence_bar}] {rec.confidence:.1%}[/ dim]",
+                f" [dim]Confidence: [{confidence_bar}] {rec.confidence:.1%}[/dim]",
             )
 
             if i < len(recommendations):

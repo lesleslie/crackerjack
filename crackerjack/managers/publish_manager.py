@@ -222,7 +222,7 @@ class PublishManagerImpl:
             version = data.get("project", {}).get("version")
             return version if isinstance(version, str) else None
         except Exception as e:
-            self.console.print(f"[yellow]⚠️[/ yellow] Error reading version: {e}")
+            self.console.print(f"[yellow]⚠️[/yellow] Error reading version: {e}")
             return None
 
     def _update_version_in_file(self, new_version: str) -> bool:
@@ -249,15 +249,15 @@ class PublishManagerImpl:
                 if not self.dry_run:
                     self.filesystem.write_file(pyproject_path, new_content)
                 self.console.print(
-                    f"[green]✅[/ green] Updated version to {new_version}",
+                    f"[green]✅[/green] Updated version to {new_version}",
                 )
                 return True
             self.console.print(
-                "[yellow]⚠️[/ yellow] Version pattern not found in pyproject.toml",
+                "[yellow]⚠️[/yellow] Version pattern not found in pyproject.toml",
             )
             return False
         except Exception as e:
-            self.console.print(f"[red]❌[/ red] Error updating version: {e}")
+            self.console.print(f"[red]❌[/red] Error updating version: {e}")
             return False
 
     def _update_python_version_files(self, new_version: str) -> bool:
@@ -284,11 +284,11 @@ class PublishManagerImpl:
                         self.filesystem.write_file(version_file, new_content)
                     updated_files.append(version_file.name)
                     self.console.print(
-                        f"[green]✅[/ green] Updated __version__ in {version_file.name}",
+                        f"[green]✅[/green] Updated __version__ in {version_file.name}",
                     )
             except Exception as e:
                 self.console.print(
-                    f"[yellow]⚠️[/ yellow] Could not update {version_file.name}: {e}",
+                    f"[yellow]⚠️[/yellow] Could not update {version_file.name}: {e}",
                 )
 
         return bool(updated_files)
@@ -309,16 +309,16 @@ class PublishManagerImpl:
             msg = f"Invalid bump type: {bump_type}"
             raise ValueError(msg)
         except Exception as e:
-            self.console.print(f"[red]❌[/ red] Error calculating version: {e}")
+            self.console.print(f"[red]❌[/red] Error calculating version: {e}")
             raise
 
     def bump_version(self, version_type: str) -> str:
         current_version = self._get_current_version()
         if not current_version:
-            self.console.print("[red]❌[/ red] Could not determine current version")
+            self.console.print("[red]❌[/red] Could not determine current version")
             msg = "Cannot determine current version"
             raise ValueError(msg)
-        self.console.print(f"[cyan]📦[/ cyan] Current version: {current_version}")
+        self.console.print(f"[cyan]📦[/cyan] Current version: {current_version}")
 
         recommendation = self._get_version_recommendation()
         if recommendation and version_type != "interactive":
@@ -336,11 +336,11 @@ class PublishManagerImpl:
             new_version = self._calculate_next_version(current_version, version_type)
             if self.dry_run:
                 self.console.print(
-                    f"[yellow]🔍[/ yellow] Would bump {version_type} version: {current_version} → {new_version}",
+                    f"[yellow]🔍[/yellow] Would bump {version_type} version: {current_version} → {new_version}",
                 )
             elif self._update_version_in_file(new_version):
                 self.console.print(
-                    f"[green]🚀[/ green] Bumped {version_type} version: {current_version} → {new_version}",
+                    f"[green]🚀[/green] Bumped {version_type} version: {current_version} → {new_version}",
                 )
 
                 self._update_python_version_files(new_version)
@@ -352,7 +352,7 @@ class PublishManagerImpl:
 
             return new_version
         except Exception as e:
-            self.console.print(f"[red]❌[/ red] Version bump failed: {e}")
+            self.console.print(f"[red]❌[/red] Version bump failed: {e}")
             raise
 
     def _prompt_for_version_type(self, recommendation: t.Any = None) -> str:
@@ -367,13 +367,13 @@ class PublishManagerImpl:
                 )
 
             return Prompt.ask(
-                "[cyan]📦[/ cyan] Select version bump type",
+                "[cyan]📦[/cyan] Select version bump type",
                 choices=["patch", "minor", "major"],
                 default=default_type,
             )
         except ImportError:
             self.console.print(
-                "[yellow]⚠️[/ yellow] Rich prompt not available, defaulting to patch",
+                "[yellow]⚠️[/yellow] Rich prompt not available, defaulting to patch",
             )
             return "patch"
 
@@ -453,8 +453,8 @@ class PublishManagerImpl:
         return None
 
     def _display_auth_setup_instructions(self) -> None:
-        self.console.print("[red]❌[/ red] No valid PyPI authentication found")
-        self.console.print("\n[yellow]💡[/ yellow] Setup options: ")
+        self.console.print("[red]❌[/red] No valid PyPI authentication found")
+        self.console.print("\n[yellow]💡[/yellow] Setup options: ")
         self.console.print(
             " 1. Set environment variable: export UV_PUBLISH_TOKEN=<your-pypi-token>",
         )
@@ -467,18 +467,18 @@ class PublishManagerImpl:
 
     def build_package(self) -> bool:
         try:
-            self.console.print("[yellow]🔨[/ yellow] Building package")
+            self.console.print("[yellow]🔨[/yellow] Building package")
 
             if self.dry_run:
                 return self._handle_dry_run_build()
 
             return self._execute_build()
         except Exception as e:
-            self.console.print(f"[red]❌[/ red] Build error: {e}")
+            self.console.print(f"[red]❌[/red] Build error: {e}")
             return False
 
     def _handle_dry_run_build(self) -> bool:
-        self.console.print("[yellow]🔍[/ yellow] Would build package")
+        self.console.print("[yellow]🔍[/yellow] Would build package")
         return True
 
     def _clean_dist_directory(self) -> None:
@@ -492,11 +492,11 @@ class PublishManagerImpl:
             shutil.rmtree(dist_dir)
             dist_dir.mkdir(exist_ok=True)
             self.console.print(
-                "[cyan]🧹[/ cyan] Cleaned dist directory for fresh build",
+                "[cyan]🧹[/cyan] Cleaned dist directory for fresh build",
             )
         except Exception as e:
             self.console.print(
-                f"[yellow]⚠️[/ yellow] Warning: Could not clean dist directory: {e}",
+                f"[yellow]⚠️[/yellow] Warning: Could not clean dist directory: {e}",
             )
 
     def _execute_build(self) -> bool:
@@ -505,10 +505,10 @@ class PublishManagerImpl:
         result = self._run_command(["uv", "build"])
 
         if result.returncode != 0:
-            self.console.print(f"[red]❌[/ red] Build failed: {result.stderr}")
+            self.console.print(f"[red]❌[/red] Build failed: {result.stderr}")
             return False
 
-        self.console.print("[green]✅[/ green] Package built successfully")
+        self.console.print("[green]✅[/green] Package built successfully")
         self._display_build_artifacts()
         return True
 
@@ -518,7 +518,7 @@ class PublishManagerImpl:
             return
 
         artifacts = list[t.Any](dist_dir.glob("*"))
-        self.console.print(f"[cyan]📦[/ cyan] Build artifacts ({len(artifacts)}): ")
+        self.console.print(f"[cyan]📦[/cyan] Build artifacts ({len(artifacts)}): ")
 
         for artifact in artifacts[-5:]:
             size_str = self._format_file_size(artifact.stat().st_size)
@@ -533,10 +533,10 @@ class PublishManagerImpl:
         try:
             if not self._validate_prerequisites():
                 return False
-            self.console.print("[yellow]🚀[/ yellow] Publishing to PyPI")
+            self.console.print("[yellow]🚀[/yellow] Publishing to PyPI")
             return self._perform_publish_workflow()
         except Exception as e:
-            self.console.print(f"[red]❌[/ red] Publish error: {e}")
+            self.console.print(f"[red]❌[/red] Publish error: {e}")
             return False
 
     def _validate_prerequisites(self) -> bool:
@@ -562,7 +562,7 @@ class PublishManagerImpl:
         return self._execute_publish()
 
     def _handle_dry_run_publish(self) -> bool:
-        self.console.print("[yellow]🔍[/ yellow] Would publish package to PyPI")
+        self.console.print("[yellow]🔍[/yellow] Would publish package to PyPI")
         return True
 
     def _execute_publish(self) -> bool:
@@ -602,10 +602,10 @@ class PublishManagerImpl:
         return False
 
     def _handle_publish_failure(self, error_msg: str) -> None:
-        self.console.print(f"[red]❌[/ red] Publish failed: {error_msg}")
+        self.console.print(f"[red]❌[/red] Publish failed: {error_msg}")
 
     def _handle_publish_success(self) -> None:
-        self.console.print("[green]🎉[/ green] Package published successfully!")
+        self.console.print("[green]🎉[/green] Package published successfully!")
         self._display_package_url()
 
     def _display_package_url(self) -> None:
@@ -614,7 +614,7 @@ class PublishManagerImpl:
 
         if package_name and current_version:
             url = f"https://pypi.org/project/{package_name}/{current_version}/"
-            self.console.print(f"[cyan]🔗[/ cyan] Package URL: {url}")
+            self.console.print(f"[cyan]🔗[/cyan] Package URL: {url}")
 
     def _get_package_name(self) -> str | None:
         pyproject_path = self.pkg_path / "pyproject.toml"
@@ -632,11 +632,11 @@ class PublishManagerImpl:
     def cleanup_old_releases(self, keep_releases: int = 10) -> bool:
         try:
             self.console.print(
-                f"[yellow]🧹[/ yellow] Cleaning up old releases (keeping {keep_releases})...",
+                f"[yellow]🧹[/yellow] Cleaning up old releases (keeping {keep_releases})...",
             )
             if self.dry_run:
                 self.console.print(
-                    "[yellow]🔍[/ yellow] Would clean up old PyPI releases",
+                    "[yellow]🔍[/yellow] Would clean up old PyPI releases",
                 )
                 return True
             pyproject_path = self.pkg_path / "pyproject.toml"
@@ -647,69 +647,69 @@ class PublishManagerImpl:
             package_name = data.get("project", {}).get("name", "")
             if not package_name:
                 self.console.print(
-                    "[yellow]⚠️[/ yellow] Could not determine package name",
+                    "[yellow]⚠️[/yellow] Could not determine package name",
                 )
                 return False
             self.console.print(
-                f"[cyan]📦[/ cyan] Would analyze releases for {package_name}",
+                f"[cyan]📦[/cyan] Would analyze releases for {package_name}",
             )
             self.console.print(
-                f"[cyan]🔧[/ cyan] Would keep {keep_releases} most recent releases",
+                f"[cyan]🔧[/cyan] Would keep {keep_releases} most recent releases",
             )
 
             return True
         except Exception as e:
-            self.console.print(f"[red]❌[/ red] Cleanup error: {e}")
+            self.console.print(f"[red]❌[/red] Cleanup error: {e}")
             return False
 
     def create_git_tag_local(self, version: str) -> bool:
         try:
             if self.dry_run:
                 self.console.print(
-                    f"[yellow]🔍[/ yellow] Would create git tag: v{version}",
+                    f"[yellow]🔍[/yellow] Would create git tag: v{version}",
                 )
                 return True
             result = self._run_command(
                 ["git", "tag", "-a", f"v{version}", "-m", f"Release v{version}"]
             )
             if result.returncode == 0:
-                self.console.print(f"[green]🏷️[/ green] Created git tag: v{version}")
+                self.console.print(f"[green]🏷️[/green] Created git tag: v{version}")
                 return True
             self.console.print(
-                f"[red]❌[/ red] Failed to create tag: {result.stderr}",
+                f"[red]❌[/red] Failed to create tag: {result.stderr}",
             )
             return False
         except Exception as e:
-            self.console.print(f"[red]❌[/ red] Tag creation error: {e}")
+            self.console.print(f"[red]❌[/red] Tag creation error: {e}")
             return False
 
     def create_git_tag(self, version: str) -> bool:
         try:
             if self.dry_run:
                 self.console.print(
-                    f"[yellow]🔍[/ yellow] Would create git tag: v{version}",
+                    f"[yellow]🔍[/yellow] Would create git tag: v{version}",
                 )
                 return True
             result = self._run_command(["git", "tag", f"v{version}"])
             if result.returncode == 0:
-                self.console.print(f"[green]🏷️[/ green] Created git tag: v{version}")
+                self.console.print(f"[green]🏷️[/green] Created git tag: v{version}")
                 push_result = self._run_command(
                     ["git", "push", "origin", f"v{version}"],
                 )
                 if push_result.returncode == 0:
-                    self.console.print("[green]📤[/ green] Pushed tag to remote")
+                    self.console.print("[green]📤[/green] Pushed tag to remote")
                 else:
                     self.console.print(
-                        f"[yellow]⚠️[/ yellow] Tag created but push failed: {push_result.stderr}",
+                        f"[yellow]⚠️[/yellow] Tag created but push failed: {push_result.stderr}",
                     )
 
                 return True
             self.console.print(
-                f"[red]❌[/ red] Failed to create tag: {result.stderr}",
+                f"[red]❌[/red] Failed to create tag: {result.stderr}",
             )
             return False
         except Exception as e:
-            self.console.print(f"[red]❌[/ red] Tag creation error: {e}")
+            self.console.print(f"[red]❌[/red] Tag creation error: {e}")
             return False
 
     def get_package_info(self) -> dict[str, t.Any]:
@@ -735,7 +735,7 @@ class PublishManagerImpl:
                 "python_requires": project.get("requires-python", ""),
             }
         except Exception as e:
-            self.console.print(f"[yellow]⚠️[/ yellow] Error reading package info: {e}")
+            self.console.print(f"[yellow]⚠️[/yellow] Error reading package info: {e}")
             return {}
 
     def _parse_project_section_fallback(self, content: str) -> dict[str, t.Any]:

@@ -116,7 +116,7 @@ class GitService(GitInterface):
             all_files = set[t.Any](staged_files + unstaged_files + untracked_files)
             return [f for f in all_files if f]
         except Exception as e:
-            self.console.print(f"[yellow]⚠️[/ yellow] Error getting changed files: {e}")
+            self.console.print(f"[yellow]⚠️[/yellow] Error getting changed files: {e}")
             return []
 
     def get_staged_files(self) -> list[str]:
@@ -124,7 +124,7 @@ class GitService(GitInterface):
             result = self._run_git_command(GIT_COMMANDS["staged_files_simple"])
             return result.stdout.strip().split("\n") if result.stdout.strip() else []
         except Exception as e:
-            self.console.print(f"[yellow]⚠️[/ yellow] Error getting staged files: {e}")
+            self.console.print(f"[yellow]⚠️[/yellow] Error getting staged files: {e}")
             return []
 
     def add_files(self, files: list[str]) -> bool:
@@ -145,26 +145,26 @@ class GitService(GitInterface):
                         result = self._run_git_command(cmd)
                     if result.returncode != 0:
                         self.console.print(
-                            f"[red]❌[/ red] Failed to add {file}: {result.stderr}"
+                            f"[red]❌[/red] Failed to add {file}: {result.stderr}"
                         )
                         return False
             return True
         except Exception as e:
-            self.console.print(f"[red]❌[/ red] Error adding files: {e}")
+            self.console.print(f"[red]❌[/red] Error adding files: {e}")
             return False
 
     def add_all_files(self) -> bool:
         try:
             result = self._run_git_command(GIT_COMMANDS["add_all"])
             if result.returncode == 0:
-                self.console.print("[green]✅[/ green] Staged all changes")
+                self.console.print("[green]✅[/green] Staged all changes")
                 return True
             self.console.print(
-                f"[red]❌[/ red] Failed to stage changes: {result.stderr}"
+                f"[red]❌[/red] Failed to stage changes: {result.stderr}"
             )
             return False
         except Exception as e:
-            self.console.print(f"[red]❌[/ red] Error staging files: {e}")
+            self.console.print(f"[red]❌[/red] Error staging files: {e}")
             return False
 
     def commit(self, message: str) -> bool:
@@ -172,11 +172,11 @@ class GitService(GitInterface):
             cmd = GIT_COMMANDS["commit"] + [message]
             result = self._run_git_command(cmd)
             if result.returncode == 0:
-                self.console.print(f"[green]✅[/ green] Committed: {message}")
+                self.console.print(f"[green]✅[/green] Committed: {message}")
                 return True
             return self._handle_commit_failure(result, message)
         except Exception as e:
-            self.console.print(f"[red]❌[/ red] Error committing: {e}")
+            self.console.print(f"[red]❌[/red] Error committing: {e}")
             return False
 
     def _handle_commit_failure(
@@ -193,18 +193,18 @@ class GitService(GitInterface):
         add_result = self._run_git_command(GIT_COMMANDS["add_updated"])
         if add_result.returncode != 0:
             self.console.print(
-                f"[red]❌[/ red] Failed to re-stage files: {add_result.stderr}"
+                f"[red]❌[/red] Failed to re-stage files: {add_result.stderr}"
             )
             return False
         cmd = GIT_COMMANDS["commit"] + [message]
         retry_result = self._run_git_command(cmd)
         if retry_result.returncode == 0:
             self.console.print(
-                f"[green]✅[/ green] Committed after re-staging: {message}"
+                f"[green]✅[/green] Committed after re-staging: {message}"
             )
             return True
         self.console.print(
-            f"[red]❌[/ red] Commit failed on retry: {retry_result.stderr}"
+            f"[red]❌[/red] Commit failed on retry: {retry_result.stderr}"
         )
         return False
 
@@ -212,13 +212,13 @@ class GitService(GitInterface):
         self, result: subprocess.CompletedProcess[str] | FailedGitResult
     ) -> bool:
         if "pre-commit" in result.stderr or "hook" in result.stderr.lower():
-            self.console.print("[red]❌[/ red] Commit blocked by hooks")
+            self.console.print("[red]❌[/red] Commit blocked by hooks")
             if result.stderr.strip():
                 self.console.print(
-                    f"[yellow]Hook output: [/ yellow]\n{result.stderr.strip()}"
+                    f"[yellow]Hook output: [/yellow]\n{result.stderr.strip()}"
                 )
         else:
-            self.console.print(f"[red]❌[/ red] Commit failed: {result.stderr}")
+            self.console.print(f"[red]❌[/red] Commit failed: {result.stderr}")
         return False
 
     def push(self) -> bool:
@@ -229,10 +229,10 @@ class GitService(GitInterface):
                 return True
             if self.auth_fallback and self._is_auth_failure(result.stderr):
                 return self._try_auth_fallback()
-            self.console.print(f"[red]❌[/ red] Push failed: {result.stderr}")
+            self.console.print(f"[red]❌[/red] Push failed: {result.stderr}")
             return False
         except Exception as e:
-            self.console.print(f"[red]❌[/ red] Error pushing: {e}")
+            self.console.print(f"[red]❌[/red] Error pushing: {e}")
             return False
 
     def _is_auth_failure(self, stderr: str) -> bool:
@@ -245,7 +245,7 @@ class GitService(GitInterface):
         original_url = self._get_remote_url()
         if not original_url:
             self.console.print(
-                "[red]❌[/ red] Could not determine remote URL for fallback"
+                "[red]❌[/red] Could not determine remote URL for fallback"
             )
             return False
         if original_url.startswith("git@"):
@@ -256,33 +256,33 @@ class GitService(GitInterface):
             auth_type = "HTTPS → SSH"
         else:
             self.console.print(
-                f"[yellow]⚠️[/ yellow] Unknown remote URL format: {original_url}"
+                f"[yellow]⚠️[/yellow] Unknown remote URL format: {original_url}"
             )
             return False
         self.console.print(
-            f"[yellow]🔄[/ yellow] Auth failed, trying fallback ({auth_type})..."
+            f"[yellow]🔄[/yellow] Auth failed, trying fallback ({auth_type})..."
         )
         if not self._set_remote_url(fallback_url):
-            self.console.print("[red]❌[/ red] Failed to set fallback remote URL")
+            self.console.print("[red]❌[/red] Failed to set fallback remote URL")
             return False
         result = self._run_git_command(GIT_COMMANDS["push_porcelain"])
         if result.returncode == 0:
             self._display_push_success(result.stdout)
             self.console.print(
-                f"[green]✅[/ green] Push succeeded using fallback auth ({auth_type})"
+                f"[green]✅[/green] Push succeeded using fallback auth ({auth_type})"
             )
             if not self.persist_fallback:
                 self._set_remote_url(original_url)
                 self.console.print(
-                    "[dim]💡 Tip: Set git.persist_fallback=true to remember this auth method[/ dim]"
+                    "[dim]💡 Tip: Set git.persist_fallback=true to remember this auth method[/dim]"
                 )
             else:
                 self.console.print(
-                    f"[green]📌[/ green] Updated remote URL to use {fallback_url.split(':')[0]}"
+                    f"[green]📌[/green] Updated remote URL to use {fallback_url.split(':')[0]}"
                 )
             return True
         self._set_remote_url(original_url)
-        self.console.print(f"[red]❌[/ red] Fallback auth also failed: {result.stderr}")
+        self.console.print(f"[red]❌[/red] Fallback auth also failed: {result.stderr}")
         return False
 
     def _get_remote_url(self, remote: str = "origin") -> str | None:
@@ -321,17 +321,17 @@ class GitService(GitInterface):
                 return True
             if self.auth_fallback and self._is_auth_failure(result.stderr):
                 return self._try_auth_fallback_with_tags()
-            self.console.print(f"[red]❌[/ red] Push failed: {result.stderr}")
+            self.console.print(f"[red]❌[/red] Push failed: {result.stderr}")
             return False
         except Exception as e:
-            self.console.print(f"[red]❌[/ red] Error pushing: {e}")
+            self.console.print(f"[red]❌[/red] Error pushing: {e}")
             return False
 
     def _try_auth_fallback_with_tags(self) -> bool:
         original_url = self._get_remote_url()
         if not original_url:
             self.console.print(
-                "[red]❌[/ red] Could not determine remote URL for fallback"
+                "[red]❌[/red] Could not determine remote URL for fallback"
             )
             return False
         if original_url.startswith("git@"):
@@ -342,33 +342,33 @@ class GitService(GitInterface):
             auth_type = "HTTPS → SSH"
         else:
             self.console.print(
-                f"[yellow]⚠️[/ yellow] Unknown remote URL format: {original_url}"
+                f"[yellow]⚠️[/yellow] Unknown remote URL format: {original_url}"
             )
             return False
         self.console.print(
-            f"[yellow]🔄[/ yellow] Auth failed, trying fallback ({auth_type})..."
+            f"[yellow]🔄[/yellow] Auth failed, trying fallback ({auth_type})..."
         )
         if not self._set_remote_url(fallback_url):
-            self.console.print("[red]❌[/ red] Failed to set fallback remote URL")
+            self.console.print("[red]❌[/red] Failed to set fallback remote URL")
             return False
         result = self._run_git_command(GIT_COMMANDS["push_with_tags"])
         if result.returncode == 0:
             self._display_push_success(result.stdout)
             self.console.print(
-                f"[green]✅[/ green] Push succeeded using fallback auth ({auth_type})"
+                f"[green]✅[/green] Push succeeded using fallback auth ({auth_type})"
             )
             if not self.persist_fallback:
                 self._set_remote_url(original_url)
                 self.console.print(
-                    "[dim]💡 Tip: Set git.persist_fallback=true to remember this auth method[/ dim]"
+                    "[dim]💡 Tip: Set git.persist_fallback=true to remember this auth method[/dim]"
                 )
             else:
                 self.console.print(
-                    f"[green]📌[/ green] Updated remote URL to use {fallback_url.split(':')[0]}"
+                    f"[green]📌[/green] Updated remote URL to use {fallback_url.split(':')[0]}"
                 )
             return True
         self._set_remote_url(original_url)
-        self.console.print(f"[red]❌[/ red] Fallback auth also failed: {result.stderr}")
+        self.console.print(f"[red]❌[/red] Fallback auth also failed: {result.stderr}")
         return False
 
     def _display_push_success(self, push_output: str) -> None:
@@ -380,7 +380,7 @@ class GitService(GitInterface):
         self._display_push_results(pushed_refs)
 
     def _display_no_commits_message(self) -> None:
-        self.console.print("[green]✅[/ green] Pushed to remote (no new commits)")
+        self.console.print("[green]✅[/green] Pushed to remote (no new commits)")
 
     def _parse_pushed_refs(self, lines: list[str]) -> list[str]:
         pushed_refs = []
@@ -395,10 +395,10 @@ class GitService(GitInterface):
     def _display_push_results(self, pushed_refs: list[str]) -> None:
         if pushed_refs:
             self.console.print(
-                f"[green]✅[/ green] Successfully pushed {len(pushed_refs)} ref(s) to remote: "
+                f"[green]✅[/green] Successfully pushed {len(pushed_refs)} ref(s) to remote: "
             )
             for ref in pushed_refs:
-                self.console.print(f" [dim]→ {ref}[/ dim]")
+                self.console.print(f" [dim]→ {ref}[/dim]")
         else:
             self._display_commit_count_push()
 
@@ -409,16 +409,16 @@ class GitService(GitInterface):
                 commit_count = int(result.stdout.strip())
                 if commit_count > 0:
                     self.console.print(
-                        f"[green]✅[/ green] Pushed {commit_count} commit(s) to remote"
+                        f"[green]✅[/green] Pushed {commit_count} commit(s) to remote"
                     )
                 else:
                     self.console.print(
-                        "[green]✅[/ green] Pushed to remote (up to date)"
+                        "[green]✅[/green] Pushed to remote (up to date)"
                     )
             else:
-                self.console.print("[green]✅[/ green] Successfully pushed to remote")
+                self.console.print("[green]✅[/green] Successfully pushed to remote")
         except ValueError, Exception:
-            self.console.print("[green]✅[/ green] Successfully pushed to remote")
+            self.console.print("[green]✅[/green] Successfully pushed to remote")
 
     def get_current_branch(self) -> str | None:
         try:

@@ -157,7 +157,7 @@ def stop_mcp_server() -> bool:
     processes = find_mcp_server_processes()
 
     if not processes:
-        console.print("[yellow]⚠️ No MCP server processes found[/ yellow]")
+        console.print("[yellow]⚠️ No MCP server processes found[/yellow]")
         return True
 
     ServerPanels.info(
@@ -187,7 +187,7 @@ def stop_zuban_lsp() -> bool:
     processes = find_zuban_lsp_processes()
 
     if not processes:
-        console.print("[yellow]⚠️ No Zuban LSP server processes found[/ yellow]")
+        console.print("[yellow]⚠️ No Zuban LSP server processes found[/yellow]")
         return True
 
     success = True
@@ -305,7 +305,7 @@ def list_server_status() -> None:
             )
             console.print(f" Command: {proc['command']}")
     else:
-        console.print("\n[yellow]MCP Servers: None running[/ yellow]")
+        console.print("\n[yellow]MCP Servers: None running[/yellow]")
 
     if zuban_lsp_processes:
         console.print("\n[bold green]Zuban LSP Servers: [/ bold green]")
@@ -315,7 +315,7 @@ def list_server_status() -> None:
             )
             console.print(f" Command: {proc['command']}")
     else:
-        console.print("\n[yellow]Zuban LSP Servers: None running[/ yellow]")
+        console.print("\n[yellow]Zuban LSP Servers: None running[/yellow]")
 
     if not mcp_processes and not zuban_lsp_processes:
-        console.print("\n[dim]No crackerjack servers currently running[/ dim]")
+        console.print("\n[dim]No crackerjack servers currently running[/dim]")

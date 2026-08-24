@@ -69,7 +69,7 @@ class VersionChecker:
         if update_available:
             self.console.print(
                 f"[yellow]🔄 {tool_name} update available: "
-                f"{current_version} → {latest_version}[/ yellow]",
+                f"{current_version} → {latest_version}[/yellow]",
             )
 
         return VersionInfo(
@@ -80,7 +80,7 @@ class VersionChecker:
         )
 
     def _create_missing_tool_info(self, tool_name: str) -> VersionInfo:
-        self.console.print(f"[red]⚠️ {tool_name} not installed[/ red]")
+        self.console.print(f"[red]⚠️ {tool_name} not installed[/red]")
         return VersionInfo(
             tool_name=tool_name,
             current_version="not installed",
@@ -92,7 +92,7 @@ class VersionChecker:
         tool_name: str,
         error: Exception,
     ) -> VersionInfo:
-        self.console.print(f"[red]❌ Error checking {tool_name}: {error}[/ red]")
+        self.console.print(f"[red]❌ Error checking {tool_name}: {error}[/red]")
         return VersionInfo(
             tool_name=tool_name,
             current_version="unknown",

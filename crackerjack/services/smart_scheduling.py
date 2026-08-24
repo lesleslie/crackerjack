@@ -76,7 +76,7 @@ class SmartSchedulingService(SmartSchedulingServiceProtocol, ServiceProtocol):
             timestamp_file.write_text(datetime.now().isoformat())
         except OSError as e:
             self.console.print(
-                f"[yellow]⚠️ Could not record init timestamp: {e}[/ yellow]",
+                f"[yellow]⚠️ Could not record init timestamp: {e}[/yellow]",
             )
 
     def _check_weekly_schedule(self) -> bool:
@@ -87,7 +87,7 @@ class SmartSchedulingService(SmartSchedulingServiceProtocol, ServiceProtocol):
             last_init = self._get_last_init_timestamp()
             if datetime.now() - last_init > timedelta(days=6):
                 self.console.print(
-                    f"[blue]📅 Weekly initialization scheduled for {init_day}[/ blue]",
+                    f"[blue]📅 Weekly initialization scheduled for {init_day}[/blue]",
                 )
                 return True
 
@@ -100,7 +100,7 @@ class SmartSchedulingService(SmartSchedulingServiceProtocol, ServiceProtocol):
         if commits_since_init >= threshold:
             self.console.print(
                 f"[blue]📊 {commits_since_init} commits since last init "
-                f"(threshold: {threshold})[/ blue]",
+                f"(threshold: {threshold})[/blue]",
             )
             return True
 
@@ -109,7 +109,7 @@ class SmartSchedulingService(SmartSchedulingServiceProtocol, ServiceProtocol):
     def _check_activity_based_schedule(self) -> bool:
         if self._has_recent_activity() and self._days_since_init() >= 7:
             self.console.print(
-                "[blue]⚡ Recent activity detected, initialization recommended[/ blue]",
+                "[blue]⚡ Recent activity detected, initialization recommended[/blue]",
             )
             return True
 

@@ -90,7 +90,7 @@ class CoverageRatchetService(CoverageRatchetProtocol):
 
         self.ratchet_file.write_text(json.dumps(ratchet_data, indent=2))
         self.console.print(
-            f"[cyan]📊[/ cyan] Coverage ratchet initialized at {initial_coverage:.0f}% baseline",
+            f"[cyan]📊[/cyan] Coverage ratchet initialized at {initial_coverage:.0f}% baseline",
         )
 
     def get_ratchet_data(self) -> dict[str, t.Any]:
@@ -251,12 +251,12 @@ class CoverageRatchetService(CoverageRatchetProtocol):
 
                 self.pyproject_file.write_text(updated_content)
                 self.console.print(
-                    f"[cyan]📝[/ cyan] Updated pyproject.toml coverage requirement to {new_coverage:.0f}%",
+                    f"[cyan]📝[/cyan] Updated pyproject.toml coverage requirement to {new_coverage:.0f}%",
                 )
 
         except Exception as e:
             self.console.print(
-                f"[yellow]⚠️[/ yellow] Failed to update pyproject.toml: {e}",
+                f"[yellow]⚠️[/yellow] Failed to update pyproject.toml: {e}",
             )
 
     def get_progress_visualization(self) -> str:
@@ -310,19 +310,19 @@ class CoverageRatchetService(CoverageRatchetProtocol):
         for milestone in milestones:
             if milestone == 100.0:
                 self.console.print(
-                    "[gold]🎉🏆 PERFECT ! 100 % COVERAGE ACHIEVED ! 🏆🎉[/ gold]",
+                    "[gold]🎉🏆 PERFECT ! 100 % COVERAGE ACHIEVED ! 🏆🎉[/gold]",
                 )
             elif milestone >= 90:
                 self.console.print(
-                    f"[gold]🏆 Milestone achieved: {milestone:.0f}% coverage ! Approaching perfection ![/ gold]",
+                    f"[gold]🏆 Milestone achieved: {milestone:.0f}% coverage ! Approaching perfection ![/gold]",
                 )
             elif milestone >= 50:
                 self.console.print(
-                    f"[green]🎯 Milestone achieved: {milestone:.0f}% coverage ! Great progress ![/ green]",
+                    f"[green]🎯 Milestone achieved: {milestone:.0f}% coverage ! Great progress ![/green]",
                 )
             else:
                 self.console.print(
-                    f"[cyan]📈 Milestone achieved: {milestone:.0f}% coverage ! Keep it up ![/ cyan]",
+                    f"[cyan]📈 Milestone achieved: {milestone:.0f}% coverage ! Keep it up ![/cyan]",
                 )
 
     def show_progress_with_spinner(self) -> None:

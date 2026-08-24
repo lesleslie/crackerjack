@@ -154,7 +154,7 @@ class AIAgentDebugger:
         self.logger.debug(f"Starting operation: {operation}", extra=kwargs)
 
         self._print_verbose(
-            f"[dim]🔍 {operation} starting...[/ dim]",
+            f"[dim]🔍 {operation} starting...[/dim]",
             level="debug",
         )
 
@@ -227,13 +227,13 @@ class AIAgentDebugger:
 
             self._print_verbose(
                 f"[{status_color}]{status_icon} MCP {operation_type}[/{status_color}]: "
-                f"[bold]{tool_name}[/ bold]"
+                f"[bold]{tool_name}[/bold]"
                 + (f" ({duration:.2f}s)" if duration else ""),
                 level="mcp",
             )
 
             if error and self.verbose:
-                self._print_verbose(f" [red]Error: {error}[/ red]", level="mcp_error")
+                self._print_verbose(f" [red]Error: {error}[/red]", level="mcp_error")
 
     def log_agent_activity(
         self,
@@ -371,7 +371,7 @@ class AIAgentDebugger:
 
         if self.verbose:
             self._print_verbose(
-                f"[red]💥 {error_type}: {message}[/ red]",
+                f"[red]💥 {error_type}: {message}[/red]",
                 level="error",
             )
 
@@ -439,7 +439,7 @@ class AIAgentDebugger:
             self._deduplicator.print_summary(self.console)
 
         self.console.print(
-            f"\n[dim]📝 Full debug log available at: {self.debug_log_path}[/ dim]"
+            f"\n[dim]📝 Full debug log available at: {self.debug_log_path}[/dim]"
             if self.debug_log_path
             else "",
         )
@@ -449,7 +449,7 @@ class AIAgentDebugger:
             return
 
         table = Table(
-            title="[cyan]Iteration Breakdown[/ cyan]",
+            title="[cyan]Iteration Breakdown[/cyan]",
             border_style=border_style,
         )
         table.add_column("Iteration", style="yellow")
@@ -497,7 +497,7 @@ class AIAgentDebugger:
                 )
 
         table = Table(
-            title="[cyan]Agent Activity Breakdown[/ cyan]",
+            title="[cyan]Agent Activity Breakdown[/cyan]",
             border_style=border_style,
         )
         table.add_column("Agent", style="blue")
@@ -571,7 +571,7 @@ class AIAgentDebugger:
                 tool_stats[tool]["total_duration"] += op["duration"]
 
         table = Table(
-            title="[cyan]MCP Tool Usage[/ cyan]",
+            title="[cyan]MCP Tool Usage[/cyan]",
             border_style=border_style,
         )
         table.add_column("Tool", style="cyan")
@@ -612,7 +612,7 @@ class AIAgentDebugger:
 
         if self.verbose:
             self._print_verbose(
-                f"[yellow]🔄 Starting Iteration {iteration_number}[/ yellow]",
+                f"[yellow]🔄 Starting Iteration {iteration_number}[/yellow]",
                 level="iteration",
             )
 

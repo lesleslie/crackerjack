@@ -319,7 +319,7 @@ class InitializationService:
         if target_file.exists() and not force:
             t.cast("list[str]", results["files_skipped"]).append(file_name)
             self.console.print(
-                f"[yellow]⚠️[/ yellow] Skipped {file_name} (already exists)",
+                f"[yellow]⚠️[/yellow] Skipped {file_name} (already exists)",
             )
             return False
         return True
@@ -351,14 +351,14 @@ class InitializationService:
             self.git_service.add_files([str(target_file)])
         except Exception as e:
             self.console.print(
-                f"[yellow]⚠️[/ yellow] Could not git add {file_name}: {e}",
+                f"[yellow]⚠️[/yellow] Could not git add {file_name}: {e}",
             )
 
-        self.console.print(f"[green]✅[/ green] Copied {file_name}")
+        self.console.print(f"[green]✅[/green] Copied {file_name}")
 
     def _skip_existing_file(self, file_name: str, results: dict[str, t.Any]) -> None:
         t.cast("list[str]", results["files_skipped"]).append(file_name)
-        self.console.print(f"[yellow]⚠️[/ yellow] Skipped {file_name} (already exists)")
+        self.console.print(f"[yellow]⚠️[/yellow] Skipped {file_name} (already exists)")
 
     def _handle_missing_source_file(
         self,
@@ -367,7 +367,7 @@ class InitializationService:
     ) -> None:
         error_msg = f"Source file not found: {file_name}"
         t.cast("list[str]", results["errors"]).append(error_msg)
-        self.console.print(f"[yellow]⚠️[/ yellow] {error_msg}")
+        self.console.print(f"[yellow]⚠️[/yellow] {error_msg}")
 
     def _handle_file_processing_error(
         self,
@@ -378,17 +378,17 @@ class InitializationService:
         error_msg = f"Failed to copy {file_name}: {error}"
         t.cast("list[str]", results["errors"]).append(error_msg)
         results["success"] = False
-        self.console.print(f"[red]❌[/ red] {error_msg}")
+        self.console.print(f"[red]❌[/red] {error_msg}")
 
     def _print_summary(self, results: dict[str, t.Any]) -> None:
         if results["success"]:
             self.console.print(
-                f"[green]🎉 Project initialized successfully ! [/ green] "
+                f"[green]🎉 Project initialized successfully ! [/green] "
                 f"Copied {len(t.cast('list[str]', results['files_copied']))} files",
             )
         else:
             self.console.print(
-                "[red]❌ Project initialization completed with errors[/ red]",
+                "[red]❌ Project initialization completed with errors[/red]",
             )
 
     def _handle_initialization_error(
@@ -398,7 +398,7 @@ class InitializationService:
     ) -> None:
         results["success"] = False
         t.cast("list[str]", results["errors"]).append(f"Initialization failed: {error}")
-        self.console.print(f"[red]❌[/ red] Initialization failed: {error}")
+        self.console.print(f"[red]❌[/red] Initialization failed: {error}")
 
     def check_uv_installed(self) -> bool:
         try:
@@ -446,7 +446,7 @@ class InitializationService:
                 target_config = {"mcpServers": crackerjack_servers}
                 self._write_mcp_config_and_track(target_file, target_config, results)
                 self.console.print(
-                    "[green]✅[/ green] Created .mcp.json with crackerjack MCP servers",
+                    "[green]✅[/green] Created .mcp.json with crackerjack MCP servers",
                 )
                 return
 
@@ -457,7 +457,7 @@ class InitializationService:
             target_config = {"mcpServers": crackerjack_servers}
             self._write_mcp_config_and_track(target_file, target_config, results)
             self.console.print(
-                "[green]✅[/ green] Updated .mcp.json with crackerjack MCP servers",
+                "[green]✅[/green] Updated .mcp.json with crackerjack MCP servers",
             )
 
         except Exception as e:
@@ -482,11 +482,11 @@ class InitializationService:
             for name, config in crackerjack_servers.items():
                 if name in existing_servers:
                     self.console.print(
-                        f"[yellow]🔄[/ yellow] Updating existing MCP server: {name}",
+                        f"[yellow]🔄[/yellow] Updating existing MCP server: {name}",
                     )
                 else:
                     self.console.print(
-                        f"[green]➕[/ green] Adding new MCP server: {name}",
+                        f"[green]➕[/green] Adding new MCP server: {name}",
                     )
                 updated_servers[name] = config
 
@@ -513,7 +513,7 @@ class InitializationService:
         try:
             self.git_service.add_files([str(target_file)])
         except Exception as e:
-            self.console.print(f"[yellow]⚠️[/ yellow] Could not git add .mcp.json: {e}")
+            self.console.print(f"[yellow]⚠️[/yellow] Could not git add .mcp.json: {e}")
 
     def _generate_project_claude_content(self, project_name: str) -> str:
         return """
@@ -648,10 +648,10 @@ python -m crackerjack - a patch
                 self.git_service.add_files([str(target_file)])
             except Exception as e:
                 self.console.print(
-                    f"[yellow]⚠️[/ yellow] Could not git add {file_name}: {e}",
+                    f"[yellow]⚠️[/yellow] Could not git add {file_name}: {e}",
                 )
 
-            self.console.print(f"[green]✅[/ green] Appended to {file_name}")
+            self.console.print(f"[green]✅[/green] Appended to {file_name}")
 
         except Exception as e:
             self._handle_file_processing_error(file_name, e, results)
@@ -703,10 +703,10 @@ python -m crackerjack - a patch
                 self.git_service.add_files([str(target_file)])
             except Exception as e:
                 self.console.print(
-                    f"[yellow]⚠️[/ yellow] Could not git add .gitignore: {e}",
+                    f"[yellow]⚠️[/yellow] Could not git add .gitignore: {e}",
                 )
 
-            self.console.print("[green]✅[/ green] Smart merged .gitignore")
+            self.console.print("[green]✅[/green] Smart merged .gitignore")
 
         except Exception as e:
             self._handle_file_processing_error(".gitignore", e, results)
@@ -766,10 +766,10 @@ python -m crackerjack - a patch
                 self.git_service.add_files([str(target_file)])
             except Exception as e:
                 self.console.print(
-                    f"[yellow]⚠️[/ yellow] Could not git add pyproject.toml: {e}",
+                    f"[yellow]⚠️[/yellow] Could not git add pyproject.toml: {e}",
                 )
 
-            self.console.print("[green]✅[/ green] Smart merged pyproject.toml")
+            self.console.print("[green]✅[/green] Smart merged pyproject.toml")
 
         except Exception as e:
             self._handle_file_processing_error("pyproject.toml", e, results)
@@ -808,10 +808,10 @@ python -m crackerjack - a patch
             else:
                 for error in template_result.get("errors", []):
                     t.cast("list[str]", results["errors"]).append(error)
-                    self.console.print(f"[yellow]⚠️[/ yellow] Template error: {error}")
+                    self.console.print(f"[yellow]⚠️[/yellow] Template error: {error}")
 
         except Exception as e:
             error_msg = f"Template application failed: {e}"
             t.cast("list[str]", results["errors"]).append(error_msg)
-            self.console.print(f"[yellow]⚠️[/ yellow] {error_msg}")
+            self.console.print(f"[yellow]⚠️[/yellow] {error_msg}")
             self.console.print("[dim]Continuing with standard initialization...[/dim]")
