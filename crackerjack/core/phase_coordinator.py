@@ -33,6 +33,7 @@ from crackerjack.decorators import handle_errors
 from crackerjack.models.protocols import ConsoleInterface
 from crackerjack.services.documentation_cleanup import DocumentationCleanup
 from crackerjack.services.frontmatter_validator import (
+    FrontmatterValidationResult,
     FrontmatterValidator,
 )
 from crackerjack.services.memory_optimizer import create_lazy_service
@@ -690,9 +691,15 @@ class PhaseCoordinator:
             skip_link_note=False,
         )
         if not vresult.success:
+            # Surface every individual frontmatter error as ``details`` so
+            # verbose mode dumps one line per failure (file:line code:
+            # message). Without this, only the count is recorded and the
+            # user cannot see which files need attention.
+            details = self._format_frontmatter_errors(vresult)
             self.session.fail_task(
                 "documentation_cleanup",
                 f"frontmatter validation failed: {vresult.error_count} errors",
+                details=details,
             )
             return False
 
@@ -723,6 +730,27 @@ class PhaseCoordinator:
             result.error_message or "Documentation cleanup failed",
         )
         return False
+
+    @staticmethod
+    def _format_frontmatter_errors(
+        vresult: FrontmatterValidationResult,
+    ) -> str:
+        """Render every ``FrontmatterValidationIssue`` as one ``file:line code: message`` line.
+
+        Verbose mode dumps this verbatim so the user can see exactly which
+        files and frontmatter keys need fixing, instead of only knowing the
+        total error count. Returns an empty string when ``vresult`` has no
+        errors (which shouldn't happen at the call site, but is safe).
+        """
+        errors = vresult.errors
+        if not errors:
+            return ""
+        lines: list[str] = []
+        for err in errors:
+            location = f"{err.file}:{err.line}" if err.line else err.file
+            lines.append(f"  {location} {err.code}: {err.message}")
+        header = f"  {len(errors)} frontmatter error(s):\n"
+        return header + "\n".join(lines)
 
     @handle_errors
     def run_git_cleanup_phase(self, options: OptionsProtocol) -> bool:
