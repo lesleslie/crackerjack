@@ -105,7 +105,7 @@ def _run_subprocess_with_kill_on_timeout(
             # cannot outlive the timeout.
             try:
                 os.killpg(proc.pid, signal.SIGKILL)
-            except (ProcessLookupError, PermissionError):
+            except ProcessLookupError, PermissionError:
                 # Process already exited or we lack permission to signal
                 # the group; fall back to killing the direct child.
                 proc.kill()

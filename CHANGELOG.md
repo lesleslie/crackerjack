@@ -1,5 +1,22 @@
 ______________________________________________________________________
 
+## [0.75.8] - 2026-08-25
+
+### Changed
+
+- crackerjack: Migrate MCP imports to fastmcp package (v3 API)
+
+### Fixed
+
+- git: Revert staged files to HEAD + kill child on timeout
+- workflow: Preserve error context + verbose detail dump in _PhaseTask
+
+### Internal
+
+- crackerjack: Drop direct mcp SDK dependency (transitive only)
+- crackerjack: Drop mcp<2 upper bound (v1 imports migrated)
+- crackerjack: Pin mcp<2 to defer v2 SDK migration
+
 ## [0.75.7] - 2026-08-24
 
 ### Fixed
