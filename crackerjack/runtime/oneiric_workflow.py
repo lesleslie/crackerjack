@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import inspect
+import logging
 import tempfile
 import typing as t
 from dataclasses import dataclass
@@ -13,6 +14,8 @@ from oneiric.runtime.orchestrator import RuntimeOrchestrator
 
 if t.TYPE_CHECKING:
     from crackerjack.core.phase_coordinator import PhaseCoordinator
+
+_logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -31,18 +34,86 @@ class OneiricWorkflowRuntime:
 
 
 class _PhaseTask:
-    def __init__(self, name: str, runner: t.Callable[[], t.Any]) -> None:
+    """Adapter that runs a crackerjack phase method inside a oneiric workflow task.
+
+    The phase method returns ``True`` on success, ``False`` on recoverable
+    failure (where the underlying error has already been recorded via
+    ``PhaseCoordinator.session.fail_task``). This adapter translates both
+    signals into something the orchestrator can act on:
+
+    - **Runner raises**: the exception class and message are included in the
+      raised :class:`RuntimeError` so the user sees *why* the task failed,
+      not just its name.
+    - **Runner returns False**: the task's recorded ``error_message`` (and, in
+      verbose mode, its ``details``) is included in the raised
+      :class:`RuntimeError`. Without this, a user sees only
+      ``workflow-task-failed: documentation_cleanup`` even when the actual
+      cause is captured in the session.
+
+    The optional ``error_provider`` callback is wired in
+    :func:`_register_tasks` so a task can reach back into the live session
+    tracker for the most recent failure context. ``verbose`` controls
+    whether the multi-line ``details`` block is also surfaced (when it
+    contains a list of every failing file/line, that is what verbose mode
+    is for).
+    """
+
+    def __init__(
+        self,
+        name: str,
+        runner: t.Callable[[], t.Any],
+        *,
+        verbose: bool = False,
+        error_provider: t.Callable[[], tuple[str | None, str | None]] | None = None,
+    ) -> None:
         self._name = name
         self._runner = runner
+        self._verbose = verbose
+        self._error_provider = error_provider
 
     async def run(self, payload: dict[str, t.Any] | None = None) -> t.Any:
-        result = self._runner()
+        try:
+            result = self._runner()
+        except Exception as exc:
+            _logger.exception("Phase task %s raised", self._name)
+            msg = f"workflow-task-failed: {self._name}: {type(exc).__name__}: {exc}"
+            raise RuntimeError(msg) from exc
+
         if inspect.isawaitable(result):
             result = await result
+
         if result is False:
+            error_message, details = self._load_failure_context()
             msg = f"workflow-task-failed: {self._name}"
+            if error_message:
+                msg = f"{msg}: {error_message}"
+            if self._verbose and details:
+                # details can be a multi-line breakdown (file/line/code per
+                # line for frontmatter errors, or a traceback when the phase
+                # surfaced an unhandled exception). Print to stderr so it
+                # lands on the user's console even when the orchestrator
+                # captures stdout.
+                import sys
+
+                sys.stderr.write(
+                    f"\n[verbose] {self._name} failure details:\n{details}\n"
+                )
+                sys.stderr.flush()
             raise RuntimeError(msg)
+
         return result
+
+    def _load_failure_context(self) -> tuple[str | None, str | None]:
+        if self._error_provider is None:
+            return None, None
+        try:
+            return self._error_provider()
+        except Exception:
+            _logger.exception(
+                "Phase task %s error_provider raised; falling back to bare name",
+                self._name,
+            )
+            return None, None
 
 
 def build_oneiric_runtime() -> OneiricWorkflowRuntime:
@@ -136,58 +207,101 @@ def _register_tasks(
     phases: PhaseCoordinator,
     options: t.Any,
 ) -> None:
+    verbose = bool(getattr(options, "verbose", False))
+
+    def _make_error_provider(
+        task_name: str,
+    ) -> t.Callable[[], tuple[str | None, str | None]]:
+        def _provider() -> tuple[str | None, str | None]:
+            session_coordinator = getattr(phases, "session", None)
+            session_tracker = getattr(session_coordinator, "session_tracker", None)
+            if session_tracker is None:
+                return None, None
+            task = session_tracker.tasks.get(task_name)
+            if task is None:
+                return None, None
+            return task.error_message, task.details
+
+        return _provider
+
     task_factories = {
         "config_cleanup": lambda: _PhaseTask(
             "config_cleanup",
             lambda: phases.run_config_cleanup_phase(options),
+            verbose=verbose,
+            error_provider=_make_error_provider("config_cleanup"),
         ),
         "configuration": lambda: _PhaseTask(
             "configuration",
             lambda: phases.run_configuration_phase(options),
+            verbose=verbose,
+            error_provider=_make_error_provider("configuration"),
         ),
         "cleaning": lambda: _PhaseTask(
             "cleaning",
             lambda: phases.run_cleaning_phase(options),
+            verbose=verbose,
+            error_provider=_make_error_provider("cleaning"),
         ),
         "fast_hooks": lambda: _PhaseTask(
             "fast_hooks",
             lambda: phases.run_fast_hooks_only(options),  # type: ignore[unused-coroutine]
+            verbose=verbose,
+            error_provider=_make_error_provider("fast_hooks"),
         ),
         "tests": lambda: _PhaseTask(
             "tests",
             lambda: phases.run_testing_phase(options),
+            verbose=verbose,
+            error_provider=_make_error_provider("tests"),
         ),
         "documentation_cleanup": lambda: _PhaseTask(
             "documentation_cleanup",
             lambda: phases.run_documentation_cleanup_phase(options),
+            verbose=verbose,
+            error_provider=_make_error_provider("documentation_cleanup"),
         ),
         "git_cleanup": lambda: _PhaseTask(
             "git_cleanup",
             lambda: phases.run_git_cleanup_phase(options),
+            verbose=verbose,
+            error_provider=_make_error_provider("git_cleanup"),
         ),
         "doc_updates": lambda: _PhaseTask(
             "doc_updates",
             lambda: phases.run_doc_update_phase(options),
+            verbose=verbose,
+            error_provider=_make_error_provider("doc_updates"),
         ),
         "snob_tests": lambda: _PhaseTask(
             "snob_tests",
             lambda: phases.run_snob_tests_phase(options),
+            verbose=verbose,
+            error_provider=_make_error_provider("snob_tests"),
         ),
         "comprehensive_hooks": lambda: _PhaseTask(
             "comprehensive_hooks",
             lambda: phases.run_comprehensive_hooks_only(options),
+            verbose=verbose,
+            error_provider=_make_error_provider("comprehensive_hooks"),
         ),
         "coverage_ratchet": lambda: _PhaseTask(
             "coverage_ratchet",
             lambda: phases.run_coverage_ratchet_phase(options),
+            verbose=verbose,
+            error_provider=_make_error_provider("coverage_ratchet"),
         ),
         "publishing": lambda: _PhaseTask(
             "publishing",
             lambda: phases.run_publishing_phase(options),
+            verbose=verbose,
+            error_provider=_make_error_provider("publishing"),
         ),
         "commit": lambda: _PhaseTask(
             "commit",
             lambda: phases.run_commit_phase(options),
+            verbose=verbose,
+            error_provider=_make_error_provider("commit"),
         ),
     }
 
