@@ -4,7 +4,7 @@ import asyncio
 import logging
 from typing import Any
 
-from mcp.server import FastMCP
+from fastmcp import FastMCP
 from pydantic import Field, validate_call
 
 logger = logging.getLogger(__name__)

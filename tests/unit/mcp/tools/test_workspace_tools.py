@@ -12,13 +12,26 @@ contract.
 
 from __future__ import annotations
 
+import asyncio
 import sys
 import types
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from mcp.server import FastMCP
+from fastmcp import FastMCP
+
+
+def _registered_tool_names(app: FastMCP) -> set[str]:
+    """Return the set of tool names registered on a FastMCP v3 instance.
+
+    FastMCP v3 removed the ``_tool_manager`` and ``_tools`` private
+    attributes that v1/v2 exposed; the public replacement is the async
+    ``list_tools()`` coroutine which yields a ``list[FunctionTool]``.
+    Wrapped here so sync tests can call it without restructuring the
+    whole test module to be async.
+    """
+    return {tool.name for tool in asyncio.run(app.list_tools())}
 
 # ---------------------------------------------------------------------------
 # Bootstrap: inject a stub `crackerjack.mahavishnu.workspace` so the import
@@ -305,10 +318,9 @@ class TestRegisterWorkspaceTools:
 
         register_workspace_tools(app)
 
-        # FastMCP stores tools in a manager; check that exactly the four
-        # workspace handlers were registered.
-        tool_manager = app._tool_manager
-        names = {name for name in tool_manager._tools}
+        # FastMCP v3: use the public ``list_tools()`` coroutine, not the
+        # removed ``_tool_manager._tools`` private attribute.
+        names = _registered_tool_names(app)
         assert {
             "create_workspace",
             "list_workspaces",
@@ -324,8 +336,7 @@ class TestRegisterWorkspaceTools:
         register_workspace_tools(app)
         register_workspace_tools(app)
 
-        tool_manager = app._tool_manager
-        names = {name for name in tool_manager._tools}
+        names = _registered_tool_names(app)
         assert "create_workspace" in names
         assert "remove_workspace" in names
 
@@ -344,9 +355,8 @@ class TestModuleSurface:
     def test_tool_decorators_attached(self) -> None:
         # Each tool function should have a FastMCP-internal __wrapped__ or
         # similar attribute proving it was registered with the module's MCP.
-        # FastMCP stores tool metadata in mcp._tool_manager._tools keyed by
-        # function name.
-        names = set(workspace_tools.mcp._tool_manager._tools)
+        # FastMCP v3 exposes tools via the public ``list_tools()`` coroutine.
+        names = _registered_tool_names(workspace_tools.mcp)
         assert {
             "create_workspace",
             "list_workspaces",

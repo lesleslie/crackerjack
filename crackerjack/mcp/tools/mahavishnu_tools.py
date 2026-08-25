@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
-from mcp.server import FastMCP
+from fastmcp import FastMCP
 from pydantic import Field, validate_call
 
 from crackerjack.integration.mahavishnu_integration import create_mahavishnu_aggregator

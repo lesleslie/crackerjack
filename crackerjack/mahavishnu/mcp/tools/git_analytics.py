@@ -11,7 +11,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any, cast
 
-from mcp.server import FastMCP
+from fastmcp import FastMCP
 from pydantic import Field, validate_call
 
 from crackerjack.integration.mahavishnu_integration import (
