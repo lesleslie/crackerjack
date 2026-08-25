@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+import signal
 import subprocess
 import typing as t
 from contextlib import suppress
@@ -8,8 +10,17 @@ from pathlib import Path
 from crackerjack.core.console import CrackerjackConsole
 from crackerjack.models.protocols import ConsoleInterface, GitInterface
 
-from .secure_subprocess import execute_secure_subprocess
 from .security_logger import get_security_logger
+
+#: Default per-command timeout for ``_run_git_command`` (seconds).
+#:
+#: Bumped from 60s to 300s on 2026-08-24 after a version-bump commit with
+#: 189 modified files (including a 1725-line ``uv.lock`` rewrite) timed out
+#: mid-commit. Pre-commit hooks, large lockfiles, and post-commit ref
+#: updates regularly push a single ``git commit`` invocation past 60s on
+#: monorepo-sized trees; 300s gives meaningful headroom without
+#: encouraging indefinite waits.
+_GIT_DEFAULT_TIMEOUT_SECONDS = 300
 
 GIT_COMMANDS = {
     "git_dir": ["rev-parse", "--git-dir"],
@@ -34,6 +45,81 @@ class FailedGitResult:
         self.returncode = -1
         self.stdout = ""
         self.stderr = f"Git security validation failed: {error}"
+
+
+def _run_subprocess_with_kill_on_timeout(
+    cmd: list[str],
+    *,
+    cwd: Path | str,
+    timeout: float | None,
+) -> subprocess.CompletedProcess[str]:
+    """Run ``cmd`` and actually kill the child when ``timeout`` elapses.
+
+    ``subprocess.run(..., timeout=N)`` only abandons the wait when the
+    child exceeds the deadline; the child process keeps running orphaned
+    and can finish after the timeout. For ``git commit`` specifically,
+    that meant a slow commit (e.g. 189 files + pre-commit hooks + a
+    1725-line ``uv.lock`` rewrite) would be declared a failure at 60s,
+    the version-bump rollback would run, and then the orphan commit
+    would land seconds later and re-apply the staged changes — the
+    rollback appeared to succeed but the working tree reverted to HEAD
+    was overwritten by the orphan.
+
+    This wrapper uses ``Popen.communicate(timeout=...)`` + ``os.killpg``
+    to take down the entire process group on timeout, so an abandoned
+    ``git`` invocation cannot complete after the caller has given up.
+
+    Args:
+        cmd: Full argv list. Will be passed to ``subprocess.Popen`` as-is;
+            callers are responsible for not using a shell.
+        cwd: Working directory for the child.
+        timeout: Wall-clock budget in seconds. ``None`` disables the
+            deadline entirely.
+
+    Returns:
+        A ``CompletedProcess`` mirroring ``subprocess.run``'s contract.
+
+    Raises:
+        subprocess.TimeoutExpired: When the child does not complete
+            within ``timeout`` seconds. The child process group is
+            killed before the exception propagates.
+    """
+    proc = subprocess.Popen(
+        cmd,
+        cwd=cwd,
+        env=None,
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        start_new_session=True,  # so killpg can take child processes too
+    )
+    if timeout is None:
+        stdout, stderr = proc.communicate()
+    else:
+        try:
+            stdout, stderr = proc.communicate(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            # Take down the entire process group so spawned subprocesses
+            # (pre-commit hooks, lockfile helpers, ``git``'s own children)
+            # cannot outlive the timeout.
+            try:
+                os.killpg(proc.pid, signal.SIGKILL)
+            except (ProcessLookupError, PermissionError):
+                # Process already exited or we lack permission to signal
+                # the group; fall back to killing the direct child.
+                proc.kill()
+            # Drain pipes to avoid a deadlock on a stuck stdio handle.
+            with suppress(Exception):
+                proc.communicate()
+            raise subprocess.TimeoutExpired(cmd, timeout) from None
+
+    return subprocess.CompletedProcess(
+        args=cmd,
+        returncode=proc.returncode,
+        stdout=stdout,
+        stderr=stderr,
+    )
 
 
 class GitService(GitInterface):
@@ -71,13 +157,10 @@ class GitService(GitInterface):
     ) -> subprocess.CompletedProcess[str] | FailedGitResult:
         cmd = ["git", *args]
         try:
-            return execute_secure_subprocess(
-                command=cmd,
+            return _run_subprocess_with_kill_on_timeout(
+                cmd=cmd,
                 cwd=self.pkg_path,
-                capture_output=True,
-                text=True,
-                timeout=60,
-                check=False,
+                timeout=_GIT_DEFAULT_TIMEOUT_SECONDS,
             )
         except Exception as e:
             security_logger = get_security_logger()
@@ -542,16 +625,26 @@ class GitService(GitInterface):
             return False
 
     def checkout_files(self, files: list[str]) -> bool:
-        """Revert the given paths in the working tree to HEAD.
+        """Revert the given paths in BOTH the working tree AND index to HEAD.
 
         Used to roll back uncommitted edits (e.g. a version bump whose
         commit subsequently failed) without touching staged-but-unrelated
         changes.
+
+        Note: ``git checkout -- <file>`` only resets the working tree to
+        match the index — which is a no-op when the file is already
+        staged (the staged value gets copied from the index to the
+        working tree, leaving the file at the bumped value). We must
+        pass ``HEAD`` explicitly so the index entry is also reset.
+        Fix for the 2026-08-24 version-bump rollback failure where
+        189 staged files (including ``pyproject.toml`` at 0.16.0) were
+        reported as "reverted to HEAD" but actually remained at the
+        staged v2 because of this.
         """
         if not files:
             return True
         try:
-            cmd = ["checkout", "--"] + files
+            cmd = ["checkout", "HEAD", "--"] + files
             result = self._run_git_command(cmd)
             if result.returncode == 0:
                 self.console.print(
