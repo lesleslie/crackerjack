@@ -41,7 +41,6 @@ dependencies = [
     "libcst>=1.8.6",
     "keyring>=25.7.0",
     "linkcheckmd>=1.4.0",
-    "mcp>=1.28.0",
     "mcp-common>=0.18.0",
     "mdformat>=1.0.0",
     "mdformat-ruff>=0.1.3",

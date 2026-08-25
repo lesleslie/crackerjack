@@ -733,7 +733,7 @@ wheels = [
 
 [[package]]
 name = "crackerjack"
-version = "0.75.6"
+version = "0.75.7"
 source = { editable = "." }
 dependencies = [
     { name = "aiofiles" },
@@ -753,7 +753,6 @@ dependencies = [
     { name = "keyring" },
     { name = "libcst" },
     { name = "linkcheckmd" },
-    { name = "mcp" },
     { name = "mcp-common" },
     { name = "mdformat" },
     { name = "mdformat-ruff" },
@@ -838,7 +837,6 @@ requires-dist = [
     { name = "keyring", specifier = ">=25.7.0" },
     { name = "libcst", specifier = ">=1.8.6" },
     { name = "linkcheckmd", specifier = ">=1.4.0" },
-    { name = "mcp", specifier = ">=1.28.0" },
     { name = "mcp-common", specifier = ">=0.18.0" },
     { name = "mdformat", specifier = ">=1.0.0" },
     { name = "mdformat-ruff", specifier = ">=0.1.3" },
