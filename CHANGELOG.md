@@ -1,5 +1,11 @@
 ______________________________________________________________________
 
+## [0.76.1] - 2026-08-25
+
+### Fixed
+
+- crackerjack: Scope refurb to inner package dir, not repo root
+
 ## [0.75.8] - 2026-08-25
 
 ### Changed
