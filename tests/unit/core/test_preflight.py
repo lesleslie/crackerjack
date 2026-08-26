@@ -571,3 +571,84 @@ def test_dirty_tree_blocks_fix_invocation(tmp_path, monkeypatch) -> None:
         return
 
     raise AssertionError("preflight must refuse to run --fix on a dirty tree")
+
+
+class TestPackageTargetDiscovery:
+    """Verify refurb scopes to the inner package directory instead of ``.``.
+
+    The pre-fix behaviour hardcoded ``.`` which scanned ``.venv`` and
+    produced diagnostics against installed third-party wheels — see the
+    refurb failure on ``.venv/lib/python3.14/site-packages/mcp_common/...``
+    for the canonical example. These tests pin the new discovery order:
+    hatch-wheel declaration → project-name fallback → project-root fallback.
+    """
+
+    @pytest.mark.parametrize(
+        ("pyproject_body", "expected_subdir"),
+        [
+            # [tool.hatch.build.targets.wheel] packages = ["<pkg>"] (crackerjack/mahavishnu style)
+            (
+                '[project]\nname = "demo"\n[tool.hatch.build.targets.wheel]\npackages = ["demo"]\n',
+                "demo",
+            ),
+            # [tool.hatchling.build.targets.wheel] packages = ["<pkg>"] (mcp-common style)
+            (
+                '[project]\nname = "demo"\n[tool.hatchling.build.targets.wheel]\npackages = ["demo"]\n',
+                "demo",
+            ),
+            # include = [...] glob (crackerjack's own pyproject uses this)
+            (
+                '[project]\nname = "demo"\n[tool.hatch.build.targets.wheel]\ninclude = ["demo/**/*.py"]\n',
+                "demo",
+            ),
+            # Fall back to project name when project name and package dir match
+            (
+                '[project]\nname = "fastblocks"\n',
+                "fastblocks",
+            ),
+        ],
+    )
+    def test_resolves_inner_package_dir(
+        self, tmp_path: Path, pyproject_body: str, expected_subdir: str
+    ) -> None:
+        (tmp_path / "pyproject.toml").write_text(pyproject_body)
+        (tmp_path / expected_subdir).mkdir()
+        (tmp_path / expected_subdir / "__init__.py").write_text("")
+
+        fixer, _ = _make_fixer(tmp_path)
+        target = fixer._resolve_package_target()
+
+        assert target == tmp_path / expected_subdir
+        assert fixer._package_dir == target  # cached
+
+    def test_falls_back_to_project_root_when_no_package_dir(
+        self, tmp_path: Path
+    ) -> None:
+        # pyproject declares a package that does NOT exist as a directory
+        (tmp_path / "pyproject.toml").write_text(
+            '[project]\nname = "ghost"\n[tool.hatch.build.targets.wheel]\npackages = ["ghost"]\n'
+        )
+
+        fixer, _ = _make_fixer(tmp_path)
+        assert fixer._resolve_package_target() == tmp_path
+
+    def test_falls_back_to_project_root_without_pyproject(
+        self, tmp_path: Path
+    ) -> None:
+        fixer, _ = _make_fixer(tmp_path)
+        assert fixer._resolve_package_target() == tmp_path
+
+    def test_refurb_cmd_uses_discovered_target(
+        self, tmp_path: Path
+    ) -> None:
+        (tmp_path / "pyproject.toml").write_text(
+            '[project]\nname = "demo"\n[tool.hatch.build.targets.wheel]\npackages = ["demo"]\n'
+        )
+        (tmp_path / "demo").mkdir()
+        (tmp_path / "demo" / "__init__.py").write_text("")
+
+        fixer, _ = _make_fixer(tmp_path)
+        cmd = fixer._build_cmd("refurb")
+
+        assert cmd[-1] == str(tmp_path / "demo"), cmd
+        assert ".venv" not in cmd[-1]

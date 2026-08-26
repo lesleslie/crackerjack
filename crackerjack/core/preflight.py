@@ -98,6 +98,11 @@ class PreflightFixer:
         # fallback when no HookSettings are provided — that field is on the
         # way out but kept read-compatible during the rollout.
         self._settings: HookSettings = settings or HookSettings()
+        # Resolve the inner package directory (e.g. ``fastblocks/``) once so
+        # tool commands like refurb can target it instead of ``.`` — the
+        # latter scans the whole repo, including ``.venv``, which produces
+        # spurious diagnostics against installed third-party wheels.
+        self._package_dir: Path | None = None
 
     async def run(self, run_id: str, iteration: int) -> PreflightReport:
         tools = self._enabled_tools()
@@ -250,8 +255,73 @@ class PreflightFixer:
             selects = ",".join(self._config.ruff_select_extra)
             return ["uv", "run", "ruff", "check", "--select", selects, "--fix", "."]
         if tool == "refurb":
-            return ["uv", "run", "refurb", "."]
+            # Refurb walks the path it is given. ``.`` would scan the whole
+            # project — including ``.venv``, where installed third-party
+            # wheels live and produce diagnostics that have nothing to do
+            # with this repo's source. Target the discovered package
+            # directory instead, falling back to the repo root when no
+            # subdirectory can be identified (matches the legacy behaviour).
+            target = self._resolve_package_target()
+            return ["uv", "run", "refurb", str(target)]
         return []
+
+    def _resolve_package_target(self) -> Path:
+        """Return the inner package directory for refurb-style tool invocations.
+
+        Discovery order:
+          1. ``[tool.hatch.build.targets.wheel] packages = [...]`` from the
+             project's ``pyproject.toml`` (most accurate for hatchling
+             projects where project name and package directory differ).
+          2. ``<project_root>/<project_name>`` (works when they match,
+             e.g. ``fastblocks/``).
+          3. ``<project_root>`` (legacy fallback — scans the whole repo).
+        """
+        if self._package_dir is None:
+            self._package_dir = self._discover_package_dir()
+        return self._package_dir
+
+    def _discover_package_dir(self) -> Path:
+        import tomllib
+
+        root = self._pkg_path
+        pyproject = root / "pyproject.toml"
+        with suppress(Exception):
+            with pyproject.open("rb") as fh:
+                data = tomllib.load(fh)
+            # Hatchling writes under ``[tool.hatchling.build]`` (e.g.
+            # mcp-common) and ``[tool.hatch.build]`` (e.g. crackerjack,
+            # mahavishnu) — check both. ``packages = [...]`` is the
+            # canonical wheel target; ``include = [...]`` is the legacy
+            # synonym crackerjack itself uses.
+            for ns in ("hatch", "hatchling"):
+                wheel_cfg = (
+                    data.get("tool", {})
+                    .get(ns, {})
+                    .get("build", {})
+                    .get("targets", {})
+                    .get("wheel", {})
+                )
+                for key in ("packages", "include"):
+                    listed = wheel_cfg.get(key)
+                    if not isinstance(listed, list) or not listed:
+                        continue
+                    for entry in listed:
+                        if not isinstance(entry, str):
+                            continue
+                        # Hatch glob patterns like ``crackerjack/**/*.py``
+                        # reduce to the package directory itself.
+                        pkg_name = entry.split("/", 1)[0] if "/" in entry else entry
+                        if not pkg_name or "*" in pkg_name:
+                            continue
+                        candidate = root / pkg_name
+                        if candidate.is_dir():
+                            return candidate
+            project_name = data.get("project", {}).get("name")
+            if isinstance(project_name, str) and project_name:
+                candidate = root / project_name
+                if candidate.is_dir():
+                    return candidate
+        return root
 
     def _guard_ruff_fix_invocation(
         self,
