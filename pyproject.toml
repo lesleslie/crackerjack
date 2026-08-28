@@ -95,6 +95,11 @@ text = "BSD-3-CLAUSE"
 [project.scripts]
 crackerjack = "crackerjack.__main__:cli"
 
+# Bodai umbrella entry-point (Phase 5.1). Discovered by the bodai CLI
+# dispatcher via importlib.metadata under the "bodai.apps" group.
+[project.entry-points."bodai.apps"]
+crackerjack = "crackerjack.cli:app"
+
 [project.urls]
 documentation = "https://github.com/lesleslie/crackerjack"
 homepage = "https://github.com/lesleslie/crackerjack"

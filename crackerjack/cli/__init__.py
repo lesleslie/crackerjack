@@ -16,3 +16,19 @@ __all__ = [
     "handle_interactive_mode",
     "handle_standard_mode",
 ]
+
+
+def __getattr__(name: str):
+    """Lazily expose the umbrella Typer app.
+
+    Phase 5.1: the Bodai ecosystem discovers CLI apps via the
+    ``bodai.apps`` entry-point group. The canonical ``app`` object lives in
+    ``crackerjack.__main__`` (where the legacy ``[project.scripts]`` runner
+    picks it up). Lazy-importing here avoids a hard
+    ``crackerjack.cli <-> crackerjack.__main__`` cycle at module-import time.
+    """
+    if name == "app":
+        from crackerjack.__main__ import app as _umbrella_app
+
+        return _umbrella_app
+    raise AttributeError(name)
