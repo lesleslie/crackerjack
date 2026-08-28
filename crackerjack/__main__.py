@@ -41,7 +41,6 @@ def crackerjack_diag() -> None:
 
 
 atexit.register(crackerjack_diag)
-from mcp_common.cli import MCPServerCLIFactory
 from rich.console import Console
 
 logger = logging.getLogger(__name__)
@@ -52,6 +51,7 @@ from crackerjack.cli import (
     BumpOption,
     create_options,
 )
+from crackerjack.cli.base import CrackerjackCLI
 from crackerjack.cli.cache_handlers import _handle_cache_commands
 from crackerjack.cli.handlers import check_docs, handle_config_updates, validate_docs
 from crackerjack.cli.handlers.advanced import handle_advanced_optimizer
@@ -86,23 +86,18 @@ from crackerjack.cli.semantic_handlers import (
     handle_semantic_stats,
 )
 from crackerjack.config import CrackerjackSettings, load_settings
-from crackerjack.config.mcp_settings_adapter import CrackerjackMCPSettings
 
 if t.TYPE_CHECKING:
     from crackerjack.cli.options import Options
 
-mcp_settings = CrackerjackMCPSettings.load_for_crackerjack()
+# MCPServerCLIFactory was replaced by CrackerjackCLI (oneiric 0.19
+# BodaiCLIBase). mcp_settings is no longer needed at module level.
 
-factory = MCPServerCLIFactory(
-    server_name="crackerjack",
-    settings=mcp_settings,
+app = CrackerjackCLI(
     start_handler=start_handler,
     stop_handler=stop_handler,
     health_probe_handler=health_probe_handler,
 )
-
-app = factory.create_app()
-app.info.help = "Crackerjack MCP Server CLI"
 
 console = Console()
 
@@ -135,13 +130,9 @@ _safe_add_typer(app, "crackerjack.cli.skills_cli", "app", "skills")
 _safe_add_typer(app, "crackerjack.cli.coverage_ratchet_cli", "app", "coverage-ratchet")
 
 
-@app.callback(invoke_without_command=True)
-def version_option(
-    version: bool = typer.Option(False, "--version", help="Show version and exit"),
-) -> None:
-    if version:
-        console.print(f"[cyan]Crackerjack[/cyan] [dim]v{__version__}[/dim]")
-        raise typer.Exit(0)
+# --version / version subcommand are wired by BodaiCLIBase; the previous
+# @app.callback(invoke_without_command=True) version_option is removed
+# to avoid a duplicate-callback Typer crash.
 
 
 def _detect_package_name_standalone() -> str:
@@ -771,45 +762,37 @@ def run_tests(
     raise typer.Exit(result.returncode)
 
 
-@app.command("health")
+# `crackerjack health` is provided by BodaiCLIBase via CrackerjackCLI; it
+# dispatches to CrackerjackCLI._health_probe() (real probe, not stub). The
+# previous rich-formatted `health_command` is preserved as a regular helper
+# for callers that need component-scoped health checks; see
+# ``crackerjack.cli.handlers.health.handle_health_check`` for the underlying
+# logic.
 def health_command(
-    component: str | None = typer.Option(
-        None,
-        "--component",
-        "-c",
-        help="Specific component to check (adapters, managers, services, all)",
-    ),
-    json_output: bool = typer.Option(
-        False,
-        "--json",
-        help="Output results as JSON",
-    ),
-    verbose: bool = typer.Option(
-        False,
-        "--verbose",
-        "-v",
-        help="Show detailed health information",
-    ),
-    quiet: bool = typer.Option(
-        False,
-        "--quiet",
-        "-q",
-        help="Only show exit code (no output)",
-    ),
-) -> t.Never:
+    component: str | None = None,
+    json_output: bool = False,
+    verbose: bool = False,
+    quiet: bool = False,
+    pkg_path: Path | None = None,
+) -> int:
+    """Component-scoped health check helper.
+
+    Returns the exit code from :func:`handle_health_check`. Kept for
+    tests/test___main__.py which imports ``health_command`` directly.
+    """
     from pathlib import Path
 
     from crackerjack.cli.handlers.health import handle_health_check
 
-    pkg_path = Path.cwd()
-    exit_code = handle_health_check(
+    if pkg_path is None:
+        pkg_path = Path.cwd()
+    return handle_health_check(
         component=component,
         json_output=json_output,
         verbose=verbose,
         quiet=quiet,
         pkg_path=pkg_path,
     )
-    raise typer.Exit(exit_code)
 
 
 @app.command()
