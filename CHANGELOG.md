@@ -1,5 +1,11 @@
 ______________________________________________________________________
 
+## [Unreleased]
+
+### Changed
+
+- **BREAKING**: Rename `BodaiCLIBase` → `OneiricCLIBase` (oneiric 0.20)
+
 ## [0.76.2] - 2026-08-28
 
 ### Added

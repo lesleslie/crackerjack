@@ -1,6 +1,6 @@
-"""CrackerjackCLI — BodaiCLIBase subclass for the crackerjack CLI entrypoint.
+"""CrackerjackCLI — OneiricCLIBase subclass for the crackerjack CLI entrypoint.
 
-Adopts oneiric 0.19.0's :class:`oneiric.cli.base.BodaiCLIBase` as the
+Adopts oneiric 0.19.0's :class:`oneiric.cli.base.OneiricCLIBase` as the
 foundation for the crackerjack CLI. Adds REAL ``_doctor_checks()`` and
 ``_health_probe()`` implementations that call into crackerjack's existing
 health surface (``crackerjack.cli.handlers.health``) — not stub returns.
@@ -18,15 +18,15 @@ from pathlib import Path
 from typing import Any
 
 from mcp_common.cli import MCPServerCLIFactory
-from oneiric.cli.base import BodaiCLIBase
+from oneiric.cli.base import OneiricCLIBase
 
 logger = logging.getLogger(__name__)
 
 
-class CrackerjackCLI(BodaiCLIBase):
-    """BodaiCLIBase subclass for the crackerjack CLI.
+class CrackerjackCLI(OneiricCLIBase):
+    """OneiricCLIBase subclass for the crackerjack CLI.
 
-    Wires in version/doctor/health global commands from :class:`BodaiCLIBase`
+    Wires in version/doctor/health global commands from :class:`OneiricCLIBase`
     and the legacy MCP server lifecycle commands (start/stop/restart/status)
     from :class:`MCPServerCLIFactory`. Doctor and health checks are real — they
     delegate to ``crackerjack.cli.handlers.health`` instead of stubbing.
@@ -68,11 +68,11 @@ class CrackerjackCLI(BodaiCLIBase):
         )
         lifecycle_app = factory.create_app()
 
-        # BodaiCLIBase already provides `health` (calls our _health_probe
+        # OneiricCLIBase already provides `health` (calls our _health_probe
         # override). Drop the factory's `health` command to avoid the
         # Typer duplicate-command error.
         for typer_info in getattr(lifecycle_app, "registered_commands", []):
-            # Skip the factory's "health" command so BodaiCLIBase's is canonical.
+            # Skip the factory's "health" command so OneiricCLIBase's is canonical.
             if getattr(typer_info, "name", None) == "health":
                 continue
             self.registered_commands.append(typer_info)
@@ -81,7 +81,7 @@ class CrackerjackCLI(BodaiCLIBase):
             self.registered_groups.append(typer_info)
 
     # ------------------------------------------------------------------
-    # BodaiCLIBase subclass hooks — REAL checks, not stubs.
+    # OneiricCLIBase subclass hooks — REAL checks, not stubs.
     # ------------------------------------------------------------------
     def _doctor_checks(self) -> dict[str, Any]:
         """Run doctor checks via the existing crackerjack health handlers.
@@ -133,7 +133,7 @@ class CrackerjackCLI(BodaiCLIBase):
         """Probe crackerjack runtime health via the existing handler.
 
         Returns a real snapshot (not the UNAVAILABLE-stub from
-        :class:`BodaiCLIBase`). The ``status`` field reflects whether the
+        :class:`OneiricCLIBase`). The ``status`` field reflects whether the
         underlying handle_health_check returned a zero exit code.
         """
         from crackerjack.cli.handlers.health import handle_health_check

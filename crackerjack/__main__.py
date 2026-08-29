@@ -91,7 +91,7 @@ if t.TYPE_CHECKING:
     from crackerjack.cli.options import Options
 
 # MCPServerCLIFactory was replaced by CrackerjackCLI (oneiric 0.19
-# BodaiCLIBase). mcp_settings is no longer needed at module level.
+# OneiricCLIBase). mcp_settings is no longer needed at module level.
 
 app = CrackerjackCLI(
     start_handler=start_handler,
@@ -130,7 +130,7 @@ _safe_add_typer(app, "crackerjack.cli.skills_cli", "app", "skills")
 _safe_add_typer(app, "crackerjack.cli.coverage_ratchet_cli", "app", "coverage-ratchet")
 
 
-# --version / version subcommand are wired by BodaiCLIBase; the previous
+# --version / version subcommand are wired by OneiricCLIBase; the previous
 # @app.callback(invoke_without_command=True) version_option is removed
 # to avoid a duplicate-callback Typer crash.
 
@@ -762,7 +762,7 @@ def run_tests(
     raise typer.Exit(result.returncode)
 
 
-# `crackerjack health` is provided by BodaiCLIBase via CrackerjackCLI; it
+# `crackerjack health` is provided by OneiricCLIBase via CrackerjackCLI; it
 # dispatches to CrackerjackCLI._health_probe() (real probe, not stub). The
 # previous rich-formatted `health_command` is preserved as a regular helper
 # for callers that need component-scoped health checks; see

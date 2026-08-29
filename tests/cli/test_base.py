@@ -1,6 +1,6 @@
-"""Tests for :class:`crackerjack.cli.base.CrackerjackCLI` BodaiCLIBase subclass.
+"""Tests for :class:`crackerjack.cli.base.CrackerjackCLI` OneiricCLIBase subclass.
 
-Phase 3 Task 4.5 — BodaiCLIBase adoption for crackerjack. These tests
+Phase 3 Task 4.5 — OneiricCLIBase adoption for crackerjack. These tests
 guard that the subclass wires up version/doctor/health correctly and that
 the override hooks return real data (not ``{}`` or ``UNAVAILABLE`` stubs).
 """
@@ -24,7 +24,7 @@ def test_crackerjackcli_component_name() -> None:
 
 
 def test_crackerjackcli_inherits_typer() -> None:
-    """BodaiCLIBase inherits typer.Typer, so CrackerjackCLI must too."""
+    """OneiricCLIBase inherits typer.Typer, so CrackerjackCLI must too."""
     import typer
 
     assert issubclass(CrackerjackCLI, typer.Typer)
@@ -33,7 +33,7 @@ def test_crackerjackcli_inherits_typer() -> None:
 def test_doctor_checks_returns_real_entries() -> None:
     """_doctor_checks() must return a non-empty dict with real check entries.
 
-    Not a stub that returns []. Per BodaiCLIBase contract, doctor must call
+    Not a stub that returns []. Per OneiricCLIBase contract, doctor must call
     into the repo's existing health surface.
     """
     cli = CrackerjackCLI()
@@ -77,7 +77,7 @@ def test_version_command_runs() -> None:
 
 
 def test_doctor_command_runs_and_outputs_checks() -> None:
-    """`crackerjack doctor` must run via BodaiCLIBase and emit check info."""
+    """`crackerjack doctor` must run via OneiricCLIBase and emit check info."""
     cli = CrackerjackCLI()
     result = runner.invoke(cli, ["doctor"])
     # exit_code 0 (all healthy) or 1 (some unhealthy) both acceptable; the
@@ -89,7 +89,7 @@ def test_doctor_command_runs_and_outputs_checks() -> None:
 def test_doctor_command_json_output() -> None:
     """`crackerjack --json doctor` must emit a JSON payload.
 
-    BodaiCLIBase wires `--json` as a global option on the root callback;
+    OneiricCLIBase wires `--json` as a global option on the root callback;
     typer requires the global option to come BEFORE the subcommand.
     """
     cli = CrackerjackCLI()
@@ -102,7 +102,7 @@ def test_doctor_command_json_output() -> None:
 
 
 def test_health_command_runs() -> None:
-    """`crackerjack health` must run via BodaiCLIBase and emit a snapshot."""
+    """`crackerjack health` must run via OneiricCLIBase and emit a snapshot."""
     cli = CrackerjackCLI()
     result = runner.invoke(cli, ["health"])
     # Should NOT be UNAVAILABLE (3) — _health_probe is real.
@@ -113,7 +113,7 @@ def test_health_command_runs() -> None:
 def test_health_command_json_output() -> None:
     """`crackerjack --json health` must emit a JSON payload.
 
-    BodaiCLIBase wires `--json` as a global option; it must precede the
+    OneiricCLIBase wires `--json` as a global option; it must precede the
     subcommand for typer to dispatch correctly.
     """
     cli = CrackerjackCLI()
@@ -124,7 +124,7 @@ def test_health_command_json_output() -> None:
 
 
 def test_bodai_cli_base_run_wires_typer() -> None:
-    """BodaiCLIBase.run() wires up typer correctly.
+    """OneiricCLIBase.run() wires up typer correctly.
 
     The base typer.Typer is callable. CrackerjackCLI inherits this
     behaviour, so invoking the cli with no args should NOT raise a
@@ -138,7 +138,7 @@ def test_bodai_cli_base_run_wires_typer() -> None:
 
 
 def test_crackerjackcli_detects_version() -> None:
-    """BodaiCLIBase._detect_version should resolve crackerjack's metadata."""
+    """OneiricCLIBase._detect_version should resolve crackerjack's metadata."""
     cli = CrackerjackCLI()
     # Either a real version or the "(not installed)" sentinel.
     assert isinstance(cli.component_version, str)
