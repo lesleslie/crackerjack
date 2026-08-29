@@ -520,7 +520,7 @@ ______________________________________________________________________
 
 - [MCP Specification](https://modelcontextprotocol.io/) - Official protocol docs
 - [FastMCP](https://github.com/jlowin/fastmcp) - Python MCP server framework
-- [Claude Code MCP Docs](https://docs.anthropic.com/claude-code/mcp) - Official Claude Code integration
+- [Claude Code MCP Docs](https://code.claude.com/docs/en/mcp) - Official Claude Code integration
 
 ### Community
 
