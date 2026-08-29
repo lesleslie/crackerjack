@@ -733,7 +733,7 @@ wheels = [
 
 [[package]]
 name = "crackerjack"
-version = "0.76.1"
+version = "0.76.2"
 source = { editable = "." }
 dependencies = [
     { name = "aiofiles" },
@@ -841,7 +841,7 @@ requires-dist = [
     { name = "mdformat", specifier = ">=1.0.0" },
     { name = "mdformat-ruff", specifier = ">=0.1.3" },
     { name = "numpy", specifier = ">=2.5.0" },
-    { name = "oneiric", specifier = ">=0.19.1" },
+    { name = "oneiric", specifier = ">=0.20" },
     { name = "pip-audit", specifier = ">=2.10.1" },
     { name = "pydantic", specifier = ">=2.13.4" },
     { name = "pyleak", specifier = ">=0.2.0" },
@@ -2581,7 +2581,7 @@ wheels = [
 
 [[package]]
 name = "oneiric"
-version = "0.19.1"
+version = "0.20.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiobreaker" },
@@ -2603,9 +2603,9 @@ dependencies = [
     { name = "typer" },
     { name = "watchfiles" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/67/9f/e509d7df94103a46aa75b6800c013ac09f8e9c9c419c21127db85bc368cb/oneiric-0.19.1.tar.gz", hash = "sha256:8e0c319d16cbc532efa6ed6cd20809b49122b2a3434f2e728db53602cb7abad8", size = 1587765, upload-time = "2026-08-28T23:47:22.469Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/d5/c6/9efd73b012685dda00886f91110feafa114c02311c0430dacfbc58c71aca/oneiric-0.20.0.tar.gz", hash = "sha256:cc715b863c091b6e6658fe8e8ac3b14b11a1be3a7badb800b65a02e0e01357c2", size = 1587902, upload-time = "2026-08-29T08:39:51.2Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/e5/71/44d5b496cfb6cb68333f2c3575a6a9847cfeb2dd7991087d22bf23dfd523/oneiric-0.19.1-py3-none-any.whl", hash = "sha256:d4c5b7879c45746cb1b79cf823347e5e74fb151716b8d24c90f0c7bdcd2d6ec7", size = 393453, upload-time = "2026-08-28T23:47:20.515Z" },
+    { url = "https://files.pythonhosted.org/packages/33/6d/3fd5b72e3c9cda4190b465bc1956b480efd3c4ec0ef788dce30f3fbc8d72/oneiric-0.20.0-py3-none-any.whl", hash = "sha256:da4671d9f52f541f5d9910ea0a2f14fef65b2833da0c77d84390973486bf9673", size = 393424, upload-time = "2026-08-29T08:39:49.391Z" },
 ]
 
 [[package]]
