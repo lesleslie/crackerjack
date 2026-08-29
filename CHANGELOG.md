@@ -1,5 +1,29 @@
 ______________________________________________________________________
 
+## [0.76.2] - 2026-08-28
+
+### Added
+
+- crackerjack: Adopt BodaiCLIBase + real doctor/health (Phase 3 Task 4.5)
+- crackerjack: Bodai.apps entry-point (Phase 5.1)
+
+### Fixed
+
+- ty: Suppress unresolved-import for fallback toml import
+- Update Claude Code MCP docs URL to current canonical location
+
+### Documentation
+
+- readme: Bump Python badge from 3.13+ to 3.14+
+
+### Testing
+
+- guard: Assert all Bodai repos use hatchling build backend
+
+### Internal
+
+- deps: Bump oneiric floor to >=0.19.1
+
 ## [0.76.1] - 2026-08-25
 
 ### Fixed
