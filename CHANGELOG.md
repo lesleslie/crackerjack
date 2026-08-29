@@ -1,5 +1,16 @@
 ______________________________________________________________________
 
+## [0.77.0] - 2026-08-29
+
+### Added
+
+- **BREAKING:** crackerjack: Rename BodaiCLIBase to OneiricCLIBase
+
+### Changed
+
+- crackerjack: Bump oneiric floor to >=0.20 for OneiricCLIBase
+- Deprecate crackerjack.interactive (Plan Task 3.2.4)
+
 ## [Unreleased]
 
 ### Changed

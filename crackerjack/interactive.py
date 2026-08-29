@@ -1,17 +1,6 @@
 from __future__ import annotations
 
 import time
-import warnings
-
-
-warnings.warn(
-    "Importing from `crackerjack.interactive` is deprecated; "
-    "use `crackerjack.cli.interactive` instead. "
-    "This module will be removed in the next minor release.",
-    DeprecationWarning,
-    stacklevel=2,
-)
-
 import typing as t
 from dataclasses import dataclass
 from enum import Enum, auto
