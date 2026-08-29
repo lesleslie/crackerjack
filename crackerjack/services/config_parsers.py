@@ -104,7 +104,7 @@ class TOMLParser:
             return tomli_w.dumps(config)
 
         try:
-            import toml
+            import toml  # ty: ignore[unresolved-import]
 
             return t.cast(str, toml.dumps(config))
         except ImportError:
