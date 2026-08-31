@@ -174,10 +174,12 @@ class FrontmatterValidator:
                     "path": r.path,
                     "status": r.status,
                     "errors": [
-                        {"rule": i.rule, "message": i.message} for i in r.errors
+                        {"rule": i.rule, "message": i.message, "line": i.line}
+                        for i in r.errors
                     ],
                     "warnings": [
-                        {"rule": i.rule, "message": i.message} for i in r.warnings
+                        {"rule": i.rule, "message": i.message, "line": i.line}
+                        for i in r.warnings
                     ],
                 }
                 for r in results

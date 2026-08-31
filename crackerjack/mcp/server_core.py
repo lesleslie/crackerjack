@@ -407,7 +407,16 @@ def _run_mcp_server(
             host = mcp_config.get("http_host", "127.0.0.1")
             port = mcp_config.get("http_port", 8676)
 
-            asyncio.run(mcp_app.run_http_async(host=host, port=port))
+            # Override FastMCP's hardcoded 2s graceful-shutdown timeout
+            # so lifespan teardown can complete cleanup without being
+            # cancelled mid-shutdown.
+            asyncio.run(
+                mcp_app.run_http_async(
+                    host=host,
+                    port=port,
+                    uvicorn_config={"timeout_graceful_shutdown": 30},
+                )
+            )
         else:
             mcp_app.run()
     except Exception as e:

@@ -37,7 +37,7 @@ class TestCallAkoshaMcpTool:
             }
         )
 
-        with patch("httpx.AsyncClient") as mock_client_cls:
+        with patch("httpx2.AsyncClient") as mock_client_cls:
             mock_instance = MagicMock()
             mock_instance.__aenter__ = AsyncMock(return_value=mock_instance)
             mock_instance.__aexit__ = AsyncMock(return_value=None)
@@ -67,7 +67,7 @@ class TestCallAkoshaMcpTool:
         mock_response.raise_for_status = MagicMock()
         mock_response.json = MagicMock(return_value="invalid")
 
-        with patch("httpx.AsyncClient") as mock_client_cls:
+        with patch("httpx2.AsyncClient") as mock_client_cls:
             mock_instance = MagicMock()
             mock_instance.__aenter__ = AsyncMock(return_value=mock_instance)
             mock_instance.__aexit__ = AsyncMock(return_value=None)
@@ -87,7 +87,7 @@ class TestCallAkoshaMcpTool:
         mock_response.raise_for_status = MagicMock()
         mock_response.json = MagicMock(return_value={"jsonrpc": "2.0", "id": 1})
 
-        with patch("httpx.AsyncClient") as mock_client_cls:
+        with patch("httpx2.AsyncClient") as mock_client_cls:
             mock_instance = MagicMock()
             mock_instance.__aenter__ = AsyncMock(return_value=mock_instance)
             mock_instance.__aexit__ = AsyncMock(return_value=None)
@@ -109,7 +109,7 @@ class TestCallAkoshaMcpTool:
             return_value={"jsonrpc": "2.0", "id": 1, "result": {}}
         )
 
-        with patch("httpx.AsyncClient") as mock_client_cls:
+        with patch("httpx2.AsyncClient") as mock_client_cls:
             mock_instance = MagicMock()
             mock_instance.__aenter__ = AsyncMock(return_value=mock_instance)
             mock_instance.__aexit__ = AsyncMock(return_value=None)
@@ -123,11 +123,11 @@ class TestCallAkoshaMcpTool:
     @pytest.mark.asyncio
     async def test_returns_empty_list_on_httpx_error(self) -> None:
         """Should return empty list on HTTP error."""
-        import httpx
+        import httpx2 as httpx
 
         from crackerjack.mcp.tools.otel_tools import _call_akosha_mcp_tool
 
-        with patch("httpx.AsyncClient") as mock_client_cls:
+        with patch("httpx2.AsyncClient") as mock_client_cls:
             mock_instance = MagicMock()
             mock_instance.__aenter__ = AsyncMock(
                 side_effect=httpx.HTTPError("network error")
@@ -143,7 +143,7 @@ class TestCallAkoshaMcpTool:
         """Should return empty list on any other exception."""
         from crackerjack.mcp.tools.otel_tools import _call_akosha_mcp_tool
 
-        with patch("httpx.AsyncClient") as mock_client_cls:
+        with patch("httpx2.AsyncClient") as mock_client_cls:
             mock_instance = MagicMock()
             mock_instance.__aenter__ = AsyncMock(side_effect=OSError("unexpected"))
             mock_client_cls.return_value = mock_instance
@@ -167,7 +167,7 @@ class TestCallAkoshaMcpTool:
             }
         )
 
-        with patch("httpx.AsyncClient") as mock_client_cls:
+        with patch("httpx2.AsyncClient") as mock_client_cls:
             mock_instance = MagicMock()
             mock_instance.__aenter__ = AsyncMock(return_value=mock_instance)
             mock_instance.__aexit__ = AsyncMock(return_value=None)
@@ -201,7 +201,7 @@ class TestCallAkoshaMcpTool:
             }
         )
 
-        with patch("httpx.AsyncClient") as mock_client_cls:
+        with patch("httpx2.AsyncClient") as mock_client_cls:
             mock_instance = MagicMock()
             mock_instance.__aenter__ = AsyncMock(return_value=mock_instance)
             mock_instance.__aexit__ = AsyncMock(return_value=None)

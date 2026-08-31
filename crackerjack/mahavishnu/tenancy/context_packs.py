@@ -5,7 +5,7 @@ import os
 from datetime import UTC, datetime
 from typing import Protocol, runtime_checkable
 
-import httpx
+import httpx2 as httpx
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 CONTEXT_FILES: tuple[str, ...] = ("voice", "icp", "positioning", "visual_identity")

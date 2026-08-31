@@ -22,7 +22,7 @@ async def _call_akosha_mcp_tool(
     arguments: dict[str, Any],
     timeout_seconds: int = 30,
 ) -> list[dict[str, Any]]:
-    import httpx
+    import httpx2 as httpx
 
     endpoint = _get_akosha_endpoint()
     base_url = endpoint.rstrip("/")

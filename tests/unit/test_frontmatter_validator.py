@@ -147,3 +147,107 @@ def test_validate_in_process_real_file_with_status_field(tmp_path: Path) -> None
     result = v.validate()
     assert result.success is True
     assert result.files_scanned == 1
+
+
+def test_invalid_date_carries_field_line(tmp_path: Path) -> None:
+    """An invalid date on a known line surfaces with that line number."""
+    plans = tmp_path / "docs" / "plans"
+    plans.mkdir(parents=True)
+    # ``date:`` lives on line 4 of the file (line 1 is the opening ``---``).
+    # ``not-a-date`` parses as a YAML string but fails the ISO-8601 regex.
+    (plans / "bad-date.md").write_text(
+        "---\n"
+        "status: draft\n"
+        "role: implementation\n"
+        "date: not-a-date\n"
+        "last_reviewed: 2026-01-01\n"
+        "topic: example-topic\n"
+        "---\n"
+        "# Hi\n",
+        encoding="utf-8",
+    )
+    v = FrontmatterValidator(pkg_path=tmp_path)
+    result = v.validate()
+    assert result.success is False
+    date_errors = [e for e in result.errors if e.code == "date_invalid"]
+    assert date_errors, "expected a date_invalid error"
+    assert date_errors[0].file == "docs/plans/bad-date.md"
+    assert date_errors[0].line == 4
+
+
+def test_inline_status_heading_carries_text_line(tmp_path: Path) -> None:
+    """A non-standard ``## Status`` heading reports the line where it occurs."""
+    plans = tmp_path / "docs" / "plans"
+    plans.mkdir(parents=True)
+    # The inline heading lands on line 10 of the file (line 9 is the
+    # blank line after ``# Heading``).
+    (plans / "inline.md").write_text(
+        "---\n"
+        "status: draft\n"
+        "role: implementation\n"
+        "date: 2026-01-01\n"
+        "last_reviewed: 2026-01-01\n"
+        "topic: example-topic\n"
+        "---\n"
+        "# Heading\n"
+        "\n"
+        "## Status\n"
+        "extra content\n",
+        encoding="utf-8",
+    )
+    v = FrontmatterValidator(pkg_path=tmp_path)
+    result = v.validate(allow_nonstandard=False)
+    assert result.warning_count >= 1
+    inline_warnings = [
+        w for w in result.warnings if w.code == "NONSTANDARD_INLINE_STATUS"
+    ]
+    assert inline_warnings, "expected a NONSTANDARD_INLINE_STATUS warning"
+    assert inline_warnings[0].file == "docs/plans/inline.md"
+    assert inline_warnings[0].line == 10
+
+
+def test_yaml_parse_error_carries_problem_line(tmp_path: Path) -> None:
+    """A malformed YAML frontmatter block reports the broken line."""
+    plans = tmp_path / "docs" / "plans"
+    plans.mkdir(parents=True)
+    # ``date: 2026-01-01`` is fine, but line 5 has a stray colon in the topic
+    # value that breaks YAML parsing.
+    (plans / "broken.md").write_text(
+        "---\n"
+        "status: draft\n"
+        "role: implementation\n"
+        "date: 2026-01-01\n"
+        "last_reviewed: 2026-01-01\n"
+        "topic: bad: :value\n"
+        "---\n"
+        "# Hi\n",
+        encoding="utf-8",
+    )
+    v = FrontmatterValidator(pkg_path=tmp_path)
+    result = v.validate()
+    assert result.success is False
+    parse_errors = [e for e in result.errors if e.code == "frontmatter_parse"]
+    assert parse_errors, "expected a frontmatter_parse error"
+    assert parse_errors[0].file == "docs/plans/broken.md"
+    # PyYAML is 0-indexed; the broken line is line 5 in the file.
+    assert parse_errors[0].line == 5
+
+
+def test_format_includes_file_and_line_for_verbose_output() -> None:
+    """``FrontmatterValidationIssue`` already carries file and line; this guards
+    against regressions in the data carrier so the verbose ``-v`` breakdown
+    keeps showing real line numbers (not the legacy ``:0`` default)."""
+    from crackerjack.services.frontmatter_validator import (
+        FrontmatterValidationIssue,
+    )
+
+    issue = FrontmatterValidationIssue(
+        file="docs/plans/example.md",
+        line=7,
+        code="date_invalid",
+        message="date must be ISO-8601 YYYY-MM-DD; got 'oops'",
+    )
+    assert issue.file == "docs/plans/example.md"
+    assert issue.line == 7
+    assert issue["line"] == 7
+    assert issue["file"] == "docs/plans/example.md"

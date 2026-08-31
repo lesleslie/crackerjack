@@ -52,7 +52,7 @@ def test_extract_frontmatter_returns_mapping() -> None:
         "---\n"
         "body\n"
     )
-    front, err = validator_module.extract_frontmatter(text)
+    front, err, _ = validator_module.extract_frontmatter(text)
     assert err is None
     assert isinstance(front, dict)
     assert front.get("status") == "draft"
@@ -114,7 +114,7 @@ def test_extract_frontmatter_returns_none_for_underscore_section_separator(
         "\n"
         "# The Real Title\n"
     )
-    front, err = extract_frontmatter(text)
+    front, err, _ = extract_frontmatter(text)
     assert front is None, f"expected None (no match), got {front!r}"
     assert err is None, f"expected None error, got {err!r}"
 
@@ -137,7 +137,7 @@ def test_extract_frontmatter_underscore_line_in_middle_returns_none() -> None:
         "\n"
         "## Section two content\n"
     )
-    front, err = extract_frontmatter(text)
+    front, err, _ = extract_frontmatter(text)
     assert front is None, f"expected None, got {front!r}"
     assert err is None, f"expected None error, got {err!r}"
 
@@ -159,7 +159,7 @@ def test_extract_frontmatter_still_parses_dash_delimited_block() -> None:
         "\n"
         "# Title\n"
     )
-    front, err = extract_frontmatter(text)
+    front, err, _ = extract_frontmatter(text)
     assert err is None, f"unexpected error {err!r}"
     assert front == {
         "status": "complete",

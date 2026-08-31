@@ -78,7 +78,7 @@ class SessionBuddyMCPClient:
 
     async def _connect_http_fallback(self) -> bool:
         try:
-            import httpx
+            import httpx2 as httpx
 
             self._http_client = httpx.AsyncClient(
                 timeout=self.config.timeout_seconds,

@@ -6,7 +6,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any, cast
 
-import httpx
+import httpx2 as httpx
 
 DEFAULT_SESSION_BUDDY_URL: str = "http://localhost:8678/mcp"
 DEFAULT_TIMEOUT_SECONDS: float = 5.0
