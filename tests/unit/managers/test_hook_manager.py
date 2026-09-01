@@ -490,24 +490,18 @@ class TestHookManagerOrchestrationConfig:
 
                 assert manager._orchestration_config == explicit_config
 
-    @pytest.mark.xfail(reason="Bug in code: LSPAwareHookExecutor only imported in TYPE_CHECKING block but used at runtime")
-    def test_load_config_from_project_file(self, tmp_path, mock_settings) -> None:
-        """Test loading config from project .crackerjack.yaml."""
-        # Create project config file
-        config_path = tmp_path / ".crackerjack.yaml"
-        config_path.write_text("enable_orchestration: true\norchestration_mode: oneiric\n")
-
-        with patch("crackerjack.executors.hook_executor.HookExecutor"):
-            with patch("crackerjack.config.hooks.HookConfigLoader"):
-                with patch("crackerjack.orchestration.config.OrchestrationConfig") as mock_config:
-                    mock_loaded = Mock()
-                    mock_loaded.enable_orchestration = True
-                    mock_loaded.orchestration_mode = "oneiric"
-                    mock_config.load.return_value = mock_loaded
-
-                    manager = HookManagerImpl(pkg_path=tmp_path, settings=mock_settings)
-
-                    assert manager._orchestration_config == mock_loaded
+    # NOTE: test_load_config_from_project_file removed 2026-08-31.
+    # The test was xfail-marked with a misleading reason
+    # ("LSPAwareHookExecutor only imported in TYPE_CHECKING block").
+    # Actual root cause: the test patches
+    # `crackerjack.orchestration.config.OrchestrationConfig`, but that
+    # module does not exist (crackerjack.orchestration was removed in a
+    # prior refactor). The patch raises AttributeError before any test
+    # logic runs. The test was testing an aspirational code path that
+    # never landed; HookManager currently falls back to
+    # `_create_default_orchestration_config` because OrchestrationConfig
+    # is None. Re-add a test for the project-config loading path if the
+    # orchestration module is restored.
 
     def test_load_config_creates_default(self, tmp_path, mock_settings) -> None:
         """Test creating default config when no project file exists."""
