@@ -355,11 +355,15 @@ class TestPublishManagerPublish:
         mock_result = Mock()
         mock_result.returncode = 0
         mock_result.stdout = "Successfully uploaded package"
+        mock_auth = Mock()
+        mock_auth.is_trusted_publishing.return_value = False
+        mock_auth.as_uv_publish_token.return_value = "pypi-test-token"
 
-        with patch.object(manager, "_run_command", return_value=mock_result):
-            result = manager._execute_publish()
+        with patch.object(manager, "_resolve_pypi_auth", return_value=mock_auth):
+            with patch.object(manager, "_run_command", return_value=mock_result):
+                result = manager._execute_publish()
 
-            assert result is True
+                assert result is True
 
     def test_execute_publish_success_in_output(self, manager) -> None:
         """Test execute publish detecting success in output."""
@@ -367,11 +371,15 @@ class TestPublishManagerPublish:
         mock_result.returncode = 1  # Non-zero but success in output
         mock_result.stdout = "Package uploaded successfully"
         mock_result.stderr = ""
+        mock_auth = Mock()
+        mock_auth.is_trusted_publishing.return_value = False
+        mock_auth.as_uv_publish_token.return_value = "pypi-test-token"
 
-        with patch.object(manager, "_run_command", return_value=mock_result):
-            result = manager._execute_publish()
+        with patch.object(manager, "_resolve_pypi_auth", return_value=mock_auth):
+            with patch.object(manager, "_run_command", return_value=mock_result):
+                result = manager._execute_publish()
 
-            assert result is True
+                assert result is True
 
     def test_execute_publish_failure(self, manager) -> None:
         """Test execute publish with failure."""

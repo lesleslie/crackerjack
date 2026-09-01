@@ -28,6 +28,28 @@ class SecurityLevel(Enum):
 
 @dataclass
 class HookDefinition:
+    """Configuration for a single hook.
+
+    Note on the ``stage`` field: its effect depends on how the hook is
+    registered.
+
+    - **Builtin hooks** (entries in :data:`FAST_HOOKS` or
+      :data:`COMPREHENSIVE_HOOKS` below): ``stage`` is *documentary metadata
+      only*. Execution is driven by which list the entry lives in, not by
+      the field. The convention is to set ``stage`` to match the list
+      placement (``HookStage.FAST`` for ``FAST_HOOKS``,
+      ``HookStage.COMPREHENSIVE`` for ``COMPREHENSIVE_HOOKS``), but no
+      runtime check enforces this — drift between list and field is a
+      silent inconsistency.
+    - **Plugin-defined hooks** (see
+      :meth:`crackerjack.plugins.hooks.CustomHookDefinition.to_hook_definition`):
+      ``stage`` drives ``auto_run`` via the rule
+      ``auto_run = stage != HookStage.COMPREHENSIVE``.
+
+    The bifurcation exists because the two registration paths share this
+    dataclass but derive execution semantics differently.
+    """
+
     name: str
     command: list[str] = field(default_factory=list)
     timeout: int = 60
@@ -211,6 +233,18 @@ FAST_HOOKS = [
         accepts_file_paths=False,
         description="Dependency vulnerability scanning with auto-fix",
     ),
+    HookDefinition(
+        name="tc-refs",
+        timeout=300,
+        description=(
+            "Detects TYPE_CHECKING-only imports referenced at runtime outside "
+            "annotation context. Catches a latent bug class where `from "
+            "__future__ import annotations` + `if TYPE_CHECKING:` imports a "
+            "name that's then used at runtime, causing NameError at import. "
+            "See crackerjack.tools.audit_type_checking_runtime_refs. "
+            "Promoted to fast hook 2026-08-31 — all Bodai repos pass cleanly."
+        ),
+    ),
 ]
 
 COMPREHENSIVE_HOOKS = [
@@ -391,23 +425,6 @@ COMPREHENSIVE_HOOKS = [
         security_level=SecurityLevel.LOW,
         accepts_file_paths=False,
         description="Comprehensive async link checker (Markdown, HTML, reStructuredText, text files with URLs)",
-    ),
-    HookDefinition(
-        name="audit-type-checking-runtime-refs",
-        command=[],
-        timeout=300,
-        stage=HookStage.FAST,
-        auto_run=True,
-        security_level=SecurityLevel.MEDIUM,
-        accepts_file_paths=False,
-        description=(
-            "Detects TYPE_CHECKING-only imports referenced at runtime outside "
-            "annotation context. Catches a latent bug class where `from "
-            "__future__ import annotations` + `if TYPE_CHECKING:` imports a "
-            "name that's then used at runtime, causing NameError at import. "
-            "See crackerjack.tools.audit_type_checking_runtime_refs. "
-            "Promoted to fast hook 2026-08-31 — all Bodai repos pass cleanly."
-        ),
     ),
 ]
 

@@ -733,7 +733,7 @@ wheels = [
 
 [[package]]
 name = "crackerjack"
-version = "0.77.0"
+version = "0.77.1"
 source = { editable = "." }
 dependencies = [
     { name = "aiofiles" },
@@ -1318,28 +1318,28 @@ grpc = [
 
 [[package]]
 name = "google-auth"
-version = "2.56.3"
+version = "2.57.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "cryptography" },
     { name = "pyasn1-modules" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/db/4c/fa42116a48bab3f7a143cf5042ecff7df9c8b73f8a376203cd534d1dc966/google_auth-2.56.3.tar.gz", hash = "sha256:40e229fc901f0a305b553050e5fce562d509bee0435be053abfa91582b51b90c", size = 367110, upload-time = "2026-08-06T06:24:01.36Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/41/64/55f316b729f92a552d26e00aa3b1542b2e149d0a5efe2842afff0cac7af7/google_auth-2.57.0.tar.gz", hash = "sha256:9b4f96d6a1feb5f7201231f47cfb3de08d8f176f8a61f9e461555116e95a8789", size = 370794, upload-time = "2026-08-25T19:18:26.419Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/bc/b3/6117b2f24065cd7e2c4f140e9a193e215f089ca8ba314cf91eb9d0b7fe0a/google_auth-2.56.3-py3-none-any.whl", hash = "sha256:8ec438808f813ad034535000261eed1067475d229d05bbf4216e78c3f2362e53", size = 259116, upload-time = "2026-08-06T06:22:51.788Z" },
+    { url = "https://files.pythonhosted.org/packages/00/f3/8508a702c094af5f6e89773f4dfdeee74913df0f41a02c21b5e7dc3d75cd/google_auth-2.57.0-py3-none-any.whl", hash = "sha256:180dafe015cfb62193bea26b677500fab5b9fd51a1e825ebf3ad9b182047ae59", size = 259728, upload-time = "2026-08-24T21:55:08.449Z" },
 ]
 
 [[package]]
 name = "google-cloud-core"
-version = "2.6.1"
+version = "2.7.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "google-api-core" },
     { name = "google-auth" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/4a/c6/9d7d9ed6703eb35306ca7bf381fb66ba8d978c61a1b550a2e1730a4c4ce8/google_cloud_core-2.6.1.tar.gz", hash = "sha256:1e044b131f2ae097b92312fa195164b0aeb6dc6a88e00231e1210516314c420c", size = 36017, upload-time = "2026-08-06T06:24:18.211Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/f9/54/790548b190cff9cf07225c811d2668eacd8f2cbf04114475cbe3e5738752/google_cloud_core-2.7.0.tar.gz", hash = "sha256:874aaf89765db87a9b911b7a2ca7c5068554868eed9e75c7766affe342a2913d", size = 36603, upload-time = "2026-08-25T19:18:43.076Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/5d/4f/37960d5255988b218c40c9b5a2b731013684294a50735d1dd1ab4894e531/google_cloud_core-2.6.1-py3-none-any.whl", hash = "sha256:2682a8a4474a32f56292fb4bca7fa7e4fb0b4af958f6abfe4bca8d195747fd45", size = 29393, upload-time = "2026-08-06T06:23:11.405Z" },
+    { url = "https://files.pythonhosted.org/packages/cb/64/904dbc9bee128e7b87eeb60da67c8fa4d1a8acdc9a45dd2fedca67ef184d/google_cloud_core-2.7.0-py3-none-any.whl", hash = "sha256:c18a250904cfdda021eb3ae8b8238c9f9ca272a4cbbfb5cba946b3fe3022eed1", size = 31046, upload-time = "2026-08-24T21:55:28.36Z" },
 ]
 
 [[package]]
@@ -2132,14 +2132,14 @@ sdist = { url = "https://files.pythonhosted.org/packages/59/ea/34da82a2c946699e1
 
 [[package]]
 name = "linkify-it-py"
-version = "2.1.0"
+version = "2.1.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "uc-micro-py" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/2e/c9/06ea13676ef354f0af6169587ae292d3e2406e212876a413bf9eece4eb23/linkify_it_py-2.1.0.tar.gz", hash = "sha256:43360231720999c10e9328dc3691160e27a718e280673d444c38d7d3aaa3b98b", size = 29158, upload-time = "2026-03-01T07:48:47.683Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/53/3e/79f35b8c31a1881893b7e62be80b2573f06e38db47c33065749293ee1b97/linkify_it_py-2.1.1.tar.gz", hash = "sha256:a78f40fee177eb912e9d2375074108378523c38d3fde5d3ee804f465b6cfbfee", size = 30889, upload-time = "2026-08-24T17:16:57.028Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/b4/de/88b3be5c31b22333b3ca2f6ff1de4e863d8fe45aaea7485f591970ec1d3e/linkify_it_py-2.1.0-py3-none-any.whl", hash = "sha256:0d252c1594ecba2ecedc444053db5d3a9b7ec1b0dd929c8f1d74dce89f86c05e", size = 19878, upload-time = "2026-03-01T07:48:46.098Z" },
+    { url = "https://files.pythonhosted.org/packages/eb/3d/e34b19cd144071c583317268c4feb2c59c03ac57eef69753410c7abb11c0/linkify_it_py-2.1.1-py3-none-any.whl", hash = "sha256:8539a6b470efce90ba9b69e39b848e5b15b7ad89f7f98ca17d3532c243f987dc", size = 20532, upload-time = "2026-08-24T17:16:55.965Z" },
 ]
 
 [[package]]
@@ -2225,7 +2225,7 @@ wheels = [
 
 [[package]]
 name = "mcp"
-version = "1.29.0"
+version = "1.29.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "anyio" },
@@ -2243,9 +2243,9 @@ dependencies = [
     { name = "typing-inspection" },
     { name = "uvicorn", marker = "sys_platform != 'emscripten'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/30/d3/f9acc21dfc886e4f78e2add1a47db46ce16884346afde53f8a064c02c891/mcp-1.29.0.tar.gz", hash = "sha256:52d01f334de1868cc3bb2d6604931126a67631f99a6c5d3b82ba47290315ec36", size = 643148, upload-time = "2026-07-28T13:41:41.939Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/b5/48/0bb26fdfe7ac16875f534a101ce2405eae192bdef37e7451f2f4507c13ec/mcp-1.29.1.tar.gz", hash = "sha256:1967ba4c315f7a375146209949f45950d18b0efd2f913d7cf3400bc723ee5f04", size = 646823, upload-time = "2026-08-24T18:30:41.161Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/01/c8/248b201f6d753d69fd5d6506011abbb35a946d9142b2ae311a948fd0be3d/mcp-1.29.0-py3-none-any.whl", hash = "sha256:f5a075bb611f23d6f4d080c6a1699fa62772eebc562ba9e66b306ddde1c755f7", size = 223436, upload-time = "2026-07-28T13:41:40.337Z" },
+    { url = "https://files.pythonhosted.org/packages/0b/04/d6b4fb82eefe9e81807aabca1ac98f460ae0883974b83a997aaa20c52545/mcp-1.29.1-py3-none-any.whl", hash = "sha256:b6310eeb59153300c4ab8b9aec4c52f4819a2d6a8e429eb43d908bed7c783648", size = 224653, upload-time = "2026-08-24T18:30:39.573Z" },
 ]
 
 [[package]]
@@ -2810,11 +2810,11 @@ wheels = [
 
 [[package]]
 name = "platformdirs"
-version = "4.11.3"
+version = "4.11.4"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/b8/d7/e7bfbc86e9f99ff7807e24de7703f032e9c9ba80bb355cf26e0e9bc5a75e/platformdirs-4.11.3.tar.gz", hash = "sha256:66a73d38a849810252df809a3d8bcbda8e26f6c189920e7535ad608a48dbb5ab", size = 33050, upload-time = "2026-08-13T22:43:27.52Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/50/bb/ebc6636e1ae41314f796ebb7215fd28febb45f9aac72f2b04cb74b5071dc/platformdirs-4.11.4.tar.gz", hash = "sha256:f3373be828247211d0febabea97e238c3dfde8a60b3c90c32756fb52cb21556d", size = 34079, upload-time = "2026-08-24T14:53:49.676Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/19/a9/c34aebedd3a4c9afe5101b1b8713710b3fec18087c8a36c35d2f909861bd/platformdirs-4.11.3-py3-none-any.whl", hash = "sha256:5ed065d443751de711da036041a7a214122efc4a4de393b3f4137ba5576540e7", size = 23491, upload-time = "2026-08-13T22:43:26.121Z" },
+    { url = "https://files.pythonhosted.org/packages/28/be/0ff05fcd2938fb58ad9219bd54135968342d214737e012d62d43f06a2dd6/platformdirs-4.11.4-py3-none-any.whl", hash = "sha256:e34ff91a24bcddc6d939b878bdf3f5c437c9c46fe9e212b1bf455fdf1ee57586", size = 23741, upload-time = "2026-08-24T14:53:48.406Z" },
 ]
 
 [[package]]

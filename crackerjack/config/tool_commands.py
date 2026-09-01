@@ -252,7 +252,7 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             "crackerjack.tools.local_link_checker"
         ),
         "linkcheckmd": _python_module_command("crackerjack.tools.linkcheckmd_wrapper"),
-        "audit-type-checking-runtime-refs": _python_module_command(
+        "tc-refs": _python_module_command(
             "crackerjack.tools.audit_type_checking_runtime_refs",
             f"./{package_name}",
         ),

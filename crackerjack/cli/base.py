@@ -68,12 +68,14 @@ class CrackerjackCLI(OneiricCLIBase):
         )
         lifecycle_app = factory.create_app()
 
-        # OneiricCLIBase already provides `health` (calls our _health_probe
-        # override). Drop the factory's `health` command to avoid the
-        # Typer duplicate-command error.
+        # OneiricCLIBase already provides `health` and `doctor` (call our
+        # _health_probe and _doctor_checks overrides). Drop the factory's
+        # `health` and `doctor` commands to avoid Typer duplicate-command
+        # errors and to make the canonical subclasses win.
         for typer_info in getattr(lifecycle_app, "registered_commands", []):
-            # Skip the factory's "health" command so OneiricCLIBase's is canonical.
-            if getattr(typer_info, "name", None) == "health":
+            name = getattr(typer_info, "name", None)
+            # Skip factory commands that OneiricCLIBase owns canonically.
+            if name in {"health", "doctor"}:
                 continue
             self.registered_commands.append(typer_info)
 

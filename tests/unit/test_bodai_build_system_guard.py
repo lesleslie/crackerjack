@@ -214,12 +214,12 @@ class TestBodaiBuildSystemGuard:
         if registry is None:
             pytest.skip("BODAI_REPO_REGISTRY.md not found")
         repos = _extract_repos(registry)
-        # 2026-08-26 baseline: 31 active repos per Phase 0.0 audit.
+        # 2026-08-31 baseline: 36 active repos per current registry audit.
         # Update this number when the registry's authoritative count
         # changes (new repo added, or repo moved to Deprecated section).
-        assert len(repos) == 31, (
+        assert len(repos) == 36, (
             f"BODAI_REPO_REGISTRY.md reports {len(repos)} active repos; "
-            f"expected 31 (2026-08-26 baseline). If the count legitimately "
+            f"expected 36 (2026-08-31 baseline). If the count legitimately "
             f"changed, update the test; if it changed accidentally, fix the "
             f"registry."
         )

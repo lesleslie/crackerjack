@@ -611,21 +611,33 @@ class TestPublishManagerPublishPackage:
     def test_execute_publish_success(self, publish_manager) -> None:
         mock_result = Mock()
         mock_result.returncode = 0
+        mock_auth = Mock()
+        mock_auth.is_trusted_publishing.return_value = False
+        mock_auth.as_uv_publish_token.return_value = "pypi-test-token"
 
-        with patch.object(publish_manager, "_run_command", return_value=mock_result):
-            with patch.object(publish_manager, "_handle_publish_success"):
-                result = publish_manager._execute_publish()
-                assert result is True
+        with patch.object(
+            publish_manager, "_resolve_pypi_auth", return_value=mock_auth,
+        ):
+            with patch.object(publish_manager, "_run_command", return_value=mock_result):
+                with patch.object(publish_manager, "_handle_publish_success"):
+                    result = publish_manager._execute_publish()
+                    assert result is True
 
     def test_execute_publish_failure(self, publish_manager) -> None:
         mock_result = Mock()
         mock_result.returncode = 1
         mock_result.stderr = "Publish failed"
+        mock_auth = Mock()
+        mock_auth.is_trusted_publishing.return_value = False
+        mock_auth.as_uv_publish_token.return_value = "pypi-test-token"
 
-        with patch.object(publish_manager, "_run_command", return_value=mock_result):
-            with patch.object(publish_manager, "_handle_publish_failure"):
-                result = publish_manager._execute_publish()
-                assert result is False
+        with patch.object(
+            publish_manager, "_resolve_pypi_auth", return_value=mock_auth,
+        ):
+            with patch.object(publish_manager, "_run_command", return_value=mock_result):
+                with patch.object(publish_manager, "_handle_publish_failure"):
+                    result = publish_manager._execute_publish()
+                    assert result is False
 
     def test_handle_publish_success(self, publish_manager) -> None:
         with patch.object(publish_manager, "_display_package_url"):

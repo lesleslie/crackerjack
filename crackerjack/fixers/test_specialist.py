@@ -501,12 +501,11 @@ async def _apply_file_fixes(issue: Issue) -> tuple[list[str], bool]:
         return [], False
 
     file_fixes = await _fix_test_file_issues(issue.file_path)
-    # Second element is coerced to ``bool`` here so the ``tuple[list[str], bool]``
-    # return annotation on ``_apply_file_fixes`` type-checks; the original
-    # ``TestSpecialistAgent._apply_file_fixes`` used the ``file_fixes if file_fixes
-    # else False`` form with a ty-ignore directive on the return. Runtime
-    # semantics are unchanged because list-truthiness matches bool semantics.
-    return file_fixes, bool(file_fixes)
+    # Preserved verbatim from TestSpecialistAgent._apply_file_fixes:
+    # the second tuple element is the *list* itself (not bool(file_fixes)),
+    # so ``modified is fixes`` at the call site holds whenever fixes were
+    # applied. See module docstring quirk 1 for context.
+    return file_fixes, file_fixes  # ty: ignore[invalid-return-type]
 
 
 def _get_failure_recommendations(fixes_applied: list[str]) -> list[str]:

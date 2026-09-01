@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """audit_type_checking_runtime_refs.py — detect TYPE_CHECKING imports used at runtime.
 
 When a Python file uses ``from __future__ import annotations`` (the crackerjack
@@ -26,6 +25,7 @@ Usage:
     python scripts/audit_type_checking_runtime_refs.py [ROOT...] [--json]
     python scripts/audit_type_checking_runtime_refs.py --root /Users/les/Projects/mahavishnu
 """
+
 from __future__ import annotations
 
 import argparse
@@ -33,6 +33,7 @@ import ast
 import json
 import sys
 from collections import defaultdict
+from contextlib import suppress
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -111,9 +112,7 @@ def _is_type_checking_test(node: ast.expr) -> bool:
     """
     if isinstance(node, ast.Name) and node.id == "TYPE_CHECKING":
         return True
-    if isinstance(node, ast.Attribute) and node.attr == "TYPE_CHECKING":
-        return True
-    return False
+    return isinstance(node, ast.Attribute) and node.attr == "TYPE_CHECKING"
 
 
 def _collect_type_checking_imports(tree: ast.Module) -> list[ImportedName]:
@@ -212,10 +211,8 @@ def _is_in_tc_else(node: ast.AST, parents: dict[int, ast.AST]) -> bool:
                 # but that's a runtime conditional, not a TC body. The point
                 # is: we're inside a TC body, which is TC-only territory.)
                 return False
-            if cur in par.orelse and _is_type_checking_test(par.test):
-                return True
-            # cur is in orelse of a non-TC If — that's runtime code.
-            return False
+            # orelse of a TC If → True; orelse of a non-TC If → False (runtime).
+            return cur in par.orelse and _is_type_checking_test(par.test)
         cur = par
     return False
 
@@ -241,45 +238,61 @@ def _collect_runtime_bound_names(
     binds it. If the RHS is itself broken, the runtime error surfaces
     there; we still correctly exclude the LHS from TC-only tracking.
     """
+    return _collect_runtime_imports(
+        tree, tc_body_ids
+    ) | _collect_else_branch_assignments(tree, parents)
+
+
+def _collect_runtime_imports(tree: ast.Module, tc_body_ids: set[int]) -> set[str]:
+    """Pass 1: names bound by Import / ImportFrom outside any TYPE_CHECKING body."""
     names: set[str] = set()
-
-    # Pass 1: imports outside TC body.
     for node in ast.walk(tree):
+        if not isinstance(node, (ast.Import, ast.ImportFrom)):
+            continue
+        if id(node) in tc_body_ids:
+            continue
         if isinstance(node, ast.Import):
-            if id(node) not in tc_body_ids:
-                for alias in node.names:
-                    names.add(alias.asname or alias.name.split(".")[0])
-        elif isinstance(node, ast.ImportFrom):
-            if id(node) not in tc_body_ids:
-                for alias in node.names:
-                    if alias.name == "*":
-                        continue  # unknown names
-                    names.add(alias.asname or alias.name)
+            names.update(
+                alias.asname or alias.name.split(".")[0] for alias in node.names
+            )
+        else:
+            names.update(
+                alias.asname or alias.name for alias in node.names if alias.name != "*"
+            )
+    return names
 
-    # Pass 2: else-branch assignment targets.
+
+def _collect_else_branch_assignments(
+    tree: ast.Module, parents: dict[int, ast.AST]
+) -> set[str]:
+    """Pass 2: names assigned inside the else-branch of a TYPE_CHECKING If.
+
+    Covers both ``X = Any`` (Pattern B variant 2) and ``X = _X`` after an
+    aliased import in the same else-branch (Pattern B variant 3).
+    """
+    names: set[str] = set()
     for node in ast.walk(tree):
         if isinstance(node, ast.Assign):
             if not _is_in_tc_else(node, parents):
                 continue
             for target in node.targets:
-                if target is None:
-                    continue
-                for inner in ast.walk(target):
-                    if isinstance(inner, ast.Name):
-                        names.add(inner.id)
-                    elif isinstance(inner, ast.Attribute):
-                        names.add(inner.attr)
+                if target is not None:
+                    names.update(_names_under_target(target))
         elif isinstance(node, ast.AnnAssign):
-            if node.target is None:
+            if node.target is None or not _is_in_tc_else(node, parents):
                 continue
-            if not _is_in_tc_else(node, parents):
-                continue
-            for inner in ast.walk(node.target):
-                if isinstance(inner, ast.Name):
-                    names.add(inner.id)
-                elif isinstance(inner, ast.Attribute):
-                    names.add(inner.attr)
+            names.update(_names_under_target(node.target))
+    return names
 
+
+def _names_under_target(target: ast.AST) -> set[str]:
+    """Names bound by walking a single assignment target (e.g. ``a.b`` → ``{"a"}``)."""
+    names: set[str] = set()
+    for inner in ast.walk(target):
+        if isinstance(inner, ast.Name):
+            names.add(inner.id)
+        elif isinstance(inner, ast.Attribute):
+            names.add(inner.attr)
     return names
 
 
@@ -348,8 +361,7 @@ def _collect_annotation_node_ids(tree: ast.Module) -> set[int]:
             if node.annotation is not None:
                 subtrees.append(node.annotation)
         for subtree in subtrees:
-            for inner in ast.walk(subtree):
-                annotation_ids.add(id(inner))
+            annotation_ids.update(id(inner) for inner in ast.walk(subtree))
     return annotation_ids
 
 
@@ -366,7 +378,9 @@ def _collect_tc_body_node_ids(
 
     # First, find every TYPE_CHECKING If node.
     tc_ifs: list[ast.If] = [
-        n for n in ast.walk(tree) if isinstance(n, ast.If) and _is_type_checking_test(n.test)
+        n
+        for n in ast.walk(tree)
+        if isinstance(n, ast.If) and _is_type_checking_test(n.test)
     ]
 
     # For every node in the tree, determine if it's inside a TC If body by
@@ -417,8 +431,7 @@ def _collect_type_erased_call_arg_ids(
             continue
         # Mark the entire first-arg subtree as type-erased.
         first_arg = node.args[0]
-        for inner in ast.walk(first_arg):
-            erased_ids.add(id(inner))
+        erased_ids.update(id(inner) for inner in ast.walk(first_arg))
     return erased_ids
 
 
@@ -445,10 +458,7 @@ def _collect_binding_node_ids(
         targets: list[ast.AST] = []
         if isinstance(node, ast.Assign):
             targets.extend(node.targets)
-        elif isinstance(node, ast.AnnAssign):
-            if node.target is not None:
-                targets.append(node.target)
-        elif isinstance(node, ast.AugAssign):
+        elif isinstance(node, (ast.AnnAssign, ast.AugAssign)):
             if node.target is not None:
                 targets.append(node.target)
         elif isinstance(node, ast.Delete):
@@ -466,8 +476,7 @@ def _collect_binding_node_ids(
             if node.name is not None and isinstance(node.name, ast.AST):
                 targets.append(node.name)
         for target in targets:
-            for inner in ast.walk(target):
-                binding_ids.add(id(inner))
+            binding_ids.update(id(inner) for inner in ast.walk(target))
     return binding_ids
 
 
@@ -481,75 +490,106 @@ def _format_context(node: ast.AST) -> str:
 
 def _scan_file(path: Path) -> FileResult:
     """Parse one file and return any TYPE_CHECKING-vs-runtime violations."""
-    result = FileResult(path=path)
     try:
-        source = path.read_text(encoding="utf-8")
-    except UnicodeDecodeError:
-        # Try latin-1 as a permissive fallback for files with non-UTF-8 content.
-        try:
-            source = path.read_text(encoding="latin-1")
-        except (OSError, UnicodeDecodeError) as exc:
-            result.parse_error = f"unreadable: {exc}"
-            return result
-    except OSError as exc:
-        result.parse_error = f"unreadable: {exc}"
-        return result
+        source = _read_source(path)
+    except (OSError, UnicodeDecodeError) as exc:
+        return FileResult(path=path, parse_error=f"unreadable: {exc}")
     try:
         tree = ast.parse(source, filename=str(path))
     except SyntaxError as exc:
-        result.parse_error = f"syntax error: {exc}"
-        return result
+        return FileResult(path=path, parse_error=f"syntax error: {exc}")
+    return _scan_parsed_tree(tree, path)
 
+
+def _read_source(path: Path) -> str:
+    """Read source text, falling back from UTF-8 to latin-1.
+
+    Raises ``OSError`` or ``UnicodeDecodeError`` on hard failure (after latin-1
+    fallback failure). Callers should catch and surface the error as a
+    ``FileResult.parse_error`` so the audit can keep going on other files.
+    """
+    with suppress(UnicodeDecodeError):
+        return path.read_text(encoding="utf-8")
+    return path.read_text(encoding="latin-1")
+
+
+def _scan_parsed_tree(tree: ast.Module, path: Path) -> FileResult:
+    """Run all audit passes over a parsed AST and assemble a FileResult."""
     tc_imports = _collect_type_checking_imports(tree)
     if not tc_imports:
-        return result  # No TYPE_CHECKING imports — nothing to check.
+        return FileResult(path=path)
 
+    name_to_import = _build_name_to_import_lookup(tc_imports)
+    if not name_to_import:
+        return FileResult(path=path)
+
+    result = FileResult(path=path)
     has_future = _has_future_annotations(tree)
     parents = _build_parent_map(tree)
+    skip_ids = _compute_skip_ids(tree, parents, has_future)
+    result.violations = _find_runtime_violations(tree, path, name_to_import, skip_ids)
+    return result
 
-    # Pre-compute skip sets: nodes we never want to flag.
+
+def _build_name_to_import_lookup(tc_imports: list[ImportedName]) -> dict[str, int]:
+    """Build runtime-name → import-line lookup, excluding star imports."""
+    return {
+        imp.runtime_name: imp.import_lineno for imp in tc_imports if not imp.is_star
+    }
+
+
+def _compute_skip_ids(
+    tree: ast.Module, parents: dict[int, ast.AST], has_future: bool
+) -> set[int]:
+    """Union of all node-id sets we never want to flag as a violation."""
     annotation_ids = _collect_annotation_node_ids(tree) if has_future else set()
     tc_body_ids = _collect_tc_body_node_ids(tree, parents)
     erased_ids = _collect_type_erased_call_arg_ids(tree, parents)
     binding_ids = _collect_binding_node_ids(tree, parents)
+    return tc_body_ids | annotation_ids | erased_ids | binding_ids
 
-    # Build runtime-name -> import-line lookup (excluding star imports).
-    name_to_import: dict[str, int] = {
-        imp.runtime_name: imp.import_lineno for imp in tc_imports if not imp.is_star
-    }
-    if not name_to_import:
-        return result
 
+def _find_runtime_violations(
+    tree: ast.Module,
+    path: Path,
+    name_to_import: dict[str, int],
+    skip_ids: set[int],
+) -> list[Violation]:
+    """Walk tree, emitting a Violation for each non-skipped runtime reference."""
+    violations: list[Violation] = []
     for node in ast.walk(tree):
-        if id(node) in tc_body_ids:
+        if id(node) in skip_ids:
             continue
-        if id(node) in annotation_ids:
+        candidate = _extract_candidate(node)
+        if candidate is None:
             continue
-        if id(node) in erased_ids:
+        name, lineno, col_offset = candidate
+        if name not in name_to_import:
             continue
-        if id(node) in binding_ids:
-            continue
-
-        # Determine what name(s) to check on this node.
-        candidate_name: str | None = None
-        if isinstance(node, ast.Name):
-            candidate_name = node.id
-        elif isinstance(node, ast.Attribute):
-            candidate_name = node.attr
-        if candidate_name is None or candidate_name not in name_to_import:
-            continue
-
-        result.violations.append(
+        violations.append(
             Violation(
                 file=path,
-                lineno=node.lineno,
-                col_offset=node.col_offset,
-                name=candidate_name,
-                import_lineno=name_to_import[candidate_name],
+                lineno=lineno,
+                col_offset=col_offset,
+                name=name,
+                import_lineno=name_to_import[name],
                 context=_format_context(node),
             )
         )
-    return result
+    return violations
+
+
+def _extract_candidate(node: ast.AST) -> tuple[str, int, int] | None:
+    """Return ``(name, lineno, col_offset)`` for Name/Attribute, else ``None``.
+
+    Captures lineno/col_offset inside the ``isinstance`` narrowing so ty
+    accepts ``.lineno`` / ``.col_offset`` on the narrowed type.
+    """
+    if isinstance(node, ast.Name):
+        return node.id, node.lineno, node.col_offset
+    if isinstance(node, ast.Attribute):
+        return node.attr, node.lineno, node.col_offset
+    return None
 
 
 def _walk_python_files(roots: list[Path]) -> list[Path]:
@@ -569,29 +609,37 @@ def _walk_python_files(roots: list[Path]) -> list[Path]:
 def render_markdown(results: list[FileResult], root_label: str) -> str:
     """Render the audit as a Markdown report grouped by file."""
     lines: list[str] = []
-    lines.append("# TYPE_CHECKING → Runtime Reference Audit")
-    lines.append("")
-    lines.append(
-        f"Generated by `scripts/audit_type_checking_runtime_refs.py`. "
-        f"Each entry below is a name imported under `if TYPE_CHECKING:` that "
-        f"is referenced at runtime (non-annotation context). The fix is to "
-        f"move the import out of `if TYPE_CHECKING:` while keeping "
-        f"`from __future__ import annotations` for forward-compat."
+    lines.extend(
+        (
+            "# TYPE_CHECKING → Runtime Reference Audit",
+            "",
+            (
+                "Generated by `scripts/audit_type_checking_runtime_refs.py`. "
+                "Each entry below is a name imported under `if TYPE_CHECKING:` that "
+                "is referenced at runtime (non-annotation context). The fix is to "
+                "move the import out of `if TYPE_CHECKING:` while keeping "
+                "`from __future__ import annotations` for forward-compat."
+            ),
+            "",
+        )
     )
-    lines.append("")
     total_files = len(results)
     files_with_violations = sum(1 for r in results if r.violations)
     total_violations = sum(len(r.violations) for r in results)
     parse_errors = sum(1 for r in results if r.parse_error)
-    lines.append(f"- **Roots**: `{root_label}`")
-    lines.append(f"- **Files scanned**: {total_files}")
-    lines.append(f"- **Files with violations**: {files_with_violations}")
-    lines.append(f"- **Total violations**: {total_violations}")
+    lines.extend(
+        (
+            f"- **Roots**: `{root_label}`",
+            f"- **Files scanned**: {total_files}",
+            f"- **Files with violations**: {files_with_violations}",
+            f"- **Total violations**: {total_violations}",
+        )
+    )
     if parse_errors:
         lines.append(f"- **Parse errors**: {parse_errors} (see end of report)")
     lines.append("")
 
-    if total_violations == 0 and parse_errors == 0:
+    if total_violations == 0 == parse_errors:
         lines.append("**No violations found.**")
         return "\n".join(lines)
 
@@ -601,24 +649,29 @@ def render_markdown(results: list[FileResult], root_label: str) -> str:
     # usages collapse to one fix: move that one import to top level).
     clusters = _cluster_by_import_site(results)
     if clusters:
-        lines.append("## Cluster summary (by fix site)")
-        lines.append("")
-        lines.append(
-            "Each row groups violations that share an import site. Fixing "
-            "the import at that line resolves every violation in the row."
+        lines.extend(
+            (
+                "## Cluster summary (by fix site)",
+                "",
+                (
+                    "Each row groups violations that share an import site. Fixing "
+                    "the import at that line resolves every violation in the row."
+                ),
+                "",
+            )
         )
-        lines.append("")
-        lines.append("| Files | Import site | Name | Count |")
-        lines.append("| --- | --- | --- | ---: |")
+        lines.extend(
+            (
+                "| Files | Import site | Name | Count |",
+                "| --- | --- | --- | ---: |",
+            )
+        )
         # Sort by total count descending — biggest cluster first.
-        for key, members in sorted(
-            clusters.items(), key=lambda kv: -len(kv[1])
-        ):
+        for key, members in sorted(clusters.items(), key=lambda kv: -len(kv[1])):
             file_count = len({v.file for v in members})
             import_lineno, name = key
             lines.append(
-                f"| {file_count} | line {import_lineno} | `{name}` | "
-                f"{len(members)} |"
+                f"| {file_count} | line {import_lineno} | `{name}` | {len(members)} |"
             )
         lines.append("")
 
@@ -630,10 +683,14 @@ def render_markdown(results: list[FileResult], root_label: str) -> str:
             rel = result.path.resolve().relative_to(Path.cwd()).as_posix()
         except ValueError:
             rel = str(result.path)
-        lines.append(f"## `{rel}`")
-        lines.append("")
-        lines.append("| Line | Name | Imported at | Context |")
-        lines.append("| --- | --- | --- | --- |")
+        lines.extend(
+            (
+                f"## `{rel}`",
+                "",
+                "| Line | Name | Imported at | Context |",
+                "| --- | --- | --- | --- |",
+            )
+        )
         for v in result.violations:
             ctx = v.context.replace("|", "\\|").replace("\n", " ")
             lines.append(
@@ -644,8 +701,7 @@ def render_markdown(results: list[FileResult], root_label: str) -> str:
     # Parse-error section
     parse_error_files = [r for r in results if r.parse_error]
     if parse_error_files:
-        lines.append("## Parse errors (file skipped, not a violation)")
-        lines.append("")
+        lines.extend(("## Parse errors (file skipped, not a violation)", ""))
         for r in parse_error_files:
             try:
                 rel = r.path.resolve().relative_to(Path.cwd()).as_posix()
@@ -671,7 +727,7 @@ def _cluster_by_import_site(
     for result in results:
         for v in result.violations:
             clusters[(v.import_lineno, v.name)].append(v)
-    return dict(clusters)
+    return clusters.copy()
 
 
 def render_json(results: list[FileResult]) -> str:
@@ -739,7 +795,7 @@ def parse_args() -> argparse.Namespace:
 def main() -> int:
     """Run the audit end-to-end and return a shell exit code."""
     args = parse_args()
-    roots = args.roots if args.roots else [Path("/Users/les/Projects")]
+    roots = args.roots or [Path("/Users/les/Projects")]
     files = _walk_python_files(roots)
     results: list[FileResult] = [_scan_file(p) for p in files]
 

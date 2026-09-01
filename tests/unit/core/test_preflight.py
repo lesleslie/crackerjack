@@ -47,7 +47,12 @@ class TestPreflightConfig:
         cfg = PreflightConfig()
         assert cfg.ruff_check is True
         assert cfg.ruff_format is True
-        assert cfg.ruff_unsafe_fixes is False
+        # ``ruff_unsafe_fixes`` defaults to True per d611bad5 / 70fa952f
+        # (preflight: ruff-unsafe fixes are part of the standard preflight
+        # workflow). The assertion value below reflects the post-fix intent
+        # even though the surrounding test method was authored against the
+        # pre-fix default.
+        assert cfg.ruff_unsafe_fixes is True
         assert cfg.ruff_select_extra == []
         assert cfg.autoflake_unused is True
         assert cfg.refurb_safe_policies is True
@@ -535,8 +540,13 @@ def test_dirty_tree_blocks_fix_invocation(tmp_path, monkeypatch) -> None:
     from crackerjack.core.preflight import PreflightFixer
 
     bus = AIFixEventBus()
+    # Both ``settings`` and ``config`` control the dirty-tree override
+    # (``self._settings.ruff_unsafe_fixes or self._config.ruff_unsafe_fixes``
+    # in ``_guard_ruff_fix_invocation``); since both default to True
+    # after d611bad5, this test must explicitly disable both to invoke
+    # the working-tree guard.
     fixer = PreflightFixer(
-        config=PreflightConfig(),
+        config=PreflightConfig(ruff_unsafe_fixes=False),
         bus=bus,
         pkg_path=tmp_path,
         settings=HookSettings(ruff_unsafe_fixes=False),

@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "crackerjack"
-version = "0.77.1"
+version = "0.78.0"
 description = "Crackerjack Python project management tool"
 readme = "README.md"
 authors = [
@@ -730,6 +730,17 @@ no_implicit_optional = true
 allow_redefinition = true
 strict_optional = false
 exclude = "^(\\.venv|venv|\\.tox|__pycache__)(/|$)"
+
+# Tolerate `ty: ignore` directives that don't match a current diagnostic.
+# ty's resolution is environment-sensitive: the same directive can report
+# UNUSED in an interactive shell (where a stub resolves the import) but
+# suppress a real error under crackerjack (where the project venv lacks
+# the package). The defense-in-depth: keep the directive, ignore the
+# unused warning. See `crackerjack/services/config_parsers.py` for the
+# canonical case (`import toml` is a defensive fallback never exercised
+# by this project, but still legitimate to keep).
+[tool.ty.rules]
+unused-ignore-comment = "ignore"
 
 # Pymetrica scope — exclude AST-transform helpers (high cyclomatic density,
 # intentionally complex) so the comprehensive metrics run stays within budget.

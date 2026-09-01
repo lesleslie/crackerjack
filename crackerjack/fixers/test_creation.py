@@ -2082,24 +2082,19 @@ def _create_test_creation_result(
     fixes_applied: list[str],
     files_modified: list[str],
 ) -> FixResult:
-    # `_create_test_creation_result` was preserved verbatim from
-    # ``TestCreationAgent._create_test_creation_result`` which assigned the
-    # *list* ``fixes_applied`` to ``success`` (the original used ty-ignore
-    # directives on the downstream call sites). Coerce to ``bool`` here so
-    # the downstream calls to ``_calculate_confidence``,
-    # ``_generate_recommendations``, and ``FixResult(success=...)``
-    # type-check; runtime semantics are unchanged because list-truthiness
-    # matches bool semantics.
-    success = bool(fixes_applied)
+    # Preserved verbatim from TestCreationAgent._create_test_creation_result:
+    # `success` is assigned the *list* `fixes_applied`, not `bool(fixes_applied)`.
+    # See module docstring for the full quirk explanation.
+    success = fixes_applied
 
-    confidence = _calculate_confidence(success, fixes_applied, files_modified)
+    confidence = _calculate_confidence(success, fixes_applied, files_modified)  # ty: ignore[invalid-argument-type]
 
     return FixResult(
-        success=success,
+        success=success,  # ty: ignore[invalid-argument-type]
         confidence=confidence,
         fixes_applied=fixes_applied,
         remaining_issues=[],
-        recommendations=_generate_recommendations(success),
+        recommendations=_generate_recommendations(success),  # ty: ignore[invalid-argument-type]
         files_modified=files_modified,
     )
 

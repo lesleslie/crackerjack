@@ -535,14 +535,18 @@ class TestPublishManagerPublishing:
             stdout="Successfully uploaded package",
             stderr="",
         )
+        mock_auth = Mock()
+        mock_auth.is_trusted_publishing.return_value = False
+        mock_auth.as_uv_publish_token.return_value = "pypi-test-token"
 
         with patch.object(manager, "validate_auth", return_value=True):
-            with patch.object(manager, "_run_command") as mock_run:
-                mock_run.side_effect = [mock_build_result, mock_publish_result]
+            with patch.object(manager, "_resolve_pypi_auth", return_value=mock_auth):
+                with patch.object(manager, "_run_command") as mock_run:
+                    mock_run.side_effect = [mock_build_result, mock_publish_result]
 
-                result = manager.publish_package()
+                    result = manager.publish_package()
 
-                assert result is True
+                    assert result is True
 
     def test_publish_package_auth_failure(self, manager) -> None:
         """Test publish_package when authentication fails."""
@@ -601,11 +605,15 @@ class TestPublishManagerPublishing:
             stdout="Warning: xyz\nSuccessfully uploaded package to PyPI",
             stderr="",
         )
+        mock_auth = Mock()
+        mock_auth.is_trusted_publishing.return_value = False
+        mock_auth.as_uv_publish_token.return_value = "pypi-test-token"
 
-        with patch.object(manager, "_run_command", return_value=mock_result):
-            result = manager._execute_publish()
+        with patch.object(manager, "_resolve_pypi_auth", return_value=mock_auth):
+            with patch.object(manager, "_run_command", return_value=mock_result):
+                result = manager._execute_publish()
 
-            assert result is True
+                assert result is True
 
     def test_execute_publish_injects_keyring_token_into_uv_publish_subprocess(
         self,

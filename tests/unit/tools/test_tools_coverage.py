@@ -424,7 +424,15 @@ class TestLocalLinkChecker:
         """Test main when no markdown files found."""
         from crackerjack.tools.local_link_checker import main
 
-        with patch("crackerjack.tools.local_link_checker.get_git_tracked_files", return_value=[]):
+        # Production ``main`` resolves tracked markdown via
+        # ``_list_markdown_via_git`` (a ``git ls-files`` wrapper that
+        # replaced the old ``get_git_tracked_files`` helper). Patch the
+        # real call target so an empty file list short-circuits to
+        # exit-0 without spawning git.
+        with patch(
+            "crackerjack.tools.local_link_checker._list_markdown_via_git",
+            return_value=[],
+        ):
             with patch("sys.stdout.write"):
                 result = main([])
                 assert result == 0

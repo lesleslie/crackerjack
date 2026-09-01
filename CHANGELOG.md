@@ -1,5 +1,21 @@
 ______________________________________________________________________
 
+## [0.78.0] - 2026-09-01
+
+### Added
+
+- hooks: Promote audit-type-checking-runtime-refs from comprehensive-weekly to fast
+- tools: Add audit_type_checking_runtime_refs AST check + comprehensive hook
+- tools: Sync audit_type_checking_runtime_refs to v2 — Pattern B variants + cluster summary
+
+### Fixed
+
+- Move TYPE_CHECKING-only imports to runtime scope
+
+### Testing
+
+- Remove stale xfail test referencing removed orchestration module
+
 ## [0.77.0] - 2026-08-29
 
 ### Added
