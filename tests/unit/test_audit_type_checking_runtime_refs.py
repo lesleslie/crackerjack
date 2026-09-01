@@ -469,6 +469,114 @@ def test_else_branch_runtime_import_rescued_by_assignattr(tmp_path):
     assert result.violations == []
 
 
+def test_else_branch_assignment_fallback(tmp_path):
+    """Pattern B variant 2: ``else: Msg = Any`` is a runtime assignment fallback.
+
+    The audit must NOT flag ``Msg`` references when the else branch binds
+    the name via assignment, not import. This is the standard
+    optional-dependency fallback pattern::
+
+        if TYPE_CHECKING:
+            from nats.aio.client import Msg
+        else:
+            Msg = Any
+        def handler(m: Msg) -> None: ...  # safe — Msg is bound at runtime
+    """
+    src = """
+        from __future__ import annotations
+        from typing import TYPE_CHECKING, Any
+        if TYPE_CHECKING:
+            from nats.aio.client import Msg
+        else:
+            Msg = Any
+
+        def handler(m: Msg) -> None: ...
+        x: Msg | None = None
+    """
+    path = write_source(tmp_path, "nats.py", src)
+    result = _scan_file(path)
+    # The annotation references are safe under future-annotations.
+    # The else-branch assignment binds Msg at runtime.
+    # No runtime usage of Msg exists in this fixture.
+    assert result.violations == []
+
+
+def test_else_branch_assignment_fallback_with_runtime_use(tmp_path):
+    """Pattern B variant 2 with actual runtime use of the rebound name."""
+    src = """
+        from __future__ import annotations
+        from typing import TYPE_CHECKING, Any
+        if TYPE_CHECKING:
+            from nats.aio.client import Msg
+        else:
+            Msg = Any
+        def make_msg() -> Msg:
+            return Msg  # type: ignore[return-value]
+    """
+    path = write_source(tmp_path, "nats2.py", src)
+    result = _scan_file(path)
+    # `return Msg` is a runtime reference, but Msg is bound via the
+    # else-branch assignment, so it's not a violation.
+    assert result.violations == []
+
+
+def test_else_branch_alias_rebind(tmp_path):
+    """Pattern B variant 3: ``else: trace = _trace`` rebinds an aliased import.
+
+    mcp-common style — TC uses ``as _alias`` to avoid name shadowing, else
+    branch imports the same alias, then module-level assignment rebinds the
+    canonical name::
+
+        if TYPE_CHECKING:
+            from opentelemetry import trace as _trace
+        else:
+            from opentelemetry import trace as _trace
+        trace = _trace        # module-level rebind
+
+        def get_tracer() -> trace:
+            return trace       # safe — `trace` is rebound at runtime
+    """
+    src = """
+        from __future__ import annotations
+        from typing import TYPE_CHECKING
+        if TYPE_CHECKING:
+            from opentelemetry import trace as _trace
+        else:
+            from opentelemetry import trace as _trace
+        trace = _trace
+
+        x = trace
+    """
+    path = write_source(tmp_path, "telem.py", src)
+    result = _scan_file(path)
+    # `trace` is rebound via else-branch assignment from the else-imported
+    # `_trace`. Runtime use of `trace` at the bottom is safe.
+    assert result.violations == []
+
+
+def test_cluster_by_import_site_groups_same_root_cause():
+    """Clustering groups violations sharing an import site into one bucket."""
+    from crackerjack.tools.audit_type_checking_runtime_refs import (
+        _cluster_by_import_site,
+        Violation,
+    )
+    v1 = Violation(file=Path("a.py"), lineno=10, col_offset=0, name="X", import_lineno=5, context="X")
+    v2 = Violation(file=Path("a.py"), lineno=20, col_offset=0, name="X", import_lineno=5, context="X")
+    v3 = Violation(file=Path("b.py"), lineno=15, col_offset=0, name="X", import_lineno=7, context="X")
+    v4 = Violation(file=Path("a.py"), lineno=30, col_offset=0, name="Y", import_lineno=5, context="Y")
+    # Make a FileResult containing these
+    from crackerjack.tools.audit_type_checking_runtime_refs import FileResult
+    results = [
+        FileResult(path=Path("a.py"), violations=[v1, v2, v4]),
+        FileResult(path=Path("b.py"), violations=[v3]),
+    ]
+    clusters = _cluster_by_import_site(results)
+    assert len(clusters) == 3  # (5, X), (7, X), (5, Y)
+    assert len(clusters[(5, "X")]) == 2
+    assert len(clusters[(7, "X")]) == 1
+    assert len(clusters[(5, "Y")]) == 1
+
+
 def test_assignment_target_is_not_a_reference(tmp_path):
     """LHS of assignment is a binding, not a runtime reference."""
     src = """

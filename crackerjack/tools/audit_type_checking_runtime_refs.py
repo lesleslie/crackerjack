@@ -55,6 +55,7 @@ EXCLUDE_DIRS: tuple[str, ...] = (
     ".worktrees",
     ".claude",  # exclude worktree metadata + skill scripts
     ".crackerjack",  # uv sdist cache (binary vendored sources)
+    ".backups",  # worktree backup directories
     "site-packages",  # third-party installed packages
 )
 
@@ -141,14 +142,20 @@ def _collect_type_checking_imports(tree: ast.Module) -> list[ImportedName]:
       2. Classify each as TC-body or runtime based on whether it lives
          inside an ``if TYPE_CHECKING:`` body (recursively through nested
          TC ifs). Imports inside TC ifs' ``else`` branches are runtime.
-      3. Names in TC-body that are also imported at runtime are excluded
-         — they're bound at runtime, not TC-only.
+      3. Collect names bound at runtime via three patterns:
+         - Direct imports outside TC body (top-level, function-local)
+         - Else-branch imports (Pattern B variant 1)
+         - Else-branch assignments like ``Msg = Any`` (Pattern B variant 2)
+         - Else-branch rebinds like ``trace = _trace`` where ``_trace`` is
+           imported via the else-branch's aliased import (Pattern B variant 3)
+      4. Names in TC-body that are also bound at runtime are excluded
+         — they're not TC-only.
     """
-    tc_body_ids = _collect_tc_body_node_ids(tree, _build_parent_map(tree))
+    parents = _build_parent_map(tree)
+    tc_body_ids = _collect_tc_body_node_ids(tree, parents)
 
     # First pass: classify all import sites.
     tc_candidates: list[ImportedName] = []
-    runtime_names: set[str] = set()
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
             for alias in node.names:
@@ -157,8 +164,6 @@ def _collect_type_checking_imports(tree: ast.Module) -> list[ImportedName]:
                     tc_candidates.append(
                         ImportedName(runtime_name=name, import_lineno=node.lineno)
                     )
-                else:
-                    runtime_names.add(name)
         elif isinstance(node, ast.ImportFrom):
             for alias in node.names:
                 if alias.name == "*":
@@ -179,13 +184,103 @@ def _collect_type_checking_imports(tree: ast.Module) -> list[ImportedName]:
                     tc_candidates.append(
                         ImportedName(runtime_name=name, import_lineno=node.lineno)
                     )
-                else:
-                    runtime_names.add(name)
 
-    # Filter: drop TC candidates that also have a runtime import of the
-    # same name. The runtime import binds the name, so TC-only assumption
-    # is wrong.
+    # Collect runtime-bound names: any name imported outside TC body, OR
+    # any name assigned in the else-branch of a TC If (Pattern B variants 2+3).
+    runtime_names = _collect_runtime_bound_names(tree, parents, tc_body_ids)
+
+    # Filter: drop TC candidates that are also bound at runtime.
     return [n for n in tc_candidates if n.runtime_name not in runtime_names]
+
+
+def _is_in_tc_else(node: ast.AST, parents: dict[int, ast.AST]) -> bool:
+    """True when ``node`` lives in the orelse branch of a TYPE_CHECKING If.
+
+    Walks ancestors to determine if any ancestor is a TYPE_CHECKING ``if``
+    whose ``orelse`` clause contains the node. A node inside the ``body``
+    of a TYPE_CHECKING If returns False (it's still TC-only).
+    """
+    cur: ast.AST | None = node
+    while cur is not None:
+        par = parents.get(id(cur))
+        if par is None:
+            return False
+        if isinstance(par, ast.If):
+            if cur in par.body:
+                # We're in a TC If's body — NOT in the else branch.
+                # (Could still be in outer If's orelse if outer If isn't TC,
+                # but that's a runtime conditional, not a TC body. The point
+                # is: we're inside a TC body, which is TC-only territory.)
+                return False
+            if cur in par.orelse and _is_type_checking_test(par.test):
+                return True
+            # cur is in orelse of a non-TC If — that's runtime code.
+            return False
+        cur = par
+    return False
+
+
+def _collect_runtime_bound_names(
+    tree: ast.Module, parents: dict[int, ast.AST], tc_body_ids: set[int]
+) -> set[str]:
+    """Collect every name bound at runtime outside TYPE_CHECKING body.
+
+    Captures three runtime-binding patterns:
+
+    A. **Direct imports outside TC body** — top-level imports, function-local
+       imports, try/except runtime imports.
+    B. **Else-branch imports** — ``if TYPE_CHECKING: ... else: from foo import X``
+    C. **Else-branch assignments** — ``if TYPE_CHECKING: ... else: X = Any``
+       (Pattern B variant 2) or ``... else: X = _X`` where ``_X`` was imported
+       in the same else-branch via an aliased import (Pattern B variant 3).
+
+    The LHS of else-branch assignments is added to the runtime-bound set
+    because the assignment executes at runtime whenever TYPE_CHECKING is
+    False, binding the name even if the RHS is a TC-only thing the audit
+    missed. The audit is conservative — it assumes any assignment to a name
+    binds it. If the RHS is itself broken, the runtime error surfaces
+    there; we still correctly exclude the LHS from TC-only tracking.
+    """
+    names: set[str] = set()
+
+    # Pass 1: imports outside TC body.
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            if id(node) not in tc_body_ids:
+                for alias in node.names:
+                    names.add(alias.asname or alias.name.split(".")[0])
+        elif isinstance(node, ast.ImportFrom):
+            if id(node) not in tc_body_ids:
+                for alias in node.names:
+                    if alias.name == "*":
+                        continue  # unknown names
+                    names.add(alias.asname or alias.name)
+
+    # Pass 2: else-branch assignment targets.
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Assign):
+            if not _is_in_tc_else(node, parents):
+                continue
+            for target in node.targets:
+                if target is None:
+                    continue
+                for inner in ast.walk(target):
+                    if isinstance(inner, ast.Name):
+                        names.add(inner.id)
+                    elif isinstance(inner, ast.Attribute):
+                        names.add(inner.attr)
+        elif isinstance(node, ast.AnnAssign):
+            if node.target is None:
+                continue
+            if not _is_in_tc_else(node, parents):
+                continue
+            for inner in ast.walk(node.target):
+                if isinstance(inner, ast.Name):
+                    names.add(inner.id)
+                elif isinstance(inner, ast.Attribute):
+                    names.add(inner.attr)
+
+    return names
 
 
 def _has_future_annotations(tree: ast.Module) -> bool:
@@ -500,6 +595,33 @@ def render_markdown(results: list[FileResult], root_label: str) -> str:
         lines.append("**No violations found.**")
         return "\n".join(lines)
 
+    # Cluster summary — group violations by import site across all files.
+    # This surfaces "32 failures → 1 fix" patterns at a glance (e.g., when
+    # a single TYPE_CHECKING import is referenced in 30 places, all 30
+    # usages collapse to one fix: move that one import to top level).
+    clusters = _cluster_by_import_site(results)
+    if clusters:
+        lines.append("## Cluster summary (by fix site)")
+        lines.append("")
+        lines.append(
+            "Each row groups violations that share an import site. Fixing "
+            "the import at that line resolves every violation in the row."
+        )
+        lines.append("")
+        lines.append("| Files | Import site | Name | Count |")
+        lines.append("| --- | --- | --- | ---: |")
+        # Sort by total count descending — biggest cluster first.
+        for key, members in sorted(
+            clusters.items(), key=lambda kv: -len(kv[1])
+        ):
+            file_count = len({v.file for v in members})
+            import_lineno, name = key
+            lines.append(
+                f"| {file_count} | line {import_lineno} | `{name}` | "
+                f"{len(members)} |"
+            )
+        lines.append("")
+
     # Group violations by file for readability
     for result in results:
         if not result.violations:
@@ -533,6 +655,23 @@ def render_markdown(results: list[FileResult], root_label: str) -> str:
         lines.append("")
 
     return "\n".join(lines)
+
+
+def _cluster_by_import_site(
+    results: list[FileResult],
+) -> dict[tuple[int, str], list[Violation]]:
+    """Group violations by (import_lineno, name) across all files.
+
+    Returns ``{(import_lineno, name): [Violation, ...]}``. Reviewers use
+    this to spot "many usages, one fix" patterns — the canonical example
+    is a single TYPE_CHECKING import referenced in 30 places; fixing the
+    one import site resolves all 30 violations.
+    """
+    clusters: dict[tuple[int, str], list[Violation]] = defaultdict(list)
+    for result in results:
+        for v in result.violations:
+            clusters[(v.import_lineno, v.name)].append(v)
+    return dict(clusters)
 
 
 def render_json(results: list[FileResult]) -> str:
