@@ -395,20 +395,18 @@ COMPREHENSIVE_HOOKS = [
     HookDefinition(
         name="audit-type-checking-runtime-refs",
         command=[],
-        timeout=600,
-        stage=HookStage.COMPREHENSIVE,
+        timeout=300,
+        stage=HookStage.FAST,
         auto_run=True,
         security_level=SecurityLevel.MEDIUM,
         accepts_file_paths=False,
-        run_schedule="weekly",
         description=(
             "Detects TYPE_CHECKING-only imports referenced at runtime outside "
             "annotation context. Catches a latent bug class where `from "
             "__future__ import annotations` + `if TYPE_CHECKING:` imports a "
             "name that's then used at runtime, causing NameError at import. "
             "See crackerjack.tools.audit_type_checking_runtime_refs. "
-            "Currently informational (run_schedule=weekly); promote to fast "
-            "hook per-repo once violation count drops below 50."
+            "Promoted to fast hook 2026-08-31 — all Bodai repos pass cleanly."
         ),
     ),
 ]
