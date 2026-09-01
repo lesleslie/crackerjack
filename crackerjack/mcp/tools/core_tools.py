@@ -1,15 +1,13 @@
 import typing as t
 
 from crackerjack.config import CrackerjackSettings
+from crackerjack.core.workflow_orchestrator import WorkflowPipeline
 from crackerjack.mcp.context import MCPServerContext, get_context
 from crackerjack.mcp.rate_limiter import RateLimitMiddleware
 from crackerjack.services.input_validator import (
     SecureInputValidator,
     get_input_validator,
 )
-
-if t.TYPE_CHECKING:
-    from crackerjack.core.workflow_orchestrator import WorkflowPipeline
 
 
 async def create_task_with_subagent(
