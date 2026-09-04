@@ -301,7 +301,7 @@ class TestPublishManagerVersionManagement:
             manager.bump_version("patch")
 
     def test_bump_version_auto_with_recommendation(self, manager, tmp_path) -> None:
-        """Test bump_version in auto mode with AI recommendation."""
+        """Test bump_version in auto mode with the heuristic recommendation."""
         pyproject_path = tmp_path / "pyproject.toml"
         pyproject_content = '[project]\nversion = "1.2.3"\n'
         pyproject_path.write_text(pyproject_content)
@@ -311,7 +311,7 @@ class TestPublishManagerVersionManagement:
             '[project]\nversion = "1.3.0"\n'
         )
 
-        # Mock AI recommendation
+        # Mock the analyzer's recommendation
         mock_recommendation = Mock()
         mock_recommendation.bump_type.value = "minor"
 

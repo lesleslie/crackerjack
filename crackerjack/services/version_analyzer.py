@@ -11,6 +11,28 @@ from rich.console import Console
 from .changelog_automation import ChangelogEntry, ChangelogGenerator
 from .git import GitService
 
+"""Heuristic version-bump recommender for semantic-versioned projects.
+
+This module analyzes git commit history since a given version and
+recommends the next semver bump (major / minor / patch) along with a
+heuristic confidence score.
+
+**Current state (heuristic only):** the analyzer runs three independent
+classifiers — ``BreakingChangeAnalyzer``, ``FeatureAnalyzer``, and
+``ConventionalCommitAnalyzer`` — and applies a small decision tree in
+:meth:`VersionAnalyzer._determine_bump_type`. Confidence scores are
+hardcoded literals (0.4 / 0.5 / 0.6 / 0.7 / 0.9), not model outputs.
+
+**Pre-1.0.0 policy:** a breaking change on a ``0.x.y`` project is
+suppressed to MINOR per semver 0.x convention (see
+:meth:`VersionAnalyzer._is_pre_release`).
+
+**Future LLM-backed scoring:** the per-branch confidence literals in
+:meth:`VersionAnalyzer._determine_bump_type` may be replaced with an
+LLM call (e.g. a DocstringEnricher-style MiniMax invocation) without
+changing the function signature.
+"""
+
 
 class VersionBumpType(Enum):
     MAJOR = "major"
@@ -204,26 +226,29 @@ class VersionAnalyzer:
 
     def _calculate_next_version(self, current: str, bump_type: VersionBumpType) -> str:
         try:
-            parts = current.split(".")
-            if len(parts) != 3:
-                msg = f"Invalid version format: {current}"
-                raise ValueError(msg)
+            from crackerjack.services.version_math import calculate_next_version
 
-            major, minor, patch = map(int, parts)
-
-            if bump_type == VersionBumpType.MAJOR:
-                return f"{major + 1}.0.0"
-            if bump_type == VersionBumpType.MINOR:
-                return f"{major}.{minor + 1}.0"
-            if bump_type == VersionBumpType.PATCH:
-                return f"{major}.{minor}.{patch + 1}"
-            from typing import assert_never
-
-            assert_never(bump_type)
-
+            return calculate_next_version(current, bump_type.value)
         except Exception as e:
             self.console.print(f"[red]❌[/red] Error calculating version: {e}")
             raise
+
+    @staticmethod
+    def _is_pre_release(version: str | None) -> bool:
+        """Return True when ``version`` is a pre-1.0.0 release (major == 0).
+
+        Per semver, while the major version is 0 the API is experimental and
+        breaking changes are expected in every MINOR bump. Returns False for
+        any unparsable or missing version, which preserves historical
+        behavior (MAJOR is allowed) for callers that don't supply
+        ``current_version``.
+        """
+        if not version:
+            return False
+        try:
+            return int(version.split(".", 1)[0]) == 0
+        except ValueError, IndexError:
+            return False
 
     async def recommend_version_bump(
         self,
@@ -306,6 +331,7 @@ class VersionAnalyzer:
             bug_fixes=bug_fixes,
             all_entries=all_entries,
             confident_features=confident_features,
+            current_version=current_version,
         )
 
         recommended_version = self._calculate_next_version(current_version, bump_type)
@@ -333,9 +359,24 @@ class VersionAnalyzer:
         bug_fixes: list[str],
         all_entries: list[ChangelogEntry],
         confident_features: list[str] | None = None,
+        current_version: str | None = None,
     ) -> tuple[VersionBumpType, float, list[str]]:
-        # TODO: wire LLM analysis via DocstringEnricher-style MiniMax call here
+        # Confidence scores (0.4 / 0.5 / 0.6 / 0.7 / 0.9) returned below are
+        # heuristic constants — not LLM-derived. A future revision may
+        # replace the per-branch confidence literals with an LLM call (e.g.
+        # a DocstringEnricher-style MiniMax invocation) for semantically
+        # grounded confidence scoring. See module docstring for context.
         if has_breaking:
+            is_pre_release = self._is_pre_release(current_version)
+            if is_pre_release:
+                return (
+                    VersionBumpType.MINOR,
+                    breaking_confidence,
+                    [
+                        f"Breaking changes detected ({len(breaking_changes)} found)",
+                        "Pre-1.0.0: breaking change treated as MINOR per semver 0.x convention",
+                    ],
+                )
             return (
                 VersionBumpType.MAJOR,
                 breaking_confidence,

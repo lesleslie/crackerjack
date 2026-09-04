@@ -295,19 +295,9 @@ class PublishManagerImpl:
 
     def _calculate_next_version(self, current: str, bump_type: str) -> str:
         try:
-            parts = current.split(".")
-            if len(parts) != 3:
-                msg = f"Invalid version format: {current}"
-                raise ValueError(msg)
-            major, minor, patch = map(int, parts)
-            if bump_type == "major":
-                return f"{major + 1}.0.0"
-            if bump_type == "minor":
-                return f"{major}.{minor + 1}.0"
-            if bump_type == "patch":
-                return f"{major}.{minor}.{patch + 1}"
-            msg = f"Invalid bump type: {bump_type}"
-            raise ValueError(msg)
+            from crackerjack.services.version_math import calculate_next_version
+
+            return calculate_next_version(current, bump_type)
         except Exception as e:
             self.console.print(f"[red]❌[/red] Error calculating version: {e}")
             raise
@@ -324,10 +314,19 @@ class PublishManagerImpl:
         if recommendation and version_type != "interactive":
             self._display_version_analysis(recommendation)
             if version_type == "auto":
-                version_type = recommendation.bump_type.value
-                self.console.print(
-                    f"[green]🎯[/green] Using AI-recommended bump type: {version_type}",
-                )
+                # MAJOR is a human decision — never auto-apply. Fall through
+                # to the interactive prompt so the user can confirm or pick
+                # a different bump type. (Audit 2026-09-03.)
+                if recommendation.bump_type.value == "major":
+                    self.console.print(
+                        "[yellow]⚠️[/yellow] AI recommended MAJOR; auto-mode requires manual confirmation.",
+                    )
+                    version_type = "interactive"
+                else:
+                    version_type = recommendation.bump_type.value
+                    self.console.print(
+                        f"[green]🎯[/green] Using recommended bump type: {version_type}",
+                    )
 
         if version_type == "interactive":
             version_type = self._prompt_for_version_type(recommendation)
@@ -425,7 +424,7 @@ class PublishManagerImpl:
             if recommendation:
                 default_type = recommendation.bump_type.value
                 self.console.print(
-                    f"[dim]AI recommendation: {default_type} (confidence: {recommendation.confidence:.0%})[/dim]",
+                    f"[dim]Recommendation: {default_type} (confidence: {recommendation.confidence:.0%})[/dim]",
                 )
 
             return Prompt.ask(
@@ -473,7 +472,7 @@ class PublishManagerImpl:
         if not recommendation:
             return
 
-        self.console.print("\n[cyan]🎯 AI Version Analysis[/cyan]")
+        self.console.print("\n[cyan]🎯 Version Analysis[/cyan]")
         self.console.print(
             f"Recommended: [bold green]{recommendation.recommended_version}[/bold green] "
             f"({recommendation.bump_type.value.upper()}) - {recommendation.confidence:.0%} confidence",

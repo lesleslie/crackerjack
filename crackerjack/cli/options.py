@@ -297,7 +297,7 @@ CLI_OPTIONS = {
         help=(
             "Bump version and publish to PyPI (patch, minor, major, auto). "
             "Use 'interactive' to be prompted for version selection. "
-            "Use 'auto' to automatically use AI recommendations. "
+            "Use 'auto' to automatically use the recommended bump type. "
             "When used as a flag (-p), defaults to 'interactive'."
         ),
         case_sensitive=False,

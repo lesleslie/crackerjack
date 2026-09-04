@@ -251,3 +251,86 @@ class TestBumpTypeDecisions:
             confident_features=["Add feature"],
         )
         assert bump_type == VersionBumpType.MAJOR
+
+
+@pytest.mark.unit
+class TestPreReleaseBreakingChangeSuppression:
+    """Pre-1.0.0 must suppress MAJOR recommendations to MINOR per semver 0.x.
+
+    Semver convention: while the major version is 0, the API is considered
+    experimental and breaking changes are expected in every MINOR bump. The
+    analyzer must never recommend MAJOR for a 0.x.y project, even when the
+    change is genuinely breaking — the user should reach 1.0.0 only by
+    explicitly deciding to graduate.
+    """
+
+    def test_pre_1_0_breaking_yields_minor_not_major(self) -> None:
+        from crackerjack.services.version_analyzer import VersionAnalyzer
+        from unittest.mock import MagicMock
+
+        git_svc = MagicMock()
+        analyzer = VersionAnalyzer(git_service=git_svc)
+
+        bump_type, confidence, reasoning = analyzer._determine_bump_type(
+            has_breaking=True,
+            breaking_changes=["Redesign plugin API"],
+            breaking_confidence=0.9,
+            has_features=False,
+            new_features=[],
+            feature_confidence=0.0,
+            bug_fixes=[],
+            all_entries=[],
+            confident_features=[],
+            current_version="0.78.0",
+        )
+        assert bump_type == VersionBumpType.MINOR, (
+            f"Pre-1.0 breaking change must yield MINOR, got {bump_type}"
+        )
+        assert confidence == 0.9
+        assert any("Pre-1.0" in r for r in reasoning), (
+            f"Reasoning must mention pre-1.0 suppression, got {reasoning!r}"
+        )
+
+    def test_post_1_0_breaking_still_yields_major(self) -> None:
+        """Once on 1.x, breaking changes legitimately require MAJOR."""
+        from crackerjack.services.version_analyzer import VersionAnalyzer
+        from unittest.mock import MagicMock
+
+        git_svc = MagicMock()
+        analyzer = VersionAnalyzer(git_service=git_svc)
+
+        bump_type, _, _ = analyzer._determine_bump_type(
+            has_breaking=True,
+            breaking_changes=["Redesign plugin API"],
+            breaking_confidence=0.9,
+            has_features=False,
+            new_features=[],
+            feature_confidence=0.0,
+            bug_fixes=[],
+            all_entries=[],
+            confident_features=[],
+            current_version="1.2.3",
+        )
+        assert bump_type == VersionBumpType.MAJOR
+
+    def test_pre_1_0_features_unaffected(self) -> None:
+        """Pre-1.0 + features only → MINOR (no change)."""
+        from crackerjack.services.version_analyzer import VersionAnalyzer
+        from unittest.mock import MagicMock
+
+        git_svc = MagicMock()
+        analyzer = VersionAnalyzer(git_service=git_svc)
+
+        bump_type, _, _ = analyzer._determine_bump_type(
+            has_breaking=False,
+            breaking_changes=[],
+            breaking_confidence=0.0,
+            has_features=True,
+            new_features=["Add plugin loader"],
+            feature_confidence=0.9,
+            bug_fixes=[],
+            all_entries=[],
+            confident_features=["Add plugin loader"],
+            current_version="0.78.0",
+        )
+        assert bump_type == VersionBumpType.MINOR

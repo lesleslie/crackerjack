@@ -1,5 +1,12 @@
 ______________________________________________________________________
 
+## [0.79.0] - 2026-09-04
+
+### Fixed
+
+- hooks: Report truthful tc-refs count (256 → 173)
+- hooks: Tc-refs clean repo no longer flagged as failed
+
 ## [0.78.0] - 2026-09-01
 
 ### Added

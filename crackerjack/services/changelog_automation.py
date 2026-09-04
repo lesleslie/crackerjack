@@ -70,7 +70,7 @@ class ChangelogGenerator:
 
         self.breaking_change_pattern = (
             re.compile(  # REGEX OK: breaking change detection
-                r"BREAKING\s*CHANGE[:]\s*(.+)",
+                r"^\s*#?\s*BREAKING[\s-]+CHANGE:\s*\S",
                 re.IGNORECASE | re.MULTILINE,
             )
         )

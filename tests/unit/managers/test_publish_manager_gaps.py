@@ -338,6 +338,119 @@ class TestPublishManagerInteractiveBump:
                 manager.bump_version("patch")
 
 
+@pytest.mark.unit
+class TestPublishManagerAutoMajorGate:
+    """Auto-mode must never apply MAJOR recommendations without confirmation.
+
+    Per project policy (crackerjack audit 2026-09-03): MAJOR bumps are a
+    human decision. When ``--bump auto`` returns a MAJOR recommendation,
+    ``PublishManager.bump_version`` must fall through to the interactive
+    prompt instead of auto-applying.
+    """
+
+    def test_auto_with_major_recommendation_falls_through_to_interactive(
+        self, tmp_path: Path
+    ) -> None:
+        manager = _make_manager(tmp_path)
+        manager._regex_patterns.update_pyproject_version.return_value = (
+            '[project]\nversion = "2.0.0"\n'
+        )
+
+        major_rec = Mock()
+        major_rec.bump_type.value = "major"
+        major_rec.confidence = 0.9
+        major_rec.reasoning = ["Breaking changes detected (1 found)"]
+        major_rec.recommended_version = "2.0.0"
+        major_rec.breaking_changes = ["Redesign API"]
+        major_rec.new_features = []
+        major_rec.bug_fixes = []
+
+        with (
+            patch.object(manager, "_get_current_version", return_value="1.5.0"),
+            patch.object(
+                manager, "_get_version_recommendation", return_value=major_rec
+            ),
+            patch.object(
+                manager, "_prompt_for_version_type", return_value="minor"
+            ) as prompt,
+            patch.object(manager, "_update_python_version_files"),
+            patch.object(manager, "_update_changelog_for_version"),
+        ):
+            result = manager.bump_version("auto")
+
+        # Falls through to interactive prompt and uses user's selection.
+        assert result == "1.6.0"
+        prompt.assert_called_once_with(major_rec)
+
+    def test_auto_with_minor_recommendation_applies_directly(
+        self, tmp_path: Path
+    ) -> None:
+        """MINOR recommendations are auto-applied without prompting."""
+        manager = _make_manager(tmp_path)
+        manager._regex_patterns.update_pyproject_version.return_value = (
+            '[project]\nversion = "1.6.0"\n'
+        )
+
+        minor_rec = Mock()
+        minor_rec.bump_type.value = "minor"
+        minor_rec.confidence = 0.9
+        minor_rec.reasoning = ["New features detected (1 found)"]
+        minor_rec.recommended_version = "1.6.0"
+        minor_rec.breaking_changes = []
+        minor_rec.new_features = ["Add feature"]
+        minor_rec.bug_fixes = []
+
+        with (
+            patch.object(manager, "_get_current_version", return_value="1.5.0"),
+            patch.object(
+                manager, "_get_version_recommendation", return_value=minor_rec
+            ),
+            patch.object(
+                manager, "_prompt_for_version_type", return_value="minor"
+            ) as prompt,
+            patch.object(manager, "_update_python_version_files"),
+            patch.object(manager, "_update_changelog_for_version"),
+        ):
+            result = manager.bump_version("auto")
+
+        assert result == "1.6.0"
+        prompt.assert_not_called()
+
+    def test_auto_with_patch_recommendation_applies_directly(
+        self, tmp_path: Path
+    ) -> None:
+        """PATCH recommendations are auto-applied without prompting."""
+        manager = _make_manager(tmp_path)
+        manager._regex_patterns.update_pyproject_version.return_value = (
+            '[project]\nversion = "1.5.1"\n'
+        )
+
+        patch_rec = Mock()
+        patch_rec.bump_type.value = "patch"
+        patch_rec.confidence = 0.9
+        patch_rec.reasoning = ["Bug fixes detected (1 found)"]
+        patch_rec.recommended_version = "1.5.1"
+        patch_rec.breaking_changes = []
+        patch_rec.new_features = []
+        patch_rec.bug_fixes = ["Fix bug"]
+
+        with (
+            patch.object(manager, "_get_current_version", return_value="1.5.0"),
+            patch.object(
+                manager, "_get_version_recommendation", return_value=patch_rec
+            ),
+            patch.object(
+                manager, "_prompt_for_version_type", return_value="patch"
+            ) as prompt,
+            patch.object(manager, "_update_python_version_files"),
+            patch.object(manager, "_update_changelog_for_version"),
+        ):
+            result = manager.bump_version("auto")
+
+        assert result == "1.5.1"
+        prompt.assert_not_called()
+
+
 # ---------------------------------------------------------------------------
 # _run_command edge cases
 # ---------------------------------------------------------------------------

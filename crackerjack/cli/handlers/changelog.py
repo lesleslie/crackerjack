@@ -95,7 +95,7 @@ def determine_changelog_version(
                 version_analyzer.recommend_version_bump(changelog_since),
             )
             version = recommendation.recommended_version
-            console.print(f"[green]✨[/green] Using AI-recommended version: {version}")
+            console.print(f"[green]✨[/green] Using recommended version: {version}")
             return version
         except Exception as e:
             console.print(f"[yellow]⚠️[/yellow] Version analysis failed: {e}")
