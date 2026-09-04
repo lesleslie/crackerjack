@@ -51,9 +51,30 @@ class TestHookExecutionResult:
     def test_failed_count(self) -> None:
         """Test failed_count property."""
         results = [
-            HookResult(id="1", name="hook1", status="passed", duration=1.0, issues_found=[], stage="fast"),
-            HookResult(id="2", name="hook2", status="failed", duration=2.0, issues_found=["error"], stage="fast"),
-            HookResult(id="3", name="hook3", status="failed", duration=1.5, issues_found=["error2"], stage="fast"),
+            HookResult(
+                id="1",
+                name="hook1",
+                status="passed",
+                duration=1.0,
+                issues_found=[],
+                stage="fast",
+            ),
+            HookResult(
+                id="2",
+                name="hook2",
+                status="failed",
+                duration=2.0,
+                issues_found=["error"],
+                stage="fast",
+            ),
+            HookResult(
+                id="3",
+                name="hook3",
+                status="failed",
+                duration=1.5,
+                issues_found=["error2"],
+                stage="fast",
+            ),
         ]
 
         result = HookExecutionResult(
@@ -71,9 +92,30 @@ class TestHookExecutionResult:
     def test_passed_count(self) -> None:
         """Test passed_count property."""
         results = [
-            HookResult(id="1", name="hook1", status="passed", duration=1.0, issues_found=[], stage="fast"),
-            HookResult(id="2", name="hook2", status="failed", duration=2.0, issues_found=["error"], stage="fast"),
-            HookResult(id="3", name="hook3", status="passed", duration=1.5, issues_found=[], stage="fast"),
+            HookResult(
+                id="1",
+                name="hook1",
+                status="passed",
+                duration=1.0,
+                issues_found=[],
+                stage="fast",
+            ),
+            HookResult(
+                id="2",
+                name="hook2",
+                status="failed",
+                duration=2.0,
+                issues_found=["error"],
+                stage="fast",
+            ),
+            HookResult(
+                id="3",
+                name="hook3",
+                status="passed",
+                duration=1.5,
+                issues_found=[],
+                stage="fast",
+            ),
         ]
 
         result = HookExecutionResult(
@@ -105,8 +147,22 @@ class TestHookExecutionResult:
     def test_performance_summary(self) -> None:
         """Test performance_summary property."""
         results = [
-            HookResult(id="1", name="hook1", status="passed", duration=1.0, issues_found=[], stage="fast"),
-            HookResult(id="2", name="hook2", status="failed", duration=2.0, issues_found=["error"], stage="fast"),
+            HookResult(
+                id="1",
+                name="hook1",
+                status="passed",
+                duration=1.0,
+                issues_found=[],
+                stage="fast",
+            ),
+            HookResult(
+                id="2",
+                name="hook2",
+                status="failed",
+                duration=2.0,
+                issues_found=["error"],
+                stage="fast",
+            ),
         ]
 
         result = HookExecutionResult(
@@ -129,8 +185,22 @@ class TestHookExecutionResult:
     def test_skipped_counts_as_success(self) -> None:
         """Test skipped hooks do not fail the overall execution result."""
         results = [
-            HookResult(id="1", name="hook1", status="passed", duration=1.0, issues_found=[], stage="fast"),
-            HookResult(id="2", name="pip-audit", status="skipped", duration=2.0, issues_found=[], stage="fast"),
+            HookResult(
+                id="1",
+                name="hook1",
+                status="passed",
+                duration=1.0,
+                issues_found=[],
+                stage="fast",
+            ),
+            HookResult(
+                id="2",
+                name="pip-audit",
+                status="skipped",
+                duration=2.0,
+                issues_found=[],
+                stage="fast",
+            ),
         ]
 
         result = HookExecutionResult(
@@ -214,9 +284,10 @@ class TestHookExecutorMethods:
         strategy.hooks = []
 
         # Mock the internal methods
-        with patch.object(executor, '_execute_hooks', return_value=[]), \
-             patch.object(executor, '_create_execution_result') as mock_create_result:
-
+        with (
+            patch.object(executor, "_execute_hooks", return_value=[]),
+            patch.object(executor, "_create_execution_result") as mock_create_result,
+        ):
             mock_create_result.return_value = HookExecutionResult(
                 strategy_name="test",
                 results=[],
@@ -242,7 +313,7 @@ class TestHookExecutorMethods:
         hook.stage.value = "fast"
 
         # Mock the internal methods
-        with patch.object(executor, '_run_hook_subprocess') as mock_run:
+        with patch.object(executor, "_run_hook_subprocess") as mock_run:
             mock_result = MagicMock()
             mock_result.returncode = 0
             mock_result.stdout = ""
@@ -308,7 +379,12 @@ class TestHookExecutorInternalMethods:
         hook.timeout = 10.0
 
         # Mock _extract_issues_from_process_output since the implementation calls it without args
-        with patch('time.time', return_value=5.0),              patch.object(executor, '_extract_issues_from_process_output', return_value=[]):
+        with (
+            patch("time.time", return_value=5.0),
+            patch.object(
+                executor, "_extract_issues_from_process_output", return_value=[]
+            ),
+        ):
             result = executor._create_timeout_result(
                 hook=hook,
                 start_time=0.0,
@@ -330,7 +406,7 @@ class TestHookExecutorInternalMethods:
         hook.stage = MagicMock()
         hook.stage.value = "fast"
 
-        with patch('time.time', return_value=5.0):
+        with patch("time.time", return_value=5.0):
             result = executor._create_error_result(
                 hook=hook,
                 start_time=0.0,
@@ -352,12 +428,16 @@ class TestHookExecutorInternalMethods:
         hook.is_formatting = False
 
         # Test with returncode 0
-        result = subprocess.CompletedProcess(args=[], returncode=0, stdout="", stderr="")
+        result = subprocess.CompletedProcess(
+            args=[], returncode=0, stdout="", stderr=""
+        )
         status = executor._determine_initial_status(hook, result)
         assert status == "passed"
 
         # Test with returncode != 0
-        result = subprocess.CompletedProcess(args=[], returncode=1, stdout="", stderr="")
+        result = subprocess.CompletedProcess(
+            args=[], returncode=1, stdout="", stderr=""
+        )
         status = executor._determine_initial_status(hook, result)
         assert status == "failed"
 
@@ -650,15 +730,29 @@ class TestHookExecutorInternalMethods:
         """Test _handle_retries method."""
         executor = HookExecutor(console=MagicMock(), pkg_path=Path("/tmp"))
         results = [
-            HookResult(id="1", name="hook1", status="passed", duration=1.0, issues_found=[], stage="fast"),
-            HookResult(id="2", name="hook2", status="failed", duration=2.0, issues_found=["error"], stage="fast"),
+            HookResult(
+                id="1",
+                name="hook1",
+                status="passed",
+                duration=1.0,
+                issues_found=[],
+                stage="fast",
+            ),
+            HookResult(
+                id="2",
+                name="hook2",
+                status="failed",
+                duration=2.0,
+                issues_found=["error"],
+                stage="fast",
+            ),
         ]
         strategy = MagicMock(spec=HookStrategy)
         strategy.retry_policy = MagicMock()
         strategy.retry_policy.value = "none"
 
         # Mock the retry methods
-        with patch.object(executor, '_retry_failed_hooks', return_value=results):
+        with patch.object(executor, "_retry_failed_hooks", return_value=results):
             result = executor._handle_retries(strategy, results)
 
             assert isinstance(result, list)
@@ -668,8 +762,22 @@ class TestHookExecutorInternalMethods:
         console = MagicMock()
         executor = HookExecutor(console=console, pkg_path=Path("/tmp"))
         results = [
-            HookResult(id="1", name="hook1", status="passed", duration=1.0, issues_found=[], stage="fast"),
-            HookResult(id="2", name="hook2", status="passed", duration=2.0, issues_found=[], stage="fast"),
+            HookResult(
+                id="1",
+                name="hook1",
+                status="passed",
+                duration=1.0,
+                issues_found=[],
+                stage="fast",
+            ),
+            HookResult(
+                id="2",
+                name="hook2",
+                status="passed",
+                duration=2.0,
+                issues_found=[],
+                stage="fast",
+            ),
         ]
 
         strategy = MagicMock(spec=HookStrategy)
@@ -710,9 +818,94 @@ class TestHookExecutorEdgeCases:
         hook.stage.value = "fast"
 
         # Mock to simulate an error during execution
-        with patch.object(executor, '_run_hook_subprocess', side_effect=Exception("Test error")):
+        with patch.object(
+            executor, "_run_hook_subprocess", side_effect=Exception("Test error")
+        ):
             result = executor.execute_single_hook(hook)
 
             # Should handle the error gracefully and return an error result
             assert isinstance(result, HookResult)
             assert result.status == "error"
+
+
+class TestParseTcRefsIssues:
+    """Dedicated parser for ``tc-refs`` markdown output.
+
+    Regression for the bug where ``_extract_issues_for_regular_tools``
+    routed the markdown report through ``extract_issue_lines`` and
+    reported 200+ "issues" because every table row survived the
+    heuristic. Routing tc-refs through a dedicated parser surfaces the
+    single ``Total violations: N`` count instead.
+    """
+
+    def _executor(self) -> HookExecutor:
+        return HookExecutor(console=MagicMock(), pkg_path=Path("/tmp"))
+
+    def test_extracts_total_violations_from_header(self) -> None:
+        executor = self._executor()
+        output = (
+            "- **Roots**: `opera_cloud_mcp`\n"
+            "- **Files scanned**: 55\n"
+            "- **Total violations**: 173\n"
+            "\n"
+            "## `opera_cloud_mcp/auth/__init__.py`\n"
+            "\n"
+            "| Line | Name | Imported at | Context |\n"
+            "| 141 | `Settings` | line 30 | `Settings` |\n"
+        )
+        issues = executor._parse_tc_refs_issues(output)
+        assert len(issues) == 1
+        assert "173" in issues[0]
+        assert "violations" in issues[0]
+
+    def test_returns_empty_when_total_header_missing(self) -> None:
+        """A malformed/missing header must yield 0, not a wrong count."""
+        executor = self._executor()
+        output = "no header here at all\njust some text\n"
+        assert executor._parse_tc_refs_issues(output) == []
+
+    def test_handles_cluster_summary_version(self) -> None:
+        """Both script versions (with and without cluster summary) parse."""
+        executor = self._executor()
+        with_cluster = (
+            "- **Total violations**: 256\n"
+            "\n"
+            "## Cluster summary (by fix site)\n"
+            "\n"
+            "| Files | Import site | Name | Count |\n"
+            "| --- | --- | --- | ---: |\n"
+            "| 3 | line 18 | `FastMCP` | 38 |\n"
+        )
+        issues = executor._parse_tc_refs_issues(with_cluster)
+        assert len(issues) == 1
+        assert "256" in issues[0]
+
+    def test_dispatch_routes_tc_refs_through_dedicated_parser(self) -> None:
+        """``_extract_issues_for_reporting_tools`` must dispatch tc-refs to its parser.
+
+        With ``hook.name == "tc-refs"`` the dispatcher invokes the
+        dedicated parser (returns a list carrying the count). For any
+        other name it falls through to the empty ``return []`` at the
+        end — guarding against accidental routing for unrelated tools.
+        """
+        executor = self._executor()
+        output = "- **Total violations**: 42\n"
+
+        tc_refs_hook = MagicMock()
+        tc_refs_hook.name = "tc-refs"
+        routed = executor._extract_issues_for_reporting_tools(
+            tc_refs_hook,
+            output,
+        )
+        assert routed == ["tc-refs: 42 violations"]
+
+        other_hook = MagicMock()
+        other_hook.name = "ruff-check"  # not in REPORTING_TOOLS
+        # ruff-check is a regular tool; the dispatcher is only reached
+        # for REPORTING_TOOLS names, so verify the fallthrough is empty.
+        if other_hook.name in executor._REPORTING_TOOLS:
+            routed_other = executor._extract_issues_for_reporting_tools(
+                other_hook,
+                output,
+            )
+            assert routed_other == []

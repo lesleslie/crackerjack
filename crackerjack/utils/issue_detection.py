@@ -101,6 +101,10 @@ def should_count_as_issue(
         logger.debug(f"Filtering out header line: {line_stripped[:100]}")
         return False
 
+    if line_stripped.startswith("|") and line_stripped.count("|") >= 2:
+        logger.debug(f"Filtering out markdown table row: {line_stripped[:100]}")
+        return False
+
     if additional_filters and not additional_filters(line_stripped):
         logger.debug(f"Filtering out line via custom filter: {line_stripped[:100]}")
         return False

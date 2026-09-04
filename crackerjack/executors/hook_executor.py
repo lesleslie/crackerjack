@@ -109,6 +109,7 @@ class HookExecutor:
             "pip-audit",
             "lychee",
             "ty",
+            "tc-refs",
         }
     )
 
@@ -901,7 +902,30 @@ class HookExecutor:
             return self._parse_lychee_issues(error_output)
         if hook.name == "ty":
             return self._parse_ty_ratchet_issues(error_output)
+        if hook.name == "tc-refs":
+            return self._parse_tc_refs_issues(error_output)
         return []
+
+    _TC_REFS_TOTAL_RE = re.compile(r"\*\*Total violations\*\*:\s*(\d+)")
+
+    def _parse_tc_refs_issues(self, output: str) -> list[str]:
+        """Extract the single ``Total violations: N`` count from a tc-refs report.
+
+        tc-refs emits a markdown report whose body contains per-file tables
+        and a cluster summary — the generic line-counting heuristic would
+        inflate the count by hundreds. Parsing the header line yields the
+        authoritative ``N`` without double-counting table rows.
+
+        Returns ``[]`` if the header is absent (e.g. parse error or empty
+        report) so the count stays 0 rather than reporting a wrong number.
+        """
+        if not output:
+            return []
+        match = self._TC_REFS_TOTAL_RE.search(output)
+        if not match:
+            return []
+        count = match.group(1)
+        return [f"tc-refs: {count} violations"]
 
     def _extract_issues_via_json_parser(self, tool_name: str, output: str) -> list[str]:
         try:

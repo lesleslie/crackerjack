@@ -4,8 +4,6 @@ This test suite verifies that the shared issue detection logic works correctly
 and is used consistently by both the hook execution layer and the AI fixing layer.
 """
 
-import pytest
-
 from crackerjack.utils.issue_detection import (
     count_issues_from_output,
     extract_issue_lines,
@@ -75,6 +73,46 @@ class TestShouldCountAsIssue:
         assert not should_count_as_issue("─────┼──────────┼────────────")
         assert not should_count_as_issue("File | Line | Issue")
         assert not should_count_as_issue("Function | Complexity")
+
+    def test_filters_markdown_table_rows(self):
+        """Markdown table rows (leading ``|``, two or more pipes) must be skipped.
+
+        Hooks that emit markdown reports (e.g. ``tc-refs``) produce tables
+        whose rows would otherwise be counted as issues by the generic
+        line-counting heuristic — inflating the Fast Hook Results table.
+        """
+        # Header row from a per-file violation table
+        assert not should_count_as_issue(
+            "| Line | Name | Imported at | Context |",
+        )
+        # Body row (cells wrapped in backticks)
+        assert not should_count_as_issue(
+            "| 141 | `Settings` | line 30 | `Settings` |",
+        )
+        # Cluster-summary header row
+        assert not should_count_as_issue("| Files | Import site | Name | Count |")
+        # Cluster-summary body row
+        assert not should_count_as_issue("| 3 | line 18 | `FastMCP` | 38 |")
+
+    def test_does_not_filter_single_pipe_in_bullet(self):
+        """A markdown bullet that happens to contain one ``|`` is not a table row.
+
+        Defends against over-eager filtering: only lines that START with
+        ``|`` AND contain a second ``|`` count as table rows.
+        """
+        # Bullet line with one pipe mid-text (still carries content)
+        assert should_count_as_issue("- See file | Path for details")
+        # Pipe inside normal text (no leading pipe)
+        assert should_count_as_issue("use A | B instead")
+
+    def test_ruff_error_line_still_counted_after_table_filter(self):
+        """Regression guard: the table filter must not swallow ruff/mypy output.
+
+        Ruff errors use the ``file:line:col: code message`` form — no
+        leading pipe — so they remain counted.
+        """
+        assert should_count_as_issue("src/foo.py:1:1: E501 line too long")
+        assert should_count_as_issue("src/bar.py:42:5: F401 unused import")
 
     def test_filters_empty_lines(self):
         """Empty lines should not be counted as issues."""
@@ -195,6 +233,40 @@ Summary: 3 errors found
         assert len(issues) == 3
         assert all("error:" in issue for issue in issues)
         assert not any("note:" in issue for issue in issues)
+
+    def test_skips_markdown_table_rows_in_realistic_output(self):
+        """A markdown report with tables must not over-count.
+
+        Mirrors the real-world bug: a hook emitting a markdown report
+        with per-file violation tables would be reported as 200+ issues
+        when the table rows survived the line-counting heuristic.
+        """
+        output = """
+- **Roots**: `opera_cloud_mcp`
+- **Files scanned**: 55
+- **Total violations**: 173
+
+## Cluster summary (by fix site)
+
+| Files | Import site | Name | Count |
+| --- | --- | --- | ---: |
+| 3 | line 18 | `FastMCP` | 38 |
+| 3 | line 18 | `Decimal` | 24 |
+
+## `opera_cloud_mcp/auth/__init__.py`
+
+| Line | Name | Imported at | Context |
+| --- | --- | --- | --- |
+| 141 | `Settings` | line 30 | `Settings` |
+| 261 | `Settings` | line 30 | `Settings` |
+"""
+        issues = extract_issue_lines(output, tool_name="tc-refs")
+        # Every table row must be filtered. Bullet metadata lines are
+        # NOT table rows so they pass the heuristic — that is the
+        # intended (conservative) behavior; Fix A short-circuits tc-refs
+        # before reaching this fallback anyway.
+        for issue in issues:
+            assert not issue.startswith("|"), f"Table row should be filtered: {issue!r}"
 
 
 class TestIntegrationWithHookExecution:
