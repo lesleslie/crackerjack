@@ -864,6 +864,25 @@ class TestParseTcRefsIssues:
         output = "no header here at all\njust some text\n"
         assert executor._parse_tc_refs_issues(output) == []
 
+    def test_returns_empty_when_total_violations_is_zero(self) -> None:
+        """Clean repo (0 violations) must yield an empty issues list.
+
+        The status-flipping logic in ``_update_status_for_reporting_tools``
+        flips ``passed`` → ``failed`` whenever the issues list is non-empty.
+        Returning a synthetic ``"tc-refs: 0 violations"`` line would
+        incorrectly flag a clean repo as failing. Return ``[]`` instead.
+        """
+        executor = self._executor()
+        output = (
+            "- **Roots**: `crackerjack`\n"
+            "- **Files scanned**: 50\n"
+            "- **Files with violations**: 0\n"
+            "- **Total violations**: 0\n"
+            "\n"
+            "**No violations found.**\n"
+        )
+        assert executor._parse_tc_refs_issues(output) == []
+
     def test_handles_cluster_summary_version(self) -> None:
         """Both script versions (with and without cluster summary) parse."""
         executor = self._executor()

@@ -917,12 +917,20 @@ class HookExecutor:
         authoritative ``N`` without double-counting table rows.
 
         Returns ``[]`` if the header is absent (e.g. parse error or empty
-        report) so the count stays 0 rather than reporting a wrong number.
+        report) **or if N == 0** — the latter keeps a clean repo from being
+        flagged as failing. ``_update_status_for_reporting_tools`` flips the
+        hook status to "failed" whenever this list is non-empty, so a
+        synthetic ``"tc-refs: 0 violations"`` line would incorrectly fail
+        every clean repo. Return ``[]`` so the Fast Hook Results table
+        shows 0 issues and a passed status, matching the script's
+        exit-code-0 behavior on a clean run.
         """
         if not output:
             return []
         match = self._TC_REFS_TOTAL_RE.search(output)
         if not match:
+            return []
+        if match.group(1) == "0":
             return []
         count = match.group(1)
         return [f"tc-refs: {count} violations"]
