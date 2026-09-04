@@ -678,6 +678,11 @@ class HookExecutor:
             if ty_actual > 0:
                 issues_count = ty_actual
 
+        if hook.name == "tc-refs" and status == "failed" and issues_found:
+            tc_refs_actual = self._tc_refs_actual_count(issues_found[0])
+            if tc_refs_actual > 0:
+                issues_count = tc_refs_actual
+
         qa_result = self._try_get_qa_result_for_hook(hook, result, duration)
 
         return HookResult(
@@ -907,6 +912,7 @@ class HookExecutor:
         return []
 
     _TC_REFS_TOTAL_RE = re.compile(r"\*\*Total violations\*\*:\s*(\d+)")
+    _TC_REFS_ISSUE_LINE_RE = re.compile(r"^tc-refs:\s+(\d+)\s+violations$")
 
     def _parse_tc_refs_issues(self, output: str) -> list[str]:
         """Extract the single ``Total violations: N`` count from a tc-refs report.
@@ -934,6 +940,24 @@ class HookExecutor:
             return []
         count = match.group(1)
         return [f"tc-refs: {count} violations"]
+
+    def _tc_refs_actual_count(self, synthetic_issue_line: str) -> int:
+        """Extract N from the synthetic ``"tc-refs: N violations"`` issue line.
+
+        The Fast Hook Results ``Issues`` column reads ``issues_count``,
+        which is computed as ``len(issues_found)``. For tc-refs that is
+        always 1 (one synthetic line per report), so the column would
+        show ``1`` even for repos with hundreds of violations. This
+        helper lets the executor override ``issues_count`` with the
+        real ``N`` parsed out of the synthetic line — mirroring the
+        ``_ty_actual_count`` pattern. Returns 0 on any malformed input.
+        """
+        if not synthetic_issue_line:
+            return 0
+        match = self._TC_REFS_ISSUE_LINE_RE.match(synthetic_issue_line)
+        if not match:
+            return 0
+        return int(match.group(1))
 
     def _extract_issues_via_json_parser(self, tool_name: str, output: str) -> list[str]:
         try:

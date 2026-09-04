@@ -899,6 +899,22 @@ class TestParseTcRefsIssues:
         assert len(issues) == 1
         assert "256" in issues[0]
 
+    def test_actual_count_extracts_n_from_synthetic_issue_line(self) -> None:
+        """``_tc_refs_actual_count`` must return N for the Issues column.
+
+        ``_calculate_issues_count`` returns ``len(issues_found)`` which
+        is 1 for tc-refs (one synthetic line per report). To make the
+        Fast Hook Results ``Issues`` column show the real count, this
+        helper parses N out of the synthetic line so the executor can
+        override ``issues_count`` — mirroring the ty pattern.
+        """
+        executor = self._executor()
+        assert executor._tc_refs_actual_count("tc-refs: 173 violations") == 173
+        assert executor._tc_refs_actual_count("tc-refs: 1 violations") == 1
+        # Defensive: malformed input should fall back to 0, not crash.
+        assert executor._tc_refs_actual_count("not a tc-refs line") == 0
+        assert executor._tc_refs_actual_count("") == 0
+
     def test_dispatch_routes_tc_refs_through_dedicated_parser(self) -> None:
         """``_extract_issues_for_reporting_tools`` must dispatch tc-refs to its parser.
 
