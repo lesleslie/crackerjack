@@ -103,6 +103,15 @@ def _parse_changelog(text: str) -> list[ChangelogClaim]:
             if not m:
                 continue
             symbol = m.group(1)
+        # Require module-qualified paths (contains at least one dot)
+        # and validate the captured token is a valid Python identifier
+        # path like "mymodule.MyClass.new_method" or
+        # "mcp_common.cli.factory.MCPServerCLIFactory.register_lifecycle_handlers".
+        # Bare words like "Prometheus" or "TLS" get rejected.
+        if "." not in symbol or not re.fullmatch(
+            r"[A-Za-z_][\w]*(\.[A-Za-z_][\w]*)+", symbol
+        ):
+            continue
         claims.append(
             ChangelogClaim(
                 claim_type=current_section,
@@ -127,11 +136,12 @@ def _parse_claude_md(text: str) -> list[ClaudeClaim]:
         if m:
             claims.append(ClaudeClaim(kind="coverage", value=m.group(1), context=line.strip()))
             continue
-        # Test count: "N tests" or "N total tests"
-        m = re.search(r"(\d+)\s+total\s+tests|(\d+)\s+tests\b", line)
+        # Test count: require canonical claim form "N tests total" (or
+        # "N test total"). Reject incidental prose mentions like
+        # "20 tests in module X" or table cells like "| 20 | ... |".
+        m = re.search(r"(\d+)\s+tests?\s+total", line, re.IGNORECASE)
         if m:
-            value = m.group(1) or m.group(2)
-            claims.append(ClaudeClaim(kind="test_count", value=value, context=line.strip()))
+            claims.append(ClaudeClaim(kind="test_count", value=m.group(1), context=line.strip()))
             continue
         # Package path: bullet under ## Package Structure
         m = re.match(r"\s*-\s+`?([\w/]+\.py)`?", line)
