@@ -8776,14 +8776,6 @@ No methods defined.
 - `dependencies` (dict[(str, str)]):
   **Returns:** list[DependencyVulnerability]
 
-#### `_check_with_pip_audit`
-
-**Parameters:**
-
-- `self` ():
-- `dependencies` (dict[(str, str)]):
-  **Returns:** list[DependencyVulnerability]
-
 #### `_run_vulnerability_tool`
 
 **Parameters:**
@@ -8826,14 +8818,6 @@ No methods defined.
 
 - `self` ():
 - `safety_data` (t.Any):
-  **Returns:** list[DependencyVulnerability]
-
-#### `_parse_pip_audit_output`
-
-**Parameters:**
-
-- `self` ():
-- `audit_data` (t.Any):
   **Returns:** list[DependencyVulnerability]
 
 #### `_check_major_updates`

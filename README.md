@@ -1443,7 +1443,7 @@ Crackerjack runs quality checks in a two-stage process for optimal development w
 - Codespell spell checking
 - Trailing whitespace and file-end cleanup
 - UV lock file updates
-- pip-audit dependency vulnerability scan
+- osv-scanner dependency vulnerability scan
 - Utility checks (YAML, TOML, JSON, AST validation)
 
 **Comprehensive Hooks (~30–120 seconds):**
