@@ -98,11 +98,25 @@ def _parse_changelog(text: str) -> list[ChangelogClaim]:
         if m:
             symbol = m.group(1)
         else:
-            # Try "Add/Remove Name" prose pattern
-            m = re.match(r"(?:Add(?:ed|ing)?|Remov(?:ed|ing))\s+([\w.]+)", bullet)
+            # Try "Add/Remove Name" prose pattern with optional repo prefix.
+            # Real mcp-common CHANGELOG entries use the form
+            # "mcp-common: Add MCPServerCLIFactory.register_lifecycle_handlers".
+            # The captured repo prefix (e.g. "mcp-common") gets translated to
+            # its Python module form ("mcp_common") and prepended to the
+            # symbol so verification can locate the definition in source.
+            m = re.match(
+                r"(?:([\w-]+):\s+)?(?:Add(?:ed|ing)?|Remov(?:ed|ing))\s+([\w.]+)",
+                bullet,
+            )
             if not m:
                 continue
-            symbol = m.group(1)
+            repo_prefix = m.group(1)
+            symbol_tail = m.group(2)
+            if repo_prefix:
+                module_prefix = repo_prefix.replace("-", "_")
+                symbol = f"{module_prefix}.{symbol_tail}"
+            else:
+                symbol = symbol_tail
         # Require module-qualified paths (contains at least one dot)
         # and validate the captured token is a valid Python identifier
         # path like "mymodule.MyClass.new_method" or
