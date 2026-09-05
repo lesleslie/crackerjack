@@ -105,7 +105,7 @@ def _parse_changelog(text: str) -> list[ChangelogClaim]:
             # its Python module form ("mcp_common") and prepended to the
             # symbol so verification can locate the definition in source.
             m = re.match(
-                r"(?:([\w-]+):\s+)?(?:Add(?:ed|ing)?|Remov(?:ed|ing))\s+([\w.]+)",
+                r"(?:([\w-]+):\s+)?(?:Add(?:ed|ing)?|Remov(?:ed|ing))\s+([\w]+(?:\.[\w]+)+)",
                 bullet,
             )
             if not m:
