@@ -286,10 +286,18 @@ def check_release_audit(
     changelog_path: Path,
     claude_md_path: Path,
     pyproject_path: Path,
-    ratchet_path: Path,
+    ratchet_path: Path | None,
     source_root: Path,
     test_root: Path,
 ) -> ReleaseAuditReport:
+    """Run the release-audit check.
+
+    ``ratchet_path`` may be ``None`` or point to a non-existent file when
+    the repo does not track coverage with the ratchet CLI. In that case the
+    coverage claim is skipped (no Fail verdict) so non-ratchet repos can
+    pass the audit. Other claim kinds (version, test count, package paths,
+    CHANGELOG symbols) still run.
+    """
     report = ReleaseAuditReport(passed=True)
 
     try:
@@ -307,12 +315,26 @@ def check_release_audit(
         else:
             report.results.append(_verify_removed(claim, source_root))
 
-    # Verify CLAUDE.md claims
+    # Verify CLAUDE.md claims. Coverage is only checked when a real ratchet
+    # file exists — passing ``None`` or a missing path skips the check
+    # instead of producing a hard FAIL for repos that don't use ratchet.
+    has_ratchet = ratchet_path is not None and ratchet_path.exists()
+
     for claim in _parse_claude_md(claude_text):
         if claim.kind == "version":
             report.results.append(_verify_version(claim, pyproject_path))
         elif claim.kind == "coverage":
-            report.results.append(_verify_coverage(claim, ratchet_path))
+            if has_ratchet:
+                report.results.append(_verify_coverage(claim, ratchet_path))
+            else:
+                report.results.append(
+                    VerifyResult(
+                        True,
+                        "claude_md",
+                        claim,
+                        f"CLAUDE.md: coverage '{claim.value}%' skipped (no ratchet file)",
+                    ),
+                )
         elif claim.kind == "test_count":
             report.results.append(_verify_test_count(claim, test_root))
         elif claim.kind == "package_path":
@@ -329,7 +351,7 @@ if __name__ == "__main__":
     parser.add_argument("--changelog", type=Path, required=True)
     parser.add_argument("--claude-md", type=Path, required=True)
     parser.add_argument("--pyproject", type=Path, required=True)
-    parser.add_argument("--ratchet", type=Path, required=True)
+    parser.add_argument("--ratchet", type=Path, default=None)
     parser.add_argument("--source-root", type=Path, required=True)
     parser.add_argument("--test-root", type=Path, required=True)
     args = parser.parse_args()

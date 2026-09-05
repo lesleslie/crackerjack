@@ -6,6 +6,7 @@ import typing as t
 from contextlib import suppress
 from pathlib import Path
 
+from crackerjack.checks.release_audit import check_release_audit
 from crackerjack.core.console import CrackerjackConsole
 from crackerjack.core.retry import retry_api_call
 from crackerjack.models.protocols import (
@@ -303,6 +304,9 @@ class PublishManagerImpl:
             raise
 
     def bump_version(self, version_type: str) -> str:
+        if not self._validate_release_audit():
+            msg = "Release-audit failed; refusing to bump version"
+            raise ValueError(msg)
         current_version = self._get_current_version()
         if not current_version:
             self.console.print("[red]❌[/red] Could not determine current version")
@@ -607,7 +611,68 @@ class PublishManagerImpl:
             return False
 
     def _validate_prerequisites(self) -> bool:
-        return self.validate_auth()
+        if not self.validate_auth():
+            return False
+        return self._validate_release_audit()
+
+    def _validate_release_audit(self) -> bool:
+        """Run release-audit check before any publish/bump operation.
+
+        Verifies that CHANGELOG.md "Added"/"Removed" claims match the
+        source tree, CLAUDE.md version/coverage/test-count claims match
+        pyproject.toml + .coverage-ratchet.json + pytest, and CLAUDE.md
+        package-path claims exist on disk. Returns False if the audit
+        fails so the caller can abort the publish/bump cleanly.
+        """
+        project_root = self.pkg_path
+        source_root = self._detect_source_root(project_root)
+        if source_root is None:
+            self.console.print(
+                "[yellow]⚠️[/yellow] Release-audit: no source package "
+                f"found under {project_root}, skipping",
+            )
+            return True
+
+        ratchet_path = project_root / ".coverage-ratchet.json"
+        report = check_release_audit(
+            project_root=project_root,
+            changelog_path=project_root / "CHANGELOG.md",
+            claude_md_path=project_root / "CLAUDE.md",
+            pyproject_path=project_root / "pyproject.toml",
+            ratchet_path=ratchet_path if ratchet_path.exists() else None,
+            source_root=source_root,
+            test_root=project_root / "tests",
+        )
+
+        if not report.passed:
+            self.console.print(
+                f"[red]❌[/red] Release-audit failed:\n{report.format_text()}",
+            )
+            return False
+
+        self.console.print("[green]✅[/green] Release-audit passed")
+        return True
+
+    def _detect_source_root(self, project_root: Path) -> Path | None:
+        """Return the first existing source-package directory under project_root.
+
+        Checks the common Bodai package directory names so the audit
+        knows where to grep for the symbols CHANGELOG claims. Returns
+        None if no known package directory exists (audit skipped).
+        """
+        for name in (
+            "mcp_common",
+            "crackerjack",
+            "mahavishnu",
+            "oneiric",
+            "session_buddy",
+            "akosha",
+            "dhara",
+        ):
+            candidate = project_root / name
+            if candidate.is_dir():
+                return candidate
+        return None
 
     def _perform_publish_workflow(self) -> bool:
         if self.dry_run:
