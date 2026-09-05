@@ -26,10 +26,9 @@ class TestToolCommandsRegistry:
 
     def test_registry_has_expected_count(self) -> None:
         """Test that registry contains expected number of tools."""
-        # Current registry: 6 custom + 9 native + 19 third-party = 34 tools
-        # Added since the original count of 30: ty-ignore-syntax (custom),
-        # betterleaks + cohesion + pymetrica (third-party).
-        assert len(TOOL_COMMANDS) == 34
+        # 6 custom + 9 native + 20 third-party = 35 tools
+        # tc-refs was added to third-party without bumping the count here.
+        assert len(TOOL_COMMANDS) == 35
 
     def test_all_commands_are_lists(self) -> None:
         """Test that all commands are lists of strings."""
@@ -65,6 +64,7 @@ class TestToolCommandsRegistry:
             "ty",
             "pyrefly",
             "betterleaks",
+            "osv-scanner",  # Go binary installed via brew / go install
         }
 
         for hook_name, command in TOOL_COMMANDS.items():
@@ -134,7 +134,7 @@ class TestToolCommandsRegistry:
             "creosote",
             "complexipy",
             "refurb",
-            "pip-audit",
+            "osv-scanner",
             "pyscn",
         ]
         for tool in expected_third_party:
@@ -453,60 +453,60 @@ class TestIntegrationWithHooks:
             assert all(isinstance(arg, str) for arg in command)
 
 
-class TestPipAuditCommand:
-    """Regression tests for the pip-audit tool command.
+class TestOsvScannerCommand:
+    """Regression tests for the osv-scanner tool command.
 
-    Why these exist: when pip-audit is run with --fix, it spawns a `pip`
-    subprocess to auto-upgrade vulnerable packages. If the calling
-    environment's pip is corrupted (e.g. partially-installed, missing
-    modules), this subprocess crashes with ModuleNotFoundError before
-    pip-audit can finish its report — surfacing as a "pip-audit failed"
-    hook error in the quality gate.
+    osv-scanner is the vulnerability scanner (formerly pip-audit). The
+    command is the audit itself — read-only, against ``uv.lock``. No
+    ``--vulnerability-service`` (osv-scanner uses OSV by default),
+    no ``--skip-editable`` / ``--require-hashes`` / ``--desc`` (those were
+    pip-audit-only flags that osv-scanner does not accept), and no
+    ``--fix`` (auto-upgrades are handled separately by the security fixer
+    via ``uv lock --upgrade-package <pkg>``).
 
-    The audit itself is read-only and safe. Upgrades are handled
-    separately by SecurityAgent._fix_dependency_vulnerability via
-    `uv lock --upgrade-package <pkg>`, which is lockfile-aware and does
-    not depend on `pip` working. Therefore the shared pip-audit command
-    must NOT use --fix.
+    Note: osv-scanner does not support ``--ignore-vuln`` flags. CVE
+    filtering is done post-parse in ``_parse_osv_scanner_issues`` against
+    the canonical ``IGNORED_VULNERABILITY_IDS`` list.
     """
 
-    def test_pip_audit_command_does_not_use_fix_flag(self) -> None:
-        """pip-audit must run read-only (no --fix).
+    def test_osv_scanner_command_targets_uv_lock(self) -> None:
+        """osv-scanner must scan ``uv.lock`` so resolution is exact."""
+        command = get_tool_command("osv-scanner")
+        assert "--lockfile=uv.lock" in command
 
-        Regression for: session-buddy's quality gate failing with
-        "ModuleNotFoundError: No module named 'pip._internal.utils.temp_dir'"
-        caused by crackerjack's shared pip-audit command invoking
-        `pip` as a subprocess via --fix.
-        """
-        command = get_tool_command("pip-audit")
-        assert "--fix" not in command, (
-            "pip-audit command must not include --fix: this causes pip-audit "
-            "to spawn a `pip` subprocess for auto-upgrades, which fails in "
-            "environments with a corrupted pip install. Upgrades are handled "
-            "by SecurityAgent via `uv lock --upgrade-package` instead."
-        )
+    def test_osv_scanner_command_emits_json(self) -> None:
+        """osv-scanner must produce JSON output for crackerjack to parse."""
+        command = get_tool_command("osv-scanner")
+        assert "--format=json" in command
 
-    def test_pip_audit_command_uses_osv_service(self) -> None:
-        """pip-audit must use OSV as the vulnerability service."""
-        command = get_tool_command("pip-audit")
-        assert "--vulnerability-service" in command
-        osv_index = command.index("--vulnerability-service")
-        assert command[osv_index + 1] == "osv", (
-            "pip-audit should use OSV (matches crackerjack convention)"
-        )
+    def test_osv_scanner_command_invokes_scan_source(self) -> None:
+        """osv-scanner requires the ``scan source`` subcommand."""
+        command = get_tool_command("osv-scanner")
+        assert "scan" in command
+        assert "source" in command
 
-    def test_pip_audit_command_emits_json(self) -> None:
-        """pip-audit must produce JSON output for crackerjack to parse."""
-        command = get_tool_command("pip-audit")
-        # The command uses --format <FORMAT> form (two args), not --format=json
-        assert "--format" in command
-        format_index = command.index("--format")
-        assert command[format_index + 1] == "json"
+    def test_osv_scanner_command_excludes_pip_audit_flags(self) -> None:
+        """osv-scanner must not carry pip-audit-specific flags."""
+        command = get_tool_command("osv-scanner")
+        for forbidden in (
+            "--vulnerability-service",
+            "--skip-editable",
+            "--require-hashes",
+            "--desc",
+            "--fix",
+            "--ignore-vuln",  # pip-audit-only flag
+        ):
+            assert forbidden not in command, (
+                f"osv-scanner command must not include {forbidden}: "
+                "the flag is from pip-audit and osv-scanner will reject it."
+            )
 
-    def test_pip_audit_command_skips_editable(self) -> None:
-        """pip-audit must skip editable installs to avoid self-auditing."""
-        command = get_tool_command("pip-audit")
-        assert "--skip-editable" in command
+    def test_osv_scanner_command_does_not_use_uv_run(self) -> None:
+        """osv-scanner is invoked directly (no ``uv run`` wrapper) so the
+        venv-spawn tax that motivated this swap is bypassed."""
+        command = get_tool_command("osv-scanner")
+        assert command[0] == "osv-scanner"
+        assert "uv" not in command[:1]
 
 
 class TestRegistryConsistency:
@@ -555,12 +555,7 @@ class TestRegistryConsistency:
 
     def test_all_tools_documented_in_phase_8(self) -> None:
         """Test that tool count matches current implementation."""
-        # Current registry has:
-        # - 6 custom tools (validate-regex-patterns, skylos, zuban, pyrefly,
-        #   ty, ty-ignore-syntax)
-        # - 9 native implementations (trailing-whitespace, etc.)
-        # - 19 third-party tools (ruff-check, bandit, semgrep, betterleaks,
-        #   cohesion, pymetrica, etc.)
+        # 6 custom + 9 native + 20 third-party = 35 tools
 
         custom = [
             "validate-regex-patterns",
@@ -595,15 +590,16 @@ class TestRegistryConsistency:
             "creosote",
             "complexipy",
             "refurb",
-            "pip-audit",
+            "osv-scanner",
             "pyscn",
             "lychee",
             "betterleaks",
             "cohesion",
             "pymetrica",
+            "tc-refs",
         ]
 
         assert len(custom) == 6
         assert len(native) == 9
-        assert len(third_party) == 19
+        assert len(third_party) == 20
         assert len(TOOL_COMMANDS) == len(custom) + len(native) + len(third_party)

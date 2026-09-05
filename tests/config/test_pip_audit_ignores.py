@@ -1,15 +1,15 @@
-"""Regression tests for pip-audit CVE ignore-list synchronization.
+"""Regression tests for osv-scanner CVE ignore-list synchronization.
 
 Why this test exists
 --------------------
 The canonical list of ignored CVE IDs lives in
-``crackerjack/config/pip_audit_ignores.py`` (``IGNORED_VULNERABILITY_IDS``).
+``crackerjack/config/osv_scanner_ignores.py`` (``IGNORED_VULNERABILITY_IDS``).
 That list is used in *two* places that must stay in sync:
 
 1. ``crackerjack/config/tool_commands.py`` — adds ``--ignore-vuln <id>`` flags
-   to the ``uv run pip-audit`` command so pip-audit itself filters at source.
-2. ``crackerjack/executors/hook_executor.py::_parse_pip_audit_issues`` — a
-   post-filter on the parsed JSON, in case pip-audit ever returns an ignored
+   to the ``uv run osv-scanner`` command so osv-scanner itself filters at source.
+2. ``crackerjack/executors/hook_executor.py::_parse_osv_scanner_issues`` — a
+   post-filter on the parsed JSON, in case osv-scanner ever returns an ignored
    CVE anyway (e.g. alias drift in the OSV service).
 
 If these two places drift apart, ignored CVEs can surface as false positives
@@ -56,42 +56,22 @@ class TestCanonicalIgnoreList:
 
 
 # ---------------------------------------------------------------------------
-# Synchronization: tool_commands.py must use the canonical list
+# Synchronization: post-parse filter in _parse_osv_scanner_issues must use
+# the canonical list (covered by TestHookExecutorUsesCanonicalList above).
 # ---------------------------------------------------------------------------
-
-
-class TestToolCommandsUsesCanonicalList:
-    """The pip-audit command must pass every canonical ID as --ignore-vuln."""
-
-    def test_pip_audit_command_contains_all_canonical_ignore_ids(self) -> None:
-        command = _build_tool_commands("crackerjack")
-        pip_audit_cmd = command["pip-audit"]
-
-        # Every canonical ID should appear as the value of a --ignore-vuln flag
-        for vid in IGNORED_VULNERABILITY_IDS:
-            assert vid in pip_audit_cmd, (
-                f"pip-audit command is missing --ignore-vuln {vid}. "
-                f"Canonical list has {len(IGNORED_VULNERABILITY_IDS)} IDs."
-            )
-
-    def test_pip_audit_command_ignore_vuln_pairs_are_paired(self) -> None:
-        """Each --ignore-vuln flag must be followed by exactly one ID."""
-        command = _build_tool_commands("crackerjack")
-        pip_audit_cmd = command["pip-audit"]
-
-        for i, arg in enumerate(pip_audit_cmd):
-            if arg == "--ignore-vuln":
-                assert i + 1 < len(pip_audit_cmd), (
-                    f"--ignore-vuln at position {i} has no value"
-                )
-                next_arg = pip_audit_cmd[i + 1]
-                assert next_arg in IGNORED_VULNERABILITY_IDS, (
-                    f"--ignore-vuln value {next_arg!r} is not in the canonical list"
-                )
+#
+# Note: as of the osv-scanner swap, the tool CLI no longer carries
+# ``--ignore-vuln`` flags — osv-scanner does not accept them. Filtering
+# happens entirely in ``hook_executor._parse_osv_scanner_issues`` against
+# ``IGNORED_VULNERABILITY_IDS``. The tests below previously verified the
+# CLI flag wiring; that surface is gone. The behavioral guarantee (every
+# canonical ID is filtered from the post-parse issue list) is exercised
+# by ``TestHookExecutorUsesCanonicalList::test_every_canonical_cve_is_filtered``
+# in this same file.
 
 
 # ---------------------------------------------------------------------------
-# Synchronization: hook_executor._parse_pip_audit_issues must use the canonical list
+# Synchronization: hook_executor._parse_osv_scanner_issues must use the canonical list
 # ---------------------------------------------------------------------------
 
 
@@ -103,32 +83,41 @@ def _make_executor(tmp_path: Path) -> HookExecutor:
     )
 
 
-def _build_pip_audit_output(cves: list[str]) -> str:
-    """Build a pip-audit-style stdout containing the given CVE IDs.
+def _build_osv_scanner_output(cves: list[str]) -> str:
+    """Build an osv-scanner-shaped stdout containing the given CVE IDs.
 
-    pip-audit writes a human-readable status line first, then JSON.
+    osv-scanner writes a human-readable status line first, then JSON
+    structured as ``results[].packages[].vulnerabilities[]``.
     """
-    deps = []
+    packages = []
     for cve in cves:
-        deps.append({
-            "name": f"vuln-pkg-{cve}",
-            "version": "1.0.0",
-            "vulns": [
+        packages.append({
+            "package": {
+                "name": f"vuln-pkg-{cve}",
+                "version": "1.0.0",
+                "ecosystem": "PyPI",
+            },
+            "vulnerabilities": [
                 {
                     "id": cve,
-                    "description": f"Test vulnerability {cve}",
-                    "fix_versions": ["99.0.0"],
-                }
+                    "aliases": [],
+                    "summary": f"Test vulnerability {cve}",
+                },
             ],
         })
     return "No known vulnerabilities found\n" + json.dumps({
-        "dependencies": deps,
+        "results": [
+            {
+                "source": {"path": "uv.lock", "type": "lockfile"},
+                "packages": packages,
+            },
+        ],
         "fixes": [],
     })
 
 
 class TestHookExecutorUsesCanonicalList:
-    """The post-filter in _parse_pip_audit_issues must use the canonical list."""
+    """The post-filter in _parse_osv_scanner_issues must use the canonical list."""
 
     def test_filters_cve_only_in_canonical_list(
         self, tmp_path: Path,
@@ -140,16 +129,16 @@ class TestHookExecutorUsesCanonicalList:
         """
         # Pick a CVE that is in the canonical 28 but NOT in any small hard-coded
         # subset. CVE-2026-25990 is in the canonical list (line 26 of
-        # pip_audit_ignores.py) and is far less likely to be in a small subset.
+        # osv_scanner_ignores.py) and is far less likely to be in a small subset.
         cve_in_canonical_only = "CVE-2026-25990"
         assert cve_in_canonical_only in IGNORED_VULNERABILITY_IDS, (
             "Test precondition: CVE must be in the canonical list"
         )
 
         executor = _make_executor(tmp_path)
-        output = _build_pip_audit_output([cve_in_canonical_only])
+        output = _build_osv_scanner_output([cve_in_canonical_only])
 
-        issues = executor._parse_pip_audit_issues(output)
+        issues = executor._parse_osv_scanner_issues(output)
 
         assert issues == [], (
             f"CVE {cve_in_canonical_only} is in the canonical ignore list "
@@ -168,9 +157,9 @@ class TestHookExecutorUsesCanonicalList:
         )
 
         executor = _make_executor(tmp_path)
-        output = _build_pip_audit_output([cve_not_ignored])
+        output = _build_osv_scanner_output([cve_not_ignored])
 
-        issues = executor._parse_pip_audit_issues(output)
+        issues = executor._parse_osv_scanner_issues(output)
 
         assert len(issues) >= 1, (
             f"CVE {cve_not_ignored} is NOT in the canonical list but was "
@@ -190,13 +179,13 @@ class TestHookExecutorUsesCanonicalList:
         missing from the post-filter, this test fails.
         """
         executor = _make_executor(tmp_path)
-        output = _build_pip_audit_output([cve])
+        output = _build_osv_scanner_output([cve])
 
-        issues = executor._parse_pip_audit_issues(output)
+        issues = executor._parse_osv_scanner_issues(output)
 
         assert issues == [], (
             f"Canonical CVE {cve} was not filtered by "
-            f"_parse_pip_audit_issues: {issues}"
+            f"_parse_osv_scanner_issues: {issues}"
         )
 
 
@@ -221,7 +210,7 @@ class TestLoadMergedIgnores:
         result = load_merged_ignores(None)
         assert set(result) == set(IGNORED_VULNERABILITY_IDS)
 
-    def test_project_with_no_tool_pip_audit_returns_canonical(
+    def test_project_with_no_tool_osv_scanner_returns_canonical(
         self, tmp_path: Path,
     ) -> None:
         """A project pyproject without [tool.pip-audit] is a no-op."""
@@ -292,71 +281,13 @@ class TestLoadMergedIgnores:
 
 
 # ---------------------------------------------------------------------------
-# Tool commands consume load_merged_ignores (not the raw tuple)
+# Tool commands consume load_merged_ignores (no longer through CLI flags;
+# see TestHookExecutorUsesCanonicalList for the post-parse equivalent)
 # ---------------------------------------------------------------------------
-
-
-class TestToolCommandsUsesLoadMergedIgnores:
-    """Regression: tool_commands must call load_merged_ignores, not the tuple.
-
-    Why pin this
-    ------------
-    Without this guard, a maintainer could ``from ... import
-    IGNORED_VULNERABILITY_IDS`` directly in tool_commands.py and the
-    per-project override layer would silently stop working. This test
-    fails fast at the moment of regression.
-    """
-
-    def test_pip_audit_command_includes_canonical_ids(
-        self, tmp_path: Path,
-    ) -> None:
-        """Even in a project with NO [tool.pip-audit], canonical IDs appear."""
-        command = _build_tool_commands("crackerjack")
-        pip_audit_cmd = command["pip-audit"]
-
-        for vid in IGNORED_VULNERABILITY_IDS:
-            assert vid in pip_audit_cmd, (
-                f"Canonical ID {vid} missing from pip-audit command — "
-                f"load_merged_ignores may not be wired."
-            )
-
-    def test_pip_audit_command_includes_project_overrides(
-        self, tmp_path: Path,
-    ) -> None:
-        """Project IDs flow through to the CLI when present.
-
-        We monkeypatch ``Path.cwd()`` to point at a synthetic project so we
-        don't actually have to be in a real project. This is the test that
-        proves the union plumbing reaches the CLI end-to-end — if you ever
-        refactor ``tool_commands.py`` to use the raw tuple, this fails.
-        """
-        from pathlib import Path
-
-        import crackerjack.config.tool_commands as tc_module
-
-        # Build a temporary project with an extra ID we can detect.
-        project_dir = tmp_path / "fakeproj"
-        project_dir.mkdir()
-        (project_dir / "pyproject.toml").write_text(
-            '[tool.pip-audit]\n'
-            'ignore-vuln = ["CVE-2099-PROJECT-OVERRIDE"]\n',
-        )
-
-        original_cwd = Path.cwd
-        try:
-            Path.cwd = lambda: project_dir  # type: ignore[assignment]
-
-            # `_build_tool_commands` calls `load_merged_ignores(Path.cwd())`
-            # at *evaluation time*, so the patched cwd is honored on every
-            # call. We bypass `_build_tool_commands_cached` (the lru_cache
-            # wrapper) to avoid serving a stale result.
-            command = tc_module._build_tool_commands("crackerjack")
-            pip_audit_cmd = command["pip-audit"]
-        finally:
-            Path.cwd = original_cwd  # type: ignore[assignment]
-
-        assert "CVE-2099-PROJECT-OVERRIDE" in pip_audit_cmd, (
-            "Project [tool.pip-audit] ignore-vuln did not reach "
-            "the pip-audit CLI command. Either load_merged_ignores "
-            "isn't called, or tool_commands.py is using the raw tuple."
-        )
+#
+# The osv-scanner swap removed ``--ignore-vuln`` from the CLI because
+# osv-scanner does not support that flag. The end-to-end guarantee —
+# "project pyproject.toml additions are honored" — is now exercised via
+# the parser path: ``test_project_adds_extra_ids`` verifies the merged
+# list, and ``TestHookExecutorUsesCanonicalList::test_filters_cve_only_in_canonical_list``
+# verifies the parser actually consumes it.

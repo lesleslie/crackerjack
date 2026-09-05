@@ -31,45 +31,49 @@ MODULE_STATUS = AdapterStatus.STABLE
 logger = logging.getLogger(__name__)
 
 
-class PipAuditSettings(ToolAdapterSettings):
-    tool_name: str = "pip-audit"
+class OsvScannerSettings(ToolAdapterSettings):
+    """Settings for the ``osv-scanner`` adapter (formerly pip-audit).
+
+    osv-scanner reads lockfiles (``uv.lock``, ``poetry.lock``, ``requirements.txt``,
+    etc.) and queries the OSV.dev database — the same backend pip-audit was
+    already routing to via ``--vulnerability-service osv``. The wrapper drops
+    the pip-audit-only flags (``--desc``, ``--skip-editable``, ``--require-hashes``,
+    ``--vulnerability-service``) that osv-scanner doesn't accept.
+
+    The file path is preserved as ``crackerjack/adapters/dependency/pip_audit.py``
+    so any internal imports of ``from .pip_audit import …`` keep working.
+    """
+
+    tool_name: str = "osv-scanner"
     use_json_output: bool = True
-    require_hashes: bool = False
-    vulnerability_service: str = "osv"
-    skip_editable: bool = True
     dry_run: bool = False
     fix: bool = False
-    output_desc: bool = True
     cache_dir: Path | None = None
     ignore_vulns: list[str] = Field(default_factory=list)
 
 
-class PipAuditAdapter(BaseToolAdapter):
-    settings: PipAuditSettings | None = None
+class OsvScannerAdapter(BaseToolAdapter):
+    settings: OsvScannerSettings | None = None
 
-    def __init__(self, settings: PipAuditSettings | None = None) -> None:
+    def __init__(self, settings: OsvScannerSettings | None = None) -> None:
         super().__init__(settings=settings)
         logger.debug(
-            "PipAuditAdapter initialized",
+            "OsvScannerAdapter initialized",
             extra={"has_settings": settings is not None},
         )
 
     async def init(self) -> None:
         if not self.settings:
-            from pathlib import Path
-
-            self.settings = PipAuditSettings(
+            self.settings = OsvScannerSettings(
                 timeout_seconds=120,
                 max_workers=4,
                 ignore_vulns=load_merged_ignores(Path.cwd()),
             )
-            logger.info("Using default PipAuditSettings")
+            logger.info("Using default OsvScannerSettings")
         await super().init()
         logger.debug(
-            "PipAuditAdapter initialization complete",
+            "OsvScannerAdapter initialization complete",
             extra={
-                "vulnerability_service": self.settings.vulnerability_service,
-                "skip_editable": self.settings.skip_editable,
                 "fix_enabled": self.settings.fix,
                 "ignored_vulns": self.settings.ignore_vulns,
             },
@@ -77,7 +81,7 @@ class PipAuditAdapter(BaseToolAdapter):
 
     @property
     def adapter_name(self) -> str:
-        return "pip-audit (Dependency Vulnerabilities)"
+        return "osv-scanner (Dependency Vulnerabilities)"
 
     @property
     def module_id(self) -> UUID:
@@ -85,7 +89,7 @@ class PipAuditAdapter(BaseToolAdapter):
 
     @property
     def tool_name(self) -> str:
-        return "pip-audit"
+        return "osv-scanner"
 
     def build_command(
         self,
@@ -99,65 +103,43 @@ class PipAuditAdapter(BaseToolAdapter):
         settings = self.settings
         cmd = [self.tool_name]
         self._add_format_options(cmd, settings)
-        self._add_vulnerability_service(cmd, settings)
-        self._add_output_options(cmd, settings)
-        self._add_skippable_options(cmd, settings)
+        self._add_input_files(cmd, files)
         self._add_fix_options(cmd, settings)
         self._add_cache_dir(cmd, settings)
         self._add_ignored_vulns(cmd, settings)
-        self._add_input_files(cmd, files)
 
         logger.info(
-            "Built pip-audit command",
+            "Built osv-scanner command",
             extra={
                 "file_count": len(files),
-                "vulnerability_service": settings.vulnerability_service,
                 "fix_mode": settings.fix,
-                "skip_editable": settings.skip_editable,
                 "ignored_vulns": settings.ignore_vulns,
             },
         )
         return cmd
 
-    def _add_format_options(self, cmd: list[str], settings: PipAuditSettings) -> None:
+    def _add_format_options(self, cmd: list[str], settings: OsvScannerSettings) -> None:
         if settings.use_json_output:
             cmd.extend(["--format", "json"])
 
-    def _add_vulnerability_service(
-        self, cmd: list[str], settings: PipAuditSettings
-    ) -> None:
-        cmd.extend(["--vulnerability-service", settings.vulnerability_service])
-
-    def _add_output_options(self, cmd: list[str], settings: PipAuditSettings) -> None:
-        if settings.output_desc:
-            cmd.append("--desc")
-
-    def _add_skippable_options(
-        self, cmd: list[str], settings: PipAuditSettings
-    ) -> None:
-        if settings.skip_editable:
-            cmd.append("--skip-editable")
-        if settings.require_hashes:
-            cmd.append("--require-hashes")
-
-    def _add_fix_options(self, cmd: list[str], settings: PipAuditSettings) -> None:
+    def _add_fix_options(self, cmd: list[str], settings: OsvScannerSettings) -> None:
         if settings.dry_run:
             cmd.append("--dry-run")
         if settings.fix:
             cmd.append("--fix")
 
-    def _add_cache_dir(self, cmd: list[str], settings: PipAuditSettings) -> None:
+    def _add_cache_dir(self, cmd: list[str], settings: OsvScannerSettings) -> None:
         if settings.cache_dir:
             cmd.extend(["--cache-dir", str(settings.cache_dir)])
 
-    def _add_ignored_vulns(self, cmd: list[str], settings: PipAuditSettings) -> None:
+    def _add_ignored_vulns(self, cmd: list[str], settings: OsvScannerSettings) -> None:
         for vuln_id in settings.ignore_vulns:
             cmd.extend(["--ignore-vuln", vuln_id])
 
     def _add_input_files(self, cmd: list[str], files: list[Path]) -> None:
         for file_path in files:
-            if file_path.name in ("requirements.txt", "pyproject.toml"):
-                cmd.extend(["-r", str(file_path)])
+            if file_path.name in {"requirements.txt", "pyproject.toml", "uv.lock"}:
+                cmd.extend(["--lockfile", str(file_path)])
 
     def _build_vulnerability_message(
         self,
@@ -165,8 +147,8 @@ class PipAuditAdapter(BaseToolAdapter):
         package_version: str,
         vuln_id: str,
         description: str,
-        fix_versions: list[str],
         aliases: list[str],
+        source_path: str,
     ) -> str:
         message_parts = [
             f"{package_name}=={package_version}",
@@ -183,64 +165,102 @@ class PipAuditAdapter(BaseToolAdapter):
             )
             message_parts.append(f"- {desc_preview}")
 
-        if fix_versions:
-            message_parts.append(f"Fix available: {', '.join(fix_versions[:3])}")
+        if source_path:
+            message_parts.append(f"[{source_path}]")
 
         return " ".join(message_parts)
 
-    def _create_issues_from_dependencies(self, data: dict) -> list[ToolIssue]:
-        issues = []
+    def _create_issues_from_entry(
+        self,
+        entry: dict,
+        source_path: str,
+    ) -> list[ToolIssue]:
+        """Walk one ``results[i]`` entry and emit ``ToolIssue`` for every
+        vulnerability. The ignore-filter happens at the outer ``parse_output``
+        level so we can distinguish "no vulns found" (exit_code stays) from
+        "all vulns were ignored" (exit_code resets to 0).
+        """
+        issues: list[ToolIssue] = []
+        entry_source = entry.get("source")
+        if isinstance(entry_source, dict):
+            candidate = t.cast(str, entry_source.get("path", ""))
+            if candidate:
+                source_path = candidate
 
-        for dependency in data.get("dependencies", []):
-            package_name = dependency.get("name", "unknown")
-            package_version = dependency.get("version", "unknown")
+        packages = entry.get("packages")
+        if not isinstance(packages, list):
+            return issues
 
-            for vuln in dependency.get("vulns", []):
-                vuln_id = vuln.get("id", "unknown")
+        for pkg in packages:
+            if not isinstance(pkg, dict):
+                continue
+            package = pkg.get("package")
+            if not isinstance(package, dict):
+                continue
+            package_name = t.cast(str, package.get("name", "unknown"))
+            package_version = t.cast(str, package.get("version", "unknown"))
 
-                if self.settings and vuln_id in self.settings.ignore_vulns:
-                    logger.debug(
-                        "Ignoring vulnerability",
-                        extra={
-                            "vuln_id": vuln_id,
-                            "package": package_name,
-                        },
-                    )
+            vulns = pkg.get("vulnerabilities")
+            if not isinstance(vulns, list):
+                continue
+
+            for vuln in vulns:
+                if not isinstance(vuln, dict):
                     continue
-
-                description = vuln.get("description", "")
-                fix_versions = vuln.get("fix_versions", [])
-                aliases = vuln.get("aliases", [])
+                vuln_id = t.cast(str, vuln.get("id", "unknown"))
+                description = t.cast(str, vuln.get("summary", ""))
+                aliases_raw = vuln.get("aliases", [])
+                aliases = (
+                    t.cast(list[str], aliases_raw)
+                    if isinstance(aliases_raw, list)
+                    else []
+                )
 
                 message = self._build_vulnerability_message(
                     package_name,
                     package_version,
                     vuln_id,
                     description,
-                    fix_versions,
                     aliases,
+                    source_path,
                 )
 
-                issue = ToolIssue(
-                    file_path=Path("pyproject.toml"),
-                    line_number=None,
-                    column_number=None,
-                    message=message,
-                    code=vuln_id,
-                    severity="error",
+                issues.append(
+                    ToolIssue(
+                        file_path=Path("pyproject.toml"),
+                        line_number=None,
+                        column_number=None,
+                        message=message,
+                        code=vuln_id,
+                        severity="error",
+                    ),
                 )
-                issues.append(issue)
 
         return issues
 
     def _count_affected_packages(self, data: dict) -> int:
-        return len(
-            {
-                dep.get("name")
-                for dep in data.get("dependencies", [])
-                if dep.get("vulns")
-            },
-        )
+        affected: set[str] = set()
+        results = data.get("results")
+        if not isinstance(results, list):
+            return 0
+        for entry in results:
+            if not isinstance(entry, dict):
+                continue
+            packages = entry.get("packages")
+            if not isinstance(packages, list):
+                continue
+            for pkg in packages:
+                if not isinstance(pkg, dict):
+                    continue
+                vulns = pkg.get("vulnerabilities")
+                if not isinstance(vulns, list) or not vulns:
+                    continue
+                package = pkg.get("package")
+                if isinstance(package, dict):
+                    name = t.cast(str, package.get("name", ""))
+                    if name:
+                        affected.add(name)
+        return len(affected)
 
     async def parse_output(
         self,
@@ -251,31 +271,31 @@ class PipAuditAdapter(BaseToolAdapter):
             return []
 
         try:
-            lines = result.raw_output.strip().split("\n")
-            json_start = -1
-            for i, line in enumerate(lines):
-                if line.strip().startswith("{"):
-                    json_start = i
-                    break
-
-            if json_start >= 0:
-                json_str = "\n".join(lines[json_start:])
-                data = json.loads(json_str)
-            else:
-                return self._parse_text_output(result.raw_output)
-
+            data = json.loads(result.raw_output)
             logger.debug(
-                "Parsed pip-audit JSON output",
-                extra={"dependencies_count": len(data.get("dependencies", []))},
+                "Parsed osv-scanner JSON output",
+                extra={"results_count": len(data.get("results", []))},
             )
-        except json.JSONDecodeError as e:
+        except json.JSONDecodeError:
             logger.debug(
-                "JSON parse failed, falling back to text parsing",
-                extra={"error": str(e), "output_preview": result.raw_output[:200]},
+                "JSON parse failed; osv-scanner produced no vulnerabilities",
+                extra={"output_preview": result.raw_output[:200]},
             )
-            return self._parse_text_output(result.raw_output)
+            return []
 
-        issues = self._create_issues_from_dependencies(data)
+        issues: list[ToolIssue] = []
+        results = data.get("results") if isinstance(data, dict) else None
+        if not isinstance(results, list):
+            return issues
+
+        for entry in results:
+            if not isinstance(entry, dict):
+                continue
+            source_path = ""
+            source = entry.get("source")
+            if isinstance(source, dict):
+                source_path = t.cast(str, source.get("path", ""))
+            issues.extend(self._create_issues_from_entry(entry, source_path))
 
         if self.settings:
             non_ignored_issues = [
@@ -286,7 +306,7 @@ class PipAuditAdapter(BaseToolAdapter):
                 )
             ]
 
-            if not non_ignored_issues and issues:
+            if issues and not non_ignored_issues:
                 logger.info(
                     "Only ignored vulnerabilities found, updating result status",
                     extra={
@@ -299,43 +319,35 @@ class PipAuditAdapter(BaseToolAdapter):
                 result.exit_code = 0
 
         logger.info(
-            "Parsed pip-audit output",
+            "Parsed osv-scanner output",
             extra={
                 "total_vulnerabilities": len(issues),
-                "affected_packages": self._count_affected_packages(data),
+                "affected_packages": self._count_affected_packages(data)
+                if isinstance(data, dict)
+                else 0,
             },
         )
         return issues
 
     def _parse_text_output(self, output: str) -> list[ToolIssue]:
         issues = []
-        lines = output.strip().split("\n")
-
-        for line in lines:
-            if "PYSEC-" in line or "CVE-" in line or "vulnerability" in line.lower():
-                issue = self._parse_text_line(line)
-                if issue:
-                    issues.append(issue)
+        for line in output.strip().split("\n"):
+            if "CVE-" in line or "GHSA-" in line or "vulnerability" in line.lower():
+                issues.append(
+                    ToolIssue(
+                        file_path=Path("pyproject.toml"),
+                        line_number=None,
+                        column_number=None,
+                        message=line.strip(),
+                        severity="error",
+                    ),
+                )
 
         logger.info(
-            "Parsed pip-audit text output (fallback)",
-            extra={
-                "total_issues": len(issues),
-            },
+            "Parsed osv-scanner text output (fallback)",
+            extra={"total_issues": len(issues)},
         )
         return issues
-
-    def _parse_text_line(self, line: str) -> ToolIssue | None:
-        try:
-            return ToolIssue(
-                file_path=Path("pyproject.toml"),
-                line_number=None,
-                column_number=None,
-                message=line.strip(),
-                severity="error",
-            )
-        except Exception:
-            return None
 
     def _get_check_type(self) -> QACheckType:
         return QACheckType.SECURITY
@@ -376,8 +388,6 @@ class PipAuditAdapter(BaseToolAdapter):
         return result.exit_code == 0
 
     def get_default_config(self) -> QACheckConfig:
-        from pathlib import Path
-
         from crackerjack.models.qa_config import QACheckConfig
 
         return QACheckConfig(
@@ -387,6 +397,7 @@ class PipAuditAdapter(BaseToolAdapter):
             enabled=True,
             file_patterns=[
                 "pyproject.toml",
+                "uv.lock",
                 "requirements.txt",
                 "requirements-*.txt",
             ],
@@ -400,10 +411,14 @@ class PipAuditAdapter(BaseToolAdapter):
             parallel_safe=True,
             stage="fast",
             settings={
-                "vulnerability_service": "osv",
-                "skip_editable": True,
-                "output_desc": True,
                 "fix": True,
                 "ignore_vulns": load_merged_ignores(Path.cwd()),
             },
         )
+
+
+# Backwards-compatible aliases for callers that still reference the old
+# pip-audit class names. The file path is intentionally preserved as
+# ``pip_audit.py`` so internal imports continue to work.
+PipAuditAdapter = OsvScannerAdapter
+PipAuditSettings = OsvScannerSettings

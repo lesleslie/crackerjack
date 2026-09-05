@@ -31,7 +31,7 @@ class LSPAwareHookExecutor(HookExecutor):
         git_service: t.Any | None = None,
         file_filter: t.Any | None = None,
         enable_hooks: list[str] | None = None,
-        skip_offline_pip_audit: bool = True,
+        skip_offline_osv_scanner: bool = True,
         adapter_learner_integration: t.Any | None = None,
     ) -> None:
         super().__init__(
@@ -44,7 +44,7 @@ class LSPAwareHookExecutor(HookExecutor):
             git_service,
             file_filter,
             enable_hooks=enable_hooks,
-            skip_offline_pip_audit=skip_offline_pip_audit,
+            skip_offline_osv_scanner=skip_offline_osv_scanner,
             adapter_learner_integration=adapter_learner_integration,
         )
         self.lsp_client = LSPClient()

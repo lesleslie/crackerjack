@@ -277,7 +277,7 @@ def _is_jwt_secret_issue(message: str) -> bool:
 
 
 def _is_dependency_vulnerability(issue: Issue) -> bool:
-    if issue.stage != "pip-audit":
+    if issue.stage != "osv-scanner":
         return False
     if not issue.message:
         return False

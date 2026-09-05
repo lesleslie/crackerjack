@@ -233,7 +233,7 @@ adapter_timeouts:
   zuban_timeout: 60
   bandit_timeout: 300
   semgrep_timeout: 300
-  pip_audit_timeout: 120
+  osv_scanner_timeout: 120
   creosote_timeout: 300
   complexipy_timeout: 600
   pyscn_timeout: 60

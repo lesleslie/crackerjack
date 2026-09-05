@@ -284,7 +284,7 @@ def test_parse_factory_issues_for_ruff_check() -> None:
 def test_parse_factory_issues_for_unregistered_tool() -> None:
     """Regression: hooks without a registered parser must return ``[]``.
 
-    ``pip-audit`` has no ``ParserFactory`` registration. The factory
+    ``osv-scanner`` has no ``ParserFactory`` registration. The factory
     dispatch must catch the resulting ``ValueError`` and return ``[]``,
     letting ``_build_success_result`` fall through to the raw line-counter.
     """
@@ -294,7 +294,7 @@ def test_parse_factory_issues_for_unregistered_tool() -> None:
     logger = logging.getLogger(__name__)
     executor = AsyncHookExecutor(console=console, pkg_path=Path())
 
-    issues = executor._parse_factory_issues("pip-audit", "some output")
+    issues = executor._parse_factory_issues("osv-scanner", "some output")
 
     assert issues == []
 

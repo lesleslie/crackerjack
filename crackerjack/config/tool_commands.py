@@ -6,9 +6,6 @@ import sys
 from functools import lru_cache
 from pathlib import Path
 
-from crackerjack.config.pip_audit_ignores import (
-    load_merged_ignores,
-)
 from crackerjack.config.settings import HookSettings
 
 
@@ -294,21 +291,12 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             "-a",
         ),
         "refurb": _python_module_command("refurb", f"{package_name}/"),
-        "pip-audit": [
-            "uv",
-            "run",
-            "pip-audit",
-            "--format",
-            "json",
-            "--desc",
-            "--skip-editable",
-            "--vulnerability-service",
-            "osv",
-            *[
-                arg
-                for vid in load_merged_ignores(Path.cwd())
-                for arg in ("--ignore-vuln", vid)
-            ],
+        "osv-scanner": [
+            "osv-scanner",
+            "scan",
+            "source",
+            "--lockfile=uv.lock",
+            "--format=json",
         ],
         "pyscn": _preferred_binary_command(
             "pyscn",

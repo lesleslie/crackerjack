@@ -225,13 +225,13 @@ FAST_HOOKS = [
         description="Fast local link validation (file references and anchors only)",
     ),
     HookDefinition(
-        name="pip-audit",
+        name="osv-scanner",
         command=[],
         timeout=180,
         retry_on_failure=True,
         security_level=SecurityLevel.CRITICAL,
         accepts_file_paths=False,
-        description="Dependency vulnerability scanning with auto-fix",
+        description="Dependency vulnerability scanning via osv-scanner (uses uv.lock; OSV.dev backend). Skipped gracefully if the osv-scanner binary is not on PATH.",
     ),
     HookDefinition(
         name="tc-refs",

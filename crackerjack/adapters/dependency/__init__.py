@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-__all__ = ["PipAuditAdapter"]
+__all__ = ["OsvScannerAdapter"]
 
 
 try:
-    from .pip_audit import PipAuditAdapter
+    from .pip_audit import OsvScannerAdapter
 except ImportError:
-    PipAuditAdapter = None  # type: ignore[assignment, misc, no-redef]
+    OsvScannerAdapter = None  # type: ignore[assignment, misc, no-redef]

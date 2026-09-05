@@ -846,91 +846,170 @@ class SemgrepJSONParser(JSONParser):
         return mapping.get(severity_str.upper(), Priority.MEDIUM)
 
 
-class PipAuditJSONParser(JSONParser):
+class OsvScannerJSONParser(JSONParser):
+    """Parser for ``osv-scanner --format=json`` output.
+
+    Schema (relevant subset):
+        {
+          "results": [
+            {
+              "source": {"path": "uv.lock", "type": "lockfile"},
+              "packages": [
+                {
+                  "package": {"name": "x", "version": "1.0", "ecosystem": "PyPI"},
+                  "vulnerabilities": [
+                    {"id": "GHSA-...", "aliases": ["CVE-..."], "summary": "..."}
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+
+    osv-scanner's severity field is a list of typed scores
+    (``[{"type": "CVSS_V3", "score": "9.8"}]``) — we don't try to parse it
+    because the score string format varies. We default to MEDIUM and let
+    the issue message surface the actual advisory summary.
+    """
+
     def parse_json(self, data: dict[str, object] | list[object]) -> list[Issue]:
         if not isinstance(data, dict):
-            logger.warning(f"pip-audit JSON data is not a dict: {type(data)}")
+            logger.warning(f"osv-scanner JSON data is not a dict: {type(data)}")
             return []
-        dependencies = data.get("dependencies")
-        if not isinstance(dependencies, list):
-            logger.warning("pip-audit JSON 'dependencies' field is not a list")
+        results = data.get("results")
+        if not isinstance(results, list):
+            logger.warning("osv-scanner JSON 'results' field is not a list")
             return []
         issues: list[Issue] = []
-        for dep in dependencies:
+        for entry in results:
             try:
-                dep_issues = self._parse_dependency(dep)
-                issues.extend(dep_issues)
+                issues.extend(self._parse_entry(entry))
             except Exception as e:
-                logger.error(f"Error parsing pip-audit JSON item: {e}", exc_info=True)
-        logger.info(f"Parsed {len(issues)} issues from pip-audit JSON output")
+                logger.error(
+                    f"Error parsing osv-scanner JSON entry: {e}", exc_info=True
+                )
+        logger.info(f"Parsed {len(issues)} issues from osv-scanner JSON output")
         return issues
 
-    def _parse_dependency(self, dep: object) -> list[Issue]:
-        if not isinstance(dep, dict):
-            logger.warning(
-                f"Skipping non-dict item in pip-audit dependencies: {type(dep)}"
-            )
+    def _parse_entry(self, entry: object) -> list[Issue]:
+        if not isinstance(entry, dict):
             return []
-        name = str(dep.get("name", "UNKNOWN"))
-        vulns = dep.get("vulns", [])
+        source_path = self._extract_source_path(entry)
+        packages = entry.get("packages")
+        if not isinstance(packages, list):
+            return []
+        issues: list[Issue] = []
+        for pkg in packages:
+            issues.extend(self._parse_package(pkg, source_path))
+        return issues
+
+    @staticmethod
+    def _extract_source_path(entry: dict[str, object]) -> str:
+        source = entry.get("source")
+        if isinstance(source, dict):
+            path = source.get("path")
+            if isinstance(path, str):
+                return path
+        return ""
+
+    @staticmethod
+    def _parse_package(pkg: object, source_path: str) -> list[Issue]:
+        if not isinstance(pkg, dict):
+            return []
+        package = pkg.get("package")
+        if not isinstance(package, dict):
+            return []
+        name = str(package.get("name", "UNKNOWN"))
+        version = str(package.get("version", "UNKNOWN"))
+        vulns = pkg.get("vulnerabilities", [])
         if not isinstance(vulns, list):
-            logger.warning(f"Vulnerabilities for {name} is not a list")
             return []
         return [
-            self._create_vulnerability_issue(name, vuln)
+            issue
             for vuln in vulns
             if isinstance(vuln, dict)
+            for issue in [
+                OsvScannerJSONParser._create_vulnerability_issue(
+                    name,
+                    version,
+                    vuln,
+                    source_path,
+                )
+            ]
         ]
 
-    def _create_vulnerability_issue(self, package_name: str, vuln: dict) -> Issue:
+    @staticmethod
+    def _create_vulnerability_issue(
+        package_name: str,
+        package_version: str,
+        vuln: dict[str, object],
+        source_path: str,
+    ) -> Issue:
         vuln_id = str(vuln.get("id", "UNKNOWN"))
-        description = str(vuln.get("description", "No description"))
-        severity_str = str(vuln.get("severity", "MEDIUM"))
+        description = str(vuln.get("summary", "No description"))
+        aliases_raw = vuln.get("aliases", [])
+        cve_alias = ""
+        if isinstance(aliases_raw, list):
+            for alias in aliases_raw:
+                if isinstance(alias, str) and alias.startswith("CVE-"):
+                    cve_alias = alias
+                    break
+
+        details = [
+            f"package: {package_name}",
+            f"version: {package_version}",
+            f"vulnerability_id: {vuln_id}",
+        ]
+        if cve_alias:
+            details.append(f"cve: {cve_alias}")
+        if source_path:
+            details.append(f"source: {source_path}")
+
+        message = f"{vuln_id}: {description}"
+        if cve_alias:
+            message = f"{vuln_id} ({cve_alias}): {description}"
+
         return Issue(
             type=IssueType.SECURITY,
-            severity=self._map_severity(severity_str),
-            message=f"{vuln_id}: {description}",
+            severity=Priority.MEDIUM,
+            message=message,
             file_path=None,
             line_number=None,
-            stage="pip-audit",
-            details=[
-                f"package: {package_name}",
-                f"vulnerability_id: {vuln_id}",
-                f"severity: {severity_str}",
-            ],
+            stage="osv-scanner",
+            details=details,
         )
 
     def get_issue_count(self, data: dict[str, object] | list[object]) -> int:
-        dependencies = self._get_dependencies_list(data)
-        if not dependencies:
+        results = self._get_results_list(data)
+        if not results:
             return 0
-        return sum(self._count_vulnerabilities_in_dep(dep) for dep in dependencies)
+        return sum(self._count_vulnerabilities_in_entry(entry) for entry in results)
 
-    def _get_dependencies_list(
-        self, data: dict[str, object] | list[object]
+    @staticmethod
+    def _get_results_list(
+        data: dict[str, object] | list[object],
     ) -> list[object] | None:
-        if isinstance(data, dict) and "dependencies" in data:
-            dependencies = data["dependencies"]
-            if not isinstance(dependencies, list):
+        if isinstance(data, dict) and "results" in data:
+            results = data["results"]
+            if not isinstance(results, list):
                 return None
-            return t.cast("list[object]", dependencies)
+            return t.cast("list[object]", results)
         return None
 
-    def _count_vulnerabilities_in_dep(self, dep: object) -> int:
-        if isinstance(dep, dict):
-            vulns = dep.get("vulns")
-            if isinstance(vulns, list):
-                return len(vulns)
-        return 0
-
-    def _map_severity(self, severity_str: str) -> Priority:
-        mapping = {
-            "CRITICAL": Priority.CRITICAL,
-            "HIGH": Priority.CRITICAL,
-            "MEDIUM": Priority.HIGH,
-            "LOW": Priority.MEDIUM,
-        }
-        return mapping.get(severity_str.upper(), Priority.MEDIUM)
+    @staticmethod
+    def _count_vulnerabilities_in_entry(entry: object) -> int:
+        if not isinstance(entry, dict):
+            return 0
+        packages = entry.get("packages")
+        if not isinstance(packages, list):
+            return 0
+        total = 0
+        for pkg in packages:
+            if isinstance(pkg, dict):
+                vulns = pkg.get("vulnerabilities")
+                if isinstance(vulns, list):
+                    total += len(vulns)
+        return total
 
 
 class GitleaksJSONParser(JSONParser):
@@ -1347,7 +1426,7 @@ def register_json_parsers(factory: ParserFactory) -> None:
     factory.register_json_parser("complexipy", ComplexipyJSONParser)
     factory.register_json_parser("pyscn", PyscnJSONParser)
     factory.register_json_parser("semgrep", SemgrepJSONParser)
-    factory.register_json_parser("pip-audit", PipAuditJSONParser)
+    factory.register_json_parser("osv-scanner", OsvScannerJSONParser)
     factory.register_json_parser("gitleaks", GitleaksJSONParser)
     factory.register_json_parser("pytest", PytestJSONParser)
     factory.register_json_parser("lychee", LycheeJSONParser)
@@ -1356,6 +1435,6 @@ def register_json_parsers(factory: ParserFactory) -> None:
     factory.register_json_parser("check-jsonschema", CheckJSONSchemaJSONParser)
     logger.info(
         "Registered JSON parsers: ruff, mypy, bandit, complexipy, pyscn, "
-        "semgrep, pip-audit, gitleaks, betterleaks, pytest, lychee, "
+        "semgrep, osv-scanner, gitleaks, betterleaks, pytest, lychee, "
         "check-jsonschema"
     )

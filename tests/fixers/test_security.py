@@ -76,7 +76,7 @@ class TestIdentifyVulnerabilityType:
     def test_identify_dependency_vulnerability(self) -> None:
         issue = _issue(
             message="CVE-2024-12345 affects this package",
-            stage="pip-audit",
+            stage="osv-scanner",
         )
 
         assert (
@@ -501,7 +501,7 @@ class TestFixUrllibFalsePositive:
 
 class TestFixDependencyVulnerability:
     async def test_no_package_name_reports_cannot_fix(self, tmp_path: Path) -> None:
-        issue = _issue(message="CVE-2024-99999 found", stage="pip-audit")
+        issue = _issue(message="CVE-2024-99999 found", stage="osv-scanner")
 
         result = await security._fix_dependency_vulnerability(issue, tmp_path)
 
@@ -513,7 +513,7 @@ class TestFixDependencyVulnerability:
     ) -> None:
         issue = _issue(
             message="CVE-2024-99999 found",
-            stage="pip-audit",
+            stage="osv-scanner",
             details=["package: some-package"],
         )
 
@@ -537,7 +537,7 @@ class TestFixDependencyVulnerability:
     ) -> None:
         issue = _issue(
             message="CVE-2024-99999 found",
-            stage="pip-audit",
+            stage="osv-scanner",
             details=["package: some-package"],
         )
 
@@ -716,7 +716,7 @@ class TestApplyVulnerabilityFixes:
             fake_fix_dependency_vulnerability,
         )
 
-        issue = _issue(message="CVE-2024-1 found", stage="pip-audit")
+        issue = _issue(message="CVE-2024-1 found", stage="osv-scanner")
         fixes, files = await security._apply_vulnerability_fixes(
             "dependency_vulnerability", issue, tmp_path, [], []
         )

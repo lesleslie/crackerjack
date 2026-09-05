@@ -20,7 +20,7 @@ from crackerjack.parsers.json_parsers import (
     GitleaksJSONParser,
     LycheeJSONParser,
     MypyJSONParser,
-    PipAuditJSONParser,
+    OsvScannerJSONParser,
     PytestJSONParser,
     RuffJSONParser,
     SemgrepJSONParser,
@@ -621,37 +621,54 @@ class TestSemgrepJSONParserGaps:
 
 
 # ---------------------------------------------------------------------------
-# PipAuditJSONParser - schema mismatch
+# OsvScannerJSONParser - schema mismatch
 # ---------------------------------------------------------------------------
 
 
-class TestPipAuditJSONParserGaps:
-    """Cover PipAuditJSONParser gap lines: non-dict, deps not list,
-    skip non-dict dep, vulns not list, file_path is None."""
+class TestOsvScannerJSONParserGaps:
+    """Cover OsvScannerJSONParser gap lines: non-dict, results not list,
+    skip non-dict package, vulns not list, file_path is None."""
 
     @pytest.fixture
-    def parser(self) -> PipAuditJSONParser:
-        return PipAuditJSONParser()
+    def parser(self) -> OsvScannerJSONParser:
+        return OsvScannerJSONParser()
 
-    def test_parse_json_non_dict(self, parser: PipAuditJSONParser) -> None:
+    def test_parse_json_non_dict(self, parser: OsvScannerJSONParser) -> None:
         assert parser.parse_json(_json_input([])) == []
         assert parser.parse_json(_json_input("oops")) == []
 
-    def test_parse_json_deps_not_list(self, parser: PipAuditJSONParser) -> None:
-        assert parser.parse_json(_json_input({"dependencies": "x"})) == []
-        assert parser.parse_json(_json_input({"dependencies": None})) == []
+    def test_parse_json_results_not_list(
+        self, parser: OsvScannerJSONParser
+    ) -> None:
+        assert parser.parse_json(_json_input({"results": "x"})) == []
+        assert parser.parse_json(_json_input({"results": None})) == []
 
-    def test_parse_json_skips_non_dict_dep(
-        self, parser: PipAuditJSONParser
+    def test_parse_json_skips_non_dict_package(
+        self, parser: OsvScannerJSONParser
     ) -> None:
         data: _JsonInput = {
-            "dependencies": [
-                "string",
-                42,
+            "results": [
                 {
-                    "name": "ok",
-                    "vulns": [{"id": "V1", "description": "d", "severity": "HIGH"}],
-                },
+                    "source": {"path": "uv.lock", "type": "lockfile"},
+                    "packages": [
+                        "string",
+                        42,
+                        {
+                            "package": {
+                                "name": "ok",
+                                "version": "1.0",
+                                "ecosystem": "PyPI",
+                            },
+                            "vulnerabilities": [
+                                {
+                                    "id": "V1",
+                                    "aliases": [],
+                                    "summary": "d",
+                                }
+                            ],
+                        },
+                    ],
+                }
             ]
         }
         issues = parser.parse_json(data)
@@ -659,23 +676,50 @@ class TestPipAuditJSONParserGaps:
         assert issues[0].file_path is None
         assert issues[0].line_number is None
 
-    def test_parse_json_vulns_not_list(self, parser: PipAuditJSONParser) -> None:
+    def test_parse_json_vulns_not_list(self, parser: OsvScannerJSONParser) -> None:
         data: _JsonInput = {
-            "dependencies": [
-                {"name": "broken", "vulns": "not a list"},
+            "results": [
+                {
+                    "source": {"path": "uv.lock", "type": "lockfile"},
+                    "packages": [
+                        {
+                            "package": {
+                                "name": "broken",
+                                "version": "1.0",
+                                "ecosystem": "PyPI",
+                            },
+                            "vulnerabilities": "not a list",
+                        }
+                    ],
+                }
             ]
         }
         assert parser.parse_json(data) == []
 
-    def test_parse_json_skips_non_dict_vuln(self, parser: PipAuditJSONParser) -> None:
+    def test_parse_json_skips_non_dict_vuln(
+        self, parser: OsvScannerJSONParser
+    ) -> None:
         data: _JsonInput = {
-            "dependencies": [
+            "results": [
                 {
-                    "name": "p",
-                    "vulns": [
-                        "string",
-                        42,
-                        {"id": "V", "description": "d", "severity": "LOW"},
+                    "source": {"path": "uv.lock", "type": "lockfile"},
+                    "packages": [
+                        {
+                            "package": {
+                                "name": "p",
+                                "version": "1.0",
+                                "ecosystem": "PyPI",
+                            },
+                            "vulnerabilities": [
+                                "string",
+                                42,
+                                {
+                                    "id": "V",
+                                    "aliases": [],
+                                    "summary": "d",
+                                },
+                            ],
+                        }
                     ],
                 }
             ]
@@ -684,15 +728,15 @@ class TestPipAuditJSONParserGaps:
         assert len(issues) == 1
         assert issues[0].details[0] == "package: p"
 
-    def test_get_issue_count_no_deps(self, parser: PipAuditJSONParser) -> None:
+    def test_get_issue_count_no_results(self, parser: OsvScannerJSONParser) -> None:
         assert parser.get_issue_count(_json_input({})) == 0
-        assert parser.get_issue_count(_json_input({"dependencies": "x"})) == 0
+        assert parser.get_issue_count(_json_input({"results": "x"})) == 0
 
     def test_count_vulnerabilities_skips_non_dict(
-        self, parser: PipAuditJSONParser
+        self, parser: OsvScannerJSONParser
     ) -> None:
-        assert parser._count_vulnerabilities_in_dep("not a dict") == 0
-        assert parser._count_vulnerabilities_in_dep(None) == 0
+        assert parser._count_vulnerabilities_in_entry("not a dict") == 0
+        assert parser._count_vulnerabilities_in_entry(None) == 0
 
 
 # ---------------------------------------------------------------------------

@@ -102,12 +102,12 @@ TOOL_CONFIGS: dict[str, ToolConfig] = {
         output_format=OutputFormat.JSON,
         required_json_fields=frozenset({"check_id", "path", "start"}),
     ),
-    "pip-audit": ToolConfig(
-        name="pip-audit",
+    "osv-scanner": ToolConfig(
+        name="osv-scanner",
         supports_json=True,
         json_flag="--format=json",
         output_format=OutputFormat.JSON,
-        required_json_fields=frozenset({"dependencies"}),
+        required_json_fields=frozenset({"results"}),
     ),
     "gitleaks": ToolConfig(
         name="gitleaks",

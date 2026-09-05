@@ -74,9 +74,9 @@ class HookManagerImpl:
                 git_service=git_service,
                 file_filter=file_filter,
                 enable_hooks=enable_hooks,
-                skip_offline_pip_audit=getattr(
+                skip_offline_osv_scanner=getattr(
                     self._settings.hooks,
-                    "skip_offline_pip_audit",
+                    "skip_offline_osv_scanner",
                     True,
                 )
                 if self._settings
@@ -96,9 +96,9 @@ class HookManagerImpl:
                 git_service=git_service,
                 file_filter=file_filter,
                 enable_hooks=enable_hooks,
-                skip_offline_pip_audit=getattr(
+                skip_offline_osv_scanner=getattr(
                     self._settings.hooks,
-                    "skip_offline_pip_audit",
+                    "skip_offline_osv_scanner",
                     True,
                 )
                 if self._settings

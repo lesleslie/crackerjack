@@ -238,7 +238,7 @@ class CreosoteAdapter(BaseToolAdapter):
                     "cohesion",
                     "complexipy",
                     "creosote",
-                    "pip-audit",
+                    "osv-scanner",
                     "pymetrica",
                     "pypistats",
                     "pyscn",

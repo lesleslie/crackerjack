@@ -25,7 +25,7 @@ class HookSettings(OneiricMCPConfig):
     enable_zuban: bool = False
     enable_ty_ignore_syntax: bool = False
     enable_lsp_optimization: bool = False
-    skip_offline_pip_audit: bool = True
+    skip_offline_osv_scanner: bool = True
     ruff_unsafe_fixes: bool = True
 
 
@@ -226,7 +226,7 @@ class AdapterTimeouts(OneiricMCPConfig):
     pyrefly_timeout: int = 120
     bandit_timeout: int = 300
     semgrep_timeout: int = 300
-    pip_audit_timeout: int = 120
+    osv_scanner_timeout: int = 120
     creosote_timeout: int = 300
     complexipy_timeout: int = 900
     pyscn_timeout: int = 60

@@ -8,7 +8,7 @@ from crackerjack.parsers.json_parsers import (
     BetterleaksJSONParser,
     GitleaksJSONParser,
     MypyJSONParser,
-    PipAuditJSONParser,
+    OsvScannerJSONParser,
     PyscnJSONParser,
     RuffJSONParser,
     SemgrepJSONParser,
@@ -414,15 +414,15 @@ class TestSemgrepJSONParser:
         assert count == 2
 
 
-class TestPipAuditJSONParser:
-    """Test pip-audit JSON parser."""
+class TestOsvScannerJSONParser:
+    """Test osv-scanner JSON parser."""
 
     @pytest.fixture
     def parser(self):
-        return PipAuditJSONParser()
+        return OsvScannerJSONParser()
 
-    def test_parse_valid_pip_audit_output(self, parser):
-        """Test parsing valid pip-audit JSON output."""
+    def test_parse_valid_osv_scanner_output(self, parser):
+        """Test parsing valid osv-scanner JSON output."""
         data = {
             "dependencies": [
                 {

@@ -46,19 +46,19 @@ class TestHookManager:
 
     @patch("crackerjack.managers.hook_manager.HookConfigLoader")
     @patch("crackerjack.executors.hook_executor.HookExecutor")
-    def test_init_passes_skip_offline_pip_audit_setting(
+    def test_init_passes_skip_offline_osv_scanner_setting(
         self,
         mock_executor_class,
         mock_loader_class,
         console,
         pkg_path,
     ) -> None:
-        settings = CrackerjackSettings(hooks=HookSettings(skip_offline_pip_audit=False))
+        settings = CrackerjackSettings(hooks=HookSettings(skip_offline_osv_scanner=False))
 
         HookManagerImpl(pkg_path, console=console, settings=settings)
 
         _, kwargs = mock_executor_class.call_args
-        assert kwargs["skip_offline_pip_audit"] is False
+        assert kwargs["skip_offline_osv_scanner"] is False
         mock_loader_class.assert_called_once()
 
     def test_get_hook_summary_empty(self, hook_manager) -> None:

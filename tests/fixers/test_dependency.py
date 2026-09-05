@@ -72,9 +72,9 @@ class TestExtractDependencyName:
     def test_extract_redundant_exclusion_name(self) -> None:
         assert (
             dependency._extract_dependency_name(
-                "Redundant exclusion 'pip-audit': import detected in source code"
+                "Redundant exclusion 'osv-scanner': import detected in source code"
             )
-            == "pip-audit"
+            == "osv-scanner"
         )
         assert (
             dependency._extract_dependency_name(
@@ -348,7 +348,7 @@ paths = [
 exclude-deps = [
     "hatchling",
     "pytest",
-    "pip-audit",
+    "osv-scanner",
     "pyright",
     "websockets",
 ]
@@ -356,10 +356,10 @@ exclude-deps = [
 
     def test_remove_creosote_exclusion(self) -> None:
         new_content = dependency._remove_creosote_exclusion(
-            self.CREOSOTE_TOML, "pip-audit"
+            self.CREOSOTE_TOML, "osv-scanner"
         )
         assert new_content is not None
-        assert '"pip-audit"' not in new_content
+        assert '"osv-scanner"' not in new_content
         assert '"pytest"' in new_content
         assert '"pyright"' in new_content
         # Section structure preserved.
@@ -385,13 +385,13 @@ exclude-deps = [
         assert "pytest>=7.0.0" in new_content
 
     def test_is_exclusion_line_ignores_comments(self) -> None:
-        assert dependency._is_exclusion_line('    # "pip-audit",', "pip-audit") is (
+        assert dependency._is_exclusion_line('    # "osv-scanner",', "osv-scanner") is (
             False
         )
 
     def test_is_exclusion_line_strips_trailing_comma_and_comment(self) -> None:
         assert dependency._is_exclusion_line(
-            '    "pip-audit",  # transitive', "pip-audit"
+            '    "osv-scanner",  # transitive', "osv-scanner"
         )
 
 
@@ -729,7 +729,7 @@ pytest = [
         pyproject.write_text(TestRemoveCreosoteExclusion.CREOSOTE_TOML)
 
         issue = _issue(
-            message="Redundant exclusion 'pip-audit': import detected in source code",
+            message="Redundant exclusion 'osv-scanner': import detected in source code",
             file_path=str(pyproject),
             stage="creosote",
         )
@@ -738,12 +738,12 @@ pytest = [
 
         assert result.success is True
         assert result.confidence == 0.9
-        assert any("pip-audit" in f for f in result.fixes_applied)
+        assert any("osv-scanner" in f for f in result.fixes_applied)
         assert any("exclude-deps" in f for f in result.fixes_applied)
         assert "pyproject.toml" in result.files_modified[0]
 
         written_content = pyproject.read_text()
-        assert '"pip-audit"' not in written_content
+        assert '"osv-scanner"' not in written_content
         assert '"hatchling"' in written_content
         assert '"pytest"' in written_content
         assert '"pyright"' in written_content
@@ -772,7 +772,7 @@ pytest = [
 
         written_content = pyproject.read_text()
         assert '"pyright"' not in written_content
-        assert '"pip-audit"' in written_content  # Other exclusions preserved
+        assert '"osv-scanner"' in written_content  # Other exclusions preserved
 
     async def test_excluded_dependencies_not_found_header(self, tmp_path: Path) -> None:
         pyproject = tmp_path / "pyproject.toml"
@@ -781,7 +781,7 @@ pytest = [
         issue = _issue(
             message=(
                 "Excluded dependencies not found in virtual environment: "
-                "pip-audit, ty, pyrefly"
+                "osv-scanner, ty, pyrefly"
             ),
             file_path=str(pyproject),
             stage="creosote",
@@ -791,6 +791,6 @@ pytest = [
 
         # First dep in the list is the one extracted; should be removed.
         assert result.success is True
-        assert any("pip-audit" in f for f in result.fixes_applied)
+        assert any("osv-scanner" in f for f in result.fixes_applied)
         written_content = pyproject.read_text()
-        assert '"pip-audit"' not in written_content
+        assert '"osv-scanner"' not in written_content

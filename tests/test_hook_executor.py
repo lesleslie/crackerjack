@@ -1298,7 +1298,7 @@ class TestReportingToolsConstant:
             "pyscn",
             "gitleaks",
             "creosote",
-            "pip-audit",
+            "osv-scanner",
             "lychee",
             "ty",
         }
@@ -1410,9 +1410,9 @@ class TestHookExecutorStatusReporting:
 
         assert status == "passed"
 
-    def test_skip_offline_pip_audit(self, executor: HookExecutor) -> None:
-        """Test offline pip-audit skip detection."""
-        hook = HookDefinition(name="pip-audit", command=[], timeout=5)
+    def test_skip_offline_osv_scanner(self, executor: HookExecutor) -> None:
+        """Test offline osv-scanner skip detection."""
+        hook = HookDefinition(name="osv-scanner", command=[], timeout=5)
         result = subprocess.CompletedProcess(
             args=[],
             returncode=1,
@@ -1420,16 +1420,16 @@ class TestHookExecutorStatusReporting:
             stderr="Could not resolve host",
         )
 
-        should_skip = executor._should_skip_offline_pip_audit(hook, result)
+        should_skip = executor._should_skip_offline_osv_scanner(hook, result)
 
         assert should_skip is True
 
-    def test_skip_offline_pip_audit_network_available(
+    def test_skip_offline_osv_scanner_network_available(
         self,
         executor: HookExecutor,
     ) -> None:
-        """Test pip-audit not skipped when network available."""
-        hook = HookDefinition(name="pip-audit", command=[], timeout=5)
+        """Test osv-scanner not skipped when network available."""
+        hook = HookDefinition(name="osv-scanner", command=[], timeout=5)
         result = subprocess.CompletedProcess(
             args=[],
             returncode=1,
@@ -1437,7 +1437,7 @@ class TestHookExecutorStatusReporting:
             stderr="",
         )
 
-        should_skip = executor._should_skip_offline_pip_audit(hook, result)
+        should_skip = executor._should_skip_offline_osv_scanner(hook, result)
 
         assert should_skip is False
 

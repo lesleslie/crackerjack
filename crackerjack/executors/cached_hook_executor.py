@@ -22,7 +22,7 @@ class CachedHookExecutor:
         pkg_path: Path,
         cache: CrackerjackCache | None = None,
         cache_ttl_seconds: int = 1800,
-        skip_offline_pip_audit: bool = True,
+        skip_offline_osv_scanner: bool = True,
     ) -> None:
         self.console = console
         self.pkg_path = pkg_path
@@ -33,7 +33,7 @@ class CachedHookExecutor:
             console,  # type: ignore
             pkg_path,
             quiet=True,
-            skip_offline_pip_audit=skip_offline_pip_audit,
+            skip_offline_osv_scanner=skip_offline_osv_scanner,
         )
         self.logger = logging.getLogger("crackerjack.cached_executor")
 

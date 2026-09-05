@@ -47,7 +47,7 @@ class TestHookConfig:
         assert config.experimental_hooks is False
         assert config.enable_pyrefly is False
         assert config.enable_ty is False
-        assert config.skip_offline_pip_audit is True
+        assert config.skip_offline_osv_scanner is True
 
     def test_all_custom_values(self) -> None:
         config = HookConfig(
@@ -55,13 +55,13 @@ class TestHookConfig:
             experimental_hooks=True,
             enable_pyrefly=True,
             enable_ty=True,
-            skip_offline_pip_audit=False,
+            skip_offline_osv_scanner=False,
         )
         assert config.skip_hooks is True
         assert config.experimental_hooks is True
         assert config.enable_pyrefly is True
         assert config.enable_ty is True
-        assert config.skip_offline_pip_audit is False
+        assert config.skip_offline_osv_scanner is False
 
     def test_mixed_values(self) -> None:
         config = HookConfig(skip_hooks=True, experimental_hooks=True)
@@ -69,7 +69,7 @@ class TestHookConfig:
         assert config.experimental_hooks is True
         assert config.enable_pyrefly is False
         assert config.enable_ty is False
-        assert config.skip_offline_pip_audit is True
+        assert config.skip_offline_osv_scanner is True
 
 
 class TestTask:

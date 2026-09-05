@@ -4,6 +4,7 @@ import json
 import logging
 import os
 import re
+import shutil
 import subprocess
 import time
 import typing as t
@@ -106,7 +107,7 @@ class HookExecutor:
             "gitleaks",
             "betterleaks",
             "creosote",
-            "pip-audit",
+            "osv-scanner",
             "lychee",
             "ty",
             "tc-refs",
@@ -124,7 +125,7 @@ class HookExecutor:
         git_service: t.Any | None = None,
         file_filter: t.Any | None = None,
         enable_hooks: list[str] | None = None,
-        skip_offline_pip_audit: bool = True,
+        skip_offline_osv_scanner: bool = True,
         adapter_learner_integration: t.Any | None = None,
         test_dir: str = "tests",
     ) -> None:
@@ -137,7 +138,7 @@ class HookExecutor:
         self.git_service = git_service
         self.file_filter = file_filter
         self.enable_hooks = set(enable_hooks) if enable_hooks else set()
-        self.skip_offline_pip_audit = skip_offline_pip_audit
+        self.skip_offline_osv_scanner = skip_offline_osv_scanner
 
         self._ty_test_dir = test_dir
         self._adapter_learner_integration = adapter_learner_integration
@@ -640,11 +641,24 @@ class HookExecutor:
         result: subprocess.CompletedProcess[str],
         duration: float,
     ) -> HookResult:
-        if self._should_skip_offline_pip_audit(hook, result):
+        if self._should_skip_missing_osv_scanner_binary(hook):
             return self._create_skipped_hook_result(
                 hook=hook,
                 duration=duration,
-                message="pip-audit skipped: network resolution unavailable",
+                message=(
+                    "osv-scanner skipped: binary not found. "
+                    "Install with `brew install osv-scanner` (macOS) or see "
+                    "https://google.github.io/osv-scanner/."
+                ),
+                output=result.stdout,
+                error=result.stderr,
+            )
+
+        if self._should_skip_offline_osv_scanner(hook, result):
+            return self._create_skipped_hook_result(
+                hook=hook,
+                duration=duration,
+                message="osv-scanner skipped: network resolution unavailable",
                 output=result.stdout,
                 error=result.stderr,
             )
@@ -728,14 +742,14 @@ class HookExecutor:
             error=error,
         )
 
-    def _should_skip_offline_pip_audit(
+    def _should_skip_offline_osv_scanner(
         self,
         hook: HookDefinition,
         result: subprocess.CompletedProcess[str],
     ) -> bool:
         if (
-            not self.skip_offline_pip_audit
-            or hook.name != "pip-audit"
+            not self.skip_offline_osv_scanner
+            or hook.name != "osv-scanner"
             or result.returncode == 0
         ):
             return False
@@ -755,6 +769,21 @@ class HookExecutor:
             "failed to establish a new connection",
         )
         return any(marker in output for marker in offline_markers)
+
+    def _should_skip_missing_osv_scanner_binary(
+        self,
+        hook: HookDefinition,
+    ) -> bool:
+        """Return True when the osv-scanner hook should be skipped because the
+        binary is not installed. The check fires before the subprocess spawns
+        by inspecting the venv and PATH.
+        """
+        if hook.name != "osv-scanner":
+            return False
+        venv_bin = self.pkg_path / ".venv" / "bin" / "osv-scanner"
+        if venv_bin.exists():
+            return False
+        return shutil.which("osv-scanner") is None
 
     def _determine_initial_status(
         self,
@@ -901,8 +930,8 @@ class HookExecutor:
             return self._parse_gitleaks_issues(error_output)
         if hook.name == "creosote":
             return self._parse_creosote_issues(error_output)
-        if hook.name == "pip-audit":
-            return self._parse_pip_audit_issues(error_output)
+        if hook.name == "osv-scanner":
+            return self._parse_osv_scanner_issues(error_output)
         if hook.name == "lychee":
             return self._parse_lychee_issues(error_output)
         if hook.name == "ty":
@@ -1421,8 +1450,34 @@ class HookExecutor:
                 issues.append(f"{error_type}: {error_msg}")
         return issues
 
-    def _parse_pip_audit_issues(self, output: str) -> list[str]:
+    def _parse_osv_scanner_issues(self, output: str) -> list[str]:
+        """Parse osv-scanner JSON output into legacy ``list[str]`` issue lines.
 
+        osv-scanner schema (relevant subset):
+            {
+              "results": [
+                {
+                  "source": {"path": "uv.lock", "type": "lockfile"},
+                  "packages": [
+                    {
+                      "package": {"name": "x", "version": "1.0", "ecosystem": "PyPI"},
+                      "vulnerabilities": [
+                        {
+                          "id": "GHSA-...",
+                          "aliases": ["CVE-..."],
+                          "summary": "...",
+                          "severity": [...],
+                          "affected": [...]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+        When the binary produces no JSON (clean repo, nothing found, or
+        binary missing), ``output`` is empty or absent, and this returns ``[]``.
+        """
         from crackerjack.config.pip_audit_ignores import IGNORED_VULNERABILITY_IDS
 
         if "Traceback (most recent call last):" in output:
@@ -1431,110 +1486,103 @@ class HookExecutor:
                 (ln for ln in reversed(lines) if not ln.startswith("File ")),
                 "unknown error",
             )
-            return [f"pip-audit crashed (pip installation error): {exception_line}"]
+            return [f"osv-scanner crashed: {exception_line}"]
 
         ignore_vulns = set(IGNORED_VULNERABILITY_IDS)
 
-        json_str = self._extract_json_from_pip_output(output)
+        json_str = self._extract_json_from_osv_output(output)
         if not json_str:
-            return self._parse_pip_text_issues(output)
+            return []
 
-        data = self._parse_pip_json(json_str)
+        data = self._parse_osv_json(json_str)
         if not data:
-            return self._parse_pip_text_issues(output)
+            return []
 
-        return self._extract_vulnerability_issues(data, ignore_vulns)
+        return self._extract_osv_vulnerability_issues(data, ignore_vulns)
 
-    def _extract_json_from_pip_output(self, output: str) -> str | None:
+    def _extract_json_from_osv_output(self, output: str) -> str | None:
         lines = output.strip().split("\n")
         for i, line in enumerate(lines):
             if line.strip().startswith("{"):
                 return "\n".join(lines[i:])
         return None
 
-    def _parse_pip_text_issues(self, output: str) -> list[str]:
-        if "No known vulnerabilities" in output or "0 vulnerabilities" in output:
-            return []
-        return [
-            line.strip()
-            for line in output.split("\n")
-            if line.strip()
-            and ("CVE-" in line or "PYSEC-" in line or "vulnerability" in line.lower())
-        ][:10]
-
-    def _parse_pip_json(self, json_str: str) -> dict[str, object] | None:
+    def _parse_osv_json(self, json_str: str) -> dict[str, object] | None:
         import json
 
         try:
             obj, _ = json.JSONDecoder().raw_decode(json_str.strip())
-            return obj if isinstance(obj, dict) else None
         except json.JSONDecodeError, ValueError:
             return None
+        return obj if isinstance(obj, dict) else None
 
-    def _extract_vulnerability_issues(
+    def _extract_osv_vulnerability_issues(
         self, data: dict[str, object], ignore_vulns: set[str]
     ) -> list[str]:
-        issues = []
-        deps = data.get("dependencies")
-        if isinstance(deps, list):
-            for dep in deps:
-                if not isinstance(dep, dict):
+        issues: list[str] = []
+        results = data.get("results")
+        if not isinstance(results, list):
+            return issues
+
+        for entry in results:
+            if not isinstance(entry, dict):
+                continue
+            source = entry.get("source")
+            source_path = ""
+            if isinstance(source, dict):
+                source_path = t.cast(str, source.get("path", ""))
+            packages = entry.get("packages")
+            if not isinstance(packages, list):
+                continue
+
+            for pkg in packages:
+                if not isinstance(pkg, dict):
                     continue
-
-                package_name = t.cast(str, dep.get("name", "unknown"))
-                package_version = t.cast(str, dep.get("version", "unknown"))
-                dep_dict = t.cast(dict[str, object], dep)
-
-                dep_issues = self._extract_dep_vulnerabilities(
-                    dep_dict, package_name, package_version, ignore_vulns
-                )
-                issues.extend(dep_issues)
-
-        return issues
-
-    def _extract_dep_vulnerabilities(
-        self,
-        dep: dict[str, object],
-        package_name: str,
-        package_version: str,
-        ignore_vulns: set[str],
-    ) -> list[str]:
-        issues = []
-        vulns = dep.get("vulns")
-        if isinstance(vulns, list):
-            for vuln in vulns:
-                if not isinstance(vuln, dict):
+                package = pkg.get("package")
+                if not isinstance(package, dict):
                     continue
+                package_name = t.cast(str, package.get("name", "unknown"))
+                package_version = t.cast(str, package.get("version", "unknown"))
 
-                vuln_id = t.cast(str, vuln.get("id", "unknown"))
-                aliases = t.cast(list[object], vuln.get("aliases", []))
-                description = t.cast(str, vuln.get("description", ""))
-                fix_versions = t.cast(list[object], vuln.get("fix_versions", []))
-
-                all_ids = {vuln_id, *aliases}
-                if all_ids & ignore_vulns:
+                vulns = pkg.get("vulnerabilities")
+                if not isinstance(vulns, list):
                     continue
+                for vuln in vulns:
+                    if not isinstance(vuln, dict):
+                        continue
+                    vuln_id = t.cast(str, vuln.get("id", "unknown"))
+                    aliases_raw = vuln.get("aliases", [])
+                    aliases = (
+                        t.cast(list[object], aliases_raw)
+                        if isinstance(aliases_raw, list)
+                        else []
+                    )
+                    summary = t.cast(str, vuln.get("summary", ""))
 
-                issue_msg = self._format_vulnerability_message(
-                    package_name,
-                    package_version,
-                    vuln_id,
-                    aliases,
-                    description,
-                    fix_versions,
-                )
-                issues.append(issue_msg)
+                    all_ids = {vuln_id, *{a for a in aliases if isinstance(a, str)}}
+                    if all_ids & ignore_vulns:
+                        continue
+
+                    issue_msg = self._format_osv_vulnerability_message(
+                        package_name,
+                        package_version,
+                        vuln_id,
+                        aliases,
+                        summary,
+                        source_path,
+                    )
+                    issues.append(issue_msg)
 
         return issues
 
     @staticmethod
-    def _format_vulnerability_message(
+    def _format_osv_vulnerability_message(
         package_name: str,
         package_version: str,
         vuln_id: str,
         aliases: list[object],
-        description: str,
-        fix_versions: list[object],
+        summary: str,
+        source_path: str,
     ) -> str:
         msg_parts = [f"{package_name}=={package_version}", vuln_id]
 
@@ -1544,15 +1592,12 @@ class HookExecutor:
         if cve_aliases:
             msg_parts.append(f"({', '.join(cve_aliases)})")
 
-        if description:
-            desc_preview = (
-                description[:80] + "..." if len(description) > 80 else description
-            )
+        if summary:
+            desc_preview = summary[:80] + "..." if len(summary) > 80 else summary
             msg_parts.append(f"- {desc_preview}")
 
-        if fix_versions:
-            fix_versions_str = [str(v) for v in fix_versions[:3]]
-            msg_parts.append(f"Fix: {', '.join(fix_versions_str)}")
+        if source_path:
+            msg_parts.append(f"[{source_path}]")
 
         return " ".join(msg_parts)
 

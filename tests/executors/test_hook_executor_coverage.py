@@ -3,7 +3,7 @@
 Targets uncovered paths identified in coverage report:
 - Parallel execution dispatch, force-enable, skipped display
 - Subprocess run with timeout/monitoring and exception branches
-- Per-tool issue parsing (complexipy, refurb, lychee, semgrep, pip-audit, creosote)
+- Per-tool issue parsing (complexipy, refurb, lychee, semgrep, osv-scanner, creosote)
 - File count extraction helpers
 - _get_changed_files_for_hook incremental paths
 - Retry: ALL_HOOKS path, retry single hook in-place
@@ -579,7 +579,7 @@ class TestDisplayHookOutput:
 
 class TestCreateSkippedHookResult:
     def test_returns_skipped_status(self, executor: HookExecutor) -> None:
-        hook = HookDefinition(name="pip-audit", command=[], timeout=5)
+        hook = HookDefinition(name="osv-scanner", command=[], timeout=5)
         result = executor._create_skipped_hook_result(
             hook=hook,
             duration=1.23,
@@ -596,38 +596,38 @@ class TestCreateSkippedHookResult:
 
 
 # ---------------------------------------------------------------------------
-# _should_skip_offline_pip_audit edge cases
+# _should_skip_offline_osv_scanner edge cases
 # ---------------------------------------------------------------------------
 
 
-class TestShouldSkipOfflinePipAudit:
-    def test_pip_audit_success_not_skipped(self, executor: HookExecutor) -> None:
+class TestShouldSkipOfflineOsvScanner:
+    def test_osv_scanner_success_not_skipped(self, executor: HookExecutor) -> None:
         """rc=0 means it ran fine — never skip."""
-        hook = HookDefinition(name="pip-audit", command=[], timeout=5)
+        hook = HookDefinition(name="osv-scanner", command=[], timeout=5)
         result = _completed(returncode=0, stdout="", stderr="")
-        assert executor._should_skip_offline_pip_audit(hook, result) is False
+        assert executor._should_skip_offline_osv_scanner(hook, result) is False
 
     def test_skip_disabled_flag_prevents_skip(self, executor: HookExecutor) -> None:
-        """When ``skip_offline_pip_audit`` is False, never skip."""
-        executor.skip_offline_pip_audit = False
-        hook = HookDefinition(name="pip-audit", command=[], timeout=5)
+        """When ``skip_offline_osv_scanner`` is False, never skip."""
+        executor.skip_offline_osv_scanner = False
+        hook = HookDefinition(name="osv-scanner", command=[], timeout=5)
         result = _completed(returncode=1, stderr="getaddrinfo failed")
-        assert executor._should_skip_offline_pip_audit(hook, result) is False
+        assert executor._should_skip_offline_osv_scanner(hook, result) is False
 
-    def test_non_pip_audit_hook_not_evaluated(self, executor: HookExecutor) -> None:
+    def test_non_osv_scanner_hook_not_evaluated(self, executor: HookExecutor) -> None:
         hook = HookDefinition(name="ruff-check", command=[], timeout=5)
         result = _completed(returncode=1, stderr="getaddrinfo failed")
-        assert executor._should_skip_offline_pip_audit(hook, result) is False
+        assert executor._should_skip_offline_osv_scanner(hook, result) is False
 
     def test_offline_markers_in_stdout(self, executor: HookExecutor) -> None:
-        hook = HookDefinition(name="pip-audit", command=[], timeout=5)
+        hook = HookDefinition(name="osv-scanner", command=[], timeout=5)
         result = _completed(returncode=1, stdout="connection refused", stderr="")
-        assert executor._should_skip_offline_pip_audit(hook, result) is True
+        assert executor._should_skip_offline_osv_scanner(hook, result) is True
 
     def test_no_offline_markers(self, executor: HookExecutor) -> None:
-        hook = HookDefinition(name="pip-audit", command=[], timeout=5)
+        hook = HookDefinition(name="osv-scanner", command=[], timeout=5)
         result = _completed(returncode=1, stdout="found 2 vulns", stderr="")
-        assert executor._should_skip_offline_pip_audit(hook, result) is False
+        assert executor._should_skip_offline_osv_scanner(hook, result) is False
 
 
 # ---------------------------------------------------------------------------
@@ -724,10 +724,10 @@ class TestExtractIssuesForReportingTools:
             )
         assert out == ["c1"]
 
-    def test_pip_audit_dispatches(self, executor: HookExecutor) -> None:
-        with patch.object(executor, "_parse_pip_audit_issues", return_value=["pa1"]):
+    def test_osv_scanner_dispatches(self, executor: HookExecutor) -> None:
+        with patch.object(executor, "_parse_osv_scanner_issues", return_value=["pa1"]):
             out = executor._extract_issues_for_reporting_tools(
-                HookDefinition(name="pip-audit", command=[]), "raw"
+                HookDefinition(name="osv-scanner", command=[]), "raw"
             )
         assert out == ["pa1"]
 
@@ -940,60 +940,71 @@ class TestParseSemgrep:
 # ---------------------------------------------------------------------------
 
 
-class TestPipAuditParsing:
-    def test_no_json_falls_back_to_text(self, executor: HookExecutor) -> None:
-        text = "Warning: CVE-2024-1234 vulnerability in pkg-x"
-        out = executor._parse_pip_audit_issues(text)
-        assert any("CVE-2024-1234" in x for x in out)
+class TestOsvScannerParsing:
+    """osv-scanner outputs JSON only when vulns are found; no text fallback."""
 
-    def test_no_vulnerabilities_text(self, executor: HookExecutor) -> None:
+    def test_no_json_returns_empty(self, executor: HookExecutor) -> None:
+        """osv-scanner text output (no vulns found) → empty list."""
         text = "Scanned. 0 vulnerabilities found."
-        out = executor._parse_pip_audit_issues(text)
+        out = executor._parse_osv_scanner_issues(text)
         assert out == []
 
     def test_valid_json_with_vulnerability(self, executor: HookExecutor) -> None:
         payload = {
-            "dependencies": [
+            "results": [
                 {
-                    "name": "pkg",
-                    "version": "1.0",
-                    "vulns": [
+                    "source": {"path": "uv.lock", "type": "lockfile"},
+                    "packages": [
                         {
-                            "id": "PYSEC-2024-X",
-                            "aliases": ["CVE-2024-9999"],
-                            "description": "very bad",
-                            "fix_versions": ["1.1"],
+                            "package": {
+                                "name": "pkg",
+                                "version": "1.0",
+                                "ecosystem": "PyPI",
+                            },
+                            "vulnerabilities": [
+                                {
+                                    "id": "PYSEC-2024-X",
+                                    "aliases": ["CVE-2024-9999"],
+                                    "summary": "very bad",
+                                }
+                            ],
                         }
                     ],
                 }
             ]
         }
-        out = executor._parse_pip_audit_issues(json.dumps(payload))
+        out = executor._parse_osv_scanner_issues(json.dumps(payload))
         assert len(out) == 1
         assert "pkg==1.0" in out[0]
         assert "PYSEC-2024-X" in out[0]
         assert "CVE-2024-9999" in out[0]
-        assert "1.1" in out[0]
 
     def test_long_description_truncated(self, executor: HookExecutor) -> None:
         long_desc = "x" * 200
         payload = {
-            "dependencies": [
+            "results": [
                 {
-                    "name": "pkg",
-                    "version": "1.0",
-                    "vulns": [
+                    "source": {"path": "uv.lock", "type": "lockfile"},
+                    "packages": [
                         {
-                            "id": "VID",
-                            "aliases": [],
-                            "description": long_desc,
-                            "fix_versions": [],
+                            "package": {
+                                "name": "pkg",
+                                "version": "1.0",
+                                "ecosystem": "PyPI",
+                            },
+                            "vulnerabilities": [
+                                {
+                                    "id": "VID",
+                                    "aliases": [],
+                                    "summary": long_desc,
+                                }
+                            ],
                         }
                     ],
                 }
             ]
         }
-        out = executor._parse_pip_audit_issues(json.dumps(payload))
+        out = executor._parse_osv_scanner_issues(json.dumps(payload))
         assert "..." in out[0]
         # Should not contain the full 200-char string
         assert long_desc not in out[0]
@@ -1005,45 +1016,72 @@ class TestPipAuditParsing:
         if not ignored:
             pytest.skip("IGNORED_VULNERABILITY_IDS empty in this build")
         payload = {
-            "dependencies": [
+            "results": [
                 {
-                    "name": "pkg",
-                    "version": "1.0",
-                    "vulns": [
-                        {"id": ignored, "aliases": [], "description": "", "fix_versions": []}
+                    "source": {"path": "uv.lock", "type": "lockfile"},
+                    "packages": [
+                        {
+                            "package": {
+                                "name": "pkg",
+                                "version": "1.0",
+                                "ecosystem": "PyPI",
+                            },
+                            "vulnerabilities": [
+                                {
+                                    "id": ignored,
+                                    "aliases": [],
+                                    "summary": "ignored",
+                                }
+                            ],
+                        }
                     ],
                 }
             ]
         }
-        out = executor._parse_pip_audit_issues(json.dumps(payload))
+        out = executor._parse_osv_scanner_issues(json.dumps(payload))
         assert out == []
 
-    def test_dep_not_dict_skipped(self, executor: HookExecutor) -> None:
-        payload = {"dependencies": ["not a dict", 42, None]}
-        out = executor._parse_pip_audit_issues(json.dumps(payload))
+    def test_package_not_dict_skipped(self, executor: HookExecutor) -> None:
+        payload = {
+            "results": [
+                {
+                    "source": {"path": "uv.lock", "type": "lockfile"},
+                    "packages": ["not a dict", 42, None],
+                }
+            ]
+        }
+        out = executor._parse_osv_scanner_issues(json.dumps(payload))
         assert out == []
 
     def test_vuln_not_dict_skipped(self, executor: HookExecutor) -> None:
         payload = {
-            "dependencies": [
+            "results": [
                 {
-                    "name": "pkg",
-                    "version": "1.0",
-                    "vulns": ["not-a-dict"],
+                    "source": {"path": "uv.lock", "type": "lockfile"},
+                    "packages": [
+                        {
+                            "package": {
+                                "name": "pkg",
+                                "version": "1.0",
+                                "ecosystem": "PyPI",
+                            },
+                            "vulnerabilities": ["not-a-dict"],
+                        }
+                    ],
                 }
             ]
         }
-        out = executor._parse_pip_audit_issues(json.dumps(payload))
+        out = executor._parse_osv_scanner_issues(json.dumps(payload))
         assert out == []
 
-    def test_dependencies_not_list_returns_empty(self, executor: HookExecutor) -> None:
-        out = executor._parse_pip_audit_issues(json.dumps({"dependencies": "oops"}))
+    def test_results_not_list_returns_empty(self, executor: HookExecutor) -> None:
+        out = executor._parse_osv_scanner_issues(json.dumps({"results": "oops"}))
         assert out == []
 
-    def test_invalid_json_falls_back(self, executor: HookExecutor) -> None:
-        # Contains a stray non-JSON prefix that contains a CVE mention
-        out = executor._parse_pip_audit_issues("not json at all CVE-2024-1\n")
-        assert any("CVE-2024-1" in x for x in out)
+    def test_invalid_json_returns_empty(self, executor: HookExecutor) -> None:
+        """Non-JSON osv-scanner output → empty list (no text fallback)."""
+        out = executor._parse_osv_scanner_issues("not json at all CVE-2024-1\n")
+        assert out == []
 
 
 # ---------------------------------------------------------------------------
@@ -2118,16 +2156,41 @@ class TestExtractIssuesDispatch:
 # ---------------------------------------------------------------------------
 
 
-class TestPipAuditText:
-    def test_no_cve_no_vulns_returns_empty(self, executor: HookExecutor) -> None:
-        out = executor._parse_pip_text_issues("just info\nnothing here\n")
-        assert out == []
+class TestOsvScannerText:
+    """Text fallback for osv-scanner — no longer supported (osv-scanner emits
+    JSON only when vulns are found). These tests pin that the legacy
+    ``_parse_pip_text_issues`` is gone: only the JSON walker remains."""
 
-    def test_cve_lines_captured(self, executor: HookExecutor) -> None:
-        text = "INFO CVE-2024-X\nsome other line\nPYSEC-2024-Y"
-        out = executor._parse_pip_text_issues(text)
-        assert len(out) >= 1
-        assert any("CVE-2024-X" in x or "PYSEC-2024-Y" in x for x in out)
+    def test_json_with_vulns_emits_issues(self, executor: HookExecutor) -> None:
+        payload = {
+            "results": [
+                {
+                    "source": {"path": "uv.lock", "type": "lockfile"},
+                    "packages": [
+                        {
+                            "package": {
+                                "name": "pkg",
+                                "version": "1.0",
+                                "ecosystem": "PyPI",
+                            },
+                            "vulnerabilities": [
+                                {
+                                    "id": "CVE-2024-X",
+                                    "aliases": [],
+                                    "summary": "demo",
+                                }
+                            ],
+                        }
+                    ],
+                }
+            ]
+        }
+        out = executor._parse_osv_scanner_issues(json.dumps(payload))
+        assert any("CVE-2024-X" in x for x in out)
+
+    def test_empty_results_emits_no_issues(self, executor: HookExecutor) -> None:
+        out = executor._parse_osv_scanner_issues(json.dumps({"results": []}))
+        assert out == []
 
 
 # ---------------------------------------------------------------------------

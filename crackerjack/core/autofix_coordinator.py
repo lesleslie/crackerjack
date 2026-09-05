@@ -90,7 +90,7 @@ _HOOK_SCOPES: dict[str, tuple[str, ...]] = {
         "**/requirements*.txt",
         "**/*.py",
     ),
-    "pip-audit": (
+    "osv-scanner": (
         "**/pyproject.toml",
         "**/uv.lock",
         "**/requirements*.txt",

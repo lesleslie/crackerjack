@@ -379,7 +379,7 @@ class TestCreosoteRegexParser:
     def test_parse_redundant_and_excluded_not_found(self, parser):
         """Parse 'Redundant exclusion' and 'Excluded dependencies not found' lines."""
         output = (
-            "Redundant exclusion 'pip-audit': import detected in source code\n"
+            "Redundant exclusion 'osv-scanner': import detected in source code\n"
             "Redundant exclusion 'pyright': not found in pyproject.toml\n"
             "Excluded dependencies not found in virtual environment: ty, pyrefly, pyright\n"
         )
@@ -396,7 +396,7 @@ class TestCreosoteRegexParser:
             for msg in (i.message for i in issues)
             if msg.startswith("Redundant exclusion '") and "'" in msg
         }
-        assert dep_names == {"pip-audit", "pyright", "ty", "pyrefly", "pyright"}
+        assert dep_names == {"osv-scanner", "pyright", "ty", "pyrefly", "pyright"}
 
     def test_parse_unused_dependencies_found_word_order(self, parser):
         """Bug #1a: parse 'Unused dependencies found:' (verb-noun-found order).

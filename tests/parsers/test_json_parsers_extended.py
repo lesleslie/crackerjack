@@ -11,7 +11,7 @@ from crackerjack.parsers.json_parsers import (
     MypyJSONParser,
     BanditJSONParser,
     SemgrepJSONParser,
-    PipAuditJSONParser,
+    OsvScannerJSONParser,
     GitleaksJSONParser,
     PytestJSONParser,
     register_json_parsers,
@@ -372,26 +372,35 @@ class TestSemgrepJSONParserCoverage:
         assert parser.get_issue_count({"results": None}) == 0
 
 
-class TestPipAuditJSONParserCoverage:
-    """Extended tests for PipAuditJSONParser."""
+class TestOsvScannerJSONParserCoverage:
+    """Extended tests for OsvScannerJSONParser."""
 
     @pytest.fixture
     def parser(self):
-        return PipAuditJSONParser()
+        return OsvScannerJSONParser()
 
-    def test_parse_pip_audit_with_vulns(self, parser):
-        """Test parsing pip-audit with vulnerabilities."""
+    def test_parse_osv_scanner_with_vulns(self, parser):
+        """Test parsing osv-scanner with vulnerabilities."""
         data = {
-            "dependencies": [
+            "results": [
                 {
-                    "name": "django",
-                    "vulns": [
+                    "source": {"path": "uv.lock", "type": "lockfile"},
+                    "packages": [
                         {
-                            "id": "PYSEC-1234",
-                            "description": "SQL Injection vulnerability",
-                            "severity": "HIGH"
+                            "package": {
+                                "name": "django",
+                                "version": "4.2.0",
+                                "ecosystem": "PyPI",
+                            },
+                            "vulnerabilities": [
+                                {
+                                    "id": "PYSEC-1234",
+                                    "aliases": [],
+                                    "summary": "SQL Injection vulnerability",
+                                }
+                            ],
                         }
-                    ]
+                    ],
                 }
             ]
         }
@@ -400,22 +409,65 @@ class TestPipAuditJSONParserCoverage:
         assert issues[0].type == IssueType.SECURITY
         assert "PYSEC-1234" in issues[0].message
 
-    def test_parse_pip_audit_no_vulns(self, parser):
-        """Test parsing pip-audit with no vulnerabilities."""
+    def test_parse_osv_scanner_no_vulns(self, parser):
+        """Test parsing osv-scanner with no vulnerabilities."""
         data = {
-            "dependencies": [
-                {"name": "safe-package", "vulns": []}
+            "results": [
+                {
+                    "source": {"path": "uv.lock", "type": "lockfile"},
+                    "packages": [
+                        {
+                            "package": {
+                                "name": "safe-package",
+                                "version": "1.0.0",
+                                "ecosystem": "PyPI",
+                            },
+                            "vulnerabilities": [],
+                        }
+                    ],
+                }
             ]
         }
         issues = parser.parse_json(data)
         assert len(issues) == 0
 
-    def test_parse_pip_audit_multiple_deps(self, parser):
-        """Test parsing pip-audit with multiple dependencies."""
+    def test_parse_osv_scanner_multiple_deps(self, parser):
+        """Test parsing osv-scanner with multiple dependencies."""
         data = {
-            "dependencies": [
-                {"name": "pkg1", "vulns": [{"id": "V1", "description": "Desc", "severity": "HIGH"}]},
-                {"name": "pkg2", "vulns": [{"id": "V2", "description": "Desc", "severity": "MEDIUM"}]},
+            "results": [
+                {
+                    "source": {"path": "uv.lock", "type": "lockfile"},
+                    "packages": [
+                        {
+                            "package": {
+                                "name": "pkg1",
+                                "version": "1.0.0",
+                                "ecosystem": "PyPI",
+                            },
+                            "vulnerabilities": [
+                                {
+                                    "id": "V1",
+                                    "aliases": [],
+                                    "summary": "Desc",
+                                }
+                            ],
+                        },
+                        {
+                            "package": {
+                                "name": "pkg2",
+                                "version": "2.0.0",
+                                "ecosystem": "PyPI",
+                            },
+                            "vulnerabilities": [
+                                {
+                                    "id": "V2",
+                                    "aliases": [],
+                                    "summary": "Desc",
+                                }
+                            ],
+                        },
+                    ],
+                }
             ]
         }
         issues = parser.parse_json(data)
@@ -425,54 +477,75 @@ class TestPipAuditJSONParserCoverage:
         """Test creating vulnerability issue."""
         vuln = {
             "id": "CVE-2024-1234",
-            "description": "Remote code execution",
-            "severity": "CRITICAL"
+            "aliases": ["CVE-2024-1234"],
+            "summary": "Remote code execution",
         }
-        issue = parser._create_vulnerability_issue("vulnerable_pkg", vuln)
+        issue = parser._create_vulnerability_issue(
+            "vulnerable_pkg",
+            "1.0.0",
+            vuln,
+            "uv.lock",
+        )
         assert issue.type == IssueType.SECURITY
-        assert issue.severity == Priority.CRITICAL
+        assert issue.severity == Priority.MEDIUM
         assert issue.details[0] == "package: vulnerable_pkg"
 
-    def test_map_severity_HIGH(self, parser):
-        """Test severity mapping for HIGH."""
-        assert parser._map_severity("HIGH") == Priority.CRITICAL
+    def test_extract_source_path(self, parser):
+        """Test _extract_source_path pulls path from source block."""
+        entry = {"source": {"path": "pyproject.toml", "type": "lockfile"}}
+        assert parser._extract_source_path(entry) == "pyproject.toml"
 
-    def test_map_severity_MEDIUM(self, parser):
-        """Test severity mapping for MEDIUM."""
-        assert parser._map_severity("MEDIUM") == Priority.HIGH
+    def test_extract_source_path_missing(self, parser):
+        """Test _extract_source_path returns empty string when missing."""
+        assert parser._extract_source_path({}) == ""
 
-    def test_map_severity_LOW(self, parser):
-        """Test severity mapping for LOW."""
-        assert parser._map_severity("LOW") == Priority.MEDIUM
+    def test_get_results_list(self, parser):
+        """Test getting results list."""
+        data = {"results": [{"source": {}}, {"source": {}}]}
+        results = parser._get_results_list(data)
+        assert results is not None
+        assert len(results) == 2
 
-    def test_get_dependencies_list(self, parser):
-        """Test getting dependencies list."""
-        data = {"dependencies": [{}, {}]}
-        deps = parser._get_dependencies_list(data)
-        assert deps is not None
-        assert len(deps) == 2
+    def test_get_results_list_missing(self, parser):
+        """Test getting results list when missing."""
+        assert parser._get_results_list({}) is None
+        assert parser._get_results_list({"results": "not a list"}) is None
 
-    def test_get_dependencies_list_missing(self, parser):
-        """Test getting dependencies list when missing."""
-        assert parser._get_dependencies_list({}) is None
-        assert parser._get_dependencies_list({"dependencies": "not a list"}) is None
+    def test_count_vulnerabilities_in_entry(self, parser):
+        """Test counting vulnerabilities in entry."""
+        entry = {
+            "packages": [
+                {
+                    "vulnerabilities": [{}, {}, {}],
+                }
+            ]
+        }
+        assert parser._count_vulnerabilities_in_entry(entry) == 3
 
-    def test_count_vulnerabilities_in_dep(self, parser):
-        """Test counting vulnerabilities in dependency."""
-        dep = {"vulns": [{}, {}, {}]}
-        assert parser._count_vulnerabilities_in_dep(dep) == 3
-
-    def test_count_vulnerabilities_in_dep_no_vulns(self, parser):
+    def test_count_vulnerabilities_in_entry_no_vulns(self, parser):
         """Test counting vulnerabilities when none."""
-        assert parser._count_vulnerabilities_in_dep({}) == 0
-        assert parser._count_vulnerabilities_in_dep({"vulns": "not a list"}) == 0
+        assert parser._count_vulnerabilities_in_entry({}) == 0
+        assert parser._count_vulnerabilities_in_entry({"packages": "not a list"}) == 0
 
     def test_get_issue_count(self, parser):
-        """Test issue count."""
+        """Test issue count across multiple entries."""
         data = {
-            "dependencies": [
-                {"vulns": [{"id": "1"}, {"id": "2"}]},
-                {"vulns": [{"id": "3"}]},
+            "results": [
+                {
+                    "packages": [
+                        {
+                            "vulnerabilities": [
+                                {"id": "1"},
+                                {"id": "2"},
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "packages": [
+                        {"vulnerabilities": [{"id": "3"}]}
+                    ]
+                },
             ]
         }
         assert parser.get_issue_count(data) == 3
@@ -615,7 +688,7 @@ class TestRegisterJsonParsers:
 
         expected_tools = [
             "ruff", "ruff-check", "mypy", "bandit",
-            "complexipy", "semgrep", "pip-audit", "gitleaks", "pytest"
+            "complexipy", "semgrep", "osv-scanner", "gitleaks", "pytest"
         ]
 
         for tool in expected_tools:
@@ -632,7 +705,7 @@ class TestJsonParsersEdgeCases:
             MypyJSONParser(),
             BanditJSONParser(),
             SemgrepJSONParser(),
-            PipAuditJSONParser(),
+            OsvScannerJSONParser(),
             GitleaksJSONParser(),
             PytestJSONParser(),
         ]
@@ -648,7 +721,7 @@ class TestJsonParsersEdgeCases:
             MypyJSONParser(),
             BanditJSONParser(),
             SemgrepJSONParser(),
-            PipAuditJSONParser(),
+            OsvScannerJSONParser(),
             GitleaksJSONParser(),
             PytestJSONParser(),
         ]

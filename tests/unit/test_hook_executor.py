@@ -195,7 +195,7 @@ class TestHookExecutionResult:
             ),
             HookResult(
                 id="2",
-                name="pip-audit",
+                name="osv-scanner",
                 status="skipped",
                 duration=2.0,
                 issues_found=[],
@@ -441,12 +441,12 @@ class TestHookExecutorInternalMethods:
         status = executor._determine_initial_status(hook, result)
         assert status == "failed"
 
-    def test_create_hook_result_skips_offline_pip_audit(self) -> None:
-        """Test pip-audit network failures are downgraded to skipped."""
+    def test_create_hook_result_skips_offline_osv_scanner(self) -> None:
+        """Test osv-scanner network failures are downgraded to skipped."""
         executor = HookExecutor(console=MagicMock(), pkg_path=Path("/tmp"))
 
         hook = MagicMock()
-        hook.name = "pip-audit"
+        hook.name = "osv-scanner"
         hook.is_formatting = False
         hook.stage = MagicMock()
         hook.stage.value = "fast"
@@ -469,18 +469,18 @@ class TestHookExecutorInternalMethods:
         assert hook_result.issues_count == 0
         assert "network resolution unavailable" in (hook_result.error_message or "")
 
-    def test_create_hook_result_respects_skip_offline_pip_audit_setting(
+    def test_create_hook_result_respects_skip_offline_osv_scanner_setting(
         self,
     ) -> None:
-        """Test the offline pip-audit skip can be disabled explicitly."""
+        """Test the offline osv-scanner skip can be disabled explicitly."""
         executor = HookExecutor(
             console=MagicMock(),
             pkg_path=Path("/tmp"),
-            skip_offline_pip_audit=False,
+            skip_offline_osv_scanner=False,
         )
 
         hook = MagicMock()
-        hook.name = "pip-audit"
+        hook.name = "osv-scanner"
         hook.is_formatting = False
         hook.stage = MagicMock()
         hook.stage.value = "fast"

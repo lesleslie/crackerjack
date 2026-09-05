@@ -128,7 +128,7 @@ class TestHookConfig:
         assert config.enable_pyrefly is False
         assert config.enable_ty is False
         assert config.enable_lsp_optimization is False
-        assert config.skip_offline_pip_audit is True
+        assert config.skip_offline_osv_scanner is True
 
     def test_hook_config_with_all_options(self) -> None:
         """Verify HookConfig with all options."""
@@ -138,14 +138,14 @@ class TestHookConfig:
             enable_pyrefly=True,
             enable_ty=True,
             enable_lsp_optimization=True,
-            skip_offline_pip_audit=False,
+            skip_offline_osv_scanner=False,
         )
         assert config.skip_hooks is True
         assert config.experimental_hooks is True
         assert config.enable_pyrefly is True
         assert config.enable_ty is True
         assert config.enable_lsp_optimization is True
-        assert config.skip_offline_pip_audit is False
+        assert config.skip_offline_osv_scanner is False
 
     def test_from_settings(self) -> None:
         """Verify from_settings classmethod."""
@@ -155,7 +155,7 @@ class TestHookConfig:
         settings.enable_pyrefly = True
         settings.enable_ty = False
         settings.enable_lsp_optimization = True
-        settings.skip_offline_pip_audit = False
+        settings.skip_offline_osv_scanner = False
 
         config = HookConfig.from_settings(settings)
 
@@ -164,10 +164,10 @@ class TestHookConfig:
         assert config.enable_pyrefly is True
         assert config.enable_ty is False
         assert config.enable_lsp_optimization is True
-        assert config.skip_offline_pip_audit is False
+        assert config.skip_offline_osv_scanner is False
 
-    def test_from_settings_missing_pip_audit(self) -> None:
-        """Verify from_settings with missing skip_offline_pip_audit."""
+    def test_from_settings_missing_osv_scanner(self) -> None:
+        """Verify from_settings with missing skip_offline_osv_scanner."""
         settings = MagicMock(spec=[])
         settings.skip_hooks = False
         settings.experimental_hooks = False
@@ -177,7 +177,7 @@ class TestHookConfig:
 
         config = HookConfig.from_settings(settings)
 
-        assert config.skip_offline_pip_audit is True
+        assert config.skip_offline_osv_scanner is True
 
 
 class TestTestConfig:

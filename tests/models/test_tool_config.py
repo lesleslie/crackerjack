@@ -390,7 +390,7 @@ class TestGetJsonFlag:
             "bandit": "-f json",
             "complexipy": "--output-json",
             "semgrep": "--json",
-            "pip-audit": "--format=json",
+            "osv-scanner": "--format=json",
             "gitleaks": "--report-format=json",
             "pylint": "--output-format=json",
         }
