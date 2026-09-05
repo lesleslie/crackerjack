@@ -326,3 +326,23 @@ retries, redaction, HTTP probing, serialization, compression, hashing,
 data transforms), check `oneiric.actions` — catalog lives at
 `oneiric/docs/action-kits.md` in the oneiric project. Discovery hint:
 `mahavishnu/.claude/decisions/promote-oneiric-action-kits.md`.
+
+## MCP Backend Wiring Discipline (Bodai-wide)
+
+Every Bodai MCP server's `/health` endpoint must aggregate per-feed state
+(`healthy | degraded | dead`) and return 503 when any feed is not healthy.
+Every registered tool must have a working data feed exposing
+`feed.entities_count`, `feed.last_updated_timestamp`, `feed.errors_total`,
+`feed.cycles_total`. Every tool registration requires
+`tests/integration/test_<tool>_e2e.py` asserting non-empty results.
+End-to-end smoke tests in CI must spin up the server and assert non-empty
+responses per tool. Monthly Bodai-wide audit cadence.
+
+Canonical rule: `.claude/decisions/mcp-backend-wiring-discipline.md`
+(lives in the mahavishnu repo and is cross-referenced for the ecosystem).
+
+When adding any new MCP tool to this repo:
+- [ ] Tool registration includes `tests/integration/test_<tool>_e2e.py`.
+- [ ] Data feed exposes the four mandatory metrics.
+- [ ] `/health` aggregator includes this feed's state.
+- [ ] CI smoke test calls this tool and asserts non-empty response.
