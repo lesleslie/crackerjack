@@ -94,8 +94,14 @@ def _build_targets(package_name: str) -> list[str]:
 
     Used by ruff-check, ruff-format, codespell, tc-refs, and any future
     tool that should cover both the package and the scripts/examples dirs.
+
+    Targets are filtered to existing directories. The `scripts/` and
+    `examples/` subdirectories are optional — consumer repos that lack
+    them (e.g., a library that ships only the package) won't fail tool
+    invocations with "directory not found".
     """
-    return [f"./{package_name}", "./scripts", "./examples"]
+    candidates = [f"./{package_name}", "./scripts", "./examples"]
+    return [p for p in candidates if Path(p).is_dir()]
 
 
 def _preferred_binary_command(tool_name: str, *args: str) -> list[str]:

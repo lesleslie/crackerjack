@@ -966,40 +966,135 @@ class TestPreferredBinaryCommandWithReport:
 
 
 class TestBuildTargetsHelper:
-    """Coverage for _build_targets canonical target list."""
+    """Coverage for _build_targets canonical target list.
 
-    def test_returns_canonical_targets(self) -> None:
+    Behavior: candidates = ["./{package_name}", "./scripts", "./examples"].
+    Only directories that exist on disk are returned — consumer repos that
+    lack scripts/ or examples/ won't fail tool invocations with "directory
+    not found". The package directory is required (it's the package itself).
+    """
+
+    def test_returns_canonical_targets_when_all_exist(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """All three targets returned when scripts/ and examples/ both exist."""
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / "myapp").mkdir()
+        (tmp_path / "scripts").mkdir()
+        (tmp_path / "examples").mkdir()
+
         assert _build_targets("myapp") == ["./myapp", "./scripts", "./examples"]
 
-    def test_distinct_per_package_name(self) -> None:
-        assert _build_targets("foo") != _build_targets("bar")
+    def test_distinct_per_package_name(self, tmp_path: Path) -> None:
+        monkeypatch_ = pytest.MonkeyPatch()
+        monkeypatch_.chdir(tmp_path)
+        (tmp_path / "foo").mkdir()
+        (tmp_path / "bar").mkdir()
 
-    def test_contains_scripts_and_examples(self) -> None:
+        assert _build_targets("foo") != _build_targets("bar")
+        monkeypatch_.undo()
+
+    def test_contains_scripts_and_examples_when_present(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / "anything").mkdir()
+        (tmp_path / "scripts").mkdir()
+        (tmp_path / "examples").mkdir()
+
         targets = _build_targets("anything")
         assert "./scripts" in targets
         assert "./examples" in targets
 
-    def test_package_target_uses_dot_slash_prefix(self) -> None:
+    def test_package_target_uses_dot_slash_prefix(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / "anything").mkdir()
+
         targets = _build_targets("anything")
         assert targets[0].startswith("./")
+
+    def test_skips_missing_examples_directory(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Consumer repos without an examples/ dir should not fail tool invocations."""
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / "myapp").mkdir()
+        (tmp_path / "scripts").mkdir()
+        # No examples/ directory
+
+        targets = _build_targets("myapp")
+        assert "./examples" not in targets
+        assert "./myapp" in targets
+        assert "./scripts" in targets
+
+    def test_skips_missing_scripts_directory(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Consumer repos without a scripts/ dir should not fail tool invocations."""
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / "myapp").mkdir()
+        (tmp_path / "examples").mkdir()
+        # No scripts/ directory
+
+        targets = _build_targets("myapp")
+        assert "./scripts" not in targets
+        assert "./myapp" in targets
+        assert "./examples" in targets
+
+    def test_skips_both_optional_dirs(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Library-style repo with only the package — neither scripts/ nor examples/."""
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / "myapp").mkdir()
+        # No scripts/ or examples/
+
+        targets = _build_targets("myapp")
+        assert targets == ["./myapp"]
+
+    def test_package_dir_missing_returns_empty(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Edge case: package dir doesn't exist either. Returns empty list.
+
+        This is a degenerate case (the package should always exist when
+        crackerjack is being run on it) but the function shouldn't crash.
+        """
+        monkeypatch.chdir(tmp_path)
+        # Nothing exists in tmp_path
+
+        targets = _build_targets("nonexistent_package")
+        assert targets == []
 
 
 class TestGetToolCommandPkgPath:
     """Coverage for get_tool_command pkg_path branches (358-362)."""
 
-    def test_explicit_pkg_path_as_string(self, tmp_path: Path) -> None:
+    def test_explicit_pkg_path_as_string(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.chdir(tmp_path)
         pkg = tmp_path / "altpkg"
         pkg.mkdir()
         (pkg / "pyproject.toml").write_text('[project]\nname = "alt-pkg"\n')
+        # Create the normalized package dir at CWD so _build_targets filter passes.
+        (tmp_path / "alt_pkg").mkdir()
         cmd = get_tool_command("ruff-check", pkg_path=str(pkg))
         assert isinstance(cmd, list)
         # The command should target alt-pkg
         assert "./alt_pkg" in cmd
 
-    def test_explicit_pkg_path_as_path(self, tmp_path: Path) -> None:
+    def test_explicit_pkg_path_as_path(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.chdir(tmp_path)
         pkg = tmp_path / "pathpkg"
         pkg.mkdir()
         (pkg / "pyproject.toml").write_text('[project]\nname = "path-pkg"\n')
+        # Create the normalized package dir at CWD so _build_targets filter passes.
+        (tmp_path / "path_pkg").mkdir()
         cmd = get_tool_command("ruff-check", pkg_path=pkg)
         assert "./path_pkg" in cmd
 
