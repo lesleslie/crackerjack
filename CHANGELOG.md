@@ -1,5 +1,20 @@
 ______________________________________________________________________
 
+## [0.80.3] - 2026-09-06
+
+### Testing
+
+- adapters/type: Cover pyright.py (41 tests)
+- Cover cli/lifecycle_handlers.py (12 tests)
+- executors: Cover cached_hook_executor.py (46 tests)
+- executors: Cover process_monitor.py (42 tests)
+- fixers: Cover ast_transform/patterns/early_return.py (49 tests)
+- mcp/tools: Cover eventbridge_tools.py (14 tests)
+- Raise checks/release_audit.py to 94% (81 tests)
+- Raise executors/tool_proxy.py to 99% (72 tests)
+- services: Cover backup_service.py (42 tests)
+- services: Cover pattern_cache.py (44 tests)
+
 ## [0.80.2] - 2026-09-06
 
 ### Testing
