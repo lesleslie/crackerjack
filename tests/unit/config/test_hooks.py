@@ -219,16 +219,16 @@ class TestHookDefinitionBuildCommand:
 
 class TestHookStrategy:
     def test_defaults(self) -> None:
-        strat = HookStrategy(name="custom", hooks=[])
-        assert strat.name == "custom"
-        assert strat.hooks == []
-        assert strat.timeout == 300
-        assert strat.retry_policy is RetryPolicy.NONE
-        assert strat.parallel is False
-        assert strat.max_workers == 3
+        strategy = HookStrategy(name="custom", hooks=[])
+        assert strategy.name == "custom"
+        assert strategy.hooks == []
+        assert strategy.timeout == 300
+        assert strategy.retry_policy is RetryPolicy.NONE
+        assert strategy.parallel is False
+        assert strategy.max_workers == 3
 
     def test_overrides(self) -> None:
-        strat = HookStrategy(
+        strategy = HookStrategy(
             name="custom",
             hooks=[],
             timeout=600,
@@ -236,10 +236,10 @@ class TestHookStrategy:
             parallel=True,
             max_workers=8,
         )
-        assert strat.timeout == 600
-        assert strat.retry_policy is RetryPolicy.ALL_HOOKS
-        assert strat.parallel is True
-        assert strat.max_workers == 8
+        assert strategy.timeout == 600
+        assert strategy.retry_policy is RetryPolicy.ALL_HOOKS
+        assert strategy.parallel is True
+        assert strategy.max_workers == 8
 
 
 # ---------------------------------------------------------------------------
@@ -609,13 +609,13 @@ class TestUpdateHookTimeoutsFromSettings:
 
 class TestHookConfigLoaderLoadStrategy:
     def test_fast_strategy(self) -> None:
-        strat = HookConfigLoader.load_strategy("fast")
-        assert isinstance(strat, HookStrategy)
-        assert strat.name == "fast"
-        assert strat.hooks is FAST_HOOKS
-        assert strat.timeout == 300
-        assert strat.parallel is True
-        assert strat.max_workers == 6
+        strategy = HookConfigLoader.load_strategy("fast")
+        assert isinstance(strategy, HookStrategy)
+        assert strategy.name == "fast"
+        assert strategy.hooks is FAST_HOOKS
+        assert strategy.timeout == 300
+        assert strategy.parallel is True
+        assert strategy.max_workers == 6
 
     def test_comprehensive_strategy_applies_settings_timeouts(self) -> None:
         # ``semgrep`` is in COMPREHENSIVE_HOOKS and its timeout is mirrored
@@ -638,31 +638,31 @@ class TestHookConfigLoaderLoadStrategy:
 
         cfg_pkg.load_settings = patched
         try:
-            strat = HookConfigLoader.load_strategy("comprehensive")
+            strategy = HookConfigLoader.load_strategy("comprehensive")
         finally:
             cfg_pkg.load_settings = real_load
-        semgrep_hook = next(h for h in strat.hooks if h.name == "semgrep")
+        semgrep_hook = next(h for h in strategy.hooks if h.name == "semgrep")
         assert semgrep_hook.timeout == 999
 
     def test_comprehensive_strategy_metadata(self) -> None:
-        strat = HookConfigLoader.load_strategy("comprehensive")
-        assert isinstance(strat, HookStrategy)
-        assert strat.name == "comprehensive"
-        assert strat.timeout == 1800
-        assert strat.parallel is True
-        assert strat.max_workers == 6
-        assert strat.retry_policy is RetryPolicy.NONE
+        strategy = HookConfigLoader.load_strategy("comprehensive")
+        assert isinstance(strategy, HookStrategy)
+        assert strategy.name == "comprehensive"
+        assert strategy.timeout == 1800
+        assert strategy.parallel is True
+        assert strategy.max_workers == 6
+        assert strategy.retry_policy is RetryPolicy.NONE
 
     def test_comprehensive_strategy_hooks_are_fresh_list(self) -> None:
         # ``load_strategy`` builds a new HookStrategy with a fresh list —
         # NOT the same list as COMPREHENSIVE_HOOKS or COMPREHENSIVE_STRATEGY.
-        strat = HookConfigLoader.load_strategy("comprehensive")
-        assert strat.hooks is not COMPREHENSIVE_HOOKS
-        assert strat.hooks is not COMPREHENSIVE_STRATEGY.hooks
+        strategy = HookConfigLoader.load_strategy("comprehensive")
+        assert strategy.hooks is not COMPREHENSIVE_HOOKS
+        assert strategy.hooks is not COMPREHENSIVE_STRATEGY.hooks
 
     def test_comprehensive_strategy_excludes_disabled(self) -> None:
-        strat = HookConfigLoader.load_strategy("comprehensive")
-        names = {h.name for h in strat.hooks}
+        strategy = HookConfigLoader.load_strategy("comprehensive")
+        names = {h.name for h in strategy.hooks}
         assert "gitleaks" not in names
         assert "skylos" not in names
         assert "complexipy" not in names

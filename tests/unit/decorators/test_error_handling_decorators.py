@@ -268,10 +268,10 @@ class TestHandleSubprocessErrors:
 
     def test_catches_timeout_expired(self, patched_logger: MagicMock) -> None:
         decorator = ehd.handle_subprocess_errors()
-        te = subprocess.TimeoutExpired(cmd=["ls"], timeout=5.0)
+        timeout_err = subprocess.TimeoutExpired(cmd=["ls"], timeout=5.0)
 
         with pytest.raises(subprocess.TimeoutExpired):
-            decorator(_make(exc=te))()
+            decorator(_make(exc=timeout_err))()
 
         patched_logger.error.assert_called_once()
 
