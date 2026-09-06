@@ -670,6 +670,20 @@ class TestTimeoutManagerAsyncBackupPath:
                 async with manager._execute_with_timeout_context(0.05):
                     await asyncio.sleep(1.0)
 
+    @pytest.mark.asyncio
+    async def test_execute_with_timeout_context_attribute_error_no_task(self) -> None:
+        """When asyncio.current_task() returns None, the else: yield branch runs."""
+        manager = AsyncTimeoutManager()
+        with patch(
+            "crackerjack.core.timeout_manager.asyncio.timeout",
+            side_effect=AttributeError,
+        ), patch(
+            "crackerjack.core.timeout_manager.asyncio.current_task",
+            return_value=None,
+        ):
+            async with manager._execute_with_timeout_context(1.0):
+                await asyncio.sleep(0.01)
+
 
 class TestTimeoutManagerRetryEdgeCases:
     """Tests for retry exhaustion and zero-retry RuntimeError paths."""
