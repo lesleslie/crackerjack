@@ -59,8 +59,7 @@ class ReleaseAuditReport:
             tag = "[PASS]" if r.passed else "[FAIL]"
             lines.append(f"{tag} {r.message}")
         n_fail = sum(1 for r in self.results if not r.passed)
-        lines.append("")
-        lines.append(f"Result: {'FAIL' if n_fail else 'PASS'} ({n_fail} errors)")
+        lines.extend(("", f"Result: {'FAIL' if n_fail else 'PASS'} ({n_fail} errors)"))
         return "\n".join(lines)
 
     def exit_code(self) -> int:

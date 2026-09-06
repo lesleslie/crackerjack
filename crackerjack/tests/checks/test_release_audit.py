@@ -32,7 +32,7 @@ def test_all_claims_valid(good_project: Path) -> None:
     )
     errors = [r for r in report.results if not r.passed]
     assert not errors, f"unexpected failures: {[r.message for r in errors]}"
-    assert report.passed is True
+    assert report.passed
 
 
 def test_missing_symbol_claim_fails(good_project: Path) -> None:

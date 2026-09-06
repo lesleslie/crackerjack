@@ -330,18 +330,17 @@ class OsvScannerAdapter(BaseToolAdapter):
         return issues
 
     def _parse_text_output(self, output: str) -> list[ToolIssue]:
-        issues = []
-        for line in output.strip().split("\n"):
-            if "CVE-" in line or "GHSA-" in line or "vulnerability" in line.lower():
-                issues.append(
-                    ToolIssue(
-                        file_path=Path("pyproject.toml"),
-                        line_number=None,
-                        column_number=None,
-                        message=line.strip(),
-                        severity="error",
-                    ),
-                )
+        issues = [
+            ToolIssue(
+                file_path=Path("pyproject.toml"),
+                line_number=None,
+                column_number=None,
+                message=line.strip(),
+                severity="error",
+            )
+            for line in output.strip().split("\n")
+            if "CVE-" in line or "GHSA-" in line or "vulnerability" in line.lower()
+        ]
 
         logger.info(
             "Parsed osv-scanner text output (fallback)",

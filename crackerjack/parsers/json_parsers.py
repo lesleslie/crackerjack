@@ -928,14 +928,14 @@ class OsvScannerJSONParser(JSONParser):
             issue
             for vuln in vulns
             if isinstance(vuln, dict)
-            for issue in [
+            for issue in (
                 OsvScannerJSONParser._create_vulnerability_issue(
                     name,
                     version,
                     vuln,
                     source_path,
-                )
-            ]
+                ),
+            )
         ]
 
     @staticmethod
