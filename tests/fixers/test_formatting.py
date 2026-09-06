@@ -318,6 +318,145 @@ class TestRunCommandCwdPinning:
         assert returncode == 0
         assert "marker.txt" in stdout
 
+    async def test_apply_ruff_fixes_handles_format_failure(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        """When ruff format exits non-zero, no formatting message is recorded."""
+        calls: list[int] = []
+
+        async def fake_run_command(
+            cmd: list[str], cwd: Path, timeout: int = 300
+        ) -> tuple[int, str, str]:
+            calls.append(1)
+            # First call (ruff format) fails, second (ruff check) succeeds.
+            return (99 if len(calls) == 1 else 0, "", "")
+
+        monkeypatch.setattr(formatting, "_run_command", fake_run_command)
+        fixes, _files = await formatting._apply_ruff_fixes(
+            ["sample.py"], tmp_path
+        )
+        assert "Applied ruff code formatting" not in fixes
+        assert "Applied ruff linting fixes" in fixes
+
+    async def test_apply_whitespace_fixes_handles_eof_failure(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        """When end_of_file_fixer exits non-zero, no EOF message is recorded."""
+        calls: list[int] = []
+
+        async def fake_run_command(
+            cmd: list[str], cwd: Path, timeout: int = 300
+        ) -> tuple[int, str, str]:
+            calls.append(1)
+            return (0 if len(calls) == 1 else 99, "", "")
+
+        monkeypatch.setattr(formatting, "_run_command", fake_run_command)
+        fixes, _files = await formatting._apply_whitespace_fixes(
+            ["sample.py"], tmp_path
+        )
+        assert "Fixed trailing whitespace" in fixes
+        assert "Fixed end-of-file formatting" not in fixes
+
+    async def test_apply_spelling_fixes_with_empty_file_path_returns_empty(
+        self, tmp_path: Path
+    ) -> None:
+        """An issue without a file_path returns ``[]`` immediately."""
+        issue = _issue(message="spelling", file_path="")
+        fixes = await formatting._apply_spelling_fixes(issue, tmp_path)
+        assert fixes == []
+
+    async def test_fix_formatting_issue_spelling_with_no_file_path(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        """When spelling message but no file_path, the spelling branch
+        exercises the `spelling_fixes and issue.file_path` False branch."""
+        seen: list[object] = []
+
+        async def fake_spelling(
+            issue: Issue, project_path: Path
+        ) -> list[str]:
+            seen.append(issue.file_path)
+            return ["spelling fixed"]  # non-empty, but file_path is ""
+
+        async def fake_ruff(
+            target: list[str], project_path: Path
+        ) -> tuple[list[str], list[str]]:
+            return ([], [])
+
+        async def fake_ws(
+            target: list[str], project_path: Path
+        ) -> tuple[list[str], list[str]]:
+            return ([], [])
+
+        async def fake_imports(
+            target: list[str], project_path: Path
+        ) -> tuple[list[str], list[str]]:
+            return ([], [])
+
+        monkeypatch.setattr(formatting, "_apply_spelling_fixes", fake_spelling)
+        monkeypatch.setattr(formatting, "_apply_ruff_fixes", fake_ruff)
+        monkeypatch.setattr(formatting, "_apply_whitespace_fixes", fake_ws)
+        monkeypatch.setattr(formatting, "_apply_import_fixes", fake_imports)
+
+        issue = _issue(message="spelling issue", file_path="")
+        result = await formatting.fix_formatting_issue(issue, tmp_path)
+        assert seen == [""]
+        # The `if spelling_fixes and issue.file_path:` is False because
+        # issue.file_path is "", so files_modified stays empty.
+        assert result.files_modified == []
+        assert "spelling fixed" in result.fixes_applied
+
+    def test_apply_planned_changes_skips_post_write_for_non_py(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A non-``.py`` target does not call ``_run_post_write_ruff_format``."""
+        file_path = tmp_path / "sample.txt"
+        file_path.write_text("value = 1\n", encoding="utf-8")
+        plan = FixPlan(
+            file_path=str(file_path),
+            issue_type="FORMATTING",
+            changes=[
+                ChangeSpec(
+                    line_range=(1, 1),
+                    old_code="value = 1",
+                    new_code="value = 2",
+                    reason="bump",
+                )
+            ],
+            rationale="bump",
+            risk_level="low",
+            validated_by="PlanningAgent",
+        )
+
+        called: list[Path] = []
+
+        def fake_post_write(file_path: Path, project_path: Path) -> None:
+            called.append(file_path)
+
+        monkeypatch.setattr(
+            formatting, "_run_post_write_ruff_format", fake_post_write
+        )
+
+        result = formatting._apply_planned_changes(plan, tmp_path)
+        assert result.success is True
+        assert called == []
+
+    def test_get_file_state_skips_py_directory(
+        self, tmp_path: Path
+    ) -> None:
+        """Directories named ``*.py`` are not added to the file_state map."""
+        # A directory ending in .py (no extension) is ``is_dir()`` True,
+        # but rglob will hit it.  ``is_file()`` returns False, so it's
+        # skipped — exercises the 223->222 branch.
+        (tmp_path / "foo.py").mkdir()  # directory, not a file
+        py_file = tmp_path / "real.py"
+        py_file.write_text("x = 1\n", encoding="utf-8")
+
+        state = formatting._get_file_state(["."], tmp_path)
+        assert str(py_file) in state
+        # The directory's path should NOT appear.
+        assert str(tmp_path / "foo.py") not in state
+
     async def test_apply_ruff_fixes_project_wide_target_passes_cwd(
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
     ) -> None:
@@ -709,3 +848,501 @@ class TestExecuteFixPlan:
         assert issue.file_path == "some/file.py"
         assert issue.line_number is None  # pre-existing dead-branch quirk (see #2)
         assert captured["project_path"] == tmp_path
+
+
+# ---------------------------------------------------------------------------
+# Edge-case coverage for the remaining branches / error paths not hit by the
+# tests above. Pure unit tests with subprocess / mtime patched at the boundary
+# so we exercise every if-else fork.
+# ---------------------------------------------------------------------------
+
+
+class TestWriteAndReadFileFailures:
+    def test_write_file_returns_false_on_oserror(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A write failure surfaces as ``False`` (no raise)."""
+        import pathlib
+
+        real_open = pathlib.Path.open
+
+        def _boom_open(self, mode="r", *args, **kwargs):
+            if "w" in mode:
+                raise OSError("disk full")
+            return real_open(self, mode, *args, **kwargs)
+
+        monkeypatch.setattr(pathlib.Path, "open", _boom_open)
+        # _write_file uses Path.write_text which calls self.open("w"); the
+        # patched ``open`` raises and the function returns False.
+        target = tmp_path / "x.txt"
+        assert formatting._write_file(target, "hello") is False
+
+
+class TestRunCommandFailurePaths:
+    async def test_run_command_returns_minus_one_on_timeout(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        """A TimeoutError yields ``(-1, "", "Command timed out")``."""
+        import asyncio
+
+        async def _fake_exec(*args: object, **kwargs: object) -> object:
+            class _Proc:
+                async def communicate(self) -> tuple[bytes, bytes]:
+                    raise TimeoutError
+
+            return _Proc()
+
+        monkeypatch.setattr(asyncio, "create_subprocess_exec", _fake_exec)
+
+        rc, stdout, stderr = await formatting._run_command(
+            ["true"], cwd=tmp_path, timeout=1
+        )
+        assert rc == -1
+        assert stdout == ""
+        assert stderr == "Command timed out"
+
+    async def test_run_command_returns_minus_one_on_generic_exception(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        """A non-TimeoutError exception yields ``(-1, ..., "Command failed: ...")``."""
+        import asyncio
+
+        async def _fake_exec(*args: object, **kwargs: object) -> object:
+            raise RuntimeError("boom")
+
+        monkeypatch.setattr(asyncio, "create_subprocess_exec", _fake_exec)
+        rc, stdout, stderr = await formatting._run_command(
+            ["true"], cwd=tmp_path
+        )
+        assert rc == -1
+        assert stdout == ""
+        assert "Command failed: boom" in stderr
+
+
+class TestGetModifiedFilesDeleted:
+    def test_get_modified_files_skips_deleted_file(self, tmp_path: Path) -> None:
+        """If a tracked file no longer exists, it is skipped silently."""
+        file_path = tmp_path / "gone.py"
+        file_path.write_text("x\n", encoding="utf-8")
+        files_before = {str(file_path): file_path.stat().st_mtime}
+        file_path.unlink()
+
+        assert formatting._get_modified_files(files_before) == []
+
+
+class TestApplyRuffFixesNoChanges:
+    async def test_ruff_check_failure_records_no_fix_message(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        """When ``ruff check --fix`` exits non-zero, no linting message is appended."""
+        calls: list[int] = []
+
+        async def fake_run_command(
+            cmd: list[str], cwd: Path, timeout: int = 300
+        ) -> tuple[int, str, str]:
+            calls.append(1)
+            # First call (ruff format) succeeds, second (ruff check) fails.
+            return (0 if len(calls) == 1 else 99, "", "")
+
+        monkeypatch.setattr(formatting, "_run_command", fake_run_command)
+        fixes, _files = await formatting._apply_ruff_fixes(
+            ["sample.py"], tmp_path
+        )
+        assert "Applied ruff code formatting" in fixes
+        assert "Applied ruff linting fixes" not in fixes
+
+
+class TestApplyWhitespaceFixesEofBranch:
+    async def test_eof_fix_exit_zero_records_message(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        """The trailing-whitespace branch is hit; if eof fixer also exits 0,
+        both messages are recorded."""
+        calls: list[int] = []
+
+        async def fake_run_command(
+            cmd: list[str], cwd: Path, timeout: int = 300
+        ) -> tuple[int, str, str]:
+            calls.append(1)
+            return (0, "", "")
+
+        monkeypatch.setattr(formatting, "_run_command", fake_run_command)
+        fixes, _files = await formatting._apply_whitespace_fixes(
+            ["sample.py"], tmp_path
+        )
+        assert "Fixed trailing whitespace" in fixes
+        assert "Fixed end-of-file formatting" in fixes
+
+
+class TestApplySpellingFixesReporting:
+    async def test_spelling_fixed_count_is_reported(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        """When codespell reports ``FIXED: <line>`` markers, the count is
+        surfaced via a fixes entry."""
+        file_path = tmp_path / "x.py"
+        file_path.write_text("x\n", encoding="utf-8")
+
+        async def fake_run_command(
+            cmd: list[str], cwd: Path, timeout: int = 300
+        ) -> tuple[int, str, str]:
+            return (
+                0,
+                "FIXED: 1\nFIXED: 2\n==> ambiguous?, alt\n",
+                "",
+            )
+
+        monkeypatch.setattr(formatting, "_run_command", fake_run_command)
+
+        issue = _issue(message="spelling", file_path=str(file_path))
+        fixes = await formatting._apply_spelling_fixes(issue, tmp_path)
+
+        assert any("Fixed 2 spelling error" in f for f in fixes)
+        assert any("ambiguous" in f for f in fixes)
+
+    async def test_ambiguous_summary_truncates_after_five(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        """When > 5 ambiguous typos are reported, the summary truncates with
+        a '(+N more)' suffix."""
+        file_path = tmp_path / "x.py"
+        file_path.write_text("x\n", encoding="utf-8")
+
+        # Build a stdout with 6 ambiguous `==>` lines.
+        ambiguous_lines = "\n".join(
+            f"file.py:1: typo ==> alt{i}, other{i}" for i in range(6)
+        )
+        stdout = f"FIXED: 0\n{ambiguous_lines}\n"
+
+        async def fake_run_command(
+            cmd: list[str], cwd: Path, timeout: int = 300
+        ) -> tuple[int, str, str]:
+            return (0, stdout, "")
+
+        monkeypatch.setattr(formatting, "_run_command", fake_run_command)
+        issue = _issue(message="spelling", file_path=str(file_path))
+        fixes = await formatting._apply_spelling_fixes(issue, tmp_path)
+
+        assert any("(+1 more)" in f for f in fixes)
+
+    async def test_spelling_fixes_exception_swallowed(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        """An exception inside ``_apply_spelling_fixes`` returns ``[]`` (no raise)."""
+
+        async def fake_run_command(
+            cmd: list[str], cwd: Path, timeout: int = 300
+        ) -> tuple[int, str, str]:
+            raise RuntimeError("subprocess explode")
+
+        monkeypatch.setattr(formatting, "_run_command", fake_run_command)
+        issue = _issue(message="spelling", file_path=str(tmp_path / "x.py"))
+        fixes = await formatting._apply_spelling_fixes(issue, tmp_path)
+        assert fixes == []
+
+
+class TestFixSpecificFileWriteFail:
+    async def test_write_failure_swallows_into_no_fix(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """If ``_write_file`` returns False, no fix entry is appended."""
+        file_path = tmp_path / "sample.py"
+        file_path.write_text("value = 1   \n", encoding="utf-8")  # has trailing ws
+
+        monkeypatch.setattr(formatting, "_write_file", lambda *a, **kw: False)
+        fixes = await formatting._fix_specific_file(str(file_path))
+        assert fixes == []
+
+
+class TestFixFormattingIssueErrorFallback:
+    async def test_unexpected_exception_returns_error_fixresult(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        """An exception inside ``fix_formatting_issue`` becomes a no-confidence
+        ``FixResult`` with the error message in ``remaining_issues``."""
+
+        async def fake_apply_ruff_fixes(*args: object, **kwargs: object) -> object:
+            raise RuntimeError("unexpected")
+
+        monkeypatch.setattr(
+            formatting, "_apply_ruff_fixes", fake_apply_ruff_fixes
+        )
+        issue = _issue(file_path="x.py", message="formatting")
+        result = await formatting.fix_formatting_issue(issue, tmp_path)
+        assert result.success is False
+        assert result.confidence == 0.0
+        assert any(
+            "Failed to apply formatting fixes" in m
+            for m in result.remaining_issues
+        )
+
+    async def test_spell_only_message_calls_spelling_branch(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        """A message containing 'spelling' triggers ``_apply_spelling_fixes``."""
+        seen: dict[str, object] = {}
+
+        async def fake_spelling(
+            issue: Issue, project_path: Path
+        ) -> list[str]:
+            seen["file_path"] = issue.file_path
+            seen["project_path"] = project_path
+            return ["spelling fixed"]
+
+        async def fake_ruff(
+            target: list[str], project_path: Path
+        ) -> tuple[list[str], list[str]]:
+            return ([], [])
+
+        async def fake_ws(
+            target: list[str], project_path: Path
+        ) -> tuple[list[str], list[str]]:
+            return ([], [])
+
+        async def fake_imports(
+            target: list[str], project_path: Path
+        ) -> tuple[list[str], list[str]]:
+            return ([], [])
+
+        monkeypatch.setattr(formatting, "_apply_spelling_fixes", fake_spelling)
+        monkeypatch.setattr(formatting, "_apply_ruff_fixes", fake_ruff)
+        monkeypatch.setattr(formatting, "_apply_whitespace_fixes", fake_ws)
+        monkeypatch.setattr(formatting, "_apply_import_fixes", fake_imports)
+
+        file_path = tmp_path / "x.py"
+        file_path.write_text("x\n", encoding="utf-8")
+        issue = _issue(message="spelling issue", file_path=str(file_path))
+        result = await formatting.fix_formatting_issue(issue, tmp_path)
+        assert seen.get("file_path") == str(file_path)
+        assert "spelling fixed" in result.fixes_applied
+        assert str(file_path) in result.files_modified
+
+    async def test_file_specific_branch_called_when_no_spelling(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        """When the issue is not spelling-related, ``_fix_specific_file`` runs."""
+        calls: list[str] = []
+
+        async def fake_specific(file_path: str) -> list[str]:
+            calls.append(file_path)
+            return [f"formatted {file_path}"]
+
+        async def fake_ruff(
+            target: list[str], project_path: Path
+        ) -> tuple[list[str], list[str]]:
+            return ([], [])
+
+        async def fake_ws(
+            target: list[str], project_path: Path
+        ) -> tuple[list[str], list[str]]:
+            return ([], [])
+
+        async def fake_imports(
+            target: list[str], project_path: Path
+        ) -> tuple[list[str], list[str]]:
+            return ([], [])
+
+        monkeypatch.setattr(formatting, "_fix_specific_file", fake_specific)
+        monkeypatch.setattr(formatting, "_apply_ruff_fixes", fake_ruff)
+        monkeypatch.setattr(formatting, "_apply_whitespace_fixes", fake_ws)
+        monkeypatch.setattr(formatting, "_apply_import_fixes", fake_imports)
+
+        file_path = tmp_path / "x.py"
+        file_path.write_text("x\n", encoding="utf-8")
+        issue = _issue(message="would reformat", file_path=str(file_path))
+        result = await formatting.fix_formatting_issue(issue, tmp_path)
+        assert calls == [str(file_path)]
+        assert any("formatted" in f for f in result.fixes_applied)
+
+
+class TestApplyChangeSpecTrailingNewline:
+    def test_preserves_trailing_newline_in_content(
+        self, tmp_path: Path
+    ) -> None:
+        file_path = tmp_path / "sample.py"
+        file_path.write_text("value = 1\n", encoding="utf-8")
+        change = ChangeSpec(
+            line_range=(1, 1),
+            old_code="value = 1",
+            new_code="value = 2",
+            reason="bump",
+        )
+        # The file content ends with \n — the `_apply_change_spec` branch
+        # at 530 should preserve that.
+        updated = formatting._apply_change_spec("value = 1\n", change)
+        assert updated == "value = 2\n"
+
+    def test_no_trailing_newline_does_not_add_one(self) -> None:
+        change = ChangeSpec(
+            line_range=(1, 1),
+            old_code="value = 1",
+            new_code="value = 2",
+            reason="bump",
+        )
+        updated = formatting._apply_change_spec("value = 1", change)
+        assert updated == "value = 2"
+
+
+class TestReplaceSegmentFlexiblyBranches:
+    def test_empty_needle_returns_none(self) -> None:
+        change = ChangeSpec(
+            line_range=(1, 1),
+            old_code="   ",
+            new_code="value = 2",
+            reason="bump",
+        )
+        assert formatting._replace_segment_flexibly("value = 1\n", change) is None
+
+    def test_single_token_needle_not_in_content_returns_none(self) -> None:
+        """A single-token needle that doesn't appear in content returns None.
+
+        (A single-token needle that DOES appear is matched via the substring
+        branch on line 540, not the tokens branch.)
+        """
+        change = ChangeSpec(
+            line_range=(1, 1),
+            old_code="NOSUCH",
+            new_code="VALUE",
+            reason="bump",
+        )
+        assert formatting._replace_segment_flexibly("value = 1\n", change) is None
+
+    def test_substring_needle_path(self) -> None:
+        """When the (stripped) needle appears verbatim in content, the simple
+        ``str.replace`` path is taken (line 540-541)."""
+        change = ChangeSpec(
+            line_range=(1, 1),
+            old_code="def foo():\n    return 1",
+            new_code="def bar():\n    return 1",
+            reason="rename",
+        )
+        # The exact stripped segment is present in content.
+        content = (
+            "def foo():\n"
+            "    return 1\n"
+        )
+        updated = formatting._replace_segment_flexibly(content, change)
+        assert updated is not None
+        assert "def bar():" in updated
+
+
+class TestApplyPlannedChangesErrorPaths:
+    def test_unreadable_file_returns_error_fixresult(
+        self, tmp_path: Path
+    ) -> None:
+        # Plan points at a non-existent file → read raises OSError → returns
+        # error FixResult.
+        plan = FixPlan(
+            file_path=str(tmp_path / "missing.py"),
+            issue_type="FORMATTING",
+            changes=[
+                ChangeSpec(
+                    line_range=(1, 1),
+                    old_code="value = 1",
+                    new_code="value = 2",
+                    reason="bump",
+                )
+            ],
+            rationale="bump",
+            risk_level="low",
+            validated_by="PlanningAgent",
+        )
+        result = formatting._apply_planned_changes(plan, tmp_path)
+        assert result.success is False
+        assert result.confidence == 0.0
+        assert any("Could not read file" in m for m in result.remaining_issues)
+
+    def test_write_failure_returns_error_fixresult(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        file_path = tmp_path / "sample.py"
+        file_path.write_text("value = 1\n", encoding="utf-8")
+        plan = FixPlan(
+            file_path=str(file_path),
+            issue_type="FORMATTING",
+            changes=[
+                ChangeSpec(
+                    line_range=(1, 1),
+                    old_code="value = 1",
+                    new_code="value = 2",
+                    reason="bump",
+                )
+            ],
+            rationale="bump",
+            risk_level="low",
+            validated_by="PlanningAgent",
+        )
+
+        monkeypatch.setattr(formatting, "_write_file", lambda *a, **kw: False)
+        result = formatting._apply_planned_changes(plan, tmp_path)
+        assert result.success is False
+        assert result.confidence == 0.0
+        assert any("Failed to write file" in m for m in result.remaining_issues)
+
+    def test_python_file_triggers_post_write_ruff_format(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """When the target file has a ``.py`` suffix, ``_run_post_write_ruff_format`` is called."""
+        file_path = tmp_path / "sample.py"
+        file_path.write_text("value = 1\n", encoding="utf-8")
+        plan = FixPlan(
+            file_path=str(file_path),
+            issue_type="FORMATTING",
+            changes=[
+                ChangeSpec(
+                    line_range=(1, 1),
+                    old_code="value = 1",
+                    new_code="value = 2",
+                    reason="bump",
+                )
+            ],
+            rationale="bump",
+            risk_level="low",
+            validated_by="PlanningAgent",
+        )
+
+        called: list[tuple[Path, Path]] = []
+
+        def fake_post_write(file_path: Path, project_path: Path) -> None:
+            called.append((file_path, project_path))
+
+        monkeypatch.setattr(
+            formatting, "_run_post_write_ruff_format", fake_post_write
+        )
+
+        result = formatting._apply_planned_changes(plan, tmp_path)
+        assert result.success is True
+        assert called == [(file_path, tmp_path)]
+
+
+class TestExecuteFixPlanExceptionFallback:
+    async def test_unexpected_exception_returns_error_fixresult(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        """An unhandled exception in ``execute_fix_plan`` returns a no-confidence
+        FixResult with the message."""
+
+        def _boom(*args: object, **kwargs: object) -> object:
+            raise RuntimeError("kaboom")
+
+        monkeypatch.setattr(formatting, "_apply_planned_changes", _boom)
+        plan = FixPlan(
+            file_path=str(tmp_path / "x.py"),
+            issue_type="FORMATTING",
+            changes=[
+                ChangeSpec(
+                    line_range=(1, 1),
+                    old_code="x = 1",
+                    new_code="x = 2",
+                    reason="bump",
+                )
+            ],
+            rationale="bump",
+            risk_level="low",
+            validated_by="PlanningAgent",
+        )
+
+        result = await formatting.execute_fix_plan(plan, tmp_path)
+        assert result.success is False
+        assert result.confidence == 0.0
+        assert any("Formatting execution error" in m for m in result.remaining_issues)
