@@ -24,19 +24,13 @@ import ast
 import textwrap
 from pathlib import Path
 
-import pytest
-
 from crackerjack.tools.audit_type_checking_runtime_refs import (
-    _collect_annotation_node_ids,
-    _collect_tc_body_node_ids,
+    Violation,
     _collect_type_checking_imports,
-    _collect_type_erased_call_arg_ids,
     _has_future_annotations,
     _is_type_checking_test,
     _scan_file,
     _walk_python_files,
-    ImportedName,
-    Violation,
 )
 
 
@@ -558,7 +552,6 @@ def test_cluster_by_import_site_groups_same_root_cause():
     """Clustering groups violations sharing an import site into one bucket."""
     from crackerjack.tools.audit_type_checking_runtime_refs import (
         _cluster_by_import_site,
-        Violation,
     )
     v1 = Violation(file=Path("a.py"), lineno=10, col_offset=0, name="X", import_lineno=5, context="X")
     v2 = Violation(file=Path("a.py"), lineno=20, col_offset=0, name="X", import_lineno=5, context="X")
@@ -738,6 +731,7 @@ def test_cli_module_runs(tmp_path):
         [sys.executable, "-m", "crackerjack.tools.audit_type_checking_runtime_refs", str(tmp_path)],
         capture_output=True,
         text=True,
+        check=False,
     )
     assert result.returncode == 1  # violations present
     assert "Bar" in result.stdout
@@ -752,6 +746,7 @@ def test_cli_exits_zero_on_clean_tree(tmp_path):
         [sys.executable, "-m", "crackerjack.tools.audit_type_checking_runtime_refs", str(tmp_path)],
         capture_output=True,
         text=True,
+        check=False,
     )
     assert result.returncode == 0
     assert "No violations found" in result.stdout
