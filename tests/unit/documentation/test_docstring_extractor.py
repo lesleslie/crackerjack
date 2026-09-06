@@ -387,101 +387,125 @@ class TestExtractForZensical:
 @pytest.mark.unit
 class TestValidateDocstringQuality:
     def test_detects_bold_text(self) -> None:
-        """has_bold is True when ** appears in the docstring."""
+        """No 'Missing bold marker' violation when ** appears in the docstring."""
         from crackerjack.documentation.docstring_extractor import (
             validate_docstring_quality,
         )
 
-        result = validate_docstring_quality("Some **bold** statement.")
+        result = validate_docstring_quality("Some **bold** statement with code:\n\n```python\nx = 1\n```\n")
 
-        assert result["has_bold"] is True
-        assert result["has_code_blocks"] is False
-        assert result["has_examples"] is False
+        assert "Missing bold marker (**)" not in result["violations"]
+
+    def test_detects_missing_bold(self) -> None:
+        """Plain prose without ** triggers the bold violation."""
+        from crackerjack.documentation.docstring_extractor import (
+            validate_docstring_quality,
+        )
+
+        result = validate_docstring_quality("A plain summary.")
+
+        assert "Missing bold marker (**)" in result["violations"]
 
     def test_detects_code_blocks(self) -> None:
-        """has_code_blocks is True when ``` appears in the docstring."""
+        """A fenced code block suppresses the code-block violation."""
         from crackerjack.documentation.docstring_extractor import (
             validate_docstring_quality,
         )
 
-        result = validate_docstring_quality("Example:\n\n```python\nfoo()\n```\n")
+        result = validate_docstring_quality(
+            "**Bold summary.**\n\nExample:\n\n```python\nfoo()\n```\n",
+        )
 
-        assert result["has_code_blocks"] is True
-        assert result["has_examples"] is True
+        assert "Missing fenced code block (```)" not in result["violations"]
 
     def test_detects_example_marker_without_code(self) -> None:
-        """has_examples is True when 'Example:' marker is present, even without code."""
+        """The 'Example:' marker satisfies the example check without a code block."""
         from crackerjack.documentation.docstring_extractor import (
             validate_docstring_quality,
         )
 
-        result = validate_docstring_quality("Summary.\n\nExample: foo bar baz")
+        result = validate_docstring_quality("**Summary.**\n\nExample: foo bar baz")
 
-        assert result["has_code_blocks"] is False
-        assert result["has_examples"] is True
+        assert (
+            "Missing example section (need ``` or 'Example:')"
+            not in result["violations"]
+        )
 
     def test_detects_excessive_blanks(self) -> None:
-        """no_excessive_blanks is False when 4+ consecutive newlines appear."""
+        """Four-or-more consecutive newlines trigger the blank violation."""
         from crackerjack.documentation.docstring_extractor import (
             validate_docstring_quality,
         )
 
-        result = validate_docstring_quality("Summary.\n\n\n\nMore text.")
+        result = validate_docstring_quality(
+            "**Bold.**\n\n```python\nfoo()\n```\n\n\n\nMore text.",
+        )
 
-        assert result["no_excessive_blanks"] is False
+        assert "Excessive blank lines (4+ consecutive)" in result["violations"]
 
-    def test_normal_spacing_passes_excessive_blanks_check(self) -> None:
-        """no_excessive_blanks is True for normal double newlines."""
+    def test_normal_spacing_has_no_blanks_violation(self) -> None:
+        """Normal double newlines do NOT trigger the blank violation."""
         from crackerjack.documentation.docstring_extractor import (
             validate_docstring_quality,
         )
 
-        result = validate_docstring_quality("Summary.\n\nMore text.")
+        result = validate_docstring_quality(
+            "**Bold.**\n\n```python\nfoo()\n```\n\nMore text.",
+        )
 
-        assert result["no_excessive_blanks"] is True
+        assert (
+            "Excessive blank lines (4+ consecutive)" not in result["violations"]
+        )
 
-    def test_empty_docstring_returns_all_false(self) -> None:
-        """An empty string yields False for all boolean fields."""
+    def test_empty_docstring_returns_all_violations(self) -> None:
+        """An empty string yields every violation."""
         from crackerjack.documentation.docstring_extractor import (
             validate_docstring_quality,
         )
 
         result = validate_docstring_quality("")
 
-        assert result == {
-            "has_bold": False,
-            "has_code_blocks": False,
-            "no_excessive_blanks": True,
-            "has_examples": False,
-        }
+        assert "Missing bold marker (**)" in result["violations"]
+        assert "Missing fenced code block (```)" in result["violations"]
+        assert (
+            "Missing example section (need ``` or 'Example:')"
+            in result["violations"]
+        )
 
     def test_non_docstring_plain_text(self) -> None:
-        """Plain prose with no markers returns the expected baseline."""
+        """Plain prose with no markers yields bold + code + example violations."""
         from crackerjack.documentation.docstring_extractor import (
             validate_docstring_quality,
         )
 
         result = validate_docstring_quality("A plain prose paragraph with no markers.")
 
-        assert result == {
-            "has_bold": False,
-            "has_code_blocks": False,
-            "no_excessive_blanks": True,
-            "has_examples": False,
-        }
+        assert "Missing bold marker (**)" in result["violations"]
+        assert "Missing fenced code block (```)" in result["violations"]
 
     def test_returns_dict_with_expected_keys(self) -> None:
-        """Result has exactly the four documented keys."""
+        """Result has exactly one key: 'violations' → list[str]."""
         from crackerjack.documentation.docstring_extractor import (
             validate_docstring_quality,
         )
 
         result = validate_docstring_quality("Anything.")
 
-        assert set(result.keys()) == {
-            "has_bold",
-            "has_code_blocks",
-            "no_excessive_blanks",
-            "has_examples",
-        }
-        assert all(isinstance(v, bool) for v in result.values())
+        assert set(result.keys()) == {"violations"}
+        assert isinstance(result["violations"], list)
+        assert all(isinstance(v, str) for v in result["violations"])
+
+    def test_complete_docstring_has_no_violations(self) -> None:
+        """A docstring with all quality markers returns an empty violations list."""
+        from crackerjack.documentation.docstring_extractor import (
+            validate_docstring_quality,
+        )
+
+        result = validate_docstring_quality(
+            "**Summary of the function.**\n\n"
+            "Longer description here.\n\n"
+            "Example:\n\n"
+            "```python\nresult = foo()\n```\n",
+        )
+
+        assert result["violations"] == []

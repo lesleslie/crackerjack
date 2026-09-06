@@ -67,10 +67,34 @@ def extract_for_zensical(
     return f"# {symbol_name}\n\nNo documentation found for this symbol."
 
 
-def validate_docstring_quality(docstring: str) -> dict[str, bool]:
-    return {
-        "has_bold": "**" in docstring,
-        "has_code_blocks": "```" in docstring,
-        "no_excessive_blanks": "\n\n\n\n" not in docstring,
-        "has_examples": "```" in docstring or "Example:" in docstring,
-    }
+def validate_docstring_quality(docstring: str) -> dict[str, list[str]]:
+    """Return markdown rendering quality violations for a docstring.
+
+    The CLI consumer (`cli.handlers.docs_commands.validate_docs`) reads
+    ``result["violations"]`` to flag docstrings. Returning boolean keys
+    (``has_bold``, ``has_code_blocks``...) would never feed the CLI,
+    so the function returns a list of human-readable violation strings
+    instead. Empty list = no issues.
+
+    Checks performed:
+        - Has at least one bold marker (``**...**``) for emphasis.
+        - Has at least one fenced code block (`` ``` ``) or inline example marker.
+        - No four-or-more consecutive blank lines (markdown rendering glitch).
+        - Has either a code block or an explicit ``Example:`` header.
+    """
+    violations: list[str] = []
+
+    if "**" not in docstring:
+        violations.append("Missing bold marker (**)")
+
+    has_code_blocks = "```" in docstring
+    if not has_code_blocks:
+        violations.append("Missing fenced code block (```)")
+
+    if "\n\n\n\n" in docstring:
+        violations.append("Excessive blank lines (4+ consecutive)")
+
+    if not (has_code_blocks or "Example:" in docstring):
+        violations.append("Missing example section (need ``` or 'Example:')")
+
+    return {"violations": violations}
