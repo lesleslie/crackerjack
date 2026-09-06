@@ -172,7 +172,7 @@ def _symbol_in_source(symbol: str, source_root: Path) -> bool:
         patterns = [
             rf"^\s*def\s+{re.escape(name)}\b",
             rf"^\s*class\s+{re.escape(name)}\b",
-            rf"^\s*{re.escape(name)}\s*=",
+            rf"^\s*{re.escape(name)}\s*[:=]",
         ]
         for py_file in source_root.rglob("*.py"):
             try:

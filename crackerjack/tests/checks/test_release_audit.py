@@ -5,7 +5,10 @@ from pathlib import Path
 
 import pytest
 
-from crackerjack.checks.release_audit import check_release_audit
+from crackerjack.checks.release_audit import (
+    _symbol_in_source,
+    check_release_audit,
+)
 
 FIXTURES = Path("/Users/les/Projects/mcp-common/tests/release_audit/fixtures")
 
@@ -145,3 +148,36 @@ def test_malformed_changelog_does_not_crash(good_project: Path) -> None:
         test_root=good_project,
     )
     assert report.passed
+
+
+class TestSymbolInSource:
+    """Regression tests for source-search pattern coverage.
+
+    Bug fix (2026-09-06): dataclass fields with type annotations
+    (e.g., `eventbridge: EventBridgeSettings = ...`) were missed by
+    the audit because the pattern only matched `name = ...` (no
+    intervening type annotation). Fix: pattern now matches `[:=]`.
+    """
+
+    def test_dataclass_field_with_annotation(self, tmp_path: Path) -> None:
+        """A dataclass field declared with type annotation is found."""
+        src = tmp_path / "settings.py"
+        src.write_text(
+            "from dataclasses import dataclass, field\n"
+            "@dataclass\n"
+            "class Settings:\n"
+            "    eventbridge: 'EventBridgeSettings' = field(default_factory=dict)\n",
+        )
+        assert _symbol_in_source("Settings.eventbridge", tmp_path) is True
+
+    def test_module_level_assignment(self, tmp_path: Path) -> None:
+        """Module-level `NAME = ...` still found (original pattern)."""
+        src = tmp_path / "const.py"
+        src.write_text("MY_CONSTANT = 42\n")
+        assert _symbol_in_source("const.MY_CONSTANT", tmp_path) is True
+
+    def test_missing_symbol_returns_false(self, tmp_path: Path) -> None:
+        """Missing symbol returns False (not raises)."""
+        src = tmp_path / "settings.py"
+        src.write_text("x: int = 1\n")
+        assert _symbol_in_source("Settings.nonexistent", tmp_path) is False
