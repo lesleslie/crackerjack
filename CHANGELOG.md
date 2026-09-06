@@ -1,5 +1,30 @@
 ______________________________________________________________________
 
+## [0.80.2] - 2026-09-06
+
+### Testing
+
+- Cover cli/clone_cli (170 → 100%)
+- Cover mcp/tools/mahavishnu_tools (95 → 100%)
+- Cover memory/git_metrics_collector, integration/mahavishnu, sop/cli
+- Cover server.py (105 → 100%)
+- Cover services/prompt_evolution (137 → 100%)
+- Cover services/quality/pattern_cache (157 → 100%)
+- Cover services/workflow_optimization (105 → 100%)
+- Cover services/zuban_lsp_service (99% line coverage)
+- Drive prompt_evolution + workflow_optimization to 100%
+- Raise cli/handlers/docs_commands.py to 98% (35 tests)
+- Raise cli/handlers/main_handlers.py to 98% (26 tests)
+- Raise fixers/formatting.py to 100% (75 tests)
+- Raise integration/akosha_learning.py to 99% (37 tests)
+- Raise mcp/service_watchdog.py to 99% (74 tests)
+- Raise quality/anti_ai_flavor{,_adapter}.py to 100% (38 tests)
+- Raise services/anomaly_detector.py to 97% (41 tests)
+- Raise services/server_manager.py to 99% (37 tests)
+- Raise tools/ty_audit.py to 98% (45 tests)
+- Raise tools/ty_cleanup.py to 99% (67 tests)
+- server_manager: Fix codespell 'expection' -> 'exception' in module docstring
+
 ## [0.80.1] - 2026-09-06
 
 ### Fixed

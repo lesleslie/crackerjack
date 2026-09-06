@@ -14,10 +14,10 @@ exclude-newer = "0001-01-01T00:00:00Z" # This has no effect and is included for 
 exclude-newer-span = "P7D"
 
 [options.exclude-newer-package]
-dhara = "2099-12-31T23:59:59Z"
-mcp-common = "2099-12-31T23:59:59Z"
 oneiric = "2099-12-31T23:59:59Z"
+mcp-common = "2099-12-31T23:59:59Z"
 session-buddy = "2099-12-31T23:59:59Z"
+dhara = "2099-12-31T23:59:59Z"
 
 [[package]]
 name = "aiobreaker"
@@ -703,7 +703,7 @@ wheels = [
 
 [[package]]
 name = "crackerjack"
-version = "0.80.0"
+version = "0.80.1"
 source = { editable = "." }
 dependencies = [
     { name = "aiofiles" },
