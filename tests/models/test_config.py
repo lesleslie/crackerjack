@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
+from crackerjack.config.settings import CrackerjackSettings
 from crackerjack.models.config import (
     AdvancedConfig,
     AIConfig,
@@ -1009,3 +1010,703 @@ class TestWorkflowOptions:
         assert result["cleaning"]["clean"] is False
         assert isinstance(result["testing"], dict)
         assert result["testing"]["test"] is True
+
+
+class TestWorkflowOptionsPropertyCoverage:
+    """Property getter/setter coverage for WorkflowOptions.
+
+    Targets lines 491-751 of crackerjack/models/config.py — covers every
+    property that is reachable through WorkflowOptions.__setattr__ but
+    was not exercised by the original test file.
+    """
+
+    def test_strip_code_property_getter(self) -> None:
+        """Verify WorkflowOptions.strip_code getter."""
+        options = WorkflowOptions(cleaning=CleaningConfig(clean=True))
+        assert options.strip_code is True
+
+        options = WorkflowOptions(cleaning=CleaningConfig(clean=False))
+        assert options.strip_code is False
+
+    def test_strip_code_property_setter(self) -> None:
+        """Verify WorkflowOptions.strip_code setter."""
+        options = WorkflowOptions()
+        options.strip_code = False
+        assert options.cleaning.clean is False
+
+        options.strip_code = True
+        assert options.cleaning.clean is True
+
+    def test_update_docs_property_getter(self) -> None:
+        """Verify WorkflowOptions.update_docs getter."""
+        options = WorkflowOptions(
+            cleaning=CleaningConfig(update_docs=True),
+        )
+        assert options.update_docs is True
+
+        options = WorkflowOptions(
+            cleaning=CleaningConfig(update_docs=False),
+        )
+        assert options.update_docs is False
+
+    def test_update_docs_property_setter(self) -> None:
+        """Verify WorkflowOptions.update_docs setter."""
+        options = WorkflowOptions()
+        options.update_docs = True
+        assert options.cleaning.update_docs is True
+
+        options.update_docs = False
+        assert options.cleaning.update_docs is False
+
+    def test_test_property_getter(self) -> None:
+        """Verify WorkflowOptions.test getter."""
+        options = WorkflowOptions(testing=TestConfig(test=True))
+        assert options.test is True
+
+    def test_run_tests_property_setter(self) -> None:
+        """Verify WorkflowOptions.run_tests setter."""
+        options = WorkflowOptions()
+        options.run_tests = True
+        assert options.testing.test is True
+
+        options.run_tests = False
+        assert options.testing.test is False
+
+    def test_run_tests_property_getter(self) -> None:
+        """Verify WorkflowOptions.run_tests getter (line 515)."""
+        options = WorkflowOptions(testing=TestConfig(test=True))
+        assert options.run_tests is True
+
+        options = WorkflowOptions(testing=TestConfig(test=False))
+        assert options.run_tests is False
+
+    def test_benchmark_property_getter(self) -> None:
+        """Verify WorkflowOptions.benchmark getter."""
+        options = WorkflowOptions(testing=TestConfig(benchmark=True))
+        assert options.benchmark is True
+
+        options = WorkflowOptions(testing=TestConfig(benchmark=False))
+        assert options.benchmark is False
+
+    def test_benchmark_property_setter(self) -> None:
+        """Verify WorkflowOptions.benchmark setter."""
+        options = WorkflowOptions()
+        options.benchmark = True
+        assert options.testing.benchmark is True
+
+        options.benchmark = False
+        assert options.testing.benchmark is False
+
+    def test_benchmark_regression_property_getter(self) -> None:
+        """Verify WorkflowOptions.benchmark_regression getter."""
+        options = WorkflowOptions(testing=TestConfig(benchmark_regression=True))
+        assert options.benchmark_regression is True
+
+    def test_benchmark_regression_property_setter(self) -> None:
+        """Verify WorkflowOptions.benchmark_regression setter."""
+        options = WorkflowOptions()
+        options.benchmark_regression = True
+        assert options.testing.benchmark_regression is True
+
+        options.benchmark_regression = False
+        assert options.testing.benchmark_regression is False
+
+    def test_benchmark_regression_threshold_property_getter(self) -> None:
+        """Verify WorkflowOptions.benchmark_regression_threshold getter."""
+        options = WorkflowOptions(
+            testing=TestConfig(benchmark_regression_threshold=0.25),
+        )
+        assert options.benchmark_regression_threshold == 0.25
+
+    def test_benchmark_regression_threshold_property_setter(self) -> None:
+        """Verify WorkflowOptions.benchmark_regression_threshold setter."""
+        options = WorkflowOptions()
+        options.benchmark_regression_threshold = 0.5
+        assert options.testing.benchmark_regression_threshold == 0.5
+
+        options.benchmark_regression_threshold = 0.1
+        assert options.testing.benchmark_regression_threshold == 0.1
+
+    def test_test_workers_property_getter(self) -> None:
+        """Verify WorkflowOptions.test_workers getter."""
+        options = WorkflowOptions(testing=TestConfig(test_workers=8))
+        assert options.test_workers == 8
+
+    def test_test_workers_property_setter(self) -> None:
+        """Verify WorkflowOptions.test_workers setter."""
+        options = WorkflowOptions()
+        options.test_workers = 16
+        assert options.testing.test_workers == 16
+
+    def test_test_timeout_property_getter(self) -> None:
+        """Verify WorkflowOptions.test_timeout getter."""
+        options = WorkflowOptions(testing=TestConfig(test_timeout=900))
+        assert options.test_timeout == 900
+
+    def test_test_timeout_property_setter(self) -> None:
+        """Verify WorkflowOptions.test_timeout setter."""
+        options = WorkflowOptions()
+        options.test_timeout = 1200
+        assert options.testing.test_timeout == 1200
+
+    def test_publish_property_getter(self) -> None:
+        """Verify WorkflowOptions.publish getter."""
+        options = WorkflowOptions(publishing=PublishConfig(publish="minor"))
+        assert options.publish == "minor"
+
+    def test_publish_property_setter(self) -> None:
+        """Verify WorkflowOptions.publish setter."""
+        options = WorkflowOptions()
+        options.publish = "patch"
+        assert options.publishing.publish == "patch"
+
+        options.publish = None
+        assert options.publishing.publish is None
+
+    def test_bump_property_getter(self) -> None:
+        """Verify WorkflowOptions.bump getter."""
+        options = WorkflowOptions(publishing=PublishConfig(bump="major"))
+        assert options.bump == "major"
+
+    def test_bump_property_setter(self) -> None:
+        """Verify WorkflowOptions.bump setter."""
+        options = WorkflowOptions()
+        options.bump = "minor"
+        assert options.publishing.bump == "minor"
+
+        options.bump = None
+        assert options.publishing.bump is None
+
+    def test_all_property_getter(self) -> None:
+        """Verify WorkflowOptions.all getter."""
+        options = WorkflowOptions(publishing=PublishConfig(all="all"))
+        assert options.all == "all"
+
+    def test_all_property_setter(self) -> None:
+        """Verify WorkflowOptions.all setter."""
+        options = WorkflowOptions()
+        options.all = "all"
+        assert options.publishing.all == "all"
+
+        options.all = None
+        assert options.publishing.all is None
+
+    def test_create_pr_property_getter(self) -> None:
+        """Verify WorkflowOptions.create_pr getter."""
+        options = WorkflowOptions(git=GitConfig(create_pr=True))
+        assert options.create_pr is True
+
+        options = WorkflowOptions(git=GitConfig(create_pr=False))
+        assert options.create_pr is False
+
+    def test_create_pr_property_setter(self) -> None:
+        """Verify WorkflowOptions.create_pr setter."""
+        options = WorkflowOptions()
+        options.create_pr = True
+        assert options.git.create_pr is True
+
+        options.create_pr = False
+        assert options.git.create_pr is False
+
+    def test_ai_fix_property_setter(self) -> None:
+        """Verify WorkflowOptions.ai_fix setter."""
+        options = WorkflowOptions()
+        options.ai_fix = True
+        assert options.ai.ai_agent is True
+
+        options.ai_fix = False
+        assert options.ai.ai_agent is False
+
+    def test_autofix_property_getter(self) -> None:
+        """Verify WorkflowOptions.autofix getter."""
+        options = WorkflowOptions(ai=AIConfig(autofix=True))
+        assert options.autofix is True
+
+        options = WorkflowOptions(ai=AIConfig(autofix=False))
+        assert options.autofix is False
+
+    def test_autofix_property_setter(self) -> None:
+        """Verify WorkflowOptions.autofix setter."""
+        options = WorkflowOptions()
+        options.autofix = False
+        assert options.ai.autofix is False
+
+        options.autofix = True
+        assert options.ai.autofix is True
+
+    def test_ai_agent_autofix_property_getter(self) -> None:
+        """Verify WorkflowOptions.ai_agent_autofix getter."""
+        options = WorkflowOptions(ai=AIConfig(ai_agent_autofix=True))
+        assert options.ai_agent_autofix is True
+
+    def test_ai_agent_autofix_property_setter(self) -> None:
+        """Verify WorkflowOptions.ai_agent_autofix setter."""
+        options = WorkflowOptions()
+        options.ai_agent_autofix = True
+        assert options.ai.ai_agent_autofix is True
+
+        options.ai_agent_autofix = False
+        assert options.ai.ai_agent_autofix is False
+
+    def test_start_mcp_server_property_getter(self) -> None:
+        """Verify WorkflowOptions.start_mcp_server getter."""
+        options = WorkflowOptions(ai=AIConfig(start_mcp_server=True))
+        assert options.start_mcp_server is True
+
+        options = WorkflowOptions(ai=AIConfig(start_mcp_server=False))
+        assert options.start_mcp_server is False
+
+    def test_start_mcp_server_property_setter(self) -> None:
+        """Verify WorkflowOptions.start_mcp_server setter."""
+        options = WorkflowOptions()
+        options.start_mcp_server = True
+        assert options.ai.start_mcp_server is True
+
+        options.start_mcp_server = False
+        assert options.ai.start_mcp_server is False
+
+    def test_async_mode_property_getter(self) -> None:
+        """Verify WorkflowOptions.async_mode getter."""
+        options = WorkflowOptions(execution=ExecutionConfig(async_mode=True))
+        assert options.async_mode is True
+
+    def test_async_mode_property_setter(self) -> None:
+        """Verify WorkflowOptions.async_mode setter."""
+        options = WorkflowOptions()
+        options.async_mode = True
+        assert options.execution.async_mode is True
+
+        options.async_mode = False
+        assert options.execution.async_mode is False
+
+    def test_no_config_updates_property_getter(self) -> None:
+        """Verify WorkflowOptions.no_config_updates getter."""
+        options = WorkflowOptions(
+            execution=ExecutionConfig(no_config_updates=True),
+        )
+        assert options.no_config_updates is True
+
+    def test_no_config_updates_property_setter(self) -> None:
+        """Verify WorkflowOptions.no_config_updates setter."""
+        options = WorkflowOptions()
+        options.no_config_updates = True
+        assert options.execution.no_config_updates is True
+
+        options.no_config_updates = False
+        assert options.execution.no_config_updates is False
+
+    def test_dry_run_property_getter(self) -> None:
+        """Verify WorkflowOptions.dry_run getter."""
+        options = WorkflowOptions(execution=ExecutionConfig(dry_run=True))
+        assert options.dry_run is True
+
+    def test_dry_run_property_setter(self) -> None:
+        """Verify WorkflowOptions.dry_run setter."""
+        options = WorkflowOptions()
+        options.dry_run = True
+        assert options.execution.dry_run is True
+
+        options.dry_run = False
+        assert options.execution.dry_run is False
+
+    def test_experimental_hooks_property_getter(self) -> None:
+        """Verify WorkflowOptions.experimental_hooks getter."""
+        options = WorkflowOptions(
+            hooks=HookConfig(experimental_hooks=True),
+        )
+        assert options.experimental_hooks is True
+
+        options = WorkflowOptions(
+            hooks=HookConfig(experimental_hooks=False),
+        )
+        assert options.experimental_hooks is False
+
+    def test_experimental_hooks_property_setter(self) -> None:
+        """Verify WorkflowOptions.experimental_hooks setter."""
+        options = WorkflowOptions()
+        options.experimental_hooks = True
+        assert options.hooks.experimental_hooks is True
+
+        options.experimental_hooks = False
+        assert options.hooks.experimental_hooks is False
+
+    def test_enable_pyrefly_property_getter(self) -> None:
+        """Verify WorkflowOptions.enable_pyrefly getter."""
+        options = WorkflowOptions(hooks=HookConfig(enable_pyrefly=True))
+        assert options.enable_pyrefly is True
+
+    def test_enable_pyrefly_property_setter(self) -> None:
+        """Verify WorkflowOptions.enable_pyrefly setter."""
+        options = WorkflowOptions()
+        options.enable_pyrefly = True
+        assert options.hooks.enable_pyrefly is True
+
+        options.enable_pyrefly = False
+        assert options.hooks.enable_pyrefly is False
+
+    def test_enable_ty_property_getter(self) -> None:
+        """Verify WorkflowOptions.enable_ty getter."""
+        options = WorkflowOptions(hooks=HookConfig(enable_ty=True))
+        assert options.enable_ty is True
+
+    def test_enable_ty_property_setter(self) -> None:
+        """Verify WorkflowOptions.enable_ty setter."""
+        options = WorkflowOptions()
+        options.enable_ty = True
+        assert options.hooks.enable_ty is True
+
+        options.enable_ty = False
+        assert options.hooks.enable_ty is False
+
+    def test_enable_lsp_optimization_property_getter(self) -> None:
+        """Verify WorkflowOptions.enable_lsp_optimization getter."""
+        options = WorkflowOptions(
+            hooks=HookConfig(enable_lsp_optimization=True),
+        )
+        assert options.enable_lsp_optimization is True
+
+    def test_enable_lsp_optimization_property_setter(self) -> None:
+        """Verify WorkflowOptions.enable_lsp_optimization setter."""
+        options = WorkflowOptions()
+        options.enable_lsp_optimization = True
+        assert options.hooks.enable_lsp_optimization is True
+
+        options.enable_lsp_optimization = False
+        assert options.hooks.enable_lsp_optimization is False
+
+    def test_track_progress_property_getter(self) -> None:
+        """Verify WorkflowOptions.track_progress getter."""
+        options = WorkflowOptions(
+            progress=ProgressConfig(track_progress=True),
+        )
+        assert options.track_progress is True
+
+        options = WorkflowOptions(
+            progress=ProgressConfig(track_progress=False),
+        )
+        assert options.track_progress is False
+
+    def test_resume_from_property_getter(self) -> None:
+        """Verify WorkflowOptions.resume_from getter."""
+        options = WorkflowOptions(
+            progress=ProgressConfig(resume_from="checkpoint_42"),
+        )
+        assert options.resume_from == "checkpoint_42"
+
+        options = WorkflowOptions(
+            progress=ProgressConfig(resume_from=None),
+        )
+        assert options.resume_from is None
+
+    def test_progress_file_property_getter(self) -> None:
+        """Verify WorkflowOptions.progress_file getter."""
+        options = WorkflowOptions(
+            progress=ProgressConfig(progress_file="/tmp/x.json"),
+        )
+        assert options.progress_file == "/tmp/x.json"
+
+        options = WorkflowOptions(
+            progress=ProgressConfig(progress_file=None),
+        )
+        assert options.progress_file is None
+
+    def test_workflow_options_kwargs_unknown_attribute(self) -> None:
+        """Verify WorkflowOptions kwargs with unknown attribute is ignored.
+
+        Covers the `478->477` branch where `hasattr(self, attr)` is False
+        for an unknown kwarg name and the body is skipped.
+        """
+        options = WorkflowOptions(unknown_attribute="value")
+
+        # Unknown attribute should NOT be set on the instance.
+        assert not hasattr(options, "unknown_attribute")
+
+
+class TestWorkflowOptionsPrivateHelpers:
+    """Direct coverage for WorkflowOptions private helper methods.
+
+    These methods are not invoked by __init__ but exist on the class. We
+    test them directly to lock their behaviour and lift coverage of the
+    unused-but-present code (lines 350-410).
+    """
+
+    def test_initialize_config_attributes_with_none(self) -> None:
+        """Verify _initialize_config_attributes defaults when None passed."""
+        options = WorkflowOptions()
+        options._initialize_config_attributes(
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        )
+        assert isinstance(options.cleaning, CleaningConfig)
+        assert isinstance(options.hooks, HookConfig)
+        assert isinstance(options.testing, TestConfig)
+        assert isinstance(options.publishing, PublishConfig)
+        assert isinstance(options.git, GitConfig)
+        assert isinstance(options.ai, AIConfig)
+        assert isinstance(options.execution, ExecutionConfig)
+        assert isinstance(options.progress, ProgressConfig)
+        assert isinstance(options.cleanup, CleanupConfig)
+        assert isinstance(options.advanced, AdvancedConfig)
+        assert isinstance(options.mcp_server, MCPServerConfig)
+        assert isinstance(options.zuban_lsp, ZubanLSPConfig)
+
+    def test_initialize_config_attributes_with_provided(self) -> None:
+        """Verify _initialize_config_attributes uses provided configs."""
+        options = WorkflowOptions()
+        cleaning = CleaningConfig(clean=False)
+        hooks = HookConfig(skip_hooks=True)
+        testing = TestConfig(test=True)
+        publishing = PublishConfig(publish="major")
+        git = GitConfig(commit=True)
+        ai = AIConfig(ai_agent=True)
+        execution = ExecutionConfig(interactive=False)
+        progress = ProgressConfig(track_progress=True)
+        cleanup = CleanupConfig(auto_cleanup=False)
+        advanced = AdvancedConfig(enabled=True)
+        mcp_server = MCPServerConfig(http_port=9999)
+        zuban_lsp = ZubanLSPConfig(port=1234)
+
+        options._initialize_config_attributes(
+            cleaning,
+            hooks,
+            testing,
+            publishing,
+            git,
+            ai,
+            execution,
+            progress,
+            cleanup,
+            advanced,
+            mcp_server,
+            zuban_lsp,
+        )
+
+        assert options.cleaning is cleaning
+        assert options.hooks is hooks
+        assert options.testing is testing
+        assert options.publishing is publishing
+        assert options.git is git
+        assert options.ai is ai
+        assert options.execution is execution
+        assert options.progress is progress
+        assert options.cleanup is cleanup
+        assert options.advanced is advanced
+        assert options.mcp_server is mcp_server
+        assert options.zuban_lsp is zuban_lsp
+
+    def test_set_default_overrides_empty_kwargs(self) -> None:
+        """Verify _set_default_overrides applies defaults when kwargs empty."""
+        options = WorkflowOptions()
+        # Defaults differ from the "blank" config defaults, so this
+        # mutates the instance.
+        options._set_default_overrides({})
+
+        # Defaults include clean=None, test=False, etc. Verify the
+        # loop ran by checking _DEFAULT_OVERRIDES was reset.
+        assert options._DEFAULT_OVERRIDES == {
+            "clean": None,
+            "test": False,
+            "publish": None,
+            "bump": None,
+            "commit": False,
+            "create_pr": False,
+            "interactive": True,
+            "dry_run": False,
+        }
+
+    def test_set_default_overrides_skip_git(self) -> None:
+        """Verify _set_default_overrides skips commit/create_pr when git is in kwargs."""
+        options = WorkflowOptions()
+        # Pre-set commit/create_pr on options to detect whether the
+        # override loop touched them.
+        options.commit = True
+        options.create_pr = True
+
+        options._set_default_overrides({"git": GitConfig()})
+
+        # commit/create_pr should NOT be reset because "git" is in kwargs.
+        assert options.commit is True
+        assert options.create_pr is True
+
+    def test_set_default_overrides_skip_cleaning(self) -> None:
+        """Verify _set_default_overrides skips clean when cleaning is in kwargs."""
+        options = WorkflowOptions()
+        options.clean = True
+
+        options._set_default_overrides({"cleaning": CleaningConfig(clean=False)})
+
+        # clean should NOT be reset because "cleaning" is in kwargs.
+        assert options.clean is True
+
+    def test_set_default_overrides_skip_testing(self) -> None:
+        """Verify _set_default_overrides skips test when testing is in kwargs."""
+        options = WorkflowOptions()
+        options.test = True
+
+        options._set_default_overrides({"testing": TestConfig(test=False)})
+
+        # test should NOT be reset because "testing" is in kwargs.
+        assert options.test is True
+
+    def test_set_default_overrides_skip_publishing(self) -> None:
+        """Verify _set_default_overrides skips publish/bump when publishing in kwargs."""
+        options = WorkflowOptions()
+        options.publish = "major"
+        options.bump = "minor"
+
+        options._set_default_overrides(
+            {"publishing": PublishConfig(publish="patch", bump="major")},
+        )
+
+        # publish/bump should NOT be reset because "publishing" is in kwargs.
+        assert options.publish == "major"
+        assert options.bump == "minor"
+
+    def test_set_default_overrides_skip_execution(self) -> None:
+        """Verify _set_default_overrides skips interactive/dry_run when execution in kwargs."""
+        options = WorkflowOptions()
+        options.interactive = False
+        options.dry_run = True
+
+        options._set_default_overrides(
+            {"execution": ExecutionConfig(interactive=True, dry_run=False)},
+        )
+
+        # interactive/dry_run should NOT be reset because "execution" is in kwargs.
+        assert options.interactive is False
+        assert options.dry_run is True
+
+    def test_should_skip_override_git_attributes(self) -> None:
+        """Verify _should_skip_override for commit/create_pr with git kwarg."""
+        # commit/create_pr should be skipped if git is in kwargs
+        assert WorkflowOptions()._should_skip_override("commit", {"git": None}) is True
+        assert WorkflowOptions()._should_skip_override("create_pr", {"git": None}) is True
+        # but not if git isn't present
+        assert WorkflowOptions()._should_skip_override("commit", {}) is False
+        assert WorkflowOptions()._should_skip_override("create_pr", {}) is False
+
+    def test_should_skip_override_cleaning(self) -> None:
+        """Verify _should_skip_override for clean with cleaning kwarg."""
+        assert WorkflowOptions()._should_skip_override("clean", {"cleaning": None}) is True
+        assert WorkflowOptions()._should_skip_override("clean", {}) is False
+
+    def test_should_skip_override_testing(self) -> None:
+        """Verify _should_skip_override for test with testing kwarg."""
+        assert WorkflowOptions()._should_skip_override("test", {"testing": None}) is True
+        assert WorkflowOptions()._should_skip_override("test", {}) is False
+
+    def test_should_skip_override_publishing(self) -> None:
+        """Verify _should_skip_override for publish/bump with publishing kwarg."""
+        assert WorkflowOptions()._should_skip_override("publish", {"publishing": None}) is True
+        assert WorkflowOptions()._should_skip_override("bump", {"publishing": None}) is True
+        assert WorkflowOptions()._should_skip_override("publish", {}) is False
+        assert WorkflowOptions()._should_skip_override("bump", {}) is False
+
+    def test_should_skip_override_execution(self) -> None:
+        """Verify _should_skip_override for interactive/dry_run with execution kwarg."""
+        assert WorkflowOptions()._should_skip_override(
+            "interactive", {"execution": None},
+        ) is True
+        assert WorkflowOptions()._should_skip_override(
+            "dry_run", {"execution": None},
+        ) is True
+        assert WorkflowOptions()._should_skip_override("interactive", {}) is False
+        assert WorkflowOptions()._should_skip_override("dry_run", {}) is False
+
+    def test_set_kwargs_attributes_sets_known(self) -> None:
+        """Verify _set_kwargs_attributes sets known kwargs."""
+        options = WorkflowOptions()
+        options._set_kwargs_attributes({"clean": False, "test": True})
+
+        assert options.clean is False
+        assert options.test is True
+
+    def test_set_kwargs_attributes_skips_unknown(self) -> None:
+        """Verify _set_kwargs_attributes skips kwargs not on class/instance."""
+        options = WorkflowOptions()
+        options._set_kwargs_attributes(
+            {"unknown_class_attr": "x", "clean": False},
+        )
+
+        assert options.clean is False
+        assert not hasattr(options, "unknown_class_attr")
+
+    def test_set_default_overrides_attr_in_kwargs(self) -> None:
+        """Verify _set_default_overrides skips attrs that are in kwargs.
+
+        Covers branch 393->390: when attr IS in kwargs and not skipped,
+        the body (setattr) is skipped.
+        """
+        options = WorkflowOptions()
+        options.clean = True
+        options.test = True
+        options.interactive = False
+
+        # Pass kwargs whose keys match DEFAULT_OVERRIDES attrs but don't
+        # trigger _should_skip_override (no cleaning/testing/etc.).
+        options._set_default_overrides(
+            {"clean": False, "test": False, "interactive": False},
+        )
+
+        # These should remain unchanged because attr was in kwargs and
+        # the body was skipped (393->390 branch).
+        assert options.clean is True
+        assert options.test is True
+        assert options.interactive is False
+
+
+class TestWorkflowOptionsFromArgsExtra:
+    """Additional from_args branches."""
+
+    def test_from_args_with_create_pr(self) -> None:
+        """Verify from_args with create_pr argument populates GitConfig.
+
+        Covers line 810 in crackerjack/models/config.py.
+        """
+        args = MagicMock()
+        args.__dict__ = {"create_pr": True}
+
+        options = WorkflowOptions.from_args(args)
+
+        assert options.git.create_pr is True
+
+    def test_from_args_with_commit_and_create_pr(self) -> None:
+        """Verify from_args with both commit and create_pr."""
+        args = MagicMock()
+        args.__dict__ = {"commit": True, "create_pr": True}
+
+        options = WorkflowOptions.from_args(args)
+
+        assert options.git.commit is True
+        assert options.git.create_pr is True
+
+
+class TestGetWorkflowOptions:
+    """Coverage for the top-level get_workflow_options function."""
+
+    def test_get_workflow_options_calls_load_settings(self) -> None:
+        """Verify get_workflow_options delegates to load_settings."""
+        from crackerjack.models.config import get_workflow_options
+
+        sentinel = MagicMock(name="sentinel_settings")
+        # The function does `from crackerjack.config import load_settings`,
+        # so patch `crackerjack.config.load_settings` (the module attribute).
+        with patch(
+            "crackerjack.config.load_settings",
+            return_value=sentinel,
+        ) as mock_load:
+            result = get_workflow_options()
+
+        assert result is sentinel
+        mock_load.assert_called_once_with(CrackerjackSettings)
+
