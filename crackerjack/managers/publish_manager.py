@@ -315,26 +315,34 @@ class PublishManagerImpl:
         self.console.print(f"[cyan]📦[/cyan] Current version: {current_version}")
 
         recommendation = self._get_version_recommendation()
+        resolved_type = self._resolve_bump_type(recommendation, version_type)
+        return self._perform_bump(current_version, resolved_type)
+
+    def _resolve_bump_type(self, recommendation: object, version_type: str) -> str:
+        """Apply AI recommendation override or interactive prompt.
+
+        MAJOR is a human decision — never auto-apply. (Audit 2026-09-03.)
+        """
         if recommendation and version_type != "interactive":
             self._display_version_analysis(recommendation)
             if version_type == "auto":
-                # MAJOR is a human decision — never auto-apply. Fall through
-                # to the interactive prompt so the user can confirm or pick
-                # a different bump type. (Audit 2026-09-03.)
                 if recommendation.bump_type.value == "major":
                     self.console.print(
                         "[yellow]⚠️[/yellow] AI recommended MAJOR; auto-mode requires manual confirmation.",
                     )
-                    version_type = "interactive"
-                else:
-                    version_type = recommendation.bump_type.value
-                    self.console.print(
-                        f"[green]🎯[/green] Using recommended bump type: {version_type}",
-                    )
+                    return self._prompt_for_version_type(recommendation)
+                resolved = recommendation.bump_type.value
+                self.console.print(
+                    f"[green]🎯[/green] Using recommended bump type: {resolved}",
+                )
+                return resolved
 
         if version_type == "interactive":
-            version_type = self._prompt_for_version_type(recommendation)
+            return self._prompt_for_version_type(recommendation)
+        return version_type
 
+    def _perform_bump(self, current_version: str, version_type: str) -> str:
+        """Calculate new version, apply edits, restore on error."""
         try:
             new_version = self._calculate_next_version(current_version, version_type)
             if self.dry_run:
