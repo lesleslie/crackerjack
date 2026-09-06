@@ -279,3 +279,358 @@ def test_log_load_info(caplog):
         # Check that the load info was logged
         assert "Loaded 2 configuration values" in caplog.text
         assert "MockSettings" in caplog.text
+
+
+# --------------------------------------------------------------------------- #
+# Extended tests for uncovered branches (push 85% -> 95%+).
+# --------------------------------------------------------------------------- #
+
+
+def test_load_single_config_file_non_dict_yaml():
+    """YAML that parses to a non-dict (e.g. a bare scalar or list) should return {}."""
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as tmp:
+        # Bare scalar (string), not a mapping.
+        tmp.write("just_a_string_value\n")
+        tmp_path = Path(tmp.name)
+
+    try:
+        with patch("crackerjack.config.loader.logger") as mock_logger:
+            data = _load_single_config_file(tmp_path)
+            assert data == {}
+            mock_logger.warning.assert_called_once()
+            warning_msg = mock_logger.warning.call_args[0][0]
+            assert "Invalid YAML format" in warning_msg
+            assert "str" in warning_msg
+    finally:
+        tmp_path.unlink()
+
+
+def test_load_single_config_file_list_yaml():
+    """YAML that parses to a list should be treated as invalid and return {}."""
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as tmp:
+        yaml.dump([1, 2, 3], tmp)
+        tmp_path = Path(tmp.name)
+
+    try:
+        data = _load_single_config_file(tmp_path)
+        assert data == {}
+    finally:
+        tmp_path.unlink()
+
+
+def test_load_single_config_file_oserror(monkeypatch):
+    """An OSError while opening the file is caught and returns {}."""
+    fake_path = Path("/does/not/matter.yaml")
+
+    # Force exists() to True, then make .open() raise OSError.
+    monkeypatch.setattr(Path, "exists", lambda self: True)
+
+    def _raise_oserror(self, *args, **kwargs):
+        raise OSError("simulated disk failure")
+
+    monkeypatch.setattr(Path, "open", _raise_oserror)
+
+    with patch("crackerjack.config.loader.logger") as mock_logger:
+        data = _load_single_config_file(fake_path)
+        assert data == {}
+        mock_logger.exception.assert_called_once()
+        exc_msg = mock_logger.exception.call_args[0][0]
+        assert "Failed to read" in exc_msg
+
+
+def test_merge_config_data_empty_list():
+    """Merging no files returns an empty dict."""
+    assert _merge_config_data([]) == {}
+
+
+def test_merge_config_data_missing_file():
+    """A single missing file produces an empty dict (via the not-exists branch)."""
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        missing_path = Path(tmp_dir) / "missing.yaml"
+        assert _merge_config_data([missing_path]) == {}
+
+
+def test_merge_config_data_single_file():
+    """Merging one file returns its data unchanged."""
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        cfg = Path(tmp_dir) / "only.yaml"
+        with cfg.open("w") as f:
+            yaml.dump({"only_key": "only_value", "value": 7}, f)
+        merged = _merge_config_data([cfg])
+        assert merged == {"only_key": "only_value", "value": 7}
+
+
+def test_extract_adapter_timeouts_no_timeouts():
+    """When no *_timeout keys exist, no adapter_timeouts key is added (56->exit)."""
+    config = {"name": "test", "value": 42, "regular_key": "stay"}
+    _extract_adapter_timeouts(config)
+    assert "adapter_timeouts" not in config
+    assert config == {"name": "test", "value": 42, "regular_key": "stay"}
+
+
+def test_extract_adapter_timeouts_empty_dict():
+    """An empty dict is a no-op."""
+    config: dict[str, object] = {}
+    _extract_adapter_timeouts(config)
+    assert config == {}
+
+
+def test_extract_adapter_timeouts_single_timeout():
+    """A single _timeout key is moved into adapter_timeouts."""
+    config = {"ruff_timeout": 30}
+    _extract_adapter_timeouts(config)
+    assert config == {"adapter_timeouts": {"ruff_timeout": 30}}
+
+
+def test_load_pyproject_toml_missing(tmp_path):
+    """When no pyproject.toml exists in the parent dir, returns {}."""
+    settings_dir = tmp_path / "settings"
+    settings_dir.mkdir()
+    # tmp_path.parent is the test runner's tmpdir root; pyproject.toml does not exist there.
+    data = _load_pyproject_toml(settings_dir)
+    assert data == {}
+
+
+def test_load_pyproject_toml_no_crackerjack_section(tmp_path):
+    """pyproject.toml without [tool.crackerjack] returns {} (no extraction)."""
+    outer = tmp_path
+    pyproject = outer / "pyproject.toml"
+    pyproject.write_text(
+        '[tool.other]\nname = "unrelated"\n',
+        encoding="utf-8",
+    )
+    settings_dir = outer / "settings"
+    settings_dir.mkdir()
+    data = _load_pyproject_toml(settings_dir)
+    assert data == {}
+
+
+def test_load_pyproject_toml_empty_tool_crackerjack(tmp_path):
+    """[tool.crackerjack] present but empty -> {} and no extraction call (75->79)."""
+    outer = tmp_path
+    pyproject = outer / "pyproject.toml"
+    pyproject.write_text("[tool.crackerjack]\n", encoding="utf-8")
+    settings_dir = outer / "settings"
+    settings_dir.mkdir()
+    data = _load_pyproject_toml(settings_dir)
+    assert data == {}
+
+
+def test_load_pyproject_toml_invalid_contents(tmp_path):
+    """Invalid TOML is caught by the generic exception handler (101-103)."""
+    outer = tmp_path
+    pyproject = outer / "pyproject.toml"
+    pyproject.write_text("this is = not valid toml ====", encoding="utf-8")
+    settings_dir = outer / "settings"
+    settings_dir.mkdir()
+    with patch("crackerjack.config.loader.logger") as mock_logger:
+        data = _load_pyproject_toml(settings_dir)
+        assert data == {}
+        mock_logger.exception.assert_called_once()
+        assert "Failed to parse pyproject.toml" in mock_logger.exception.call_args[0][0]
+
+
+def test_load_pyproject_toml_no_toml_libraries(monkeypatch, tmp_path):
+    """When neither tomllib nor tomli is importable, returns {} with a warning."""
+    outer = tmp_path
+    pyproject = outer / "pyproject.toml"
+    pyproject.write_text("[tool.crackerjack]\nname = 'x'\n", encoding="utf-8")
+    settings_dir = outer / "settings"
+    settings_dir.mkdir()
+
+    # Make both import statements raise ImportError.
+    import builtins
+
+    real_import = builtins.__import__
+
+    def _fake_import(name, *args, **kwargs):
+        if name in ("tomllib", "tomli"):
+            raise ImportError(f"simulated missing {name}")
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", _fake_import)
+
+    with patch("crackerjack.config.loader.logger") as mock_logger:
+        data = _load_pyproject_toml(settings_dir)
+        assert data == {}
+        mock_logger.warning.assert_called_once()
+        assert "Neither tomllib nor tomli" in mock_logger.warning.call_args[0][0]
+
+
+def test_load_settings_uses_pyproject_data(tmp_path):
+    """load_settings merges pyproject.toml [tool.crackerjack] into the result."""
+    outer = tmp_path
+    pyproject = outer / "pyproject.toml"
+    pyproject.write_text(
+        '[tool.crackerjack]\nname = "from_pyproject"\nvalue = 777\n',
+        encoding="utf-8",
+    )
+    settings_dir = outer / "settings"
+    settings_dir.mkdir()
+
+    settings = load_settings(MockSettings, settings_dir)
+    assert settings.name == "from_pyproject"
+    assert settings.value == 777
+
+
+def test_load_settings_filters_unknown_fields(tmp_path):
+    """load_settings logs ignored (non-model) fields but still constructs the model."""
+    settings_dir = tmp_path / "settings"
+    settings_dir.mkdir()
+    config = settings_dir / "crackerjack.yaml"
+    config.write_text(
+        "name: configured\nvalue: 100\nsome_unknown_key: ignored\n",
+        encoding="utf-8",
+    )
+
+    with patch("crackerjack.config.loader.logger") as mock_logger:
+        settings = load_settings(MockSettings, settings_dir)
+        assert settings.name == "configured"
+        assert settings.value == 100
+        # The "Ignored unknown configuration fields" debug log was emitted.
+        debug_msgs = [c.args[0] for c in mock_logger.debug.call_args_list]
+        assert any("Ignored unknown configuration fields" in m for m in debug_msgs)
+
+
+def test_load_settings_uses_defaults(tmp_path):
+    """Without any config files, defaults from the model are used."""
+    settings_dir = tmp_path / "settings"
+    settings_dir.mkdir()
+    settings = load_settings(MockSettings, settings_dir)
+    assert settings.name == "default"
+    assert settings.value == 42
+    assert settings.timeout == 30
+
+
+@pytest.mark.asyncio
+async def test_load_settings_async_uses_defaults(tmp_path, monkeypatch):
+    """load_settings_async without settings_dir defaults to <cwd>/settings (line 145)."""
+    import tempfile as _tf
+
+    with _tf.TemporaryDirectory() as cwd:
+        monkeypatch.chdir(cwd)
+        # No settings dir in cwd; load_settings_async should fall back to defaults.
+        settings = await load_settings_async(MockSettings)
+        assert settings.name == "default"
+        assert settings.value == 42
+
+
+@pytest.mark.asyncio
+async def test_load_settings_async_uses_pyproject_data(tmp_path):
+    """load_settings_async pulls [tool.crackerjack] from pyproject.toml."""
+    outer = tmp_path
+    pyproject = outer / "pyproject.toml"
+    pyproject.write_text(
+        '[tool.crackerjack]\nname = "async_pyproject"\nvalue = 555\n',
+        encoding="utf-8",
+    )
+    settings_dir = outer / "settings"
+    settings_dir.mkdir()
+
+    settings = await load_settings_async(MockSettings, settings_dir)
+    assert settings.name == "async_pyproject"
+    assert settings.value == 555
+
+
+@pytest.mark.asyncio
+async def test_load_yaml_data_skips_missing_files(tmp_path):
+    """Files that do not exist are skipped (170->166)."""
+    missing = tmp_path / "nope.yaml"
+    data = await _load_yaml_data([missing])
+    assert data == {}
+
+
+@pytest.mark.asyncio
+async def test_load_yaml_data_mixed_missing_and_present(tmp_path):
+    """A missing file does not block loading from a present file."""
+    present = tmp_path / "present.yaml"
+    present.write_text("name: present\nvalue: 11\n", encoding="utf-8")
+    missing = tmp_path / "missing.yaml"
+    data = await _load_yaml_data([missing, present])
+    assert data == {"name": "present", "value": 11}
+
+
+@pytest.mark.asyncio
+async def test_load_single_yaml_file_non_dict():
+    """Non-dict YAML returns {} (not None) from _load_single_yaml_file."""
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as tmp:
+        tmp.write("just_a_string\n")
+        tmp_path = Path(tmp.name)
+    try:
+        with patch("crackerjack.config.loader.logger") as mock_logger:
+            data = await _load_single_yaml_file(tmp_path)
+            assert data == {}
+            mock_logger.warning.assert_called_once()
+    finally:
+        tmp_path.unlink()
+
+
+@pytest.mark.asyncio
+async def test_load_single_yaml_file_yamlerror(monkeypatch):
+    """YAMLError during parsing is caught and returns None."""
+    fake_path = Path("/fake/config.yaml")
+    monkeypatch.setattr(Path, "exists", lambda self: True)
+
+    def _raise_yamlerror(*args, **kwargs):
+        import yaml as _yaml
+
+        raise _yaml.YAMLError("simulated parse failure")
+
+    monkeypatch.setattr(Path, "open", _raise_yamlerror)
+
+    with patch("crackerjack.config.loader.logger") as mock_logger:
+        data = await _load_single_yaml_file(fake_path)
+        assert data is None
+        mock_logger.exception.assert_called_once()
+        assert "Failed to parse YAML" in mock_logger.exception.call_args[0][0]
+
+
+@pytest.mark.asyncio
+async def test_load_single_yaml_file_oserror(monkeypatch):
+    """OSError during read is caught and returns None."""
+    fake_path = Path("/fake/config.yaml")
+    monkeypatch.setattr(Path, "exists", lambda self: True)
+
+    def _raise_oserror(self, *args, **kwargs):
+        raise OSError("simulated disk failure")
+
+    monkeypatch.setattr(Path, "open", _raise_oserror)
+
+    with patch("crackerjack.config.loader.logger") as mock_logger:
+        data = await _load_single_yaml_file(fake_path)
+        assert data is None
+        mock_logger.exception.assert_called_once()
+        assert "Failed to read" in mock_logger.exception.call_args[0][0]
+
+
+def test_filter_relevant_data_empty_input():
+    """Empty dict passes through _filter_relevant_data unchanged."""
+    assert _filter_relevant_data({}, MockSettings) == {}
+
+
+def test_filter_relevant_data_all_unknown():
+    """A dict with only unknown keys filters down to empty."""
+    filtered = _filter_relevant_data({"a": 1, "b": 2}, MockSettings)
+    assert filtered == {}
+
+
+def test_log_filtered_fields_no_excluded(caplog):
+    """No debug log is emitted when nothing is filtered out."""
+    import logging
+
+    merged = {"name": "x", "value": 1}
+    relevant = {"name": "x", "value": 1}
+    with caplog.at_level(logging.DEBUG, logger="crackerjack.config.loader"):
+        _log_filtered_fields(merged, relevant)
+    # No "Ignored unknown configuration fields" log expected.
+    assert "Ignored unknown configuration fields" not in caplog.text
+
+
+def test_log_load_info_empty_data(caplog):
+    """_log_load_info reports 0 values when relevant_data is empty."""
+    import logging
+
+    with caplog.at_level(logging.DEBUG, logger="crackerjack.config.loader"):
+        _log_load_info(MockSettings, {})
+    assert "Loaded 0 configuration values" in caplog.text
+    assert "MockSettings" in caplog.text
