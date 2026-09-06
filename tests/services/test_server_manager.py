@@ -8,7 +8,7 @@ escalation logic in ``stop_process``, and the orchestration in
 ``stop_mcp_server``/``stop_zuban_lsp``/``restart_*`` without spawning
 real processes.
 
-The ``_extract_process_info`` expection list is positional ``parts[1]`` is
+The ``_extract_process_info`` exception list is positional ``parts[1]`` is
 PID, ``parts[0]`` is user, ``parts[2..3]`` are CPU/mem percentages; the
 command-start index defaults to 10 (BSD/macOS ``ps aux``) but adjusts when
 the command contains ``python``/``Python`` (Linux style).
