@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import pytest
 
+from crackerjack.models import enums as enums_module
 from crackerjack.models.enums import HealthStatus, HookStatus, TaskStatus, WorkflowPhase
 
 
@@ -74,6 +75,31 @@ class TestHealthStatus:
         # which falls back to type-based comparison
         assert isinstance(HealthStatus.HEALTHY < "degraded", bool)
         assert isinstance(HealthStatus.DEGRADED < "healthy", bool)
+
+    def test_lt_returns_notimplemented_for_plain_str(self) -> None:
+        """Directly verify __lt__ returns NotImplemented for plain str."""
+        result = HealthStatus.HEALTHY.__lt__("degraded")
+        assert result is NotImplemented
+
+    def test_lt_returns_bool_for_healthstatus(self) -> None:
+        """Directly verify __lt__ returns a bool for HealthStatus comparison."""
+        result = HealthStatus.HEALTHY.__lt__(HealthStatus.DEGRADED)
+        assert isinstance(result, bool)
+        assert result is True
+
+    def test_sort_mixed_health_status(self) -> None:
+        """Verify sorting mixed HealthStatus values orders by severity."""
+        statuses = [
+            HealthStatus.UNHEALTHY,
+            HealthStatus.HEALTHY,
+            HealthStatus.DEGRADED,
+        ]
+        ordered = sorted(statuses)
+        assert ordered == [
+            HealthStatus.HEALTHY,
+            HealthStatus.DEGRADED,
+            HealthStatus.UNHEALTHY,
+        ]
 
 
 class TestWorkflowPhase:
@@ -199,6 +225,18 @@ class TestHookStatus:
         """Verify is_failure for skipped status."""
         assert HookStatus.SKIPPED.is_failure is False
 
+    def test_is_failure_running(self) -> None:
+        """Verify is_failure for running status."""
+        assert HookStatus.RUNNING.is_failure is False
+
+    def test_is_success_skipped(self) -> None:
+        """Verify is_success for skipped status."""
+        assert HookStatus.SKIPPED.is_success is False
+
+    def test_is_success_timeout(self) -> None:
+        """Verify is_success for timeout status."""
+        assert HookStatus.TIMEOUT.is_success is False
+
 
 class TestTaskStatus:
     """Tests for TaskStatus enum."""
@@ -258,3 +296,22 @@ class TestTaskStatus:
     def test_is_active_failed(self) -> None:
         """Verify is_active for failed status."""
         assert TaskStatus.FAILED.is_active is False
+
+
+class TestModuleExports:
+    """Verify __all__ export contract."""
+
+    def test_all_contains_healthstatus(self) -> None:
+        assert "HealthStatus" in enums_module.__all__
+
+    def test_all_contains_workflow_phase(self) -> None:
+        assert "WorkflowPhase" in enums_module.__all__
+
+    def test_all_contains_hook_status(self) -> None:
+        assert "HookStatus" in enums_module.__all__
+
+    def test_all_contains_task_status(self) -> None:
+        assert "TaskStatus" in enums_module.__all__
+
+    def test_all_has_four_entries(self) -> None:
+        assert len(enums_module.__all__) == 4
