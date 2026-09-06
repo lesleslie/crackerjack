@@ -6,6 +6,7 @@ import sys
 from functools import lru_cache
 from pathlib import Path
 
+from crackerjack.config.per_file_ignores import build_inline_per_file_ignores
 from crackerjack.config.settings import HookSettings
 
 
@@ -86,6 +87,15 @@ def _build_skylos_command(package_name: str) -> list[str]:
 
 def _python_module_command(module: str, *args: str) -> list[str]:
     return [sys.executable, "-m", module, *args]
+
+
+def _build_targets(package_name: str) -> list[str]:
+    """Canonical target list for tools that walk multiple directories.
+
+    Used by ruff-check, ruff-format, codespell, tc-refs, and any future
+    tool that should cover both the package and the scripts/examples dirs.
+    """
+    return [f"./{package_name}", "./scripts", "./examples"]
 
 
 def _preferred_binary_command(tool_name: str, *args: str) -> list[str]:
@@ -237,12 +247,14 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             "--output-format",
             "json",
             "--fix",
-            f"./{package_name}",
+            "--config",
+            f"lint.extend-per-file-ignores = {build_inline_per_file_ignores()}",
+            *_build_targets(package_name),
         ),
         "ruff-format": _python_module_command(
             "ruff",
             "format",
-            f"./{package_name}",
+            *_build_targets(package_name),
         ),
         "mdformat": _python_module_command("crackerjack.tools.mdformat_wrapper"),
         "check-local-links": _python_module_command(

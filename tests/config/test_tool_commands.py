@@ -363,6 +363,33 @@ class TestCommandStructureValidation:
         # Should have a package name as last argument
         assert any("crackerjack" in arg for arg in refurb_cmd)
 
+        # NEW: ruff-check and ruff-format include scripts/ and examples/
+        ruff_check_cmd = get_tool_command("ruff-check")
+        assert any("crackerjack" in arg for arg in ruff_check_cmd)
+        assert any("scripts" in arg for arg in ruff_check_cmd)
+        assert any("examples" in arg for arg in ruff_check_cmd)
+
+        ruff_format_cmd = get_tool_command("ruff-format")
+        assert any("crackerjack" in arg for arg in ruff_format_cmd)
+        assert any("scripts" in arg for arg in ruff_format_cmd)
+        assert any("examples" in arg for arg in ruff_format_cmd)
+
+        # NEW: ruff-check uses --config='<inline TOML>' for the starter pack
+        assert "--config" in ruff_check_cmd
+        config_idx = ruff_check_cmd.index("--config")
+        config_value = ruff_check_cmd[config_idx + 1]
+        # The value MUST be inline TOML, not a file path
+        assert not config_value.endswith(".toml")
+        assert not config_value.endswith(".toml/")
+        assert config_value.startswith("lint.extend-per-file-ignores = {")
+        assert '"scripts/**/*.py"' in config_value
+        assert '"examples/**/*.py"' in config_value
+
+    def test_ruff_format_has_no_config_flag(self) -> None:
+        """ruff-format has no --config flag — only lint does."""
+        ruff_format_cmd = get_tool_command("ruff-format")
+        assert "--config" not in ruff_format_cmd
+
     def test_special_flags_for_specific_tools(self) -> None:
         """Test that tools with special flags have them configured."""
         # Gitleaks has protect and -v flags
