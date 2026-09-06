@@ -62,4 +62,3 @@ def test_l2_noop_callable_synchronously_via_asyncio_run() -> None:
     """The async function can be driven from sync tests via ``asyncio.run``."""
     result = asyncio.run(l2_noop(operation="sync", l1_context={}))
     assert result == "noop_recovery"
-

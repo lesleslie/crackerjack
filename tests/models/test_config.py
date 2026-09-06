@@ -1709,4 +1709,3 @@ class TestGetWorkflowOptions:
 
         assert result is sentinel
         mock_load.assert_called_once_with(CrackerjackSettings)
-

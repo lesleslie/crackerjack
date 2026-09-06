@@ -62,4 +62,3 @@ def test_sast_adapter_protocol_rejects_unrelated_objects() -> None:
 def test_sast_adapter_protocol_subclass_protocol_relationship() -> None:
     """``SASTAdapterProtocol`` is a legitimate ``typing.Protocol`` subclass."""
     assert issubclass(SASTAdapterProtocol, Protocol)
-

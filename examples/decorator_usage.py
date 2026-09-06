@@ -150,7 +150,8 @@ async def execute_quality_checks(project_dir: Path) -> dict:
         capture_output=True,
         text=True,
         timeout=50,
-     check=False)
+        check=False,
+    )
 
     if result.returncode != 0:
         raise ExecutionError(
@@ -270,7 +271,8 @@ class QualityManager:
             ["pre-commit", "run", hook_type],
             capture_output=True,
             text=True,
-         check=False)
+            check=False,
+        )
 
         return result.returncode == 0
 

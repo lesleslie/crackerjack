@@ -28,7 +28,7 @@ _DOCSTRING_EXTRACTOR_ATTRS = frozenset(
 )
 
 
-def __getattr__(name: str):  # noqa: ANN401 — PEP 562 protocol
+def __getattr__(name: str):
     if name in _DOCSTRING_EXTRACTOR_ATTRS:
         from . import docstring_extractor
 

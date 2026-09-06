@@ -11,6 +11,7 @@ Verifies that:
 Used by `crackerjack --all` to prevent broken releases (e.g., 0.24.0
 where documented methods were silently removed in the version bump).
 """
+
 from __future__ import annotations
 
 import re
@@ -142,24 +143,32 @@ def _parse_claude_md(text: str) -> list[ClaudeClaim]:
         # Version: "Current Status: vX.Y.Z"
         m = re.search(r"Current Status:\s*v?(\d+\.\d+(?:\.\d+)?)", line)
         if m:
-            claims.append(ClaudeClaim(kind="version", value=m.group(1), context=line.strip()))
+            claims.append(
+                ClaudeClaim(kind="version", value=m.group(1), context=line.strip())
+            )
             continue
         # Coverage: "X% line coverage" or "X% coverage"
         m = re.search(r"(\d+)\s*%\s*(?:line\s+)?coverage", line, re.IGNORECASE)
         if m:
-            claims.append(ClaudeClaim(kind="coverage", value=m.group(1), context=line.strip()))
+            claims.append(
+                ClaudeClaim(kind="coverage", value=m.group(1), context=line.strip())
+            )
             continue
         # Test count: require canonical claim form "N tests total" (or
         # "N test total"). Reject incidental prose mentions like
         # "20 tests in module X" or table cells like "| 20 | ... |".
         m = re.search(r"(\d+)\s+tests?\s+total", line, re.IGNORECASE)
         if m:
-            claims.append(ClaudeClaim(kind="test_count", value=m.group(1), context=line.strip()))
+            claims.append(
+                ClaudeClaim(kind="test_count", value=m.group(1), context=line.strip())
+            )
             continue
         # Package path: bullet under ## Package Structure
         m = re.match(r"\s*-\s+`?([\w/]+\.py)`?", line)
         if m:
-            claims.append(ClaudeClaim(kind="package_path", value=m.group(1), context=line.strip()))
+            claims.append(
+                ClaudeClaim(kind="package_path", value=m.group(1), context=line.strip())
+            )
     return claims
 
 
@@ -189,14 +198,28 @@ def _symbol_in_source(symbol: str, source_root: Path) -> bool:
 
 def _verify_added(claim: ChangelogClaim, source_root: Path) -> VerifyResult:
     if _symbol_in_source(claim.symbol, source_root):
-        return VerifyResult(True, "changelog", claim, f"CHANGELOG: {claim.symbol} added — verified")
-    return VerifyResult(False, "changelog", claim, f"CHANGELOG claims {claim.symbol} was added but no definition found in source")
+        return VerifyResult(
+            True, "changelog", claim, f"CHANGELOG: {claim.symbol} added — verified"
+        )
+    return VerifyResult(
+        False,
+        "changelog",
+        claim,
+        f"CHANGELOG claims {claim.symbol} was added but no definition found in source",
+    )
 
 
 def _verify_removed(claim: ChangelogClaim, source_root: Path) -> VerifyResult:
     if not _symbol_in_source(claim.symbol, source_root):
-        return VerifyResult(True, "changelog", claim, f"CHANGELOG: {claim.symbol} removed — verified")
-    return VerifyResult(False, "changelog", claim, f"CHANGELOG claims {claim.symbol} was removed but definition still exists in source")
+        return VerifyResult(
+            True, "changelog", claim, f"CHANGELOG: {claim.symbol} removed — verified"
+        )
+    return VerifyResult(
+        False,
+        "changelog",
+        claim,
+        f"CHANGELOG claims {claim.symbol} was removed but definition still exists in source",
+    )
 
 
 def _read_pyproject_version(path: Path) -> str | None:
@@ -212,9 +235,10 @@ def _read_pyproject_version(path: Path) -> str | None:
 def _read_ratchet_floor(path: Path) -> float | None:
     """Extract `current_minimum` from .coverage-ratchet.json."""
     import json
+
     try:
         data = json.loads(path.read_text())
-    except (FileNotFoundError, json.JSONDecodeError):
+    except FileNotFoundError, json.JSONDecodeError:
         return None
     return float(data.get("current_minimum")) if "current_minimum" in data else None
 
@@ -230,7 +254,7 @@ def _count_tests(test_root: Path) -> int | None:
             timeout=120,
             check=False,
         )
-    except (subprocess.SubprocessError, FileNotFoundError):
+    except subprocess.SubprocessError, FileNotFoundError:
         return None
     output = result.stdout + result.stderr
     # Look for "N tests collected" or "N tests"
@@ -248,35 +272,87 @@ def _count_tests(test_root: Path) -> int | None:
 def _verify_version(claim: ClaudeClaim, pyproject_path: Path) -> VerifyResult:
     actual = _read_pyproject_version(pyproject_path)
     if actual is None:
-        return VerifyResult(False, "claude_md", claim, f"CLAUDE.md claims version {claim.value} but pyproject.toml version could not be read")
+        return VerifyResult(
+            False,
+            "claude_md",
+            claim,
+            f"CLAUDE.md claims version {claim.value} but pyproject.toml version could not be read",
+        )
     if claim.value == actual:
-        return VerifyResult(True, "claude_md", claim, f"CLAUDE.md: version '{claim.value}' matches pyproject.toml")
-    return VerifyResult(False, "claude_md", claim, f"CLAUDE.md claims version {claim.value} but pyproject.toml says {actual}")
+        return VerifyResult(
+            True,
+            "claude_md",
+            claim,
+            f"CLAUDE.md: version '{claim.value}' matches pyproject.toml",
+        )
+    return VerifyResult(
+        False,
+        "claude_md",
+        claim,
+        f"CLAUDE.md claims version {claim.value} but pyproject.toml says {actual}",
+    )
 
 
 def _verify_coverage(claim: ClaudeClaim, ratchet_path: Path) -> VerifyResult:
     actual = _read_ratchet_floor(ratchet_path)
     if actual is None:
-        return VerifyResult(False, "claude_md", claim, f"CLAUDE.md claims {claim.value}% coverage but ratchet file could not be read")
+        return VerifyResult(
+            False,
+            "claude_md",
+            claim,
+            f"CLAUDE.md claims {claim.value}% coverage but ratchet file could not be read",
+        )
     if float(claim.value) >= actual:
-        return VerifyResult(True, "claude_md", claim, f"CLAUDE.md: coverage '{claim.value}%' meets ratchet baseline {actual}%")
-    return VerifyResult(False, "claude_md", claim, f"CLAUDE.md claims {claim.value}% coverage but ratchet baseline is {actual}%")
+        return VerifyResult(
+            True,
+            "claude_md",
+            claim,
+            f"CLAUDE.md: coverage '{claim.value}%' meets ratchet baseline {actual}%",
+        )
+    return VerifyResult(
+        False,
+        "claude_md",
+        claim,
+        f"CLAUDE.md claims {claim.value}% coverage but ratchet baseline is {actual}%",
+    )
 
 
 def _verify_test_count(claim: ClaudeClaim, test_root: Path) -> VerifyResult:
     actual = _count_tests(test_root)
     if actual is None:
-        return VerifyResult(False, "claude_md", claim, f"CLAUDE.md claims {claim.value} tests but pytest --collect-only could not be parsed")
+        return VerifyResult(
+            False,
+            "claude_md",
+            claim,
+            f"CLAUDE.md claims {claim.value} tests but pytest --collect-only could not be parsed",
+        )
     if int(claim.value) == actual:
-        return VerifyResult(True, "claude_md", claim, f"CLAUDE.md: test count '{claim.value}' matches pytest")
-    return VerifyResult(False, "claude_md", claim, f"CLAUDE.md claims {claim.value} tests but pytest reports {actual}")
+        return VerifyResult(
+            True,
+            "claude_md",
+            claim,
+            f"CLAUDE.md: test count '{claim.value}' matches pytest",
+        )
+    return VerifyResult(
+        False,
+        "claude_md",
+        claim,
+        f"CLAUDE.md claims {claim.value} tests but pytest reports {actual}",
+    )
 
 
 def _verify_path(claim: ClaudeClaim, project_root: Path) -> VerifyResult:
     target = project_root / claim.value
     if target.exists():
-        return VerifyResult(True, "claude_md", claim, f"CLAUDE.md: path '{claim.value}' exists")
-    return VerifyResult(False, "claude_md", claim, f"CLAUDE.md references '{claim.value}' but no such file")
+        return VerifyResult(
+            True, "claude_md", claim, f"CLAUDE.md: path '{claim.value}' exists"
+        )
+    return VerifyResult(
+        False,
+        "claude_md",
+        claim,
+        f"CLAUDE.md references '{claim.value}' but no such file",
+    )
 
 
 def check_release_audit(
@@ -303,7 +379,11 @@ def check_release_audit(
         changelog_text = changelog_path.read_text()
         claude_text = claude_md_path.read_text()
     except FileNotFoundError as e:
-        report.results.append(VerifyResult(False, "changelog", None, f"Required file not found: {e.filename}"))
+        report.results.append(
+            VerifyResult(
+                False, "changelog", None, f"Required file not found: {e.filename}"
+            )
+        )
         report.passed = False
         return report
 
@@ -345,6 +425,7 @@ def check_release_audit(
 
 if __name__ == "__main__":
     import argparse
+
     parser = argparse.ArgumentParser(description="Release audit check")
     parser.add_argument("--project-root", type=Path, required=True)
     parser.add_argument("--changelog", type=Path, required=True)

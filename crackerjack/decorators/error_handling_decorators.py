@@ -155,6 +155,7 @@ def handle_network_errors(
     ``httpx.TimeoutException`` inherit from stdlib ``ConnectionError`` /
     ``TimeoutError`` and are caught implicitly via those base classes.
     """
+
     def decorator(func: _F) -> _F:
         @functools.wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> Any:

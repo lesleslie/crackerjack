@@ -1,5 +1,51 @@
 ______________________________________________________________________
 
+## [0.80.1] - 2026-09-06
+
+### Fixed
+
+- coverage: Defer docstring_extractor import via PEP 562 __getattr__
+- decorators: Pass eval_str=True to inspect.signature in validate_args
+- decorators: Suppress retry_on_error warning on final attempt
+- tool_commands: Filter _build_targets to existing directories
+- Validate_docstring_quality returns violations list (CLI was broken)
+
+### Documentation
+
+- decorators: Document handle_network_errors scope (stdlib-only, no requests)
+
+### Testing
+
+- Add coverage for _git_utils (12% → 97%)
+- Add coverage for connection_pool (28% → 100%)
+- Add coverage for decorators/error_handling (0% to 99%)
+- Add coverage for decorators/patterns (15% → 98%)
+- Add coverage for docstring_extractor (12% → 97%)
+- Add coverage for error_handling_decorators (10% to 96%)
+- Add coverage for metrics (24% → 100%)
+- Add coverage for pip_audit_ignores (13% -> 100%)
+- Add coverage for ToolExecutionError (10% → 100%)
+- Cover git_metrics_integration stub and improvement_overseer
+- Extend coverage for 12 low-coverage modules (~140 lines, 107 tests)
+- Extend coverage for config/hooks (43% → 100%)
+- Extend coverage for config/loader (85% → 99%)
+- Extend coverage for fix_plan (62% → 100%)
+- Extend coverage for git_analytics (96% → 100%)
+- Extend coverage for health_check (44% → 100%)
+- Extend coverage for models/config (58% → 100%)
+- Extend coverage for models/enums (58% → 100%)
+- Extend coverage for patterns/core (62% → 100%)
+- Extend coverage for profile_loader (52% → 100%)
+- Extend coverage for qa_config (89% → 100%)
+- Extend coverage for security_logger (63% → 100%)
+- Extend coverage for session_metrics (98% → 100%)
+- Extend coverage for timeout_manager (23% → 99%)
+- Extend coverage for tool_commands (55% → 100%)
+- Extend coverage for validation_contracts (95% → 100%)
+- release_audit: Drop redundant 'is True'/'is False' per refurb FURB149
+- Rename 'strat' and 'te' to satisfy codespell fast hook
+- websocket: Fix tls_config tests for module-reload isolation
+
 ## [0.80.0] - 2026-09-06
 
 ### Added

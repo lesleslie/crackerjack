@@ -12,7 +12,6 @@ Use case: Simple manual tracking outside AgentOrchestrator
 from pathlib import Path
 
 from crackerjack.agents.base import AgentContext
-
 from crackerjack.integration.skills_tracking import create_skills_tracker
 
 
