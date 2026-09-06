@@ -389,6 +389,49 @@ class TestValidationReport:
         assert result["error_count"] == 1
         assert result["warning_count"] == 0
 
+    def test_from_result_with_string_issue(self) -> None:
+        """Verify from_result wraps a single string issue into a list."""
+        result = ValidationReport.from_result({"issues": "single error"})
+        assert len(result.issues) == 1
+        assert result.issues[0].message == "single error"
+
+    def test_from_result_with_string_errors_fallback(self) -> None:
+        """Verify from_result wraps a single string in errors fallback."""
+        result = ValidationReport.from_result({"errors": "fallback error"})
+        assert len(result.issues) == 1
+        assert result.issues[0].message == "fallback error"
+
+    def test_from_result_with_details_metadata(self) -> None:
+        """Verify from_result uses details as metadata fallback."""
+        result = ValidationReport.from_result(
+            {"details": {"detail_key": "detail_val"}},
+        )
+        assert result.metadata == {"detail_key": "detail_val"}
+
+    def test_from_result_merges_metadata_kwargs_with_details(self) -> None:
+        """Verify from_result merges kwargs metadata with details fallback."""
+        result = ValidationReport.from_result(
+            {"details": {"a": 1}},
+            metadata={"b": 2},
+        )
+        assert result.metadata == {"a": 1, "b": 2}
+
+    def test_from_result_with_no_valid_and_no_issues_is_valid(self) -> None:
+        """Verify from_result treats no valid key + no issues as valid."""
+        result = ValidationReport.from_result({})
+        assert result.valid is True
+
+    def test_from_result_overrides_source_from_data(self) -> None:
+        """Verify from_result defaults source to 'crackerjack' (no override path)."""
+        result = ValidationReport.from_result({"source": "external"})
+        # source has a non-empty default, so data.source is not consulted
+        assert result.source == "crackerjack"
+
+    def test_from_result_overrides_validation_type_from_data(self) -> None:
+        """Verify from_result uses data.validation_type when arg is empty."""
+        result = ValidationReport.from_result({"validation_type": "schema"})
+        assert result.validation_type == "schema"
+
 
 class TestQualityGateCheck:
     """Tests for QualityGateCheck model."""
@@ -461,6 +504,46 @@ class TestQualityGateCheck:
         data = {"name": "test", "passed": True, "score": "not_a_number"}
         result = QualityGateCheck.from_value(data)
         assert result.score is None
+
+    def test_from_value_with_invalid_threshold(self) -> None:
+        """Verify from_value handles invalid threshold (non-numeric)."""
+        data = {"name": "test", "passed": True, "threshold": "not_a_number"}
+        result = QualityGateCheck.from_value(data)
+        assert result.threshold is None
+
+    def test_from_value_with_invalid_threshold_typeerror(self) -> None:
+        """Verify from_value handles threshold that raises TypeError."""
+        data = {"name": "test", "passed": True, "threshold": [1, 2, 3]}
+        result = QualityGateCheck.from_value(data)
+        assert result.threshold is None
+
+    def test_from_value_with_invalid_duration_ms(self) -> None:
+        """Verify from_value handles invalid duration_ms (non-numeric)."""
+        data = {"name": "test", "passed": True, "duration_ms": "not_a_number"}
+        result = QualityGateCheck.from_value(data)
+        assert result.duration_ms is None
+
+    def test_from_value_with_invalid_duration_ms_typeerror(self) -> None:
+        """Verify from_value handles duration_ms that raises TypeError."""
+        data = {"name": "test", "passed": True, "duration_ms": [1, 2, 3]}
+        result = QualityGateCheck.from_value(data)
+        assert result.duration_ms is None
+
+    def test_from_value_with_details_dict(self) -> None:
+        """Verify from_value preserves a dict details payload."""
+        data = {
+            "name": "test",
+            "passed": True,
+            "details": {"actual": 0.95, "expected": 1.0},
+        }
+        result = QualityGateCheck.from_value(data)
+        assert result.details == {"actual": 0.95, "expected": 1.0}
+
+    def test_from_value_with_non_dict_details(self) -> None:
+        """Verify from_value coerces non-dict details to empty dict."""
+        data = {"name": "test", "passed": True, "details": "not a dict"}
+        result = QualityGateCheck.from_value(data)
+        assert result.details == {}
 
     def test_to_dict(self) -> None:
         """Verify to_dict serialization."""
@@ -680,3 +763,77 @@ class TestQualityGateReport:
 
         assert report.required_check_failures == ["lint.required"]
         assert "required_check_failures" in report.to_dict()
+
+    def test_from_result_with_string_checks(self) -> None:
+        """Verify from_result wraps a single string checks value into a list."""
+        result = QualityGateReport.from_result({"checks": "single_check"})
+        assert len(result.checks) == 1
+        # String is wrapped into [string]; QualityGateCheck.from_value
+        # coerces the string to a check named "unknown".
+        assert result.checks[0].name == "unknown"
+        assert result.checks[0].passed is False
+
+    def test_from_result_with_metadata_kwarg(self) -> None:
+        """Verify from_result merges metadata passed via kwarg."""
+        result = QualityGateReport.from_result({}, metadata={"key": "value"})
+        assert result.metadata == {"key": "value"}
+
+    def test_from_result_with_data_metadata(self) -> None:
+        """Verify from_result merges metadata found in data dict."""
+        result = QualityGateReport.from_result({"metadata": {"key": "value"}})
+        assert result.metadata == {"key": "value"}
+
+    def test_from_result_metadata_data_overwrites_kwargs(self) -> None:
+        """Verify from_result lets data.metadata overwrite kwargs metadata."""
+        result = QualityGateReport.from_result(
+            {"metadata": {"a": 1, "b": 2}},
+            metadata={"b": 99, "c": 3},
+        )
+        assert result.metadata == {"a": 1, "b": 2, "c": 3}
+
+    def test_from_result_with_overall_score_fallback(self) -> None:
+        """Verify from_result uses overall_score as coverage fallback."""
+        result = QualityGateReport.from_result({"overall_score": 0.77})
+        assert result.coverage == 0.77
+
+    def test_from_result_with_string_errors_fallback(self) -> None:
+        """Verify from_result wraps a single string errors value into a list."""
+        result = QualityGateReport.from_result({"errors": "single_error"})
+        assert result.errors == ["single_error"]
+
+    def test_from_result_overrides_repository_from_data(self) -> None:
+        """Verify from_result uses data.repository when repository arg is empty."""
+        result = QualityGateReport.from_result({"repository": "from/data"})
+        assert result.repository == "from/data"
+
+    def test_from_result_overrides_profile_from_data(self) -> None:
+        """Verify from_result uses data.profile when profile arg is empty."""
+        result = QualityGateReport.from_result({"profile": "from-data"})
+        assert result.profile == "from-data"
+
+    def test_from_result_overrides_source_from_data(self) -> None:
+        """Verify from_result defaults source to 'crackerjack' (no override path)."""
+        result = QualityGateReport.from_result({"source": "external"})
+        # source has a non-empty default, so data.source is not consulted
+        assert result.source == "crackerjack"
+
+    def test_to_dict_logs_required_check_failures(self) -> None:
+        """Verify to_dict emits required_check_failures alongside logger warnings."""
+        failing = QualityGateCheck(
+            name="lint.required",
+            passed=False,
+            severity=GateSeverity.REQUIRED,
+        )
+        report = QualityGateReport(
+            fast_hooks=True,
+            tests=True,
+            comprehensive=True,
+            coverage=1.0,
+            checks=[failing],
+        )
+
+        result = report.to_dict()
+        assert result["required_check_failures"] == ["lint.required"]
+        assert "passed" in result
+        assert "all_passed" in result
+        assert "blocking_failure" in result
