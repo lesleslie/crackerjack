@@ -223,7 +223,11 @@ def retry_on_error(
                     return func(*args, **kwargs)
                 except exceptions as e:
                     last_exception = e
-                    if log_retry:
+                    # Only warn when an actual retry will happen. Skipping
+                    # the final attempt avoids duplicate noise — the loop
+                    # exit already triggers `logger.error("All N attempts
+                    # failed...")` below.
+                    if log_retry and attempt < max_attempts - 1:
                         logger.warning(
                             f"Attempt {attempt + 1}/{max_attempts} failed in {func.__name__}: {e}. "
                             f"Retrying in {current_delay}s...",

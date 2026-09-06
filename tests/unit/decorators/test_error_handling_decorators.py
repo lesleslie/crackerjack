@@ -565,8 +565,11 @@ class TestRetryOnError:
             assert mock_sleep.call_count == 2
 
         assert len(attempts) == 3
-        # One warning per failed attempt (3) and a final error.
-        assert patched_logger.warning.call_count == 3
+        # Warnings fire only for attempts that will be retried (2), then
+        # a single terminal "All 3 attempts failed" error. This avoids
+        # duplicate noise — the final attempt is silenced because the
+        # loop-exit error already reports the failure.
+        assert patched_logger.warning.call_count == 2
         final_msg = patched_logger.error.call_args.args[0]
         assert "All 3 attempts failed" in final_msg
 
@@ -634,11 +637,15 @@ class TestRetryOnError:
             with pytest.raises(ValueError):
                 decorator(_make(exc=ValueError("boom")))()
 
-        # Each failed attempt logs a warning, including the final one.
+        # Warnings fire only for attempts that will be retried — the final
+        # attempt is silenced because the loop exit already logs a
+        # terminal "All N attempts failed..." error.
         warning_messages = [c.args[0] for c in patched_logger.warning.call_args_list]
+        assert len(warning_messages) == 2
         assert any("Attempt 1/3" in msg for msg in warning_messages)
         assert any("Attempt 2/3" in msg for msg in warning_messages)
-        assert any("Attempt 3/3" in msg for msg in warning_messages)
+        # Final attempt (3/3) intentionally NOT warned — avoids duplicate noise.
+        assert not any("Attempt 3/3" in msg for msg in warning_messages)
 
     def test_passes_args_and_kwargs(self) -> None:
         attempts: list[tuple[int, int]] = []
@@ -664,8 +671,9 @@ class TestRetryOnError:
             # No sleeps when max_attempts is 1.
             mock_sleep.assert_not_called()
 
-        # One warning for the single attempt and a final error.
-        assert patched_logger.warning.call_count == 1
+        # Single attempt never gets a "Retrying..." warning because
+        # there's no retry to schedule — only the terminal error.
+        assert patched_logger.warning.call_count == 0
         patched_logger.error.assert_called_once()
 
     def test_default_exception_is_exception(self, patched_logger: MagicMock) -> None:
