@@ -1,5 +1,42 @@
 ______________________________________________________________________
 
+## [0.80.0] - 2026-09-06
+
+### Added
+
+- crackerjack: Add release-audit check for CHANGELOG/CLAUDE.md consistency
+- crackerjack: Hook release-audit into publish_manager pre-publish validation
+- deps: Swap pip-audit for osv-scanner in fast hooks
+- hooks: Add universal per-file-ignores starter pack for scripts/examples
+- hooks: Add universal per-file-ignores starter pack for scripts/examples
+- hooks: Extend codespell + tc-refs targets to scripts/ and examples/
+- hooks: Extend ruff-check + ruff-format to scripts/ and examples/
+- Revert "feat(hooks): add universal per-file-ignores starter pack for scripts/examples"
+
+### Changed
+
+- Extract helpers from PublishManagerImpl.bump_version (C901)
+
+### Fixed
+
+- Add positive controls for per-file-ignores integration tests
+- crackerjack: Handle <repo>: Add <symbol> prefix in CHANGELOG parser
+- crackerjack: Require internal dot in CHANGELOG symbol tail
+- crackerjack: Tighten release-audit parsers to reduce false positives
+- deps: Post-review polish for osv-scanner swap
+- release-audit: Match dataclass fields with type annotations
+- types: Narrow recommendation to None-safe in _resolve_bump_type (ty)
+
+### Documentation
+
+- CLAUDE.md: Cross-reference MCP backend wiring discipline (Bodai-wide)
+- Scripts/examples coverage rollout verification report
+
+### Internal
+
+- Address parked refurb FURB findings (F4 follow-up)
+- tests: Clean up ruff violations in test_audit_type_checking_runtime_refs
+
 ## [0.79.1] - 2026-09-04
 
 ### Fixed
