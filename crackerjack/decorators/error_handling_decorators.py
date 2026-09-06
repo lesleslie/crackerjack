@@ -140,6 +140,21 @@ def handle_network_errors(
     log_error: bool = True,
     reraise: bool | None = None,
 ):
+    """Decorator that catches stdlib network exceptions and returns ``default_return``.
+
+    Catches the built-in ``ConnectionError``, ``ConnectionRefusedError``, and
+    ``TimeoutError`` by default. These cover stdlib networking (``socket``,
+    ``urllib``, ``http.client``, ``asyncio``) and the errors raised by most
+    third-party HTTP libraries that propagate stdlib exceptions.
+
+    **Note**: ``requests.RequestException`` is intentionally NOT included —
+    ``requests`` is not a crackerjack dependency. Callers that use ``requests``
+    should pass ``exceptions=(requests.RequestException, ...)`` explicitly
+    or import ``requests`` themselves and wrap the call. ``httpx`` errors are
+    similarly NOT caught by default; ``httpx.ConnectError`` and
+    ``httpx.TimeoutException`` inherit from stdlib ``ConnectionError`` /
+    ``TimeoutError`` and are caught implicitly via those base classes.
+    """
     def decorator(func: _F) -> _F:
         @functools.wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> Any:
