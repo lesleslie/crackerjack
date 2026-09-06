@@ -4,7 +4,77 @@ Tests for FixPlan and ChangeSpec models.
 Test fix planning data structures.
 """
 
-from crackerjack.models.fix_plan import ChangeSpec, FixPlan, create_fix_plan
+from pathlib import Path
+
+from crackerjack.models.fix_plan import (
+    ChangeSpec,
+    FixPlan,
+    create_change_spec,
+    create_fix_plan,
+)
+
+
+class TestCreateChangeSpec:
+    """Test suite for create_change_spec factory function."""
+
+    def test_create_change_spec_returns_change_spec(self) -> None:
+        """Test that create_change_spec returns a ChangeSpec instance."""
+        result = create_change_spec(
+            line_range=(1, 5),
+            old_code="old code",
+            new_code="new code",
+            reason="test reason",
+        )
+
+        assert isinstance(result, ChangeSpec)
+
+    def test_create_change_spec_preserves_fields(self) -> None:
+        """Test that create_change_spec preserves all fields exactly."""
+        line_range = (10, 20)
+        old_code = "old\ncode\n"
+        new_code = "new\ncode\n"
+        reason = "Refactoring for clarity"
+
+        result = create_change_spec(
+            line_range=line_range,
+            old_code=old_code,
+            new_code=new_code,
+            reason=reason,
+        )
+
+        assert result.line_range == line_range
+        assert result.old_code == old_code
+        assert result.new_code == new_code
+        assert result.reason == reason
+
+    def test_create_change_spec_with_empty_strings(self) -> None:
+        """Test create_change_spec handles empty string inputs."""
+        result = create_change_spec(
+            line_range=(1, 1),
+            old_code="",
+            new_code="",
+            reason="",
+        )
+
+        assert result.line_range == (1, 1)
+        assert result.old_code == ""
+        assert result.new_code == ""
+        assert result.reason == ""
+
+    def test_create_change_spec_with_multiline_code(self) -> None:
+        """Test create_change_spec with multi-line code blocks."""
+        old_code = "def foo():\n    pass\n"
+        new_code = "def foo() -> None:\n    pass\n"
+
+        result = create_change_spec(
+            line_range=(1, 2),
+            old_code=old_code,
+            new_code=new_code,
+            reason="Add return type annotation",
+        )
+
+        assert result.old_code == old_code
+        assert result.new_code == new_code
 
 
 class TestChangeSpec:
@@ -255,6 +325,230 @@ class TestFixPlan:
 
         assert high_risk_plan.is_high_risk() is True
         assert low_risk_plan.is_high_risk() is False
+
+    def test_post_init_converts_path_object_to_string(self) -> None:
+        """Test __post_init__ converts pathlib.Path to str."""
+        path_obj = Path("/path/to/file.py")
+
+        plan = FixPlan(
+            file_path=path_obj,  # type: ignore[arg-type]
+            issue_type="COMPLEXITY",
+            changes=[],
+            rationale="test",
+            risk_level="low",
+            validated_by="test",
+        )
+
+        # __post_init__ should coerce the Path to str
+        assert plan.file_path == "/path/to/file.py"
+        assert isinstance(plan.file_path, str)
+
+    def test_post_init_keeps_string_file_path(self) -> None:
+        """Test __post_init__ does not modify string file_path."""
+        plan = FixPlan(
+            file_path="/already/a/string.py",
+            issue_type="COMPLEXITY",
+            changes=[],
+            rationale="test",
+            risk_level="low",
+            validated_by="test",
+        )
+
+        # String file_path should remain unchanged
+        assert plan.file_path == "/already/a/string.py"
+        assert isinstance(plan.file_path, str)
+
+    def test_total_lines_changed_no_changes(self) -> None:
+        """Test total_lines_changed returns 0 when no changes."""
+        plan = FixPlan(
+            file_path="/path/to/file.py",
+            issue_type="TEST",
+            changes=[],
+            rationale="test",
+            risk_level="low",
+            validated_by="test",
+        )
+
+        assert plan.total_lines_changed() == 0
+
+    def test_total_lines_changed_negative_diff(self) -> None:
+        """Test total_lines_changed handles new < old (uses abs)."""
+        # old has 5 newlines, new has 2 newlines -> |2-5| = 3
+        change = ChangeSpec(
+            line_range=(1, 10),
+            old_code="a\nb\nc\nd\ne\n",
+            new_code="x\ny\n",
+            reason="test",
+        )
+
+        plan = FixPlan(
+            file_path="/path/to/file.py",
+            issue_type="TEST",
+            changes=[change],
+            rationale="test",
+            risk_level="low",
+            validated_by="test",
+        )
+
+        assert plan.total_lines_changed() == 3
+
+    def test_total_lines_changed_positive_diff(self) -> None:
+        """Test total_lines_changed handles new > old."""
+        # old has 0 newlines, new has 4 newlines -> |4-0| = 4
+        change = ChangeSpec(
+            line_range=(1, 1),
+            old_code="single line",
+            new_code="a\nb\nc\nd\n",
+            reason="test",
+        )
+
+        plan = FixPlan(
+            file_path="/path/to/file.py",
+            issue_type="TEST",
+            changes=[change],
+            rationale="test",
+            risk_level="low",
+            validated_by="test",
+        )
+
+        assert plan.total_lines_changed() == 4
+
+    def test_total_lines_changed_multiple_changes(self) -> None:
+        """Test total_lines_changed accumulates across multiple changes."""
+        changes = [
+            # |3-1| = 2
+            ChangeSpec(
+                line_range=(1, 5),
+                old_code="a\n",
+                new_code="a\nb\nc\n",
+                reason="first",
+            ),
+            # |0-2| = 2
+            ChangeSpec(
+                line_range=(10, 15),
+                old_code="hello",
+                new_code="x\ny\n",
+                reason="second",
+            ),
+            # |1-1| = 0 (equal newlines)
+            ChangeSpec(
+                line_range=(20, 25),
+                old_code="x\n",
+                new_code="y\n",
+                reason="third",
+            ),
+        ]
+
+        plan = FixPlan(
+            file_path="/path/to/file.py",
+            issue_type="TEST",
+            changes=changes,
+            rationale="test",
+            risk_level="low",
+            validated_by="test",
+        )
+
+        assert plan.total_lines_changed() == 4
+
+    def test_is_high_risk_medium(self) -> None:
+        """Test is_high_risk returns False for medium risk."""
+        change = ChangeSpec(line_range=(1, 1), old_code="old", new_code="new", reason="test")
+        plan = FixPlan(
+            file_path="/path/to/file.py",
+            issue_type="TEST",
+            changes=[change],
+            rationale="test",
+            risk_level="medium",
+            validated_by="test",
+        )
+
+        assert plan.is_high_risk() is False
+
+    def test_create_fix_plan_with_defaults(self) -> None:
+        """Test create_fix_plan factory uses default values."""
+        plan = create_fix_plan(
+            file_path="/path/to/file.py",
+            issue_type="COMPLEXITY",
+            changes=[],
+            rationale="test",
+        )
+
+        # Defaults: risk_level="low", validated_by="system"
+        assert plan.risk_level == "low"
+        assert plan.validated_by == "system"
+        # Defaults: issue_message="", issue_stage="", issue_details=[]
+        assert plan.issue_message == ""
+        assert plan.issue_stage == ""
+        assert plan.issue_details == []
+
+    def test_create_fix_plan_with_none_issue_details(self) -> None:
+        """Test create_fix_plan coerces None issue_details to empty list."""
+        plan = create_fix_plan(
+            file_path="/path/to/file.py",
+            issue_type="COMPLEXITY",
+            changes=[],
+            rationale="test",
+            issue_details=None,
+        )
+
+        assert plan.issue_details == []
+
+    def test_create_fix_plan_with_medium_risk(self) -> None:
+        """Test create_fix_plan accepts medium risk_level."""
+        plan = create_fix_plan(
+            file_path="/path/to/file.py",
+            issue_type="COMPLEXITY",
+            changes=[],
+            rationale="test",
+            risk_level="medium",
+        )
+
+        assert plan.risk_level == "medium"
+        assert plan.is_high_risk() is False
+
+    def test_create_fix_plan_with_high_risk(self) -> None:
+        """Test create_fix_plan accepts high risk_level."""
+        plan = create_fix_plan(
+            file_path="/path/to/file.py",
+            issue_type="COMPLEXITY",
+            changes=[],
+            rationale="test",
+            risk_level="high",
+        )
+
+        assert plan.risk_level == "high"
+        assert plan.is_high_risk() is True
+
+    def test_change_spec_equality(self) -> None:
+        """Test ChangeSpec equality (dataclass-generated __eq__)."""
+        a = ChangeSpec(line_range=(1, 5), old_code="old", new_code="new", reason="r")
+        b = ChangeSpec(line_range=(1, 5), old_code="old", new_code="new", reason="r")
+        c = ChangeSpec(line_range=(1, 5), old_code="old", new_code="new", reason="different")
+
+        assert a == b
+        assert a != c
+
+    def test_fix_plan_equality(self) -> None:
+        """Test FixPlan equality (dataclass-generated __eq__)."""
+        change = ChangeSpec(line_range=(1, 1), old_code="old", new_code="new", reason="r")
+        a = FixPlan(
+            file_path="/p.py",
+            issue_type="T",
+            changes=[change],
+            rationale="r",
+            risk_level="low",
+            validated_by="v",
+        )
+        b = FixPlan(
+            file_path="/p.py",
+            issue_type="T",
+            changes=[change],
+            rationale="r",
+            risk_level="low",
+            validated_by="v",
+        )
+
+        assert a == b
 
     def test_is_acceptable_risk(self) -> None:
         """Test acceptable risk levels.
