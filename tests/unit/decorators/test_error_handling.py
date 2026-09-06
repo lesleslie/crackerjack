@@ -785,17 +785,6 @@ class TestValidateArgs:
         with pytest.raises(ValidationError):
             f(1, 2)  # type: ignore[arg-type]
 
-    @pytest.mark.xfail(
-        reason=(
-            "validate_args(type_check=True) is bugged: production code calls "
-            "inspect.signature(func) without eval_str=True, so when the "
-            "decorated function lives in a module using "
-            "`from __future__ import annotations`, isinstance() raises "
-            "TypeError instead of the expected ValidationError. Coverage is "
-            "still recorded for the branch."
-        ),
-        strict=False,
-    )
     def test_type_check_against_signature(self) -> None:
         @validate_args(type_check=True)
         def f(x: int) -> int:

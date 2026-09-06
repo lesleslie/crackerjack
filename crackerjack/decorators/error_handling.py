@@ -450,7 +450,12 @@ def validate_args(
     _run_validators = _create_validator_runner(validator_map)
 
     def decorator(func: t.Callable[..., t.Any]) -> t.Callable[..., t.Any]:
-        signature = inspect.signature(func)
+        # eval_str=True resolves string annotations (PEP 563) so that
+        # modules using `from __future__ import annotations` work the
+        # same as modules without. Without it, parameter.annotation
+        # is the literal string "int" and `isinstance(value, "int")`
+        # raises TypeError instead of the expected ValidationError.
+        signature = inspect.signature(func, eval_str=True)
 
         def _validate(bound: inspect.BoundArguments) -> None:
             if type_check:
