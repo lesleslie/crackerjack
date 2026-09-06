@@ -5,8 +5,16 @@ from pathlib import Path
 
 import pytest
 
+from crackerjack.config.settings import HookSettings
 from crackerjack.config.tool_commands import (
+    _DEFAULT_CWD_STR,
+    _SKYLOS_EXCLUDE_FOLDERS,
+    _build_skylos_command,
+    _build_targets,
     _build_tool_commands,
+    _detect_package_name_cached,
+    _preferred_binary_command,
+    _preferred_binary_command_with_report,
     get_tool_command,
     is_native_tool,
     list_available_tools,
@@ -643,3 +651,527 @@ class TestRegistryConsistency:
         assert len(native) == 9
         assert len(third_party) == 20
         assert len(TOOL_COMMANDS) == len(custom) + len(native) + len(third_party)
+
+
+class TestDetectPackageNameCached:
+    """Coverage for _detect_package_name_cached directory fallback paths.
+
+    The pyproject.toml branch is exercised at import time by the existing
+    tests; these tests target the fall-through paths (29-41) that run when
+    pyproject.toml is missing or lacks a [project].name.
+    """
+
+    def test_reads_project_name_from_pyproject(self, tmp_path: Path) -> None:
+        pkg = tmp_path / "proj"
+        pkg.mkdir()
+        (pkg / "pyproject.toml").write_text('[project]\nname = "my-pkg"\n')
+        assert _detect_package_name_cached(str(pkg)) == "my_pkg"
+
+    def test_replaces_hyphens_with_underscores(self, tmp_path: Path) -> None:
+        pkg = tmp_path / "proj"
+        pkg.mkdir()
+        (pkg / "pyproject.toml").write_text('[project]\nname = "kebab-name"\n')
+        assert _detect_package_name_cached(str(pkg)) == "kebab_name"
+
+    def test_falls_back_to_subdir_when_pyproject_missing(
+        self, tmp_path: Path
+    ) -> None:
+        pkg = tmp_path / "root"
+        pkg.mkdir()
+        sub = pkg / "core"
+        sub.mkdir()
+        (sub / "__init__.py").write_text("")
+        assert _detect_package_name_cached(str(pkg)) == "core"
+
+    def test_falls_back_when_pyproject_lacks_project_name(
+        self, tmp_path: Path
+    ) -> None:
+        pkg = tmp_path / "root"
+        pkg.mkdir()
+        (pkg / "pyproject.toml").write_text('[tool.black]\nline-length = 100\n')
+        sub = pkg / "core"
+        sub.mkdir()
+        (sub / "__init__.py").write_text("")
+        assert _detect_package_name_cached(str(pkg)) == "core"
+
+    def test_falls_back_when_pyproject_has_empty_project_section(
+        self, tmp_path: Path
+    ) -> None:
+        pkg = tmp_path / "root"
+        pkg.mkdir()
+        (pkg / "pyproject.toml").write_text('[project]\n')
+        sub = pkg / "core"
+        sub.mkdir()
+        (sub / "__init__.py").write_text("")
+        assert _detect_package_name_cached(str(pkg)) == "core"
+
+    def test_skips_excluded_subdirs(self, tmp_path: Path) -> None:
+        pkg = tmp_path / "root"
+        pkg.mkdir()
+        # The function's inline exclusion set only contains these six names
+        for excluded in (
+            "tests",
+            "docs",
+            ".venv",
+            "venv",
+            "build",
+            "dist",
+        ):
+            d = pkg / excluded
+            d.mkdir()
+            (d / "__init__.py").write_text("")
+        real = pkg / "real_pkg"
+        real.mkdir()
+        (real / "__init__.py").write_text("")
+        assert _detect_package_name_cached(str(pkg)) == "real_pkg"
+
+    def test_skips_hidden_directories(self, tmp_path: Path) -> None:
+        pkg = tmp_path / "root"
+        pkg.mkdir()
+        hidden = pkg / ".git"
+        hidden.mkdir()
+        (hidden / "__init__.py").write_text("")
+        real = pkg / "main"
+        real.mkdir()
+        (real / "__init__.py").write_text("")
+        assert _detect_package_name_cached(str(pkg)) == "main"
+
+    def test_skips_files_not_directories(self, tmp_path: Path) -> None:
+        pkg = tmp_path / "root"
+        pkg.mkdir()
+        # Plain file with init-like contents should not be picked up
+        (pkg / "not_a_dir.py").write_text("")
+        real = pkg / "main"
+        real.mkdir()
+        (real / "__init__.py").write_text("")
+        assert _detect_package_name_cached(str(pkg)) == "main"
+
+    def test_skips_only_files_no_subdirs(self, tmp_path: Path) -> None:
+        """Deterministically triggers the file-skip branch (line 35)."""
+        pkg = tmp_path / "root"
+        pkg.mkdir()
+        # No subdirectories — only files, so iterdir() must skip each via line 35
+        (pkg / "file1.py").write_text("")
+        (pkg / "file2.txt").write_text("")
+        (pkg / "file3.md").write_text("")
+        # Falls through to root dir name since no subdir matched
+        assert _detect_package_name_cached(str(pkg)) == "root"
+
+    def test_subdir_without_init_skipped(self, tmp_path: Path) -> None:
+        pkg = tmp_path / "root"
+        pkg.mkdir()
+        empty_dir = pkg / "empty"
+        empty_dir.mkdir()
+        # no __init__.py
+        real = pkg / "main"
+        real.mkdir()
+        (real / "__init__.py").write_text("")
+        assert _detect_package_name_cached(str(pkg)) == "main"
+
+    def test_returns_root_dir_name_when_nothing_matches(
+        self, tmp_path: Path
+    ) -> None:
+        pkg = tmp_path / "my-root"
+        pkg.mkdir()
+        # No pyproject.toml, no subdirs
+        assert _detect_package_name_cached(str(pkg)) == "my_root"
+
+    def test_returns_root_dir_name_when_only_excluded_subdirs(
+        self, tmp_path: Path
+    ) -> None:
+        pkg = tmp_path / "my-root"
+        pkg.mkdir()
+        for excluded in ("tests", "docs", ".venv"):
+            d = pkg / excluded
+            d.mkdir()
+            (d / "__init__.py").write_text("")
+        assert _detect_package_name_cached(str(pkg)) == "my_root"
+
+    def test_lru_cache_returns_same_value(self, tmp_path: Path) -> None:
+        pkg = tmp_path / "cached"
+        pkg.mkdir()
+        (pkg / "pyproject.toml").write_text('[project]\nname = "cached-proj"\n')
+        first = _detect_package_name_cached(str(pkg))
+        second = _detect_package_name_cached(str(pkg))
+        assert first == second == "cached_proj"
+
+    def test_handles_invalid_toml_gracefully(self, tmp_path: Path) -> None:
+        """Invalid TOML should not raise — falls through to dir scan."""
+        pkg = tmp_path / "root"
+        pkg.mkdir()
+        (pkg / "pyproject.toml").write_text("not valid toml [[[")
+        sub = pkg / "core"
+        sub.mkdir()
+        (sub / "__init__.py").write_text("")
+        assert _detect_package_name_cached(str(pkg)) == "core"
+
+
+class TestBuildSkylosCommand:
+    """Coverage for _build_skylos_command uv-run fallback (line 71)."""
+
+    def test_uses_venv_binary_when_present(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        venv_bin = tmp_path / ".venv" / "bin"
+        venv_bin.mkdir(parents=True)
+        (venv_bin / "skylos").write_text("#!/bin/sh\n")
+        monkeypatch.chdir(tmp_path)
+        cmd = _build_skylos_command("myapp")
+        assert cmd[0] == str(venv_bin / "skylos")
+        assert "./myapp" in cmd
+
+    def test_falls_back_to_uv_run_when_venv_missing(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.chdir(tmp_path)  # No .venv at all
+        cmd = _build_skylos_command("myapp")
+        assert cmd[:3] == ["uv", "run", "skylos"]
+
+    def test_includes_all_exclude_folders(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.chdir(tmp_path)
+        cmd = _build_skylos_command("myapp")
+        for folder in _SKYLOS_EXCLUDE_FOLDERS:
+            assert folder in cmd, f"missing --exclude-folder {folder}"
+        # Each folder appears with its flag prefix
+        exclude_idx = cmd.index("--exclude-folder")
+        assert cmd[exclude_idx + 1] == _SKYLOS_EXCLUDE_FOLDERS[0]
+
+    def test_includes_confidence_and_limit(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.chdir(tmp_path)
+        cmd = _build_skylos_command("myapp")
+        idx = cmd.index("--confidence")
+        assert cmd[idx + 1] == "70"
+        idx = cmd.index("--limit")
+        assert cmd[idx + 1] == "50"
+
+    def test_diff_base_uses_env_var_when_set(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.setenv("PRE_COMMIT_FROM_REF", "origin/main")
+        cmd = _build_skylos_command("myapp")
+        idx = cmd.index("--diff-base")
+        assert cmd[idx + 1] == "origin/main"
+
+    def test_diff_base_defaults_to_head_tilde_one(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.delenv("PRE_COMMIT_FROM_REF", raising=False)
+        cmd = _build_skylos_command("myapp")
+        idx = cmd.index("--diff-base")
+        assert cmd[idx + 1] == "HEAD~1"
+
+    def test_appends_package_target(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.chdir(tmp_path)
+        cmd = _build_skylos_command("myapp")
+        assert cmd[-1] == "./myapp"
+
+
+class TestPreferredBinaryCommand:
+    """Coverage for _preferred_binary_command (line 110 bare-name fallback)."""
+
+    def test_uses_venv_path_when_present(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        venv_bin = tmp_path / ".venv" / "bin"
+        venv_bin.mkdir(parents=True)
+        tool = venv_bin / "mytool"
+        tool.write_text("#!/bin/sh\n")
+        monkeypatch.chdir(tmp_path)
+        cmd = _preferred_binary_command("mytool", "a", "b")
+        assert cmd == [str(tool), "a", "b"]
+
+    def test_uses_shutil_which_when_no_venv(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.setattr(
+            "crackerjack.config.tool_commands.shutil.which",
+            lambda name: f"/usr/bin/{name}" if name == "mytool" else None,
+        )
+        cmd = _preferred_binary_command("mytool", "arg")
+        assert cmd == ["/usr/bin/mytool", "arg"]
+
+    def test_falls_back_to_bare_name_when_not_found(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.setattr(
+            "crackerjack.config.tool_commands.shutil.which",
+            lambda name: None,
+        )
+        cmd = _preferred_binary_command("mytool", "a", "b")
+        assert cmd == ["mytool", "a", "b"]
+
+    def test_returns_list_with_only_tool_name_when_no_args(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.setattr(
+            "crackerjack.config.tool_commands.shutil.which",
+            lambda name: None,
+        )
+        cmd = _preferred_binary_command("mytool")
+        assert cmd == ["mytool"]
+
+
+class TestPreferredBinaryCommandWithReport:
+    """Coverage for _preferred_binary_command_with_report (creates parent dir)."""
+
+    def test_creates_parent_dir_when_missing(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.setattr(
+            "crackerjack.config.tool_commands.shutil.which",
+            lambda name: None,
+        )
+        report = tmp_path / "cache" / "subdir" / "out.json"
+        assert not report.parent.exists()
+        _preferred_binary_command_with_report("mytool", str(report))
+        assert report.parent.exists()
+
+    def test_idempotent_when_parent_exists(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.setattr(
+            "crackerjack.config.tool_commands.shutil.which",
+            lambda name: None,
+        )
+        report = tmp_path / "existing" / "out.json"
+        report.parent.mkdir()
+        # Should not raise even though dir already exists
+        cmd = _preferred_binary_command_with_report("mytool", str(report))
+        assert cmd == ["mytool"]
+
+    def test_creates_deeply_nested_dirs(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.setattr(
+            "crackerjack.config.tool_commands.shutil.which",
+            lambda name: None,
+        )
+        report = tmp_path / "a" / "b" / "c" / "d" / "report.json"
+        _preferred_binary_command_with_report("mytool", str(report))
+        assert report.parent.exists()
+
+
+class TestBuildTargetsHelper:
+    """Coverage for _build_targets canonical target list."""
+
+    def test_returns_canonical_targets(self) -> None:
+        assert _build_targets("myapp") == ["./myapp", "./scripts", "./examples"]
+
+    def test_distinct_per_package_name(self) -> None:
+        assert _build_targets("foo") != _build_targets("bar")
+
+    def test_contains_scripts_and_examples(self) -> None:
+        targets = _build_targets("anything")
+        assert "./scripts" in targets
+        assert "./examples" in targets
+
+    def test_package_target_uses_dot_slash_prefix(self) -> None:
+        targets = _build_targets("anything")
+        assert targets[0].startswith("./")
+
+
+class TestGetToolCommandPkgPath:
+    """Coverage for get_tool_command pkg_path branches (358-362)."""
+
+    def test_explicit_pkg_path_as_string(self, tmp_path: Path) -> None:
+        pkg = tmp_path / "altpkg"
+        pkg.mkdir()
+        (pkg / "pyproject.toml").write_text('[project]\nname = "alt-pkg"\n')
+        cmd = get_tool_command("ruff-check", pkg_path=str(pkg))
+        assert isinstance(cmd, list)
+        # The command should target alt-pkg
+        assert "./alt_pkg" in cmd
+
+    def test_explicit_pkg_path_as_path(self, tmp_path: Path) -> None:
+        pkg = tmp_path / "pathpkg"
+        pkg.mkdir()
+        (pkg / "pyproject.toml").write_text('[project]\nname = "path-pkg"\n')
+        cmd = get_tool_command("ruff-check", pkg_path=pkg)
+        assert "./path_pkg" in cmd
+
+    def test_pkg_path_matching_default_cwd_uses_default(self) -> None:
+        """Passing Path(_DEFAULT_CWD_STR) should match the default branch."""
+        cmd = get_tool_command("ruff-check", pkg_path=Path(_DEFAULT_CWD_STR))
+        assert isinstance(cmd, list)
+        assert len(cmd) > 0
+
+    def test_pkg_path_default_cwd_string_uses_default(self) -> None:
+        """Passing _DEFAULT_CWD_STR as string should match default branch."""
+        cmd = get_tool_command("ruff-check", pkg_path=_DEFAULT_CWD_STR)
+        assert isinstance(cmd, list)
+
+    def test_explicit_pkg_path_skylos_uses_target_package(
+        self, tmp_path: Path
+    ) -> None:
+        pkg = tmp_path / "skylospkg"
+        pkg.mkdir()
+        (pkg / "pyproject.toml").write_text('[project]\nname = "skylos-pkg"\n')
+        cmd = get_tool_command("skylos", pkg_path=pkg)
+        assert "./skylos_pkg" in cmd
+
+
+class TestGetToolCommandVerbose:
+    """Coverage for get_tool_command ty --verbose injection (line 384)."""
+
+    def test_verbose_true_appends_to_ty(self) -> None:
+        cmd = get_tool_command("ty", verbose=True)
+        assert cmd[-1] == "--verbose"
+
+    def test_verbose_false_omits_for_ty(self) -> None:
+        cmd = get_tool_command("ty", verbose=False)
+        assert "--verbose" not in cmd
+
+    def test_verbose_default_omits_for_ty(self) -> None:
+        cmd = get_tool_command("ty")
+        assert "--verbose" not in cmd
+
+    def test_verbose_true_omits_for_non_ty(self) -> None:
+        cmd = get_tool_command("ruff-check", verbose=True)
+        assert "--verbose" not in cmd
+
+    def test_verbose_true_omits_for_zuban(self) -> None:
+        cmd = get_tool_command("zuban", verbose=True)
+        assert "--verbose" not in cmd
+
+    def test_verbose_true_omits_for_bandit(self) -> None:
+        cmd = get_tool_command("bandit", verbose=True)
+        assert "--verbose" not in cmd
+
+    def test_verbose_true_with_explicit_pkg_path(
+        self, tmp_path: Path
+    ) -> None:
+        pkg = tmp_path / "verbosepkg"
+        pkg.mkdir()
+        (pkg / "pyproject.toml").write_text('[project]\nname = "verbose-pkg"\n')
+        cmd = get_tool_command("ty", pkg_path=pkg, verbose=True)
+        assert cmd[-1] == "--verbose"
+
+
+class TestGetToolCommandUnsafeFixes:
+    """Coverage for get_tool_command --unsafe-fixes injection (378-381)."""
+
+    def test_unsafe_fixes_injected_after_fix_when_enabled(self) -> None:
+        settings = HookSettings(ruff_unsafe_fixes=True)
+        cmd = get_tool_command("ruff-check", settings=settings)
+        fix_idx = cmd.index("--fix")
+        assert cmd[fix_idx + 1] == "--unsafe-fixes"
+
+    def test_unsafe_fixes_not_injected_when_disabled(self) -> None:
+        settings = HookSettings(ruff_unsafe_fixes=False)
+        cmd = get_tool_command("ruff-check", settings=settings)
+        assert "--unsafe-fixes" not in cmd
+
+    def test_unsafe_fixes_not_injected_when_settings_none(self) -> None:
+        cmd = get_tool_command("ruff-check", settings=None)
+        assert "--unsafe-fixes" not in cmd
+
+    def test_unsafe_fixes_not_injected_for_bandit(self) -> None:
+        """Injection is keyed to ruff-check only."""
+        settings = HookSettings(ruff_unsafe_fixes=True)
+        cmd = get_tool_command("bandit", settings=settings)
+        assert "--unsafe-fixes" not in cmd
+
+    def test_unsafe_fixes_not_injected_for_codespell(self) -> None:
+        settings = HookSettings(ruff_unsafe_fixes=True)
+        cmd = get_tool_command("codespell", settings=settings)
+        assert "--unsafe-fixes" not in cmd
+
+    def test_unsafe_fixes_not_injected_for_ty(self) -> None:
+        settings = HookSettings(ruff_unsafe_fixes=True)
+        cmd = get_tool_command("ty", settings=settings)
+        assert "--unsafe-fixes" not in cmd
+
+    def test_unsafe_fixes_returns_copy(self) -> None:
+        """Ensure mutation of returned cmd does not affect subsequent calls."""
+        settings = HookSettings(ruff_unsafe_fixes=True)
+        cmd1 = get_tool_command("ruff-check", settings=settings)
+        cmd1.append("--user-extra")
+        cmd2 = get_tool_command("ruff-check", settings=settings)
+        assert "--user-extra" not in cmd2
+
+    def test_unsafe_fixes_appends_when_fix_absent(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """When --fix is missing from the cached command, --unsafe-fixes is appended (line 381).
+
+        Production ruff-check always includes --fix, so this branch is
+        defensive. Monkeypatch the cached commands to simulate a command
+        variant without --fix.
+        """
+        import crackerjack.config.tool_commands as tc
+
+        # Build a modified ruff-check command without --fix
+        original = list(tc._DEFAULT_COMMANDS["ruff-check"])
+        assert "--fix" in original  # sanity check the prod command
+        modified = tuple(arg for arg in original if arg != "--fix")
+        assert "--fix" not in modified
+
+        # Patch the default commands with the modified version
+        patched = dict(tc._DEFAULT_COMMANDS)
+        patched["ruff-check"] = modified
+        monkeypatch.setattr(tc, "_DEFAULT_COMMANDS", patched)
+
+        settings = HookSettings(ruff_unsafe_fixes=True)
+        cmd = get_tool_command("ruff-check", settings=settings)
+        assert "--unsafe-fixes" in cmd
+        # And not double-inserted after --fix (since --fix isn't there)
+        assert cmd.count("--unsafe-fixes") == 1
+
+
+class TestSkylosExcludeFoldersConstant:
+    """Coverage for the _SKYLOS_EXCLUDE_FOLDERS module constant."""
+
+    def test_contains_expected_entries(self) -> None:
+        expected = {
+            "tests",
+            "docs",
+            "scripts",
+            "examples",
+            "archive",
+            "assets",
+            "templates",
+            "tools",
+            "worktrees",
+            "settings",
+            ".venv",
+            "venv",
+            "build",
+            "dist",
+            "htmlcov",
+            "logs",
+            "node_modules",
+        }
+        assert expected.issubset(set(_SKYLOS_EXCLUDE_FOLDERS))
+
+    def test_is_list(self) -> None:
+        assert isinstance(_SKYLOS_EXCLUDE_FOLDERS, list)
+
+    def test_all_strings(self) -> None:
+        assert all(isinstance(f, str) for f in _SKYLOS_EXCLUDE_FOLDERS)
+
+
+class TestDefaultCwdStr:
+    """Coverage for the _DEFAULT_CWD_STR module constant."""
+
+    def test_is_string(self) -> None:
+        assert isinstance(_DEFAULT_CWD_STR, str)
+
+    def test_matches_current_directory(self) -> None:
+        assert _DEFAULT_CWD_STR == str(Path.cwd())
+
+    def test_is_absolute_path(self) -> None:
+        assert Path(_DEFAULT_CWD_STR).is_absolute()
