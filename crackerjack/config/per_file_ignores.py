@@ -1,6 +1,6 @@
 """Universal per-file-ignores injected via ruff's --config='<inline TOML>' flag.
 
-The starter pack silences ecosystem-wide patterns that fire too noisilyin admin/demo code to be worth enforcing repo-by-repo. Per-repo rules(intentionally) stay OUT of this module — they're addressed per-repo.
+The starter pack silences ecosystem-wide patterns that fire too noisily in admin/demo code to be worth enforcing repo-by-repo. Per-repo rules (intentionally) stay OUT of this module — they're addressed per-repo.
 
 The returned string is an inline TOML value (an inline-table expression)
 used as the right-hand side of `lint.extend-per-file-ignores = <value>`.

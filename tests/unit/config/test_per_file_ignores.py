@@ -43,6 +43,8 @@ class TestUniversalPerFileIgnores:
         """TC003 catches real runtime bugs. Must NOT be silenced."""
         for rules in UNIVERSAL_PER_FILE_IGNORES.values():
             assert "TC003" not in rules
+            # Legacy alias (kept in older ruff versions / some forks).
+            assert "TCH003" not in rules
 
     def test_underscore_prefixed_scripts_get_n999(self) -> None:
         assert UNIVERSAL_PER_FILE_IGNORES["scripts/_*.py"] == ["N999"]
@@ -132,6 +134,30 @@ class TestRuffAcceptsInlineConfig:
         sample_dir.mkdir()
         sample = sample_dir / "sample.py"
         sample.write_text("#!/usr/bin/env python3\nprint('hello')\n")
+
+        # NEGATIVE CONTROL: Without --config, EXE001 must fire.
+        # This proves the test would catch a regression where the inline
+        # config silently stops silencing — the prior assert (returncode == 0)
+        # could pass vacuously if EXE001 was renamed/removed from ruff.
+        result_no_override = subprocess.run(
+            [
+                "ruff",
+                "check",
+                "--no-fix",
+                "--select",
+                "EXE001",
+                str(sample_dir),
+            ],
+            capture_output=True,
+            text=True,
+            cwd=tmp_path,
+            check=False,
+        )
+        assert result_no_override.returncode != 0, (
+            "Without --config, EXE001 must fire — proves the test would catch "
+            "a regression where the inline config silently stops silencing."
+        )
+
         result = subprocess.run(
             [
                 "ruff",
@@ -189,3 +215,35 @@ class TestRuffAcceptsInlineConfig:
             f"inline --config replaced consumer auto-discovery:\n"
             f"stdout={result.stdout}\nstderr={result.stderr}"
         )
+
+        # POSITIVE CONTROL: Without consumer pyproject, B007 must fire.
+        # This proves the test would catch an auto-discovery loss regression —
+        # the prior assert could pass vacuously if B007 never fired for any
+        # reason (rule renamed, etc.). Rename the pyproject out of the way and
+        # re-run; ruff should now report B007 on loop.py (crackerjack's
+        # override does NOT include B007).
+        backup = tmp_path / "pyproject.toml.bak"
+        (tmp_path / "pyproject.toml").rename(backup)
+        try:
+            result_no_override = subprocess.run(
+                [
+                    "ruff",
+                    "check",
+                    "--no-fix",
+                    "--select",
+                    "B007",
+                    "--config",
+                    f"lint.extend-per-file-ignores = {inline}",
+                    str(scripts_dir),
+                ],
+                capture_output=True,
+                text=True,
+                cwd=tmp_path,
+                check=False,
+            )
+            assert result_no_override.returncode != 0, (
+                "Without consumer pyproject, B007 should fire — "
+                "auto-discovery loss would not be detected."
+            )
+        finally:
+            backup.rename(tmp_path / "pyproject.toml")
