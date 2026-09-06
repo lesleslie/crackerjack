@@ -318,12 +318,12 @@ class PublishManagerImpl:
         resolved_type = self._resolve_bump_type(recommendation, version_type)
         return self._perform_bump(current_version, resolved_type)
 
-    def _resolve_bump_type(self, recommendation: object, version_type: str) -> str:
+    def _resolve_bump_type(self, recommendation: t.Any, version_type: str) -> str:
         """Apply AI recommendation override or interactive prompt.
 
         MAJOR is a human decision — never auto-apply. (Audit 2026-09-03.)
         """
-        if recommendation and version_type != "interactive":
+        if recommendation is not None and version_type != "interactive":
             self._display_version_analysis(recommendation)
             if version_type == "auto":
                 if recommendation.bump_type.value == "major":
