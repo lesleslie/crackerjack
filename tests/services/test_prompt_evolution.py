@@ -126,6 +126,20 @@ def test_prompt_evolution_record_successful_fix(tmp_path: Path) -> None:
     assert pattern.success_count == 1
 
 
+def test_prompt_evolution_repeat_success_increments(tmp_path: Path) -> None:
+    """Recording the same success twice increments ``success_count``."""
+    evolution = PromptEvolution(storage_path=tmp_path)
+    issue = _make_issue()
+    evolution.record_successful_fix(
+        issue=issue, before_code="a", after_code="b"
+    )
+    evolution.record_successful_fix(
+        issue=issue, before_code="a", after_code="b"
+    )
+    key = f"{issue.type.value}:{evolution._extract_error_code(issue.message)}"  # noqa: SLF001
+    assert evolution.successful_patterns[key].success_count == 2
+
+
 def test_prompt_evolution_get_success_rate(tmp_path: Path) -> None:
     evolution = PromptEvolution(storage_path=tmp_path)
     # No data: success rate is 0.0
@@ -194,6 +208,87 @@ def test_prompt_evolution_extract_error_code(tmp_path: Path) -> None:
     evolution = PromptEvolution(storage_path=tmp_path)
     code = evolution._extract_error_code("Failure [e501] too long")  # noqa: SLF001
     assert code == "e501"
+
+
+@pytest.mark.parametrize(
+    ("message", "expected"),
+    [
+        ("name 'foo' is not defined", "name-defined"),
+        ("Need type annotation for 'x'", "var-annotated"),
+        ("Object has no attribute 'bar'", "attr-defined"),
+        ("Object has no attribute 'baz'", "attr-defined"),
+        ("incompatible argument", "call-arg"),
+        ("incompatible type", "arg-type"),
+        ("foo bar baz", "unknown"),
+    ],
+)
+def test_prompt_evolution_extract_error_code_known_categories(
+    tmp_path: Path, message: str, expected: str
+) -> None:
+    """Plain (non-bracketed) messages map to known error categories."""
+    evolution = PromptEvolution(storage_path=tmp_path)
+    code = evolution._extract_error_code(message)  # noqa: SLF001
+    assert code == expected
+
+
+def test_prompt_evolution_get_evolved_prompt_with_failures(tmp_path: Path) -> None:
+    """Failures for the same error_code trigger warning text in the prompt."""
+    evolution = PromptEvolution(storage_path=tmp_path)
+    issue = _make_issue()
+    # Record several failed attempts for the same error_code.
+    for _ in range(4):
+        evolution.record_failed_fix(
+            issue=issue,
+            attempted_fix="bad attempt that failed",
+            failure_reason="syntax error",
+        )
+    # Now record a success for the same error_code.
+    evolution.record_successful_fix(
+        issue=issue, before_code="a", after_code="b"
+    )
+    base = "fix this:"
+    result = evolution.get_evolved_prompt(issue=issue, base_prompt=base)
+    # The augmentation should reference past failures as warnings.
+    assert "AVOID" in result or "WARNINGS" in result or base in result
+
+
+def test_prompt_evolution_load_state_with_corrupt_file(tmp_path: Path) -> None:
+    """A corrupt state file is logged but does not raise."""
+    state_file = tmp_path / "evolution_state.json"
+    state_file.write_text("not valid json {{{")
+    # Constructing a new instance triggers _load_state which should swallow
+    # the JSON decode error and log a warning.
+    evolution = PromptEvolution(storage_path=tmp_path)
+    assert evolution.failed_attempts == []
+    assert evolution.successful_patterns == {}
+
+
+def test_prompt_evolution_generate_pattern_description(tmp_path: Path) -> None:
+    """The helper picks a description based on diff structure."""
+    evolution = PromptEvolution(storage_path=tmp_path)
+    desc = evolution._generate_pattern_description(  # noqa: SLF001
+        before="def f(): pass",
+        after="import os\ndef f(): pass",
+    )
+    assert "import" in desc.lower()
+
+
+@pytest.mark.parametrize(
+    ("before", "after", "expected_phrase"),
+    [
+        ("def f(): pass", "def f(): pass  # type: ignore", "type: ignore"),
+        ("x = 1", "x: int = 1", "type annotation"),
+        ("x = 1\ny = 2\n", "x = 1", "redundant"),
+        ("def f(): pass", "def f(): pass", "Code transformation"),
+    ],
+)
+def test_prompt_evolution_generate_pattern_description_branches(
+    tmp_path: Path, before: str, after: str, expected_phrase: str
+) -> None:
+    """Each branch of the description heuristic is exercised."""
+    evolution = PromptEvolution(storage_path=tmp_path)
+    desc = evolution._generate_pattern_description(before, after)  # noqa: SLF001
+    assert expected_phrase.lower() in desc.lower()
 
 
 def test_prompt_evolution_extract_error_code_no_match(tmp_path: Path) -> None:

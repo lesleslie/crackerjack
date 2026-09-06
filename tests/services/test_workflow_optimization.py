@@ -231,11 +231,64 @@ def test_engine_velocity_score_calculation() -> None:
     assert isinstance(score, float)
 
 
-def test_engine_velocity_stability_calculation() -> None:
-    metrics = _make_metrics(git_commit_velocity=5.0)
+def test_engine_velocity_score_zero_when_no_data(tmp_path: Path) -> None:
+    """When ``velocity`` is None, the score is 0.0."""
+    from crackerjack.models.session_metrics import SessionMetrics
+
+    metrics = SessionMetrics(
+        session_id="s",
+        project_path=Path("/tmp/x"),
+        start_time=datetime.now(UTC),
+        git_commit_velocity=None,
+    )
+    engine = WorkflowOptimizationEngine(session_metrics=metrics)
+    score = engine._calculate_velocity_score(0.0)  # noqa: SLF001
+    assert score == 0.0
+
+
+def test_engine_velocity_trend_zero_when_no_data(tmp_path: Path) -> None:
+    """When velocity is None, trend is 0.0."""
+    from crackerjack.models.session_metrics import SessionMetrics
+
+    metrics = SessionMetrics(
+        session_id="s",
+        project_path=Path("/tmp/x"),
+        start_time=datetime.now(UTC),
+        git_commit_velocity=None,
+    )
+    engine = WorkflowOptimizationEngine(session_metrics=metrics)
+    trend = engine._calculate_velocity_trend(days_back=30)  # noqa: SLF001
+    assert trend == 0.0
+
+
+def test_engine_velocity_stability_zero_when_no_data(tmp_path: Path) -> None:
+    """When ``git_workflow_efficiency_score`` is None, stability is 0.0."""
+    from crackerjack.models.session_metrics import SessionMetrics
+
+    metrics = SessionMetrics(
+        session_id="s",
+        project_path=Path("/tmp/x"),
+        start_time=datetime.now(UTC),
+        git_workflow_efficiency_score=None,
+    )
     engine = WorkflowOptimizationEngine(session_metrics=metrics)
     stability = engine._calculate_velocity_stability()  # noqa: SLF001
-    assert isinstance(stability, float)
+    assert stability == 0.0
+
+
+def test_engine_velocity_stability_calculation() -> None:
+    """``_calculate_velocity_stability`` returns efficiency / 100 when present."""
+    from crackerjack.models.session_metrics import SessionMetrics
+
+    metrics = SessionMetrics(
+        session_id="s",
+        project_path=Path("/tmp/x"),
+        start_time=datetime.now(UTC),
+        git_workflow_efficiency_score=75.0,
+    )
+    engine = WorkflowOptimizationEngine(session_metrics=metrics)
+    stability = engine._calculate_velocity_stability()  # noqa: SLF001
+    assert stability == 0.75
 
 
 def test_engine_velocity_trend_calculation() -> None:
@@ -243,3 +296,116 @@ def test_engine_velocity_trend_calculation() -> None:
     engine = WorkflowOptimizationEngine(session_metrics=metrics)
     trend = engine._calculate_velocity_trend(days_back=30)  # noqa: SLF001
     assert isinstance(trend, float)
+
+
+def test_engine_identify_bottlenecks_low_efficiency(tmp_path: Path) -> None:
+    """Low efficiency_score produces a workflow-efficiency bottleneck."""
+    from crackerjack.models.session_metrics import SessionMetrics
+
+    metrics = SessionMetrics(
+        session_id="s",
+        project_path=Path("/tmp/x"),
+        start_time=datetime.now(UTC),
+        git_workflow_efficiency_score=40.0,
+    )
+    engine = WorkflowOptimizationEngine(session_metrics=metrics)
+    bottlenecks = engine.identify_bottlenecks(quality_metrics={})
+    assert any("efficiency" in b.lower() for b in bottlenecks)
+
+
+def test_engine_identify_bottlenecks_low_velocity(tmp_path: Path) -> None:
+    """Low commit velocity produces a velocity bottleneck."""
+    from crackerjack.models.session_metrics import SessionMetrics
+
+    metrics = SessionMetrics(
+        session_id="s",
+        project_path=Path("/tmp/x"),
+        start_time=datetime.now(UTC),
+        git_commit_velocity=0.5,
+    )
+    engine = WorkflowOptimizationEngine(session_metrics=metrics)
+    bottlenecks = engine.identify_bottlenecks(quality_metrics={})
+    assert any("velocity" in b.lower() for b in bottlenecks)
+
+
+def test_engine_identify_bottlenecks_high_ai_fixes(tmp_path: Path) -> None:
+    """More than 10 AI fixes produces an AI-dependency bottleneck."""
+    from crackerjack.models.session_metrics import SessionMetrics
+
+    metrics = SessionMetrics(
+        session_id="s",
+        project_path=Path("/tmp/x"),
+        start_time=datetime.now(UTC),
+        ai_fixes_applied=15,
+    )
+    engine = WorkflowOptimizationEngine(session_metrics=metrics)
+    bottlenecks = engine.identify_bottlenecks(quality_metrics={})
+    assert any("ai" in b.lower() for b in bottlenecks)
+
+
+def test_engine_recommendations_for_low_efficiency(tmp_path: Path) -> None:
+    """Low efficiency produces at least one recommendation."""
+    from crackerjack.models.session_metrics import SessionMetrics
+
+    metrics = SessionMetrics(
+        session_id="s",
+        project_path=Path("/tmp/x"),
+        start_time=datetime.now(UTC),
+        git_workflow_efficiency_score=30.0,
+    )
+    engine = WorkflowOptimizationEngine(session_metrics=metrics)
+    insights = engine.generate_insights()
+    assert any(
+        rec.priority == "critical" for rec in insights.recommendations
+    )
+
+
+def test_engine_recommendations_for_very_low_merge_rate(tmp_path: Path) -> None:
+    """Merge rate below 0.5 produces a critical recommendation."""
+    from crackerjack.models.session_metrics import SessionMetrics
+
+    metrics = SessionMetrics(
+        session_id="s",
+        project_path=Path("/tmp/x"),
+        start_time=datetime.now(UTC),
+        git_merge_success_rate=0.4,
+    )
+    engine = WorkflowOptimizationEngine(session_metrics=metrics)
+    insights = engine.generate_insights()
+    assert any(
+        rec.priority == "critical" for rec in insights.recommendations
+    )
+
+
+def test_engine_recommendations_for_moderate_efficiency(tmp_path: Path) -> None:
+    """Moderate efficiency (40-60) produces a high-priority recommendation."""
+    from crackerjack.models.session_metrics import SessionMetrics
+
+    metrics = SessionMetrics(
+        session_id="s",
+        project_path=Path("/tmp/x"),
+        start_time=datetime.now(UTC),
+        git_workflow_efficiency_score=50.0,
+    )
+    engine = WorkflowOptimizationEngine(session_metrics=metrics)
+    insights = engine.generate_insights()
+    assert any(
+        rec.priority == "high" for rec in insights.recommendations
+    )
+
+
+def test_engine_recommendations_for_good_efficiency(tmp_path: Path) -> None:
+    """Good efficiency (60-80) produces a medium-priority recommendation."""
+    from crackerjack.models.session_metrics import SessionMetrics
+
+    metrics = SessionMetrics(
+        session_id="s",
+        project_path=Path("/tmp/x"),
+        start_time=datetime.now(UTC),
+        git_workflow_efficiency_score=70.0,
+    )
+    engine = WorkflowOptimizationEngine(session_metrics=metrics)
+    insights = engine.generate_insights()
+    assert any(
+        rec.priority == "medium" for rec in insights.recommendations
+    )
