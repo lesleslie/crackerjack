@@ -168,16 +168,16 @@ class TestSymbolInSource:
             "class Settings:\n"
             "    eventbridge: 'EventBridgeSettings' = field(default_factory=dict)\n",
         )
-        assert _symbol_in_source("Settings.eventbridge", tmp_path) is True
+        assert _symbol_in_source("Settings.eventbridge", tmp_path)
 
     def test_module_level_assignment(self, tmp_path: Path) -> None:
         """Module-level `NAME = ...` still found (original pattern)."""
         src = tmp_path / "const.py"
         src.write_text("MY_CONSTANT = 42\n")
-        assert _symbol_in_source("const.MY_CONSTANT", tmp_path) is True
+        assert _symbol_in_source("const.MY_CONSTANT", tmp_path)
 
     def test_missing_symbol_returns_false(self, tmp_path: Path) -> None:
         """Missing symbol returns False (not raises)."""
         src = tmp_path / "settings.py"
         src.write_text("x: int = 1\n")
-        assert _symbol_in_source("Settings.nonexistent", tmp_path) is False
+        assert not _symbol_in_source("Settings.nonexistent", tmp_path)
