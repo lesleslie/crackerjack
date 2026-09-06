@@ -412,6 +412,19 @@ class TestCommandStructureValidation:
         assert "--venv" in creosote_cmd
         assert ".venv" in creosote_cmd
 
+    def test_codespell_targets_include_scripts_and_examples(self) -> None:
+        """codespell extends coverage to admin/demo code for typo detection."""
+        codespell_cmd = get_tool_command("codespell")
+        assert any("scripts" in arg for arg in codespell_cmd)
+        assert any("examples" in arg for arg in codespell_cmd)
+
+    def test_tc_refs_targets_include_scripts_and_examples(self) -> None:
+        """tc-refs (audit-type-checking-runtime-refs) covers TYPE_CHECKING
+        runtime usage in scripts/examples too."""
+        tc_refs_cmd = get_tool_command("tc-refs")
+        assert any("scripts" in arg for arg in tc_refs_cmd)
+        assert any("examples" in arg for arg in tc_refs_cmd)
+
 
 class TestIntegrationWithHooks:
     """Test integration points with hooks configuration."""

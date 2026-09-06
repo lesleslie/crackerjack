@@ -240,7 +240,10 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             "tests",
             f"./{package_name}",
         ),
-        "codespell": _python_module_command("crackerjack.tools.codespell_wrapper"),
+        "codespell": _python_module_command(
+            "crackerjack.tools.codespell_wrapper",
+            *_build_targets(package_name),
+        ),
         "ruff-check": _python_module_command(
             "ruff",
             "check",
@@ -263,7 +266,7 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
         "linkcheckmd": _python_module_command("crackerjack.tools.linkcheckmd_wrapper"),
         "tc-refs": _python_module_command(
             "crackerjack.tools.audit_type_checking_runtime_refs",
-            f"./{package_name}",
+            *_build_targets(package_name),
         ),
         "creosote": _preferred_binary_command(
             "creosote",
