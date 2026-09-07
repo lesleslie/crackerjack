@@ -1,5 +1,15 @@
 ______________________________________________________________________
 
+## [0.80.4] - 2026-09-07
+
+### Added
+
+- Bodai fleet .gitignore conformance check + canonical snippet
+
+### Fixed
+
+- gitignore-conformance: Refurb lint + restore template from mdformat
+
 ## [0.80.3] - 2026-09-06
 
 ### Testing
