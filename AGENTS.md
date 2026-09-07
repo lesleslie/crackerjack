@@ -15,7 +15,7 @@ ______________________________________________________________________
 
 - `uv sync --group dev`: install runtime, testing, and MCP dependencies into the active environment.
 - `/crackerjack:run --debug`: execute the end-to-end multi-agent workflow locally before running isolated modules.
-- `uv run python -m crackerjack run --help`: list available CLI entrypoints when adjusting invocation behavior.
+- `python -m crackerjack run --help`: list available CLI entrypoints when adjusting invocation behavior. **Always invoke crackerjack via `python -m crackerjack …` from this repo's root, not `uv run crackerjack …`.** `uv run` activates `crackerjack/.venv` and shadows worktree edits with whatever's installed there, so in-tree changes (templates/, package data, fresh commits) won't be exercised. `python -m` adds CWD to `sys.path[0]`, so `crackerjack` resolves to the worktree package — that's the code you just edited.
 - `uv run pytest --maxfail=1`: run the default test suite, stopping on the first failure during iteration.
 - `uv run ruff check --fix && uv run ruff format`: apply lint fixes and enforce formatting, including import ordering.
 
