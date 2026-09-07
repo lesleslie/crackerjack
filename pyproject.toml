@@ -152,6 +152,7 @@ snob = []
 include = [
     "crackerjack/**/*.py",
     "crackerjack/**/*.md",
+    "templates/GITIGNORE_BODAI.md",
 ]
 
 [tool.ruff]
