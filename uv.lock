@@ -703,7 +703,7 @@ wheels = [
 
 [[package]]
 name = "crackerjack"
-version = "0.80.2"
+version = "0.80.3"
 source = { editable = "." }
 dependencies = [
     { name = "aiofiles" },
@@ -972,7 +972,7 @@ wheels = [
 
 [[package]]
 name = "dhara"
-version = "0.19.5"
+version = "0.19.6"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiosqlite" },
@@ -987,9 +987,9 @@ dependencies = [
     { name = "uvicorn" },
     { name = "zstandard" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/01/20/6a5a391a5d3f481096ad439353609cfdb2381a7ea92024b7362d47cfc77d/dhara-0.19.5.tar.gz", hash = "sha256:7b9e0eabf692f9a51901a438d2112ea1b329245da6f758e41aa01ce10a6e3cbb", size = 1022473, upload-time = "2026-09-06T13:56:31.973Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/f7/88/d36210329405f9551fecfcca22f58161f5ecb7d6186b8acaba593557eec6/dhara-0.19.6.tar.gz", hash = "sha256:ac0d169e6c701e347d4d867b5ec69d5fd001d3fb1d19105ef8c17449e4d73d78", size = 1022593, upload-time = "2026-09-07T01:38:08.677Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/3e/70/d8c8825f0d841ff0f44c254b80820fe867771c9ed134447d33f14c8712da/dhara-0.19.5-py3-none-any.whl", hash = "sha256:d6cc25c94791569083774e3bd75f9d48d783c8715415f314cd14f5fffb93f2d7", size = 282628, upload-time = "2026-09-06T13:56:30.28Z" },
+    { url = "https://files.pythonhosted.org/packages/92/5e/b150b21af57dd71b8105d749a9b3f056e52a0b5c1b62dcb4ff9784a8390f/dhara-0.19.6-py3-none-any.whl", hash = "sha256:6c4b99cc651741e0961fa06a8f7ed7fbc7e44443c218dad1508b688c95f23133", size = 282618, upload-time = "2026-09-07T01:38:07.461Z" },
 ]
 
 [[package]]
@@ -3720,7 +3720,7 @@ wheels = [
 
 [[package]]
 name = "session-buddy"
-version = "0.25.6"
+version = "0.25.7"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiofiles" },
@@ -3744,9 +3744,9 @@ dependencies = [
     { name = "typer" },
     { name = "websockets" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/f0/67/09f924332e33d96308ec10100873cef134674d8699ea1b6ca56e04ac2256/session_buddy-0.25.6.tar.gz", hash = "sha256:d6f1444b4246d816791d227150ec659dedb0b5ac3b494c9038970cda9976d023", size = 5533175, upload-time = "2026-09-05T10:04:42.698Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/99/59/cc691325914cad3c035b4303bcaac308eeb849e8068a5822e1db46c18fec/session_buddy-0.25.7.tar.gz", hash = "sha256:1e09dffb53602a87c770250eea42e13081221665e01acd7a28a6fb98116384ee", size = 5527096, upload-time = "2026-09-07T00:29:45.732Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/31/2a/24d1f7358d7ab8f1e71bdcd4b2ddda0248f2605969094fcd7effb9894c37/session_buddy-0.25.6-py3-none-any.whl", hash = "sha256:b07236ffae271206cad3410d23a640ce0fd2179b10269369852403e6dcf36dd1", size = 1058553, upload-time = "2026-09-05T10:04:40.359Z" },
+    { url = "https://files.pythonhosted.org/packages/75/67/cb499298f8796dc987a2fa7227f711d3e23802e2bf82c1f8956e478a80a1/session_buddy-0.25.7-py3-none-any.whl", hash = "sha256:1763015d4e0c24e49bf0661e9cbef151aa5edf1e023039e02e790cf717f0b3aa", size = 1058555, upload-time = "2026-09-07T00:29:43.408Z" },
 ]
 
 [[package]]

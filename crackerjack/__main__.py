@@ -128,6 +128,7 @@ _safe_add_typer(app, "crackerjack.cli.hypothesis_lock_cli", "app", "hypothesis-l
 _safe_add_typer(app, "crackerjack.cli.audit_cli", "app", "audit")
 _safe_add_typer(app, "crackerjack.cli.skills_cli", "app", "skills")
 _safe_add_typer(app, "crackerjack.cli.coverage_ratchet_cli", "app", "coverage-ratchet")
+_safe_add_typer(app, "crackerjack.cli.gitignore_cli", "app", "gitignore")
 
 
 # --version / version subcommand are wired by OneiricCLIBase; the previous

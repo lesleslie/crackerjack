@@ -6,6 +6,7 @@ import typing as t
 from contextlib import suppress
 from pathlib import Path
 
+from crackerjack.checks.gitignore_conformance import check_repo_gitignore
 from crackerjack.checks.release_audit import check_release_audit
 from crackerjack.core.console import CrackerjackConsole
 from crackerjack.core.retry import retry_api_call
@@ -621,7 +622,9 @@ class PublishManagerImpl:
     def _validate_prerequisites(self) -> bool:
         if not self.validate_auth():
             return False
-        return self._validate_release_audit()
+        if not self._validate_release_audit():
+            return False
+        return self._validate_gitignore_conformance()
 
     def _validate_release_audit(self) -> bool:
         """Run release-audit check before any publish/bump operation.
@@ -660,6 +663,39 @@ class PublishManagerImpl:
 
         self.console.print("[green]✅[/green] Release-audit passed")
         return True
+
+    def _validate_gitignore_conformance(self) -> bool:
+        """Verify the Bodai canonical `.gitignore` snippet is installed.
+
+        Pre-publish gate mirroring `_validate_release_audit`. Non-Bodai
+        repos return True silently; missing/drifted snippets return False
+        with a clear error so the caller can refuse to publish.
+        """
+        result = check_repo_gitignore(self.pkg_path)
+        if not result.is_fleet_member:
+            return True
+
+        if result.snippet_present and not result.missing_patterns:
+            self.console.print(
+                f"[green]✅[/green] Gitignore-conformance passed for {result.repo_path}"
+            )
+            return True
+
+        if not result.snippet_present:
+            self.console.print(
+                f"[red]❌[/red] Bodai `.gitignore` snippet is missing in "
+                f"{result.repo_path}. Run `crackerjack gitignore sync` to install."
+            )
+            return False
+
+        self.console.print(
+            f"[red]❌[/red] Bodai `.gitignore` snippet is present but "
+            f"missing {len(result.missing_patterns)} pattern(s) in "
+            f"{result.repo_path}:"
+        )
+        for pattern in result.missing_patterns:
+            self.console.print(f"  - {pattern}")
+        return False
 
     def _detect_source_root(self, project_root: Path) -> Path | None:
         """Return the first existing source-package directory under project_root.
