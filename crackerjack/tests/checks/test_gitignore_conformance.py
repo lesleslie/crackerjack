@@ -43,7 +43,7 @@ def non_fleet_repo(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     repo.mkdir()
     monkeypatch.setattr(
         "crackerjack.checks.gitignore_conformance._bodai_fleet_paths",
-        lambda: frozenset(),
+        frozenset,
     )
     _bodai_fleet_paths.cache_clear()
     return repo
@@ -61,7 +61,7 @@ def test_fleet_repo_with_snippet_passes(fleet_repo: Path) -> None:
     result = check_repo_gitignore(fleet_repo)
     assert result.is_fleet_member
     assert result.snippet_present
-    assert result.missing_patterns == []
+    assert not result.missing_patterns
 
 
 def test_fleet_repo_without_snippet_fails(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -113,7 +113,7 @@ def test_sync_installs_snippet(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) 
     result = sync_repo_gitignore(repo)
     assert result.is_fleet_member
     assert result.snippet_present
-    assert result.missing_patterns == []
+    assert not result.missing_patterns
     assert result.backup_path is None  # no existing .gitignore, so no backup
     body = (repo / ".gitignore").read_text()
     assert MARKER_BEGIN in body

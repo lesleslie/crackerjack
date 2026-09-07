@@ -193,7 +193,7 @@ def check_repo_gitignore(repo_path: Path) -> GitignoreConformanceResult:
             repo_path=resolved,
             is_fleet_member=True,
             snippet_present=False,
-            missing_patterns=list(canonical),
+            missing_patterns=canonical.copy(),
         )
 
     existing = _existing_canonical_patterns(text)
