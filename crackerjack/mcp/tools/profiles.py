@@ -35,6 +35,20 @@ if TYPE_CHECKING:
     from fastmcp import FastMCP
 
 
+# MCP Tool Tier Assignment (per spec MCP F1, dd9d9c05).
+#
+# FULL_REGISTRATIONS: all tools available when MAHAVISHNU_TOOL_PROFILE=full.
+#                     Mutation tools (bump_*, release_*) belong here.
+# STANDARD_REGISTRATIONS: tools available when profile=standard. Read tools
+#                     typically live here; mutation tools do NOT.
+# MINIMAL_REGISTRATIONS: health probes only (profile=minimal). All
+#                     language-specific tool groups belong here ONLY
+#                     when their tools are non-mutating diagnostics.
+#
+# Adding a new group: edit the appropriate set below AND ensure the
+# group name appears in _build_registration_map() in server_core.py.
+# Test by calling `mahavishnu mcp start` and `mahavishnu mcp status`.
+
 MINIMAL_REGISTRATIONS: list[str | Callable[[FastMCP], Awaitable[None] | None]] = []
 
 STANDARD_REGISTRATIONS: list[str | Callable[[FastMCP], Awaitable[None] | None]] = [
