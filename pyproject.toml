@@ -105,6 +105,7 @@ crackerjack = "crackerjack.cli:app"
 # Phases 2-4.
 [project.entry-points."crackerjack.language_adapters"]
 python = "crackerjack.adapters.python:PythonAdapter"
+swift = "crackerjack.adapters.swift:SwiftAdapter"
 
 [project.urls]
 documentation = "https://github.com/lesleslie/crackerjack"
