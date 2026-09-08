@@ -100,6 +100,12 @@ crackerjack = "crackerjack.__main__:cli"
 [project.entry-points."bodai.apps"]
 crackerjack = "crackerjack.cli:app"
 
+# Phase 1 — multi-language extension. The Python adapter is the only
+# built-in. Swift, Kotlin, Web (CSS/HTML/JS/TS + Jinja) ship in
+# Phases 2-4.
+[project.entry-points."crackerjack.language_adapters"]
+python = "crackerjack.adapters.python"
+
 [project.urls]
 documentation = "https://github.com/lesleslie/crackerjack"
 homepage = "https://github.com/lesleslie/crackerjack"
