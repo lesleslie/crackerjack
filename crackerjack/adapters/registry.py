@@ -5,7 +5,7 @@ import typing as t
 from importlib import metadata
 
 from crackerjack.adapters._qa_adapter_base import QAAdapterBase
-from crackerjack.adapters.base import LanguageAdapter
+from crackerjack.adapters.base import LanguageAdapter, LanguageAdapterBase
 
 logger = logging.getLogger(__name__)
 
@@ -102,12 +102,19 @@ def discover_adapters() -> dict[str, LanguageAdapter]:
             continue
 
         if not isinstance(obj, LanguageAdapter):
-            logger.warning(
-                "adapter entry point %s did not return a LanguageAdapter (got %s)",
-                ep.name,
-                type(obj).__name__,
-            )
-            continue
+            # Allow entry points that point at a LanguageAdapterBase CLASS
+            # (the conventional form: ``module:ClassName``). Instantiate
+            # it so downstream code can treat the registry contents
+            # uniformly as instances.
+            if isinstance(obj, type) and issubclass(obj, LanguageAdapterBase):
+                obj = obj()
+            else:
+                logger.warning(
+                    "adapter entry point %s did not return a LanguageAdapter (got %s)",
+                    ep.name,
+                    type(obj).__name__,
+                )
+                continue
 
         adapters[obj.name] = obj
 

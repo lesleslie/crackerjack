@@ -104,7 +104,7 @@ crackerjack = "crackerjack.cli:app"
 # built-in. Swift, Kotlin, Web (CSS/HTML/JS/TS + Jinja) ship in
 # Phases 2-4.
 [project.entry-points."crackerjack.language_adapters"]
-python = "crackerjack.adapters.python"
+python = "crackerjack.adapters.python:PythonAdapter"
 
 [project.urls]
 documentation = "https://github.com/lesleslie/crackerjack"
