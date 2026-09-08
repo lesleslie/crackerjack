@@ -61,6 +61,7 @@ STANDARD_REGISTRATIONS: list[str | Callable[[FastMCP], Awaitable[None] | None]] 
 FULL_REGISTRATIONS: list[str | Callable[[FastMCP], Awaitable[None] | None]] = [
     *STANDARD_REGISTRATIONS,
     "eventbridge_tools",
+    "language_tools",  # NEW (Phase 2) — Swift lifecycle + hooks + detect
     "monitoring_tools",
     "otel_tools",
     "progress_tools",
@@ -105,6 +106,7 @@ def _build_registration_map() -> dict[str, Callable[[FastMCP], Awaitable[None] |
     from crackerjack.mcp.tools.health_tools_wrapper import (
         register_crackerjack_health,
     )
+    from crackerjack.mcp.tools.language_tools import register_language_tools
     from crackerjack.mcp.tools.monitoring_tools import register_monitoring_tools
     from crackerjack.mcp.tools.otel_tools import register_otel_tools
     from crackerjack.mcp.tools.proactive_tools import register_proactive_tools
@@ -119,6 +121,7 @@ def _build_registration_map() -> dict[str, Callable[[FastMCP], Awaitable[None] |
         "eventbridge_tools": register_crackerjack_eventbridge,
         "execution_tools": register_execution_tools,
         "health_tools": register_crackerjack_health,
+        "language_tools": register_language_tools,
         "monitoring_tools": register_monitoring_tools,
         "otel_tools": register_otel_tools,
         "proactive_tools": register_proactive_tools,
