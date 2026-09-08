@@ -193,6 +193,30 @@ async def create_mcp_server(config: dict[str, t.Any] | None = None) -> t.Any | N
             msg = f"Failed to read status command: {e}"
             raise ValueError(msg)
 
+    # MCP Tool Registration — 4-step pipeline (per spec MCP F1, dd9d9c05).
+    #
+    # Adding a new tool group (e.g., "language_tools" in Phase 2) requires ALL
+    # FOUR of these steps. Skipping any step silently produces invisible tools.
+    #
+    #   1. CREATE  crackerjack/mcp/tools/<group>_tools.py exporting
+    #              register_<group>_tools(mcp_app: FastMCP) -> None. Each
+    #              tool is a nested `async def` decorated with @mcp_app.tool().
+    #
+    #   2. REGISTER in _build_registration_map() below: add an entry
+    #              "<group>": <group>_tools.register_<group>_tools.
+    #
+    #   3. ASSIGN TIER in crackerjack/mcp/tools/profiles.py: add "<group>"
+    #              to FULL_REGISTRATIONS, STANDARD_REGISTRATIONS, or
+    #              MINIMAL_REGISTRATIONS (depending on the tools' risk).
+    #
+    #   4. TEST the new tool by:
+    #              a) starting the MCP server: `mahavishnu mcp start`
+    #              b) calling discover_tools() to confirm registration
+    #              c) exercising the tool end-to-end via the FastMCP client
+    #
+    # Phase 1 of the multi-language extension lands the language_tools
+    # group in Phase 2 (Swift); Kotlin/Web groups in Phases 3-4.
+
     # W2a: Apply ToolProfile dispatch via the W0 helper from mcp-common 0.18.0.
     #
     # Replaces the legacy per-group register_* block above. PROFILE_REGISTRATIONS

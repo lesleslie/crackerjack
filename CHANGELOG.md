@@ -1,5 +1,15 @@
 ______________________________________________________________________
 
+## [Unreleased]
+
+### Added
+
+- Multi-language extension foundation (Phase 1): new `crackerjack/adapters/`
+  package with `LanguageAdapter` Protocol, `LanguageAdapterBase` ABC,
+  `Capabilities` / `Hook` / `Lifecycle` types, and a `PythonAdapter`
+  that wraps the existing Python lifecycle. No CLI behavior change;
+  all 11K+ existing tests pass. Spec: dd9d9c05.
+
 ## [0.80.5] - 2026-09-07
 
 ### Build
