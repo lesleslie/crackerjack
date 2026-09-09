@@ -261,7 +261,7 @@ class ErrorCache:
 mcp:
   host: "127.0.0.1"
   http_port: 8676
-  websocket_port: 8675
+  websocket_port: 8696
   http_enabled: true
 
 # Job Manager
@@ -360,7 +360,7 @@ async def run_quality_checks():
 | WebSocket connection drops | Implement auto-reconnect with exponential backoff |
 | Job manager memory leaks | Periodic cleanup of completed jobs (>1 hour old) |
 | FastMCP version conflicts | Pin to `fastmcp~=2.13.0` in pyproject.toml |
-| Port conflicts (8675/8676) | Allow configuration via environment variables |
+| ~~Port conflicts (8675/8676)~~ | ~~Allow configuration via environment variables~~ — **Resolved 2026-09-09**: MCP websocket moved to 8696; see `settings/crackerjack.yaml`. |
 
 ## Migration Notes
 
