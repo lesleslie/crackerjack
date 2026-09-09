@@ -2,43 +2,44 @@
 
 # AI Adapter
 
-Claude-powered code fixing and AI helpers following adapter patterns. The built-in adapter focuses on safe, validated code fixes using Anthropic’s Claude models.
+AI-powered code fixing helpers following the crackerjack adapter pattern. The built-in adapter focuses on safe, validated code fixes using the `mcp_common.FallbackChain` LLM gateway (defaults to MiniMax → llama_server → ollama).
+
+> **Note**: This README was rewritten 2026-09-09 to drop the obsolete `ClaudeCodeFixer` / `ClaudeCodeFixerSettings` references — those classes lived in the deleted `crackerjack.adapters.ai.claude` module and the pre-2026-08-06 multi-provider AI-fix chain. The current public surface is `BaseCodeFixer`, `FallbackChainCodeFixer`, `BaseCodeFixerSettings`, and `FallbackChainSettings` exported from `crackerjack.adapters.ai`.
 
 ## Overview
 
-- Secure AI integration: validates generated code (regex + AST), sanitizes errors, enforces file-size and key format limits
-- legacy-style initialization: async `init()`, typed settings, metadata, and DI via `depends`
+- Async `init()` lifecycle (inherited from `BaseCodeFixer`)
+- Validates generated code (regex + AST), sanitizes errors, enforces file-size limits
+- Uses the `mcp_common.FallbackChain` provider gateway — provider config flows through `settings/llms.yaml`, not this adapter
 - Designed to fit end-to-end QA flows and orchestrations
 
 ## Built-in Implementation
 
 | Module | Description | Status |
 | ------ | ----------- | ------ |
-| `claude.py` | Claude AI code fixer with robust validation and retry logic | Stable |
+| `base.py` | `BaseCodeFixer` ABC + `BaseCodeFixerSettings` (validation, retry, AST security checks) | Stable |
+| `unified.py` | `FallbackChainCodeFixer` concrete implementation + `FallbackChainSettings` | Stable |
+| `registry.py` | Provider registry helpers (`get_code_fixer`, `list_providers`, `ProviderID`) | Stable |
 
 ## Settings
 
-Settings class: `ClaudeCodeFixerSettings`
+Settings class: `FallbackChainSettings`
 
-- `anthropic_api_key` (SecretStr, required; must start with `sk-ant-`)
-- `model` (str; default `claude-sonnet-4-5-20250929`)
-- `max_tokens` (int; default 4096)
-- `temperature` (float; default 0.1)
-- `confidence_threshold` (float; default 0.7)
-- `max_retries` (int; default 3)
-- `max_file_size_bytes` (int; default 10MB)
+- `model` (str; default `MiniMax-M2.7`)
+- `task_type` (str; default `code_generation`)
+- `llama_server_url` (str; default `http://localhost:8081`)
+- Inherited from `BaseCodeFixerSettings`: `max_tokens`, `temperature`, `confidence_threshold`, `max_retries`, `max_file_size_bytes`
 
-Values are typically sourced from `Config` via `depends.get(Config)` during `init()`.
+Provider routing (`minimax` → `llama_server` → `ollama`) lives in `settings/llms.yaml`; the `FallbackChainCodeFixer` reads from `mcp_common.llm_settings` at `init()` time.
 
 ## Basic Usage
 
 ```python
-from legacy.depends import depends
-from crackerjack.adapters.ai.claude import ClaudeCodeFixer
+from crackerjack.adapters.ai import FallbackChainCodeFixer
 
 
 async def fix_with_ai() -> None:
-    fixer = ClaudeCodeFixer()
+    fixer = FallbackChainCodeFixer()
     await fixer.init()
 
     result = await fixer.fix_code_issue(
@@ -57,7 +58,8 @@ async def fix_with_ai() -> None:
 
 - Keep `temperature` low for predictable refactors
 - Gate changes by `confidence_threshold` and validate diffs in CI
-- Rotate and scope API keys; never log secrets
+- Provider keys live in env vars (`MINIMAX_API_KEY`, etc.) — never log secrets
+- The provider chain (MiniMax → llama_server → ollama) is configured in `settings/llms.yaml`, not in this adapter
 
 ## Related
 

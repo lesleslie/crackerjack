@@ -50,9 +50,15 @@ The models package provides the foundational data structures and protocol-based 
 
 **Agent System (Phase 4):**
 
-- `AgentCoordinatorProtocol` - AI agent coordination and issue routing
-- `AgentTrackerProtocol` - Agent execution metrics tracking
-- `AgentDebuggerProtocol` - Agent debugging and activity logging
+> **REMOVED 2026-08-06**: `AgentCoordinatorProtocol`, `AgentTrackerProtocol`,
+> and `AgentDebuggerProtocol` were removed when the `crackerjack.agents.*`
+> subsystem was reduced to a type-stub module. The bullets below describe
+> deleted protocols and no longer apply. See
+> `docs/archive/2026-08-06-ai-fix-removal-cleanup/`.
+
+- ~~`AgentCoordinatorProtocol` - AI agent coordination and issue routing~~
+- ~~`AgentTrackerProtocol` - Agent execution metrics tracking~~
+- ~~`AgentDebuggerProtocol` - Agent debugging and activity logging~~
 
 **Orchestration:**
 
@@ -302,7 +308,7 @@ class MyConfig(BaseModel):
 
 ## Future Enhancements
 
-- Phase 5: Additional agent system protocols
-- Enhanced validation protocols for AI agent fixes
+- ~~Phase 5: Additional agent system protocols~~ [removed 2026-08-06]
+- ~~Enhanced validation protocols for AI agent fixes~~ [removed 2026-08-06]
 - Extended performance monitoring protocols
 - Advanced caching strategy protocols

@@ -1427,7 +1427,7 @@ ______________________________________________________________________
 - `tests/integration/test_skills_tracking.py` — `NoOpSkillsTracker` / `SessionBuddyDirectTracker` / `SessionBuddyMCPTracker` + `create_skills_tracker` factory.
 - `tests/integration/test_skills_recommender.py` — `SkillExecutionContext` + `agent_context.get_skill_recommendations`.
 - `tests/integration/test_skill_coverage_report.py` — `skill_coverage_report` with mocked SB MCP (the A3 + Q3 contract).
-- `tests/integration/test_ai_fix_workflow.py` — `FallbackChainCodeFixer` + `MetricsCollector` + `EnhancedAgentCoordinator` end-to-end (the one place that exercises the metrics DB).
+- `tests/integration/test_ai_fix_workflow.py` — ~~`FallbackChainCodeFixer` + `MetricsCollector` + `EnhancedAgentCoordinator` end-to-end (the one place that exercises the metrics DB).~~ [removed 2026-08-06 — see `docs/archive/2026-08-06-ai-fix-removal-cleanup/`]
 - `tests/integration/test_eventbridge_e2e.py` — `publish_test_started` / `completed` / `failed` round-trip with a `RecordingTransport`; pins `headers.source="crackerjack"` and `headers.version="1.0.0"`.
 - `tests/integration/test_migration.py` — the skills-migration script (with a stub for the removed `validate_migration` function).
 - `tests/integration/test_two_stage_workflow.py` / `test_sandboxed_fix.py` / `test_tier_architecture_e2e.py` / `test_phase8_direct_invocation.py` / `test_phase_coordinator_integration.py` — workflow-level integration tests.

@@ -94,9 +94,14 @@ The structured logs output to stderr follow this format:
 
 ### Agent Coordinator Updates
 
-- The `AgentCoordinator` and `EnhancedAgentCoordinator` now use structured logging
-- AI agent activities are logged with rich context information
-- Performance metrics for individual agents are captured
+> **REMOVED 2026-08-06**: `AgentCoordinator` and `EnhancedAgentCoordinator` were
+> removed when the `crackerjack.agents.*` subsystem was reduced to a type-stub
+> module. See `docs/archive/2026-08-06-ai-fix-removal-cleanup/`. The bullets
+> below describe deleted classes and no longer apply.
+
+- ~~The `AgentCoordinator` and `EnhancedAgentCoordinator` now use structured logging~~
+- ~~AI agent activities are logged with rich context information~~
+- ~~Performance metrics for individual agents are captured~~
 
 ### Workflow Orchestrator Updates
 
