@@ -9,6 +9,18 @@ ______________________________________________________________________
   `Capabilities` / `Hook` / `Lifecycle` types, and a `PythonAdapter`
   that wraps the existing Python lifecycle. No CLI behavior change;
   all 11K+ existing tests pass. Spec: dd9d9c05.
+- Swift language adapter (Phase 2): GitTagVersionSource reads version from
+  `git describe --tags --match "v*"`; lifecycle bumps via git tags only
+  (no Package.swift mutation in v1); hooks include swift test/build
+  (NO `-destination` flag — swift test doesn't accept it; iOS-only packages
+  need xcodebuild test, which is out of Phase 2 scope), swift format
+  (swift-format preferred over built-in swift format), and swift package
+  update. Three new MCP tools: swift_bump_version (mutation; requires auth
+  per spec MCP F5 + path validation against MAHAVISHNU_PROJECT_ROOTS),
+  swift_list_hooks (renamed from swift_run_hooks in Rev 1; returns metadata,
+  doesn't execute), detect_languages. `crackerjack.language_adapters`
+  entry-point group now registers both Python and Swift adapters. Spec:
+  dd9d9c05.
 
 ## [0.80.5] - 2026-09-07
 
