@@ -74,7 +74,9 @@ class GradlePropertiesVersionSource:
         written = False
         for key in self._PROBE_KEYS:
             pattern = rf"^(\s*)({re.escape(key)}\s*=\s*)(\S+?)([,\s]*)$"
-            new_content, count = re.subn(pattern, rf"\1\2{new_version}\4", content, flags=re.MULTILINE)
+            new_content, count = re.subn(
+                pattern, rf"\1\g<2>{new_version}\4", content, flags=re.MULTILINE,
+            )
             if count:
                 content = new_content
                 written = True
