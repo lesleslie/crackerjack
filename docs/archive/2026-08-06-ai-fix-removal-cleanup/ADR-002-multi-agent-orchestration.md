@@ -1,6 +1,6 @@
 ---
-status: active
-role: canonical
+status: archived
+role: historical
 topic: architecture
 date: 2026-07-17
 last_reviewed: 2026-07-17
