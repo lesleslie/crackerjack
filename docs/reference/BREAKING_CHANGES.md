@@ -1,12 +1,14 @@
 ______________________________________________________________________
 
-## status: active role: canonical date: 2026-07-17 last_reviewed: 2026-07-17 superseded_by: null blocks_on: [] topic: mcp-design
+## status: archived role: historical date: 2026-07-17 last_reviewed: 2026-09-09 superseded_by: null blocks_on: [] topic: mcp-design
 
 # Breaking Changes: Oneiric Migration
 
 **Migration Date:** TBD (after Phase 0 complete)
-**Migration Plan:** ONEIRIC_MIGRATION_EXECUTION_PLAN.md
-**Audit Report:** MIGRATION_AUDIT.md
+**Migration Plan:** ~~ONEIRIC_MIGRATION_EXECUTION_PLAN.md~~ [link removed 2026-09-09 — file no longer exists]
+**Audit Report:** ~~MIGRATION_AUDIT.md~~ [link removed 2026-09-09 — file no longer exists]
+
+**Status:** migration plan removed 2026-09-09; please refer to root CHANGELOG.md for the breaking-changes history.
 
 ______________________________________________________________________
 

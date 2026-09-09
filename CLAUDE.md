@@ -267,7 +267,7 @@ The discover_tools meta-tool is registered unconditionally so clients can
 introspect the active profile at runtime.
 
 **Detailed rationale** (group choices, mandatory-groups set, fix-loop
-history): see [docs/architecture/tool-profile-rationale.md](docs/architecture/tool-profile-rationale.md).
+history): see [docs/architecture/tool-profile-rationale.md](../architecture/tool-profile-rationale.md).
 
 ## Coverage Status
 
@@ -282,14 +282,14 @@ To read the current value:
 python -c "import json; print(json.load(open('coverage.json'))['totals']['percent_covered'])"
 ```
 
-See [COVERAGE_POLICY.md](docs/reference/COVERAGE_POLICY.md) for the full policy.
+See [COVERAGE_POLICY.md](../reference/COVERAGE_POLICY.md) for the full policy.
 
 ## Additional Resources
 
 **For detailed documentation**:
 
-- **[README.md](./README.md)**: Complete project documentation
-- **[docs/](./docs/)**: Implementation plans, ADRs, and reference docs
+- **[README.md](../../README.md)**: Complete project documentation
+- **[docs/](../)**: Implementation plans, ADRs, and reference docs
 
 **For comprehensive protocol documentation**:
 
