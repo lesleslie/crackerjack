@@ -133,7 +133,7 @@ def reset(commit_sha: str) -> None:
     )
 
 
-def gh_release(tag_name: str, release_name: str | None = None) -> str:
+def gh_release(tag_name: str, release_name: str | None = None) -> str | None:
     """Create a GitHub release for ``tag_name``. Returns the release URL.
 
     ``release_name`` (optional, Phase 3 Rev 2 Ruling 11) overrides the
@@ -188,7 +188,7 @@ def make_git_backend(
     Callable[[str, str], None],
     Callable[[str], None],
     Callable[[str], None],
-    Callable[..., str],
+    Callable[..., str | None],
 ]:
     """Return the six git/gh callables bound to ``project_root``.
 
@@ -262,7 +262,7 @@ def make_git_backend(
             check=True,
         )
 
-    def _gh_release(tag_name: str, release_name: str | None = None) -> str:
+    def _gh_release(tag_name: str, release_name: str | None = None) -> str | None:
         title = release_name if release_name else tag_name
         notes_file = project_root / ".crackerjack-release-notes.tmp"
         notes = (
