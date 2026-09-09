@@ -112,39 +112,17 @@ crackerjack config set coverage.min_coverage 80
 
 # Set complexity threshold
 crackerjack config set complexity.max_complexity 15
-
-# Set multiple thresholds at once
-crackerjack set-threshold --coverage 80 --complexity 15
 ```
+
+> Note: There is no `crackerjack set-threshold` subcommand. Multi-threshold configuration belongs in `crackerjack.toml` under `[quality_gates]` (or use `crackerjack config set <key> <value>`). See `crackerjack/cli/options.py` for the actual `Config.set` surface.
 
 ### Add Custom Checks
 
-```bash
-# Add custom check
-crackerjack add-check --name "security-scan" --command "bandit -r ."
-
-# Add check with timeout
-crackerjack add-check --name "integration-tests" --command "pytest tests/integration/" --timeout 300
-
-# Add check with dependencies
-crackerjack add-check --name "type-check" --command "mypy ." --depends "ruff"
-```
+> Note: There is no `crackerjack add-check` subcommand. Custom checks are configured declaratively in `crackerjack.toml` (or the `[tool.crackerjack]` table in `pyproject.toml`) — there is no imperative CLI registration path. See the Quality Gates section in [docs/CLI_REFERENCE.md](docs/CLI_REFERENCE.md) for the configuration schema.
 
 ### Create Custom Quality Gates
 
-```bash
-# Create new quality gate
-crackerjack gate create strict --description "Strict quality requirements"
-
-# Add checks to gate
-crackerjack gate add-check strict --check ruff --check pytest --check bandit
-
-# Set gate thresholds
-crackerjack gate set-threshold strict --coverage 90 --complexity 10
-
-# Use custom gate
-crackerjack run --gate strict
-```
+> Note: There is no `crackerjack gate create`, `gate add-check`, or `gate set-threshold` subcommand. Quality gates are defined statically in `crackerjack.toml` under `[quality_gates]` (keys: `fail_on_test_errors`, `fail_on_coverage`, `coverage_threshold`, `fail_on_complexity`). There is also no `--gate strict` flag on `crackerjack run`; gate selection happens via the active config profile (`quick` / `standard` / `comprehensive`).
 
 ## Configuration
 
@@ -303,7 +281,7 @@ crackerjack --version
 crackerjack run --verbose
 
 # Run specific check in isolation
-crackerjack run --check pytest --verbose
+crackerjack run --tool ruff-check --verbose
 
 # Check configuration
 crackerjack config show
@@ -331,11 +309,12 @@ crackerjack run --quick
 # Reduce parallel workers
 crackerjack run --test-workers 2
 
-# Increase timeout
-crackerjack run --timeout 600
+# Increase timeout (test-timeout is a run_tests flag, not a run flag)
+crackerjack run --test-timeout 600
 
-# Run with performance profiling
-crackerjack run --profile
+# Run with performance profiling (crackerjack has no --profile flag; profile selection
+# is via --quick / --thorough or the active config profile)
+crackerjack run --thorough
 ```
 
 ### AI Fix Not Working
@@ -358,7 +337,7 @@ tail -f .crackerjack/runs/$(ls -t .crackerjack/runs | head -1)/events.jsonl
 | `crackerjack run` | Run standard checks (default) |
 | `crackerjack run --quick` | Run quick checks (1 minute) |
 | `crackerjack run --thorough` | Run comprehensive checks (10-15 minutes) |
-| `crackerjack run --profile <name>` | Run with specific profile |
+| `crackerjack run` | Run with the default standard profile (no `--profile` flag; use `--quick` / `--thorough` or set the active profile in `crackerjack.toml`) |
 | `crackerjack profile list` | List all profiles |
 | `crackerjack profile show <name>` | Show profile details |
 | `crackerjack status` | View quality metrics |

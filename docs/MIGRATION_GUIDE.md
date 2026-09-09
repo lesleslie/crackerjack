@@ -305,12 +305,7 @@ cat pyproject.toml  # Crackerjack tool configuration
 
 2. **Customize Thresholds** (optional):
 
-```bash
-# Edit quality tiers
-python -m crackerjack run --quality-tier bronze  # Start with bronze
-python -m crackerjack run --quality-tier silver  # Standard (default)
-python -m crackerjack run --quality-tier gold    # Excellence
-```
+> Note: There is no `--quality-tier bronze|silver|gold` flag on `crackerjack run`. Coverage / complexity gates are configured in `crackerjack.toml` under `[quality_gates]` (keys: `fail_on_test_errors`, `fail_on_coverage`, `coverage_threshold`, `fail_on_complexity`). Profile selection uses `--quick` / `--thorough` or the `profile.name` setting.
 
 3. **Set Coverage Ratchet** (optional):
 
@@ -738,10 +733,7 @@ python -m crackerjack run --ai-fix --run-tests
 
 2. **Set Quality Tier**:
 
-```bash
-# Start with bronze, aim for gold
-python -m crackerjack run --quality-tier silver
-```
+> Note: There is no `--quality-tier` flag. Tune the standard profile's coverage / complexity gates in `crackerjack.toml` under `[quality_gates]` (e.g. `coverage_threshold = 80` for "silver", `95` for "gold").
 
 3. **Configure MCP Server** (optional):
 
@@ -756,10 +748,12 @@ python -m crackerjack start
 python -m crackerjack run --coverage-status
 
 # Performance monitoring
-python -m crackerjack run --monitor
+# (no `--monitor` flag — service health is via `crackerjack mcp status` /
+#  `crackerjack mcp health`; quality history is via `crackerjack history`.)
 
 # Enhanced monitoring with patterns
-python -m crackerjack run --enhanced-monitor
+# (no `--enhanced-monitor` flag — pattern detection is an MCP-server feature,
+#  not a `crackerjack run` flag.)
 ```
 
 ## Support

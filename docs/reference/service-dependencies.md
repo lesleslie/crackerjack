@@ -68,13 +68,7 @@ Crackerjack can generate configuration files for various CI/CD platforms, but do
 
 #### Usage
 
-```bash
-# Initialize CI/CD configuration
-crackerjack init-ci --platform github
-
-# This generates configuration files only
-# Crackerjack does not depend on the CI/CD service
-```
+> Note: There is no `crackerjack init-ci` subcommand. The CI/CD configs above (`.github/workflows/crackerjack.yml`, `.gitlab-ci.yml`, etc.) must be hand-authored; copy the `python -m crackerjack run --run-tests` invocation from the [CI/CD Migration](../MIGRATION_GUIDE.md#phase-5-cicd-integration-10-minutes) section of MIGRATION_GUIDE.md into your platform's pipeline file. Crackerjack does not depend on the CI/CD service to run.
 
 ### AI Services (Optional)
 
@@ -274,7 +268,8 @@ export CRACKERJACK_DB_URL="postgresql://..."
 ```bash
 # In CI/CD pipeline
 - pip install crackerjack
-- crackerjack init-ci --platform github
+- # (Hand-author .github/workflows/quality.yml — see "CI/CD Migration" in MIGRATION_GUIDE.md
+- #   for the canonical `python -m crackerjack run --run-tests` invocation.)
 - crackerjack run
 
 # No services required in CI/CD
@@ -402,7 +397,7 @@ crackerjack mcp restart
 ### CI/CD
 
 1. **Minimal installation** in CI/CD: `pip install crackerjack`
-1. **Generate CI/CD config** with `crackerjack init-ci`
+1. **Hand-author your CI/CD pipeline** (no `crackerjack init-ci` subcommand exists; see [CI/CD Migration](../MIGRATION_GUIDE.md#phase-5-cicd-integration-10-minutes))
 1. **Use strict quality gates** for production branches
 1. **Cache dependencies** between runs for faster execution
 

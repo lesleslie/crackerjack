@@ -1401,6 +1401,8 @@ Crackerjack supports the following environment variables:
 
 - **UV_PUBLISH_TOKEN\`**: PyPI authentication token for publishing ⚠️ **Keep secure!**
 - **AI_AGENT\`**: Set to "1" to enable tool-native auto-fixes (currently used by the Ruff adapter to set `fix_enabled=True` via `crackerjack/adapters/factory.py`; the 12-agent AI subsystem was removed 2026-08-06). Crackerjack does not read `UV_KEYRING_PROVIDER` or `EDITOR` directly — those are consumed by `uv` / git, not by crackerjack itself.
+- **CRACKERJACK_DISABLE_AUTO_WORKERS\`**: Set to "1" to force sequential test execution (bypasses `--test-workers 0` auto-detect via pytest-xdist). Wired at `crackerjack/cli/options.py:335`.
+- **CRACKERJACK_DEBUG\`**: Set to "1" to enable debug-mode logging across the runtime (`crackerjack/runtime/oneiric_workflow.py:131`), security logger (`crackerjack/services/security_logger.py:143`), and secure subprocess (`crackerjack/services/secure_subprocess.py:84`).
 
 #### Security Best Practices
 

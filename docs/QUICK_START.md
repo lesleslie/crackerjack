@@ -320,26 +320,14 @@ python -m crackerjack run
 
 ### Quality Tier Configuration
 
-**Choose quality tier based on project type**:
+> Note: There is no `--quality-tier bronze|silver|gold` flag on `crackerjack run`. Crackerjack selects a profile via the `--quick` / `--thorough` flags (or the `profile.name` key in `crackerjack.toml`). The tier table below maps the legacy bronze/silver/gold nomenclature onto real coverage / complexity thresholds you can configure in `crackerjack.toml` under `[quality_gates]`.
 
-```bash
-# Bronze (minimum acceptable)
-python -m crackerjack run --quality-tier bronze
+**Tier Comparison** (legacy nomenclature → real config keys):
 
-# Silver (standard, default)
-python -m crackerjack run --quality-tier silver
-
-# Gold (excellence)
-python -m crackerjack run --quality-tier gold
-```
-
-**Tier Comparison**:
-
-| Metric | Bronze | Silver | Gold |
+| Metric | Bronze | Silver (default) | Gold |
 |--------|--------|--------|------|
-| Coverage | ≥50% | ≥80% | ≥95% |
-| Complexity | ≤25 | ≤15 | ≤10 |
-| Type Coverage | ≥30% | ≥60% | ≥80% |
+| Coverage | `coverage_threshold = 50` | `coverage_threshold = 80` | `coverage_threshold = 95` |
+| Complexity | `fail_on_complexity = false` (≤25) | `fail_on_complexity = true` (≤15) | `fail_on_complexity = true` (≤10) |
 
 ### Coverage Goal Configuration
 
@@ -396,10 +384,11 @@ ai:
 python -m crackerjack start
 
 # Multi-project monitoring
-python -m crackerjack run --monitor
+# (no `--monitor` flag — service health visibility is via `crackerjack mcp status`,
+#  `crackerjack mcp health`, or `crackerjack health`)
 
 # Enhanced monitoring with patterns
-python -m crackerjack run --enhanced-monitor
+# (no `--enhanced-monitor` flag — pattern detection is on the MCP server, not on `run`)
 
 # Service watchdog with auto-restart
 python -m crackerjack run --watchdog
