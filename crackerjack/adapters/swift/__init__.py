@@ -7,7 +7,7 @@ from crackerjack.adapters.swift.hooks import swift_hooks
 from crackerjack.adapters.swift.lifecycle import SwiftLifecycle
 from crackerjack.adapters.swift.version_source import GitTagVersionSource
 
-__all__ = ["SwiftAdapter", "SwiftLifecycle", "GitTagVersionSource", "swift_hooks"]
+__all__ = ["GitTagVersionSource", "SwiftAdapter", "SwiftLifecycle", "swift_hooks"]
 
 
 class SwiftAdapter(LanguageAdapterBase):
@@ -24,20 +24,7 @@ class SwiftAdapter(LanguageAdapterBase):
         return (project_root / "Package.swift").is_file()
 
     def capabilities(self, project_root: Path) -> Capabilities:
-        from crackerjack.adapters.swift.git_backend import make_git_backend
-
         version_source = GitTagVersionSource(project_root)
-        commit, tag, push, delete_tag, reset, gh_release = make_git_backend(project_root)
-        SwiftLifecycle(
-            version_source=version_source,
-            project_root=project_root,
-            commit=commit,
-            tag=tag,
-            push=push,
-            delete_tag=delete_tag,
-            reset=reset,
-            gh_release=gh_release,
-        )
         return Capabilities(
             version_source=version_source,
             hooks=swift_hooks(project_root / "Package.swift"),

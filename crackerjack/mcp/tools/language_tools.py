@@ -200,14 +200,4 @@ def register_language_tools(mcp_app: FastMCP) -> None:
         """
         root = _validate_project_root(project_root)
         adapters = discover_adapters()
-        # Registry may return either instances or classes (depends on entry-point
-        # shape vs the runtime_checkable Protocol in base.py). Normalize so we
-        # always call detect() on an instance.
-        return {
-            name: (
-                adapter().detect(root)
-                if isinstance(adapter, type)
-                else adapter.detect(root)
-            )
-            for name, adapter in adapters.items()
-        }
+        return {name: adapter.detect(root) for name, adapter in adapters.items()}

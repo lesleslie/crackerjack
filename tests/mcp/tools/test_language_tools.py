@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import os
-import subprocess
 from pathlib import Path
 from unittest import mock
 
@@ -73,18 +72,21 @@ def test_swift_bump_version_runs_with_auth(tmp_path: Path) -> None:
     assert result["tag_name"] == "v1.1.0"
 
 
-def test_swift_list_hooks_does_not_require_auth() -> None:
+def test_swift_list_hooks_does_not_require_auth(tmp_path: Path) -> None:
     """swift_list_hooks is read-only — no auth required."""
+    # Create a real Package.swift so swift_hooks() runs to completion.
+    (tmp_path / "Package.swift").write_text(
+        "// swift-tools-version:5.9\n"
+        "import PackageDescription\n"
+        "let package = Package(name: \"x\")\n",
+    )
     with mock.patch.dict(os.environ, {}, clear=True):
         _, tools = asyncio.run(_register())
         tool = tools["swift_list_hooks"]
-        # No PermissionError raised. Other errors OK.
-        try:
-            asyncio.run(tool.fn(project_root="/tmp/nonexistent"))
-        except PermissionError as e:
-            pytest.fail(f"swift_list_hooks should not require auth, got: {e}")
-        except Exception:
-            pass
+        result = asyncio.run(tool.fn(project_root=str(tmp_path)))
+        assert isinstance(result, dict)
+        assert "swift.test" in result
+        assert "swift.build" in result
 
 
 def test_swift_bump_version_rejects_path_traversal(tmp_path: Path) -> None:

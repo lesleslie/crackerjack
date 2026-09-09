@@ -74,11 +74,6 @@ class SwiftLifecycle(Lifecycle):
         self._gh_release = gh_release
 
     def run(self, options: LifecycleOptions) -> LifecycleResult:
-        if options.level not in ("major", "minor", "patch"):
-            raise ValueError(
-                f"level must be 'major', 'minor', or 'patch'; got {options.level!r}",
-            )
-
         current = self._version_source.read()
         new_version = _bump(current, options.level)
 

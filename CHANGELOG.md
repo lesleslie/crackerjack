@@ -20,7 +20,10 @@ ______________________________________________________________________
   swift_list_hooks (renamed from swift_run_hooks in Rev 1; returns metadata,
   doesn't execute), detect_languages. `crackerjack.language_adapters`
   entry-point group now registers both Python and Swift adapters. Spec:
-  dd9d9c05.
+  dd9d9c05. Also includes a fix to
+  `crackerjack.adapters.registry.discover_adapters()` that now
+  instantiates class entry points before indexing them, so adapter
+  detection returns instances (not classes) in Phase 2 as well.
 
 ## [0.80.5] - 2026-09-07
 
