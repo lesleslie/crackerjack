@@ -1,0 +1,1 @@
+"""Web adapter test package."""
