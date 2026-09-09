@@ -243,13 +243,18 @@ project root:
 - `package.json` is present at the root, **or**
 - `pyproject.toml` contains `[tool.crackerjack.web] enabled = true`
 
-Once activated, the four Web hooks below join the comprehensive-hook
-stage. They are not gated behind a CLI flag — they participate in the
-normal `python -m crackerjack run` execution path. To run a single Web
-hook in isolation, use `--enable-hook <name>` (see `--enable-hook` in
-[Configuration Commands](#configuration-commands)) or call the
-`check_web_lint` MCP tool documented in
-[`MCP_TOOLS_SPECIFICATION.md` §3.6](./MCP_TOOLS_SPECIFICATION.md).
+Once activated, the four Web hooks below are **registered** as
+entry-points in `crackerjack/adapters/web/hooks.py`, but they are **not
+automatically invoked by `python -m crackerjack run`** — the run-path
+hook dispatcher has no `run_web_hooks` consumer, and the Web hooks are
+absent from the comprehensive-hook stage. To run them, use one of:
+
+- the `check_web_lint` MCP tool (documented in
+  [`MCP_TOOLS_SPECIFICATION.md` §3.6](./MCP_TOOLS_SPECIFICATION.md)),
+- the `detect_languages` MCP tool to surface the registered Web hook
+  surface, or
+- invoke them via their registered entry-point names (`web.stylelint`,
+  `web.eslint`, `web.tsc`, `web.html_validate`) from a custom stage.
 
 ### Web hook names
 
