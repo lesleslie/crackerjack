@@ -1,8 +1,12 @@
-______________________________________________________________________
-
-## status: archived role: historical date: 2026-07-17 last_reviewed: 2026-09-09 superseded_by: ../../CHANGELOG.md blocks_on: [] topic: mcp-design
-
-______________________________________________________________________
+---
+status: archived
+role: historical
+date: 2026-07-17
+last_reviewed: 2026-09-09
+superseded_by: ../../CHANGELOG.md
+blocks_on: []
+topic: mcp-design
+---
 
 > **Status:** This changelog is frozen at 0.44.29 (2025-11-19) as a historical artifact. Current release notes live in root `CHANGELOG.md`.
 
