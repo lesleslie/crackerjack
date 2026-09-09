@@ -39,6 +39,7 @@ dependencies = [
     "hatchling>=1.30.1",
     "hypothesis>=6.155.7",
     "ipython>=9.14.1",
+    "jinja2>=3.1.6",
     "libcst>=1.8.6",
     "keyring>=25.7.0",
     "linkcheckmd>=1.4.0",
@@ -104,9 +105,10 @@ crackerjack = "crackerjack.cli:app"
 # built-in. Swift, Kotlin, Web (CSS/HTML/JS/TS + Jinja) ship in
 # Phases 2-4.
 [project.entry-points."crackerjack.language_adapters"]
+kotlin = "crackerjack.adapters.kotlin:KotlinAdapter"
 python = "crackerjack.adapters.python:PythonAdapter"
 swift = "crackerjack.adapters.swift:SwiftAdapter"
-kotlin = "crackerjack.adapters.kotlin:KotlinAdapter"
+web = "crackerjack.adapters.web:WebAdapter"
 
 [project.urls]
 documentation = "https://github.com/lesleslie/crackerjack"

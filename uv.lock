@@ -14,10 +14,10 @@ exclude-newer = "0001-01-01T00:00:00Z" # This has no effect and is included for 
 exclude-newer-span = "P7D"
 
 [options.exclude-newer-package]
-oneiric = "2099-12-31T23:59:59Z"
-mcp-common = "2099-12-31T23:59:59Z"
-session-buddy = "2099-12-31T23:59:59Z"
 dhara = "2099-12-31T23:59:59Z"
+mcp-common = "2099-12-31T23:59:59Z"
+oneiric = "2099-12-31T23:59:59Z"
+session-buddy = "2099-12-31T23:59:59Z"
 
 [[package]]
 name = "aiobreaker"
@@ -703,7 +703,7 @@ wheels = [
 
 [[package]]
 name = "crackerjack"
-version = "0.80.3"
+version = "0.80.8"
 source = { editable = "." }
 dependencies = [
     { name = "aiofiles" },
@@ -721,6 +721,7 @@ dependencies = [
     { name = "httpx2" },
     { name = "hypothesis" },
     { name = "ipython" },
+    { name = "jinja2" },
     { name = "keyring" },
     { name = "libcst" },
     { name = "linkcheckmd" },
@@ -805,6 +806,7 @@ requires-dist = [
     { name = "httpx2", specifier = ">=0.28.1" },
     { name = "hypothesis", specifier = ">=6.155.7" },
     { name = "ipython", specifier = ">=9.14.1" },
+    { name = "jinja2", specifier = ">=3.1.6" },
     { name = "keyring", specifier = ">=25.7.0" },
     { name = "libcst", specifier = ">=1.8.6" },
     { name = "linkcheckmd", specifier = ">=1.4.0" },
