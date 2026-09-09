@@ -72,18 +72,7 @@ crackerjack profile compare quick comprehensive
 
 Integrate Crackerjack into your CI/CD pipeline for automated quality checks.
 
-### Initialize CI/CD Configuration
-
-```bash
-# Initialize GitHub Actions
-crackerjack init-ci --platform github
-
-# Initialize GitLab CI
-crackerjack init-ci --platform gitlab
-
-# Initialize generic CI
-crackerjack init-ci --platform generic
-```
+> Note: There is no `crackerjack init-ci` subcommand. CI/CD configuration is project-specific; copy the relevant `crackerjack run` invocation from this guide into your existing pipeline file (e.g., `.github/workflows/quality.yml`, `.gitlab-ci.yml`).
 
 ### Pre-commit Hooks
 
@@ -92,7 +81,7 @@ crackerjack init-ci --platform generic
 crackerjack install-hooks
 
 # Run pre-commit checks manually
-crackerjack run --profile standard
+crackerjack run
 
 # Uninstall hooks
 crackerjack uninstall-hooks
