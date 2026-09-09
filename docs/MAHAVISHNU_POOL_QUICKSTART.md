@@ -42,7 +42,13 @@ Source of truth: `mahavishnu/pools/_registry.py`.
 | `session-buddy` | SessionBuddyPool — delegates to a Session-Buddy instance (3 fixed workers) |
 | `runpod` | RunPodPool — RunPod Flash serverless GPU |
 | `pi` | PiPool — `@earendil-works/pi-coding-agent` subprocess bridge |
-| `gpu-handler` | RunPod GPU-handler variant |
+
+> **`gpu-handler` is NOT a registered pool type.** `GpuHandlerPool`
+> exists in `mahavishnu/pools/gpu_handler_pool.py` as a `RunPodPool`
+> subclass you can instantiate directly, but it is NOT registered with
+> `mahavishnu.pools._registry::register_pool_type` and does not appear
+> in `list_pool_types()`. Import the class directly instead of using
+> `pool_spawn` / registry dispatch.
 
 `kubernetes`, `container`, `mahavishnu_pool`, `session_buddy_pool`,
 `runpod_pool`, `pi_pool` are **not** valid pool-type values. The
@@ -50,11 +56,10 @@ underscored forms (`session_buddy_pool`, etc.) are accepted only by
 the CLI whitelist, which translates them to the canonical hyphen form
 before registry lookup (`mahavishnu/pools/_registry.py:69-80`).
 
-### Pool tools (10 MCP tools, verified)
+### Pool tools (8 MCP tools, verified)
 
-Source of truth: `mahavishnu/mcp/tools/pool_tools.py` +
-`mahavishnu/core/skill_mcp_validator.py::KNOWN_TOOLS` +
-`bodai/docs/memory/TOOL_ALIAS_INVENTORY.md`.
+Source of truth: `mahavishnu/mcp/tools/pool_tools.py` (counted
+`@mcp.tool()` decorators).
 
 ```text
 pool_list           # List active pools
@@ -64,12 +69,15 @@ pool_close          # Close one pool
 pool_close_all      # Close every active pool
 pool_health         # Cross-pool health snapshot
 pool_search_memory  # Cross-pool memory search
-pool_execute        # Execute a prompt on a specific pool
-pool_route_execute  # Auto-route a prompt to the best pool
 budget_enforce      # Declare a per-workflow budget (Phase 3 v2)
 ```
 
-The earlier draft claimed **9** pool tools; the live count is **10**.
+The earlier draft claimed **9** or **10** pool tools; the live count
+is **8** `@mcp.tool()` decorators in `pool_tools.py`. `pool_execute`
+and `pool_route_execute` are NOT registered MCP tools — they are CLI
+commands (`mahavishnu pool execute`, `mahavishnu pool route`) and
+Python functions in `mahavishnu/_main_cli.py:1668`, not MCP
+wire-protocol tools.
 
 ______________________________________________________________________
 
@@ -143,11 +151,18 @@ async def main() -> None:
     print(f"  active pools: {len(pools)}")
 
     print("Routing a tiny prompt to the least-loaded pool...")
-    result = await call_mcp_tool(
-        "pool_route_execute",
-        {"prompt": "echo hello-from-mahavishnu", "pool_selector": "least_loaded"},
+    # NOTE: `pool_route_execute` is NOT an MCP tool — it is a CLI
+    # command. To route via the wire protocol, use the CLI subprocess
+    # (or any of the 8 registered pool_* MCP tools above).
+    import subprocess
+
+    result = subprocess.run(
+        ["mahavishnu", "pool", "route",
+         "--prompt", "echo hello-from-mahavishnu",
+         "--selector", "least_loaded"],
+        capture_output=True, text=True, check=False,
     )
-    print(f"  result: {result}")
+    print(f"  rc={result.returncode} stdout={result.stdout[:120]}")
 
 
 if __name__ == "__main__":
@@ -193,9 +208,13 @@ Workers can take time to spin up, especially on first start
 timeout to the spawn call.
 
 ```python
-result = await call_mcp_tool(
-    "pool_route_execute",
-    {"prompt": prompt, "pool_selector": "least_loaded", "timeout": 60},
+# NOTE: `pool_route_execute` is NOT an MCP tool — it is a CLI command.
+# Use `subprocess.run(...)` (see the smoke-test above for the pattern)
+# or pick a real MCP tool from the 8 listed above (e.g. `pool_list`).
+result = subprocess.run(
+    ["mahavishnu", "pool", "route",
+     "--prompt", prompt, "--selector", "least_loaded", "--timeout", "60"],
+    capture_output=True, text=True, check=False,
 )
 ```
 
@@ -206,10 +225,12 @@ call — pick `mahavishnu` if you need to scale.
 
 ### "Unknown pool type 'kubernetes'"
 
-The pool type string is wrong. Use one of the five canonical names
-above (`mahavishnu`, `session-buddy`, `runpod`, `pi`, `gpu-handler`).
-The error comes from `mahavishnu/pools/_registry.py::get_pool_factory`
-via the manager dispatch.
+The pool type string is wrong. Use one of the four canonical registered
+names (`mahavishnu`, `session-buddy`, `runpod`, `pi`). The error
+comes from `mahavishnu/pools/_registry.py::get_pool_factory` via the
+manager dispatch. `gpu-handler` is NOT a registered pool type (see
+the callout above — `GpuHandlerPool` exists but requires direct
+instantiation, not registry dispatch).
 
 ### "No module named 'mahavishnu.mcp.pools'"
 
