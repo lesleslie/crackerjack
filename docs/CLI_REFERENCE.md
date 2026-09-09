@@ -32,9 +32,8 @@ Complete command-line interface reference for Crackerjack.
 | Subcommand / path                      | Default   | Mutates files? | Notes                                       |
 |----------------------------------------|-----------|----------------|---------------------------------------------|
 | `crackerjack run`                      | safe fix  | yes (safe)     | `--fix` only; no `--unsafe-fixes`           |
-| `crackerjack run --preview`            | preview   | no             | `ruff check --diff`                         |
 | `crackerjack run --allow-unsafe-fixes` | unsafe    | yes (unsafe)   | Per-file `.bak` siblings; dirty-tree guard  |
-| CI / `crackerjack run --no-fix`        | read-only | no             | Fails on remaining violations               |
+| `crackerjack run --safe-only`          | read-only | no             | Refuses any invocation that emits `--unsafe-fixes` |
 | Generated `pyproject.toml`             | safe      | n/a            | `unsafe-fixes = false`                      |
 
 ### `crackerjack run`
@@ -105,8 +104,7 @@ python -m crackerjack start
 # Start with verbose logging
 python -m crackerjack start --verbose
 
-# Start with custom port
-python -m crackerjack start --mcp-port 8676
+# Start with custom port (not a CLI flag — see Environment Variables / Settings below for mcp_http_port)
 ```
 
 ### `crackerjack status`
@@ -147,7 +145,7 @@ Cache Stats:
 **Usage**:
 
 ```bash
-python -m crackerjack health [--probe]
+python -m crackerjack health
 ```
 
 **Examples**:
@@ -156,8 +154,8 @@ python -m crackerjack health [--probe]
 # Basic health check
 python -m crackerjack health
 
-# Liveness probe (for Kubernetes)
-python -m crackerjack health --probe
+# Liveness probe (for Kubernetes) — note: --probe lives on the mcp health subcommand, not the top-level health command
+python -m crackerjack mcp health --probe
 ```
 
 **Output**:
@@ -229,32 +227,20 @@ python -m crackerjack run --skip-hooks --run-tests
 
 **Use Case**: During development, when you want to run tests without waiting for quality checks.
 
-### `--quality-tier`
-
-**Description**: Set quality tier (bronze, silver, gold).
-
-**Usage**:
-
-```bash
-python -m crackerjack run --quality-tier silver
-```
-
-**Tiers**:
-
-| Tier | Coverage | Complexity | Type Coverage |
-|------|----------|------------|---------------|
-| Bronze | ≥50% | ≤25 | ≥30% |
-| Silver | ≥80% | ≤15 | ≥60% |
-| Gold | ≥95% | ≤10 | ≥80% |
-
 ## AI Integration Commands
 
-The AI auto-fix loop is **not** a shell flag. The previous `--ai-fix`,
-`--ai-debug` (as a sub-bullet of `--ai-fix`), `--dry-run` (as a sub-bullet
-of `--ai-fix`), `--max-iterations`, `--quick` (as a sub-bullet of
-`--ai-fix`), and `--thorough` (as a sub-bullet of `--ai-fix`) flags were
-removed on 2026-08-06 along with the 12-agent internal subsystem they
-dispatched to. The replacement is the Claude Code `Workflow`-tool loop
+The AI auto-fix loop is **not** a shell flag. The previous `--ai-fix` flag
+was removed on 2026-08-06 along with the 12-agent internal subsystem it
+dispatched to. The following flags are **still available** as top-level
+`crackerjack run` options (see `crackerjack/cli/options.py`):
+
+- `--ai-debug` — verbose debugging for AI auto-fixing mode (still implies the removed `--ai-fix`)
+- `--dry-run` — preview fixes without modifying files (still implies the removed `--ai-fix`)
+- `--max-iterations` — maximum auto-fix iterations (default: 10)
+- `--quick` — quick mode (3 iterations max, ideal for CI/CD)
+- `--thorough` — thorough mode (8 iterations max, for complex refactoring)
+
+The replacement for the *workflow* is the Claude Code `Workflow`-tool loop
 that lives at `.claude/workflows/ai-fix-loop.js`; that script calls
 `python -m crackerjack run -v` itself and dispatches residual issues to a
 single fix agent.
@@ -500,57 +486,6 @@ python -m crackerjack run --bump [VERSION_TYPE] --run-tests --publish [VERSION_T
 
 ## Monitoring Commands
 
-### `--monitor`
-
-**Description**: Multi-project progress monitor.
-
-**Usage**:
-
-```bash
-python -m crackerjack run --monitor
-```
-
-**Output**:
-
-```
-📊 Multi-Project Monitor
-
-Project A:
-  Status: Running
-  Phase: Comprehensive Hooks
-  Progress: 65%
-  Issues: 3 found
-
-Project B:
-  Status: Completed
-  Phase: All
-  Progress: 100%
-  Issues: 0 found
-
-Project C:
-  Status: Failed
-  Phase: Fast Hooks
-  Progress: 20%
-  Issues: 12 found
-```
-
-### `--enhanced-monitor`
-
-**Description**: Advanced monitoring with patterns.
-
-**Usage**:
-
-```bash
-python -m crackerjack run --enhanced-monitor
-```
-
-**Features**:
-
-- Pattern detection
-- Anomaly detection
-- Predictive alerts
-- Historical trends
-
 ### `--watchdog`
 
 **Description**: Service watchdog with auto-restart.
@@ -739,7 +674,7 @@ python -m crackerjack run --strip-code
 **Usage**:
 
 ```bash
-python -m crackerjack run --dev --monitor
+python -m crackerjack run --dev
 ```
 
 **Features**:
@@ -763,45 +698,29 @@ python -m crackerjack run --generate-docs
 - `--docs-format`: Documentation format (markdown/rst/html)
 - `--validate-docs`: Validate existing documentation
 
-### `--orchestrated`
-
-**Description**: Advanced orchestrated workflow mode.
-
-**Usage**:
-
-```bash
-python -m crackerjack run --orchestrated
-```
-
-**Features**:
-
-- Complex workflow orchestration
-- Multi-phase coordination
-- Advanced error handling
-
 ## Global Options
 
 ### Environment Variables
 
-**Crackerjack** respects these environment variables:
+**Crackerjack** itself reads only a small set of environment variables; the rest are consumed by `uv` / git / AI providers, not by crackerjack:
 
 ```bash
-# PyPI Authentication
+# PyPI Authentication (consumed by `uv` during --publish / -p)
 export UV_PUBLISH_TOKEN=pypi-your-token-here
 
-# Keyring Provider
-export UV_KEYRING_PROVIDER=subprocess
-
-# Default Editor
-export EDITOR=code --wait
-
-# AI Integration
+# AI Integration (consumed by AI SDK clients, not crackerjack)
 export ANTHROPIC_API_KEY=sk-ant-...
 
-# MCP Server
-export CRACKERJACK_MCP_HOST=127.0.0.1
-export CRACKERJACK_MCP_PORT=8676
+# Tool-native auto-fix (consumed by crackerjack/adapters/factory.py)
+export AI_AGENT=1
+
+# MCP server host/port — configured via pyproject.toml [tool.crackerjack]
+# mcp_http_host (default 127.0.0.1) and mcp_http_port (default 8676).
+# Crackerjack does NOT read CRACKERJACK_MCP_HOST / CRACKERJACK_MCP_PORT env vars;
+# the Oneiric env_prefix is ONEIRIC_MCP_ (see oneiric/core/config.py).
 ```
+
+> Note: `UV_KEYRING_PROVIDER` and `EDITOR` are passed through to `uv` / git by the surrounding shell and are not interpreted by crackerjack.
 
 ### Exit Codes
 

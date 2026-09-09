@@ -418,7 +418,7 @@ removed on 2026-08-06 alongside the `--ai-fix` flag.
 
 - **Zuban** (Type Checking, opt-in): 20-200x faster than pyright
 
-  - Enable via `enable_zuban` in `pyproject.toml` under `[tool.crackerjack]`
+  - Enable via the Pydantic `enable_zuban` field on `HookSettings` (loaded via the `ONEIRIC_MCP_HOOKS__ENABLE_ZUBAN` env var, not from `[tool.crackerjack]` in `pyproject.toml`)
   - LSP server wiring lives in `zuban_lsp_enabled = true` (default on)
 
 **Performance Benefits**:
@@ -1017,13 +1017,13 @@ from legacy.depends import depends
 from crackerjack.config import CrackerjackSettings
 
 settings = depends.get(CrackerjackSettings)
-# Auto-loads from: env vars (CRACKERJACK_*), .env file, defaults
+# Auto-loads from: env vars (ONEIRIC_MCP_* / ONEIRIC_*), .env file, defaults
 ```
 
 **Benefits:**
 
 - **83% LOC reduction** in configuration code
-- **Automatic environment variable loading** (CRACKERJACK\_\* prefix)
+- **Automatic environment variable loading** (ONEIRIC_MCP\_\* prefix for MCP settings; ONEIRIC\_\* for other Oneiric config)
 - **Type validation** via Pydantic
 - **Single source of truth** for all runtime settings
 - **Backward compatible** - Public API unchanged (`create_workflow_options()`)
@@ -1302,11 +1302,7 @@ Model Context Protocol (MCP) enables AI agents to interact directly with Cracker
          "args": [
            "crackerjack",
            "start"
-         ],
-         "env": {
-           "UV_KEYRING_PROVIDER": "subprocess",
-           "EDITOR": "code --wait"
-         }
+         ]
        }
      }
    }
@@ -1324,11 +1320,7 @@ Model Context Protocol (MCP) enables AI agents to interact directly with Cracker
            "/path/to/crackerjack",
            "crackerjack",
            "start"
-         ],
-         "env": {
-           "UV_KEYRING_PROVIDER": "subprocess",
-           "EDITOR": "code --wait"
-         }
+         ]
        }
      }
    }
@@ -1336,12 +1328,10 @@ Model Context Protocol (MCP) enables AI agents to interact directly with Cracker
 
 ### Environment Variables & Security
 
-Crackerjack supports several environment variables for configuration:
+Crackerjack supports the following environment variables:
 
 - **UV_PUBLISH_TOKEN\`**: PyPI authentication token for publishing ⚠️ **Keep secure!**
-- **UV_KEYRING_PROVIDER\`**: Keyring provider for secure credential storage (e.g., "subprocess")
-- **EDITOR\`**: Default text editor for interactive commit message editing (e.g., "code --wait")
-- **AI_AGENT\`**: Set to "1" to enable AI agent mode with structured JSON output
+- **AI_AGENT\`**: Set to "1" to enable tool-native auto-fixes (currently used by the Ruff adapter to set `fix_enabled=True` via `crackerjack/adapters/factory.py`; the 12-agent AI subsystem was removed 2026-08-06). Crackerjack does not read `UV_KEYRING_PROVIDER` or `EDITOR` directly — those are consumed by `uv` / git, not by crackerjack itself.
 
 #### Security Best Practices
 
@@ -1377,8 +1367,6 @@ keyring set https://upload.pypi.org/legacy/ __token__
         "start"
       ],
       "env": {
-        "UV_KEYRING_PROVIDER": "subprocess",
-        "EDITOR": "code --wait",
         "UV_PUBLISH_TOKEN": "pypi-your-token-here"
       }
     }
@@ -1463,8 +1451,8 @@ Crackerjack runs quality checks in a two-stage process for optimal development w
 
 **Opt-in comprehensive hooks (disabled by default):**
 
-- Zuban type checking (`enable_zuban` flag)
-- Pyrefly type checking (`enable_pyrefly` flag)
+- Zuban type checking — controlled by the Pydantic `enable_zuban` field on `HookSettings` (env var `ONEIRIC_MCP_HOOKS__ENABLE_ZUBAN`, not `[tool.crackerjack]` in `pyproject.toml`); CLI flag `--enable-zuban`
+- Pyrefly type checking — same shape: Pydantic `enable_pyrefly` / env `ONEIRIC_MCP_HOOKS__ENABLE_PYREFLY` / CLI flag `--enable-pyrefly`
 - gitleaks secrets detection (replaced by betterleaks)
 
 `ty` is the default type checker as of v0.8. Zuban and Pyrefly remain available as opt-in alternatives for repositories that require them.
@@ -1531,12 +1519,9 @@ python -m crackerjack run
 | `--coverage-status` | - | Show coverage ratchet status |
 | `--debug` | - | Enable debug output |
 | `--dev` | - | Enable development mode for monitors |
-| `--enhanced-monitor` | - | Advanced monitoring with patterns |
 | `--fast` | - | Run only fast hooks |
 | `--generate-docs` | - | Generate API documentation |
 | `--interactive` | `-i` | Use Rich UI interface |
-| `--monitor` | - | Multi-project progress monitor |
-| `--orchestrated` | - | Advanced orchestrated workflow mode |
 | `--publish` | `-p` | Bump version and publish to PyPI |
 | `--quick` | - | Quick mode (3 iterations, for CI/CD) |
 | `--run-tests` | `-t` | Execute test suite |
@@ -1580,7 +1565,6 @@ python -m crackerjack run --publish patch      # Version bump + publish
 python -m crackerjack run                     # AI auto-fixing via Workflow tool (.claude/workflows/ai-fix-loop.js)
 python -m crackerjack run --ai-debug --run-tests # AI debugging with verbose output
 python -m crackerjack run --run-tests -v      # Full AI workflow (then dispatch Workflow tool)
-python -m crackerjack run --orchestrated        # Advanced orchestrated workflow
 python -m crackerjack run --quick               # Quick mode (3 iterations max)
 python -m crackerjack run --thorough            # Thorough mode (8 iterations max)
 ```
@@ -1588,8 +1572,6 @@ python -m crackerjack run --thorough            # Thorough mode (8 iterations ma
 **Monitoring & Observability:**
 
 ```bash
-python -m crackerjack run --monitor             # Multi-project progress monitor
-python -m crackerjack run --enhanced-monitor    # Enhanced monitoring with patterns
 python -m crackerjack run --watchdog            # Service watchdog (auto-restart)
 ```
 
@@ -1601,8 +1583,8 @@ python -m crackerjack start      # Start MCP server (fully functional)
 python -m crackerjack stop       # Stop server
 python -m crackerjack restart    # Restart server
 python -m crackerjack status     # Server status
-python -m crackerjack health     # Health check
-python -m crackerjack health --probe  # Liveness probe
+python -m crackerjack health     # Health check (top-level, no flags)
+python -m crackerjack mcp health --probe  # MCP-only liveness probe (--probe lives on the mcp health subcommand, see crackerjack/cli/mcp_cli.py:533-540)
 
 # Migration note: Legacy flags --start-mcp-server, --stop-mcp-server,
 # --restart-mcp-server are still available under `crackerjack run`,
@@ -1651,7 +1633,7 @@ python -m crackerjack run --validate-docs       # Validate existing documentatio
 **Global Locking & Concurrency:**
 
 ```bash
-python -m crackerjack run --disable-global-locking # Allow concurrent execution
+python -m crackerjack run --disable-global-locks # Allow concurrent execution
 python -m crackerjack run --global-lock-timeout 600 # Lock timeout in seconds
 python -m crackerjack run --cleanup-stale-locks # Clean stale lock files (default)
 python -m crackerjack run --no-cleanup-stale-locks # Don't clean stale locks
@@ -1686,8 +1668,8 @@ python -m crackerjack run --enable-ty           # Enable ty type verification (e
 - `--quick`: Quick mode (3 iterations max, ideal for CI/CD)
 - `--thorough`: Thorough mode (8 iterations max, for complex refactoring)
 - `--debug`: Enable debug output with detailed information
-- `--no-config-update`: Do not update configuration files
-- `--update-precommit`: Update pre-commit hooks configuration
+- `--no-config-updates`: Do not update configuration files (plural; see `crackerjack/cli/options.py:284-289`)
+- `--ai-debug`: Enable verbose debugging for AI auto-fixing mode (implies the removed `--ai-fix` flag)
 
 ## Style Guide
 
@@ -1875,7 +1857,7 @@ pre-commit clean                     # Clear hook cache
 pre-commit install --force          # Reinstall hooks
 
 # Update hooks
-python -m crackerjack run --update-precommit
+pre-commit autoupdate              # Use pre-commit's own autoupdate (crackerjack has no --update-precommit flag)
 
 # Type checking errors
 python -m crackerjack run               # Run quality checks

@@ -435,9 +435,10 @@ export PRE_COMMIT_HOME=/path/to/cache
 
 ```bash
 # No environment variables needed for basic usage
-# Advanced: MCP server configuration
-export CRACKERJACK_MCP_HOST="127.0.0.1"
-export CRACKERJACK_MCP_PORT=8676
+# Advanced: MCP server configuration lives in pyproject.toml under [tool.crackerjack]
+# (keys: mcp_http_host, default 127.0.0.1; mcp_http_port, default 8676).
+# Crackerjack does NOT read CRACKERJACK_MCP_HOST / CRACKERJACK_MCP_PORT env vars;
+# the Oneiric env_prefix is ONEIRIC_MCP_ (see oneiric/core/config.py).
 
 # AI integration
 export ANTHROPIC_API_KEY=sk-ant-...
