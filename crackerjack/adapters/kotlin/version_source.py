@@ -12,7 +12,7 @@ import re
 import subprocess
 from pathlib import Path
 
-from crackerjack.adapters.base import VersionNotFoundError, VersionSource
+from crackerjack.adapters.base import VersionNotFoundError
 
 logger = logging.getLogger(__name__)
 
@@ -89,13 +89,3 @@ class GradlePropertiesVersionSource:
             raise VersionWriteError(
                 f"Write verification failed: wrote {new_version!r}, read back {verified!r}"
             )
-
-
-def gradle_properties_version_source(project_root: Path) -> VersionSource:
-    """Factory matching the Phase 1 VersionSource Protocol shape.
-
-    Returns the underlying object typed as VersionSource; concrete class is
-    `GradlePropertiesVersionSource`. Use this factory for parity with
-    `git_tag_version_source()` (Phase 2).
-    """
-    return GradlePropertiesVersionSource(project_root)
