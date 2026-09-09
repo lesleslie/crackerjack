@@ -7,6 +7,7 @@ multi-agent review).
 from __future__ import annotations
 
 import logging
+import os
 import subprocess
 from collections.abc import Callable
 from pathlib import Path
@@ -63,10 +64,12 @@ def make_git_backend(
 
     def tag(name: str, message: str) -> None:
         # Per Security F7: -- separator before user-influenced positional.
+        # Options must come BEFORE `--` so git parses `-m message` as the
+        # annotation flag rather than as positionals after `--`.
         if not name or name.startswith("-"):
             raise ValueError(f"Invalid tag name: {name!r}")
         subprocess.run(
-            ["git", "tag", "-a", "--", name, "-m", message],
+            ["git", "tag", "-a", "-m", message, "--", name],
             cwd=project_root,
             check=True,
         )
@@ -74,8 +77,9 @@ def make_git_backend(
     def push(_commit_sha: str, tag_name: str) -> None:
         if not tag_name or tag_name.startswith("-"):
             raise ValueError(f"Invalid tag name: {tag_name!r}")
+        remote = os.environ.get("MAHAVISHNU_GIT_REMOTE", "origin")
         subprocess.run(
-            ["git", "push", "origin", "--", tag_name],
+            ["git", "push", "--", remote, tag_name],
             cwd=project_root,
             check=True,
         )
