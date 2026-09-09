@@ -1267,6 +1267,75 @@ Adapters connect Crackerjack to external tools and subsystems (e.g., Ruff, Zuban
 
 Quick index: [crackerjack/adapters/README.md](./crackerjack/adapters/README.md).
 
+## Language Adapters
+
+Language adapters extend Crackerjack to non-Python projects. Each one
+auto-detects whether it should activate in a given `project_root`, and if
+so wires the matching hook (and, where applicable, lifecycle / version
+source) into the Crackerjack capability registry. All four ship under the
+`crackerjack.language_adapters` entry-point group declared in
+`pyproject.toml`.
+
+| Adapter | Module | Detects via | Hooks (selected) |
+| --- | --- | --- | --- |
+| **Python** | `crackerjack.adapters.python` | `pyproject.toml` at root | Ruff format/lint, `ty`, Bandit, pytest (default Crackerjack surface) |
+| **Swift** | `crackerjack.adapters.swift` | `Package.swift` at root | `swift.build`, `swift.format`, `swift.package.update`, `swift.test` |
+| **Kotlin** | `crackerjack.adapters.kotlin` | `build.gradle.kts` / `build.gradle` at root | Gradle tasks via `./gradlew` probe |
+| **Web** | `crackerjack.adapters.web` | `package.json` at root **or** `[tool.crackerjack.web] enabled = true` | `web.stylelint`, `web.eslint`, `web.tsc` (`tsc --noEmit`), `web.html_validate` |
+
+### Activation rules
+
+- **Python** activates on every project that already has a `pyproject.toml`
+  — there is no opt-out.
+- **Swift / Kotlin** activate only when their build manifest is present.
+- **Web** activates when `package.json` is at the project root, OR when the
+  project explicitly opts in via `pyproject.toml`:
+
+  ```toml
+  [tool.crackerjack.web]
+  enabled = true
+  ```
+
+  The opt-in path exists so Django / Sphinx / MkDocs Python projects (which
+  may keep an unrelated `package.json` around for tooling) do not get
+  false-positive Web hook runs.
+
+### Jinja template formatter (Web)
+
+The Web adapter also ships `crackerjack.adapters.web.jinja_formatter`,
+which canonicalizes `.html`, `.j2`, and `.jinja` files in Tier 1 only:
+
+1. Trailing newline at EOF.
+1. No trailing whitespace per line.
+1. Preserve `{%-` / `-%}` / `{{-` / `-}}` whitespace markers.
+
+Tier 2 normalization is deferred. Per-project delimiter overrides live
+under `[tool.crackerjack.jinja]` in `pyproject.toml` (six keys:
+`block_start` / `block_end` / `variable_start` / `variable_end` /
+`comment_start` / `comment_end`).
+
+MCP exposure: `check_web_lint(project_root)` returns the resolved hook
+metadata (read-only); `format_jinja_templates(projects, dry_run=True)`
+previews / applies Tier 1 rewrites (mutation; `dry_run` defaults to
+`True`). See `docs/MCP_TOOLS_SPECIFICATION.md` §3.6 (`language_tools`).
+
+### Python example
+
+```python
+from pathlib import Path
+from crackerjack.adapters.python import PythonAdapter
+from crackerjack.adapters.web import WebAdapter
+
+for adapter in (PythonAdapter(), WebAdapter()):
+    if adapter.detect(Path(".")):
+        caps = adapter.capabilities(Path("."))
+        print(adapter.name, [h.name for h in caps.hooks])
+```
+
+For the underlying protocol (`LanguageAdapterBase`, `Capabilities`),
+see `crackerjack/adapters/base.py`. For full CLI coverage of the Web
+hooks, see [docs/CLI_REFERENCE.md](./docs/CLI_REFERENCE.md).
+
 ## MCP Server Configuration
 
 ### What is MCP?

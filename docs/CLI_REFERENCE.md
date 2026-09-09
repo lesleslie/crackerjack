@@ -227,6 +227,71 @@ python -m crackerjack run --skip-hooks --run-tests
 
 **Use Case**: During development, when you want to run tests without waiting for quality checks.
 
+## Language-Specific Hooks
+
+The Python adapter ships with Crackerjack by default. The Swift, Kotlin,
+and Web adapters activate only when their target manifest is detected at
+the project root (see [README § Language Adapters](../README.md#language-adapters)
+for the detection rules). This section documents the **Web** hook surface,
+which is the most recently shipped language adapter (Phase 4, 2026-09-04).
+
+### Web adapter activation
+
+The Web adapter auto-activates when either of the following holds for the
+project root:
+
+- `package.json` is present at the root, **or**
+- `pyproject.toml` contains `[tool.crackerjack.web] enabled = true`
+
+Once activated, the four Web hooks below join the comprehensive-hook
+stage. They are not gated behind a CLI flag — they participate in the
+normal `python -m crackerjack run` execution path. To run a single Web
+hook in isolation, use `--enable-hook <name>` (see `--enable-hook` in
+[Configuration Commands](#configuration-commands)) or call the
+`check_web_lint` MCP tool documented in
+[`MCP_TOOLS_SPECIFICATION.md` §3.6](./MCP_TOOLS_SPECIFICATION.md).
+
+### Web hook names
+
+| Hook | Underlying CLI | Files covered | Timeout |
+| --- | --- | --- | --- |
+| `web.stylelint` | `stylelint` (or `npx --no stylelint`) | `**/*.css` | 300 s |
+| `web.eslint` | `eslint` (or `npx --no eslint`) | `.`, `--ext .ts,.tsx,.js,.jsx` | 300 s |
+| `web.tsc` | `tsc --noEmit` (or `npx --no tsc -- --noEmit`) | entire project | 600 s |
+| `web.html_validate` | `html-validate` (or `npx --no html-validate`) | `**/*.html` | 300 s |
+
+The hook resolver (`crackerjack/adapters/web/hooks.py::_resolve`) prefers
+`node_modules/.bin/<tool>` (or its pnpm/yarn wrapped layout) before
+falling back to `PATH`, and finally to `npx --no <tool>`. When the tool
+cannot be resolved, the hook raises `WebHookError` with installation
+instructions; no Python fallback is provided (same precedent as the Swift
+and Kotlin adapters).
+
+### Output formats
+
+Each Web hook emits a stable, parseable output:
+
+- `web.stylelint` — JSON (`stylelint -f json`)
+- `web.eslint` — JSON (`eslint -f json`)
+- `web.html_validate` — JSON (`html-validate -f json`)
+- `web.tsc` — line-oriented (`tsc --noEmit`); entries match
+  `<path>(<line>,<col>): error|warning TS<id>: <message>`
+
+### Jinja template formatter
+
+The Web adapter also ships `crackerjack.adapters.web.jinja_formatter`
+(Tier 1 only). It is exposed via the `format_jinja_templates` MCP tool
+(see [`MCP_TOOLS_SPECIFICATION.md` §3.6](./MCP_TOOLS_SPECIFICATION.md));
+there is no CLI wrapper today. Tier 1 rules:
+
+1. Trailing newline at EOF.
+1. Strip trailing whitespace from every line.
+1. Preserve `{%-` / `-%}` / `{{-` / `-}}` whitespace markers.
+
+Per-project delimiter overrides live under `[tool.crackerjack.jinja]`
+in `pyproject.toml` (six keys: `block_start`, `block_end`,
+`variable_start`, `variable_end`, `comment_start`, `comment_end`).
+
 ## AI Integration Commands
 
 The AI auto-fix loop is **not** a shell flag. The previous `--ai-fix` flag
