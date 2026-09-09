@@ -28,10 +28,22 @@ class GradleTaskProbe:
         self._project_root = project_root
 
     def has_task(self, task_name: str) -> bool:
-        result = subprocess.run(
-            ["./gradlew", "tasks", "--all", "-q", "--no-daemon", "--no-configuration-cache"],
-            cwd=self._project_root, capture_output=True, text=True,
-        )
+        try:
+            result = subprocess.run(
+                ["./gradlew", "tasks", "--all", "-q", "--no-daemon", "--no-configuration-cache"],
+                cwd=self._project_root, capture_output=True, text=True,
+            )
+        except FileNotFoundError:
+            # gradlew not present in this environment (e.g. tests, minimal
+            # install). Can't probe — assume present so capability wiring
+            # still exposes the hook; runtime invocation will surface the
+            # actual failure if the task is truly absent.
+            logger.warning(
+                "`./gradlew` not found in %s; assuming %r is present.",
+                self._project_root,
+                task_name,
+            )
+            return True
         if result.returncode != 0:
             logger.warning(
                 "gradlew tasks --all failed (exit %d); treating %r as absent. "
