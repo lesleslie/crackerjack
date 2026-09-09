@@ -1,6 +1,12 @@
-______________________________________________________________________
-
-## status: complete role: historical date: 2026-07-17 last_reviewed: 2026-07-17 superseded_by: null blocks_on: [] topic: persistence
+---
+status: complete
+role: historical
+date: 2026-07-17
+last_reviewed: 2026-07-17
+superseded_by: null
+blocks_on: []
+topic: persistence
+---
 
 # Session Checkpoint Report: 2025-01-22
 

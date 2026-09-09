@@ -1,6 +1,12 @@
-______________________________________________________________________
-
-## status: active role: canonical date: 2026-07-17 last_reviewed: 2026-07-17 superseded_by: null blocks_on: [] topic: lifecycle
+---
+status: active
+role: canonical
+date: 2026-07-17
+last_reviewed: 2026-07-17
+superseded_by: null
+blocks_on: []
+topic: lifecycle
+---
 
 # H11 — SELFPATCHER_DENY_PATHS missing 10 critical files
 

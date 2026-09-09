@@ -1,6 +1,12 @@
-______________________________________________________________________
-
-## status: active role: canonical date: 2026-07-17 last_reviewed: 2026-07-17 superseded_by: null blocks_on: [] topic: observability
+---
+status: active
+role: canonical
+date: 2026-07-17
+last_reviewed: 2026-07-17
+superseded_by: null
+blocks_on: []
+topic: observability
+---
 
 # Phase 2.2 Completion Report: HTTP Connection Pool Implementation
 

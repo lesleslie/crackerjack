@@ -1,6 +1,12 @@
-______________________________________________________________________
-
-## status: archived role: historical date: 2026-07-17 last_reviewed: 2026-09-09 superseded_by: null blocks_on: [] topic: mcp-design
+---
+status: archived
+role: historical
+date: 2026-07-17
+last_reviewed: 2026-09-09
+superseded_by: null
+blocks_on: []
+topic: mcp-design
+---
 
 # Breaking Changes: Oneiric Migration
 

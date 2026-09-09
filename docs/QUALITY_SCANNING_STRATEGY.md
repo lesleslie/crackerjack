@@ -1,6 +1,12 @@
-______________________________________________________________________
-
-## status: active role: canonical date: 2026-07-17 last_reviewed: 2026-07-17 superseded_by: null blocks_on: [] topic: mcp-design
+---
+status: active
+role: canonical
+date: 2026-07-17
+last_reviewed: 2026-07-17
+superseded_by: null
+blocks_on: []
+topic: mcp-design
+---
 
 # Crackerjack Quality Scanning: Strategic Decision Framework
 

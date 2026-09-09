@@ -1,6 +1,12 @@
-______________________________________________________________________
-
-## status: active role: implementation date: 2026-07-17 last_reviewed: 2026-07-17 superseded_by: null blocks_on: [] topic: lifecycle
+---
+status: active
+role: implementation
+date: 2026-07-17
+last_reviewed: 2026-07-17
+superseded_by: null
+blocks_on: []
+topic: lifecycle
+---
 
 # Triage Note — refactoring_agent.py AST fallback tests
 

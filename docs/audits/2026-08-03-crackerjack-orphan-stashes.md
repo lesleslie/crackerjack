@@ -1,6 +1,12 @@
-______________________________________________________________________
-
-## status: complete role: triage date: 2026-08-03 last_reviewed: 2026-08-03 superseded_by: null blocks_on: [] topic: lifecycle
+---
+status: complete
+role: triage
+date: 2026-08-03
+last_reviewed: 2026-08-03
+superseded_by: null
+blocks_on: []
+topic: lifecycle
+---
 
 # Crackerjack orphan-stash + failing-test triage (2026-08-03)
 

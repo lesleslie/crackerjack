@@ -1,6 +1,12 @@
-______________________________________________________________________
-
-## status: active role: canonical topic: lifecycle date: 2026-07-17 last_reviewed: 2026-07-17 superseded_by: null blocks_on: []
+---
+status: active
+role: canonical
+topic: lifecycle
+date: 2026-07-17
+last_reviewed: 2026-07-17
+superseded_by: null
+blocks_on: []
+---
 
 # Document Frontmatter Schema v1
 
