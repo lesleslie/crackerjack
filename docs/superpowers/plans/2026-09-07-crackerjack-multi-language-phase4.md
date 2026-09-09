@@ -679,24 +679,25 @@ class TestApplyTier1:
         src = "A {%- if x -%} B\n"
         assert _apply_tier1(src) == "A {%- if x -%} B\n"
 
-    def test_does_not_strip_crlf_terminators(self) -> None:
-        # CRLF preservation is out of scope for Phase 4 (deferred; see Spec Revision Notes).
-        src = "hello\r\n"
-        # Phase 4 only normalizes the trailing-newline rule; we don't currently
-        # rewrite CRLF, so the value passes through (possibly with trailing-whitespace strip).
-        assert _apply_tier1(src) == "hello\r\n"
+    def test_normalizes_crlf_to_lf(self) -> None:
+        # Phase 4 normalizes CRLF → LF (Python's splitlines() strips line
+        # terminators; we rejoin with LF only). CRLF preservation is out of
+        # scope for Phase 4 (deferred; see Spec Revision Notes #8).
+        assert _apply_tier1("hello\r\n") == "hello\n"
 
 
 class TestFormatTemplate:
     def test_lex_failure_returns_source_unchanged(self) -> None:
-        # A custom delimiter that doesn't match the source → TemplateSyntaxError → source returned.
+        """Mismatched delimiters raise TemplateSyntaxError; format_template catches and returns src."""
         src = "{% if x %}A{% endif %}"
-        with pytest.raises(Exception):
-            _env({"block_start": "[%", "block_end": "%]"})
-        # But format_template catches TemplateSyntaxError internally and returns src.
-        bad = _env({"block_start": "[%", "block_end": "%]", "variable_start": "[[", "variable_end": "]]",
-                    "comment_start": "[#", "comment_end": "#]"})
-        assert format_template(src, delimiters=bad[1]) == src
+        custom_delims = {
+            "block_start": "[%", "block_end": "%]",
+            "variable_start": "[[", "variable_end": "]]",
+            "comment_start": "[#", "comment_end": "#]",
+        }
+        # Source uses `{%` but env expects `[%`. env.lex() raises TemplateSyntaxError;
+        # format_template catches and returns src unchanged.
+        assert format_template(src, delimiters=custom_delims) == src
 
     def test_default_delimiters_round_trip(self) -> None:
         src = "{# c #}\n{% if x %}\nA\n{% else %}\nB\n{% endif %}\n"
@@ -908,7 +909,7 @@ git -c user.email=les@wedgwoodwebworks.com -c user.name=les commit -m "feat(adap
 - Modify: `crackerjack/adapters/web/__init__.py` (add WebAdapter class; existing `web_enabled` stays)
 - Test: `tests/adapters/web/test_web_adapter.py`
 
-Per Phase 4 simplification F11: `WebAdapter.capabilities()` constructs nothing heavy (no formatter, no lifecycle). Mirrors Swift/Kotlin's `name = "swift"` style (bare assignment, NOT `name: str =`) — the ClassVar annotation is inherited from `LanguageAdapterBase`.
+Per Phase 4 simplification F11: `WebAdapter.capabilities()` constructs nothing heavy (no formatter, no lifecycle). Mirrors Swift's `name = "swift"` bare-assignment style. Kotlin uses `name: str = "kotlin"` annotated; either style is functionally equivalent (both inherit the `ClassVar[str]` annotation from `LanguageAdapterBase`).
 
 Per spec line 65: no lifecycle for Web. `has_lifecycle=False` and `version_source=None`.
 
@@ -1153,10 +1154,12 @@ Expected: 5 failures (the new tests; the updated `test_detect_languages_returns_
 At the top of `crackerjack/mcp/tools/language_tools.py`, add the imports (with the existing top-level imports sorted):
 
 ```python
-from crackerjack.adapters.web import WebAdapter
-from crackerjack.adapters.web.jinja_formatter import JINJA_SUFFIXES, _apply_tier1, _load_jinja_config, format_template
+from crackerjack.adapters.web import WebAdapter, web_enabled
+from crackerjack.adapters.web.jinja_formatter import JINJA_SUFFIXES, _load_jinja_config, format_template
 from crackerjack.adapters.web.hooks import _parse_eslint_json, _parse_html_validate_json, _parse_stylelint_json, _parse_tsc_output
 ```
+
+(`_apply_tier1` removed from the import list — it was a leftover from an earlier draft; only `format_template` and `_load_jinja_config` are used by the MCP tool.)
 
 Inside `register_language_tools(mcp_app: FastMCP) -> None:`, after the existing Phase 3 tools and before any closing statement, add the two web tools:
 
@@ -1182,7 +1185,6 @@ Inside `register_language_tools(mcp_app: FastMCP) -> None:`, after the existing 
                 `MAHAVISHNU_PROJECT_ROOTS` allowlist.
             ValueError: if the Web adapter is not enabled for the project.
         """
-        from crackerjack.adapters.web import web_enabled
         root = _validate_project_root(project_root)
         if not web_enabled(root):
             raise ValueError(
@@ -1225,7 +1227,6 @@ Inside `register_language_tools(mcp_app: FastMCP) -> None:`, after the existing 
             ValueError: if any project is not Web-enabled (per Writing F3).
         """
         _require_auth_config()
-        from crackerjack.adapters.web import web_enabled
         for project_dir in projects:
             _validate_project_root(project_dir)
         files: list[str] = []
@@ -1255,14 +1256,14 @@ Inside `register_language_tools(mcp_app: FastMCP) -> None:`, after the existing 
         return {"files": files, "errors": errors, "mode": "dry_run" if dry_run else "write"}
 ```
 
-- [ ] **Step 4: Update `test_register_language_tools_registers_three_tools` → `_six_tools`**
+- [ ] **Step 4: Update `test_register_language_tools_registers_three_tools` → `_seven_tools`**
 
-Find the existing assertion in `tests/mcp/tools/test_language_tools.py` that asserts a specific tool count and update it to six tools (swift_bump_version, swift_list_hooks, detect_languages, kotlin_bump_version, kotlin_list_hooks, plus the two new ones).
+Find the existing assertion in `tests/mcp/tools/test_language_tools.py` and update it to assert all 7 tool names (swift_bump_version, swift_list_hooks, detect_languages, kotlin_bump_version, kotlin_list_hooks, check_web_lint, format_jinja_templates). Note: existing test name is "three_tools" because Phase 2 had 3 tools; Phase 3 (Kotlin) silently failed to rename it (carry-over).
 
 - [ ] **Step 5: Run all MCP tests to verify they pass**
 
 Run: `cd /Users/les/Projects/crackerjack && /Users/les/Projects/crackerjack/.venv/bin/pytest tests/mcp/tools/test_language_tools.py tests/adapters/test_registry.py -v`
-Expected: All pass (17 prior + 4 new web = 21 in test_language_tools.py, plus the new test_registry.py entry).
+Expected: All pass (13 prior + 4 new web = 17 in test_language_tools.py, plus the 1 new test_registry.py entry = 18 total).
 
 - [ ] **Step 6: Commit**
 
@@ -1427,7 +1428,7 @@ markers = [
 - [ ] **Step 4: Run full Phase 4 test suite**
 
 Run: `cd /Users/les/Projects/crackerjack && /Users/les/Projects/crackerjack/.venv/bin/pytest tests/adapters/web/ tests/mcp/tools/test_language_tools.py tests/adapters/test_registry.py --cov=crackerjack.adapters.web --cov=crackerjack.mcp.tools.language_tools --cov-report=term-missing -q`
-Expected: ~55 passed (8 detection + 12 hooks + 13 formatter + 8 adapter + 21 mcp + 1 registry = 63, plus 4 fixture reference); coverage ≥ 89%.
+Expected: ~55 passed (8 detection + 12 hooks + 13 formatter + 8 adapter + 17 mcp + 1 registry + ~4 fixture reference = ~63); coverage ≥ 89%.
 
 - [ ] **Step 5: Run crackerjack quality gate**
 
@@ -1508,7 +1509,7 @@ git -c user.email=les@wedgwoodwebworks.com -c user.name=les commit -m "test(adap
 | `WebHookError` raised + tested | Task 3 | ✓ (closes Writing LOW-5 / A11y F16) |
 | No lifecycle (spec line 65) | Task 5 | ✓ |
 | `has_lifecycle=False` and `version_source=None` | Task 5 | ✓ |
-| `name = "web"` (ClassVar inherited, no annotation) | Task 5 | ✓ (closes Web MEDIUM-5) |
+| `name = "web"` (mirrors Swift's bare-assignment style; Kotlin uses annotated form — both work) | Task 5 | ✓ (closes Web MEDIUM-5) |
 | `detection.py` folded into `__init__.py` | Task 2 | ✓ (closes Simplification F10) |
 | No `python_fallbacks.py` module | Task 3 absent | ✓ (closes Simplification F6) |
 | Real-CLI smoke tests gated on availability | Task 7 | ✓ (closes Testing HIGH-3) |
@@ -1539,7 +1540,9 @@ The following items deviate from spec Rev 2 (`b00b36f0`) and require a spec amen
 
 7. **Shared `jinja-test-fixtures/` Bodai sibling package deferred.** Spec line 420 lists this as the "Phase 4 deliverable". Phase 4 ships 3 inline fixture files inside `tests/fixtures/web-vanilla/templates/` + a 6-file golden-master corpus at `tests/fixtures/jinja-templates/` instead. When the sibling package lands, the inline fixtures migrate.
 
-8. **CRLF preservation deferred.** Spec Jinja F1 caveat says "lex() normalizes CRLF → LF — preserve CRLF flag from raw input if needed." Phase 4 does not currently handle CRLF inputs; tests assert LF-only inputs. The spec wording is ambiguous on whether preservation is mandatory — recorded here so the next spec revision can clarify.
+8. **CRLF preservation deferred.** Spec Jinja F1 caveat says "lex() normalizes CRLF → LF — preserve CRLF flag from raw input if needed." Phase 4 does not currently handle CRLF inputs; `_apply_tier1("hello\r\n")` returns `"hello\n"` because Python's `str.splitlines()` strips the line terminator. The spec wording is ambiguous on whether preservation is mandatory — recorded here so the next spec revision can clarify.
+
+9. **Spec line 713 acceptance target deferred.** Spec line 713 names "Test on `fastblocks`, `splashstand`" as a Phase 4 acceptance criterion. Phase 4 ships only a synthetic `tests/fixtures/web-vanilla/` fixture; real-world fastblocks and splashstand validation is deferred to a separate plan (or to Phase 5 if these repos become available locally).
 
 ---
 
