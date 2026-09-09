@@ -10,7 +10,7 @@ topic: archive-cleanup
 
 # Archived docs — 2026-08-06 AI-fix removal cleanup
 
-The nine files in this directory describe the deleted `crackerjack.agents.*`
+The forty-seven files in this directory describe the deleted `crackerjack.agents.*`
 subsystem and the pre-removal provider architecture (the multi-provider AI-fix
 chain with `ClaudeCodeFixer`, `OpenAICodeFixer`, `QwenCodeFixer`, and
 `ProviderFactory`). They were archived during the 2026-09-09 docs audit because
