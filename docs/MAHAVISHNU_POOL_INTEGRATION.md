@@ -60,7 +60,14 @@ Verified against `mahavishnu/pools/_registry.py` (canonical hyphen form):
 | `session-buddy` | SessionBuddyPool — delegates to a Session-Buddy instance (3 fixed workers) | Distributed execution with memory integration |
 | `runpod` | RunPodPool — RunPod Flash serverless GPU | GPU/ML workloads |
 | `pi` | PiPool — `npx @earendil-works/pi-coding-agent` subprocess bridge | Model-agnostic agent execution via Bifrost |
-| `gpu-handler` | RunPod handler variant | GPU pool alternative |
+
+> **`gpu-handler` is NOT a registered pool type.** `GpuHandlerPool`
+> exists in `mahavishnu/pools/gpu_handler_pool.py` as a `RunPodPool`
+> subclass you can instantiate directly, but it is NOT registered with
+> `mahavishnu.pools._registry::register_pool_type` and does not appear
+> in `list_pool_types()`. To use it, import the class directly and pass
+> it to `PoolManager` rather than relying on `pool_spawn`/registry
+> dispatch.
 
 The `pool_type` values `kubernetes`, `container`, `mahavishnu_pool`,
 `session_buddy_pool`, `runpod_pool`, `pi_pool` (underscored forms in
@@ -74,11 +81,10 @@ To discover the canonical names at runtime use
 `mahavishnu/pools/_registry.py::list_pool_types()` or the CLI:
 `mahavishnu pool types`.
 
-### Real Pool MCP Tools (10 Verified)
+### Real Pool MCP Tools (8 Verified)
 
-Verified against `mahavishnu/mcp/tools/pool_tools.py` and
-`mahavishnu/core/skill_mcp_validator.py` (the `KNOWN_TOOLS` whitelist
-that gates `crackerjack__get_skills_for_issue`):
+Verified against `mahavishnu/mcp/tools/pool_tools.py` (counted
+`@mcp.tool()` decorators):
 
 | MCP Tool | Purpose |
 |----------|---------|
@@ -89,14 +95,22 @@ that gates `crackerjack__get_skills_for_issue`):
 | `pool_close_all` | Close every active pool |
 | `pool_health` | Cross-pool health snapshot |
 | `pool_search_memory` | Cross-pool memory search |
-| `pool_execute` | Execute a prompt on a specific pool |
-| `pool_route_execute` | Auto-route a prompt to the best pool (least_loaded / round_robin / random / affinity) |
 | `budget_enforce` | Declare a per-workflow budget (Phase 3 v2) — registered in `pool_tools.py` but not a pool-management primitive |
 
-Earlier drafts of this document claimed **9** pool tools; the current
-ground-truth count is **10**. The earlier drafts also showed example
-parameters (`pool_id`, `pool_type="mahavishnu"`, `worker_type="container"`)
+Earlier drafts of this document claimed **9** or **10** pool tools; the
+current ground-truth count is **8** `@mcp.tool()` decorators in
+`mahavishnu/mcp/tools/pool_tools.py`. The earlier drafts also showed
+example parameters (`pool_id`, `pool_type="mahavishnu"`, `worker_type="container"`)
 that are inconsistent with the live signatures in `pool_tools.py`.
+
+> **`pool_execute` and `pool_route_execute` are NOT registered MCP
+> tools.** They are referenced in code comments and the
+> `bodai/docs/memory/TOOL_ALIAS_INVENTORY.md` inventory, but no
+> `@mcp.tool()` decorator defines them anywhere in the Mahavishnu tree
+> (verified by `grep -rn "@mcp.tool" mahavishnu/`). They are CLI
+> commands (`mahavishnu pool execute`, `mahavishnu pool route`) and
+> Python functions in `mahavishnu/_main_cli.py:1668` (`pool_execute`)
+> but are not exposed over the MCP wire protocol.
 
 ### Tool Signatures (Verified)
 
@@ -116,10 +130,13 @@ async def budget_enforce(workflow_id: str, budget_tokens: int | None = None,
 ```
 
 `pool_execute` and `pool_route_execute` are referenced in
-`mahavishnu/pools/manager.py:518-519` and listed as registered in
-`bodai/docs/memory/TOOL_ALIAS_INVENTORY.md` (the canonical
-cross-component truth). Their full signatures live in the Mahavishnu
-worker dispatch path, not `pool_tools.py`.
+`mahavishnu/pools/manager.py:518-519` (in a comment only) and are
+listed as registered in `bodai/docs/memory/TOOL_ALIAS_INVENTORY.md`
+(line 149 for `pool_route_execute`). Neither has a `@mcp.tool()`
+decorator anywhere in the Mahavishnu source tree. Their full
+signatures live in the Mahavishnu CLI dispatch path
+(`mahavishnu/_main_cli.py:1668` for `pool_execute`) — they are CLI
+commands, not MCP wire-protocol tools.
 
 ______________________________________________________________________
 
@@ -162,12 +179,16 @@ async def call_mcp_tool(tool_name: str, arguments: dict[str, Any]) -> dict[str, 
     return json.loads(text_payload)
 
 
-async def example_route_execute(prompt: str) -> dict[str, Any]:
-    """Auto-route a prompt to the least-loaded pool."""
-    return await call_mcp_tool(
-        "pool_route_execute",
-        {"prompt": prompt, "pool_selector": "least_loaded"},
-    )
+async def example_pool_list() -> list[dict[str, Any]]:
+    """List active pools via the registered MCP tool.
+
+    Note: `pool_route_execute` is NOT a registered MCP tool (see the
+    "Real Pool MCP Tools" section above) — use the CLI
+    (`mahavishnu pool route --prompt ... --selector least_loaded`)
+    for routing, or call any of the 8 MCP tools registered in
+    `mahavishnu/mcp/tools/pool_tools.py` (e.g. `pool_list`).
+    """
+    return await call_mcp_tool("pool_list", {})
 ```
 
 ### Using the official MCP Python client
@@ -240,7 +261,11 @@ scoped out during the **2026-08-06 AI-fix subsystem removal** (see
 |--------------|--------|--------|
 | `crackerjack/integration/mahavishnu_pool_dispatcher.py` (236 lines, routes via `mcp__mahavishnu__pool_route_execute`) | `docs/plans/2026-06-27-ty-cleanup-and-ai-fix.md:286`, `docs/superpowers/specs/2026-05-20-ai-fix-comprehensive-overhaul-design.md:243` | File does not exist. Phase 4 implementation was dropped when the AI-fix pipeline was removed. |
 | `pool_scanning:` Crackerjack config block | `crackerjack/config/settings.py` `pooled_tools`, `local_tools`, `autoscaling`, `memory` | These config keys still exist for forward compatibility but no production code reads them. |
-| `crackerjack/services/pool_client.py`, `crackerjack/hooks/pool_based_hooks.py`, `crackerjack/services/pool_router.py`, `crackerjack/services/pool_scaler.py`, `crackerjack/services/memory_aware_scanner.py` | Earlier drafts of this document | None of these modules exist. |
+| `crackerjack/hooks/pool_based_hooks.py` | Earlier drafts of this document | File does not exist. The hook-based pool router was removed with the AI-fix subsystem. |
+| `crackerjack/services/pool_client.py` | Earlier drafts of this document | File EXISTS (180 lines, `crackerjack/services/pool_client.py`). Not consumed by any production code path; carried for forward compatibility. |
+| `crackerjack/services/pool_router.py` | Earlier drafts of this document | File EXISTS (147 lines, `crackerjack/services/pool_router.py`). Carries `TOOL_WORKER_MAP` routing keys for `refurb`, `complexipy`, `pylint`, `mypy`, `bandit`, `skylos`, `ruff`, `vulture`, `codespell`, `check-jsonschema`, `semgrep`, `gitleaks`. Not invoked by the current hook executor. |
+| `crackerjack/services/pool_scaler.py` | Earlier drafts of this document | File EXISTS (159 lines, `crackerjack/services/pool_scaler.py`). Not consumed by any production code path; carried for forward compatibility. |
+| `crackerjack/services/memory_aware_scanner.py` | Earlier drafts of this document | File EXISTS (`crackerjack/services/memory_aware_scanner.py`). The earlier drafts incorrectly listed this path as `crackerjack/integration/memory_aware_scanner.py` — the actual location is `crackerjack/services/`. |
 
 Any future reimplementation belongs in a **new Phase 5 plan**, not in
 this document. The 2026-05-20 spec and 2026-06-27 plan are
