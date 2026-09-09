@@ -24,6 +24,19 @@ ______________________________________________________________________
   `crackerjack.adapters.registry.discover_adapters()` that now
   instantiates class entry points before indexing them, so adapter
   detection returns instances (not classes) in Phase 2 as well.
+- Kotlin/Gradle language adapter (Phase 3): GradlePropertiesVersionSource reads version from
+  gradle.properties (keys: pluginVersion, projectVersion, version) with fallback to
+  build.gradle.kts scan and `./gradlew properties` as source of truth. Lifecycle bumps via
+  gradle.properties write (NOT build.gradle.kts); real-semver `_bump` semantics preserving
+  pre-release qualifiers (`-SNAPSHOT`, `-RC1`) and build metadata. Three hooks with
+  Gradle task probing: kotlin.ktlint (`./gradlew ktlintCheck`), kotlin.detekt
+  (`./gradlew detekt`), kotlin.test (`./gradlew test`); absent tasks filtered with
+  logged warning. All Gradle invocations pass `--no-daemon --no-configuration-cache` for
+  CI reliability. Two new MCP tools: kotlin_bump_version (mutation; requires auth per
+  spec MCP F5 + path validation; per-invocation check), kotlin_list_hooks (read-only;
+  returns hook metadata after task probing). `crackerjack.language_adapters` entry-point
+  group now registers Python, Swift, and Kotlin adapters. New fixture at
+  `tests/fixtures/gradle-vanilla/` exercises the full lifecycle end-to-end.
 
 ## [0.80.5] - 2026-09-07
 
