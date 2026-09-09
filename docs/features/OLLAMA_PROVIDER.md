@@ -465,8 +465,8 @@ export AI_PROVIDER=ollama
 
 ## Related Documentation
 
-- [Qwen Provider Documentation](QWEN_PROVIDER.md)
-- [Provider Architecture Documentation](PROVIDER_ARCHITECTURE.md)
+- ~~[Qwen Provider Documentation](QWEN_PROVIDER.md)~~ — archived 2026-08-10 (commit `907ab860`); provider subsystem was replaced by the external Workflow tool loop at `.claude/workflows/ai-fix-loop.js`. See `docs/archive/2026-08-06-ai-fix-removal-cleanup/README.md`.
+- ~~[Provider Architecture Documentation](PROVIDER_ARCHITECTURE.md)~~ — archived 2026-08-10 (commit `907ab860`); archived copy at `docs/archive/2026-08-06-ai-fix-removal-cleanup/PROVIDER_ARCHITECTURE.md`.
 - [Configuration Reference](../reference/CONFIGURATION.md)
 
 ## Support
