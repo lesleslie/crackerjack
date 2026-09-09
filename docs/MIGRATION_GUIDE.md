@@ -286,8 +286,8 @@ python -m crackerjack run
 3. **If Issues Found**:
 
 ```bash
-# Run with AI auto-fixing (recommended)
-python -m crackerjack run --ai-fix --run-tests
+# Run the quality suite (--ai-fix was removed 2026-08-06)
+python -m crackerjack run --run-tests
 
 # Or run with verbose output to see details
 python -m crackerjack run --verbose
@@ -341,8 +341,8 @@ python -m crackerjack run
 # Quality checks + tests
 python -m crackerjack run --run-tests
 
-# AI auto-fixing
-python -m crackerjack run --ai-fix --run-tests
+# Quality checks + tests (--ai-fix removed 2026-08-06)
+python -m crackerjack run --run-tests
 ````
 
 ### Pre-Commit
@@ -357,8 +357,8 @@ We no longer use pre-commit. Quality checks are run via Crackerjack before pushi
 # Quick demo
 python -m crackerjack run --help
 
-# Show AI capabilities
-python -m crackerjack run --ai-fix --dry-run --run-tests
+# Dry-run preview (--ai-fix removed 2026-08-06)
+python -m crackerjack run --dry-run --run-tests
 ````
 
 3. **Monitor Adoption**:
@@ -588,11 +588,11 @@ python --version
 **Solution**:
 
 ```bash
-# Run with AI auto-fixing
-python -m crackerjack run --ai-fix --run-tests
+# Run the quality suite (--ai-fix removed 2026-08-06)
+python -m crackerjack run --run-tests
 
-# Or run with dry-run to preview fixes
-python -m crackerjack run --ai-fix --dry-run --run-tests
+# Or run with dry-run to preview
+python -m crackerjack run --dry-run --run-tests
 
 # Or skip quality checks temporarily
 python -m crackerjack run --skip-hooks --run-tests

@@ -254,7 +254,7 @@ names below are `Hook.name` values, not package entry points. To run
 them, use one of:
 
 - the `check_web_lint` MCP tool (documented in
-  [`MCP_TOOLS_SPECIFICATION.md` §3.6](./MCP_TOOLS_SPECIFICATION.md)), or
+  [`MCP_TOOLS_SPECIFICATION.md` §3.6](../MCP_TOOLS_SPECIFICATION.md)), or
 - invoke them via their registered `Hook.name` values
   (`web.stylelint`, `web.eslint`, `web.tsc`, `web.html_validate`) from
   a custom stage.
@@ -293,7 +293,7 @@ Each Web hook emits a stable, parseable output:
 
 The Web adapter also ships `crackerjack.adapters.web.jinja_formatter`
 (Tier 1 only). It is exposed via the `format_jinja_templates` MCP tool
-(see [`MCP_TOOLS_SPECIFICATION.md` §3.6](./MCP_TOOLS_SPECIFICATION.md));
+(see [`MCP_TOOLS_SPECIFICATION.md` §3.6](../MCP_TOOLS_SPECIFICATION.md));
 there is no CLI wrapper today. Tier 1 rules:
 
 1. Trailing newline at EOF.
