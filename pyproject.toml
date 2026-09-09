@@ -106,6 +106,7 @@ crackerjack = "crackerjack.cli:app"
 [project.entry-points."crackerjack.language_adapters"]
 python = "crackerjack.adapters.python:PythonAdapter"
 swift = "crackerjack.adapters.swift:SwiftAdapter"
+kotlin = "crackerjack.adapters.kotlin:KotlinAdapter"
 
 [project.urls]
 documentation = "https://github.com/lesleslie/crackerjack"
