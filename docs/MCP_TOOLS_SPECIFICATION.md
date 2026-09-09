@@ -54,7 +54,7 @@ Verified by grepping every `@mcp_app.tool()` / `@mcp.tool()` decorator under
 `crackerjack/mcp/tools/` and cross-checking against
 `profiles.py::PROFILE_REGISTRATIONS`. The `eventbridge_tools` row is
 conditional — the `publish_to_eventbridge` tool only appears when
-`crackerjack.yaml::eventbridge.enabled=true` (default `false`).
+`settings/crackerjack.yaml::eventbridge.enabled=true` (default `false`).
 
 | Profile | Profile-listed tools | + mandatory (health) | + `discover_tools` | **Total** |
 |---|---:|---:|---:|---:|
@@ -71,7 +71,7 @@ start` does not expose them:
 
 | Module | Tools | Status |
 |---|---|---|
-| `crackerjack/mcp/tools/mahavishnu_tools.py` | `get_cross_project_git_dashboard`, `get_repository_health`, `get_cross_project_patterns`, `get_velocity_comparison` | **Orphan.** Defined but never wired. Wire-up requires adding `"mahavishnu_tools": register_mahavishnu_tools` to `REGISTRATION_MAP` and assigning a tier in `PROFILE_REGISTRATIONS`. |
+| `crackerjack/mcp/tools/mahavishnu_tools.py` | `get_cross_project_git_dashboard`, `get_repository_health`, `get_cross_project_patterns`, `get_velocity_comparison` | **Orphan.** Defined but never wired. Wire-up requires adding `"mahavishnu_tools"` to `REGISTRATION_MAP` (with a corresponding register function) and assigning a tier in `PROFILE_REGISTRATIONS`. As of 2026-09-09 the module does not expose any `register_*` function. |
 | `crackerjack/mcp/tools/workspace_tools.py` | `create_workspace`, `list_workspaces`, `get_workspace_info`, `remove_workspace` | **Orphan + stubs.** Defined but never wired; even when wired, `_get_manager()` raises `NotImplementedError` until the Phase 3 Oneiric workspace backend lands. |
 
 These tools are intentionally **not** documented in §3 below because they
@@ -98,7 +98,7 @@ are not callable through the MCP server.
 | `health_tools` | `health_tools_wrapper.py` → `mcp_common.health.register_health_tools` | ✓ | ✓ | ✓ |
 | `discover_tools` | `discover_query.py` (auto-registered by W0 helper) | ✓ | ✓ | ✓ |
 
-¹ Conditional on `crackerjack.yaml::eventbridge.enabled=true`.
+¹ Conditional on `settings/crackerjack.yaml::eventbridge.enabled=true`.
 
 ---
 
@@ -116,14 +116,14 @@ are not callable through the MCP server.
 |---|---|---|
 | `execute_crackerjack(args: str, kwargs: str) -> str` | Args = optional sub-mode; `kwargs` = JSON `{test: bool, testing: bool, execution_timeout: int, ...}`. | Full Crackerjack quality workflow. Rate-limited via `context.rate_limiter`. Writes `workflow_checkpoints.sqlite`, `fix_attempts`, `error_patterns`, `progress_dir/job-<id>.json`. |
 | `smart_error_analysis(use_cache: bool = True) -> str` | In-process `ErrorCache` frequency counter. | AI-prioritized fix suggestions from the cached error pattern DB. |
-| `init_crackerjack(args: str = "", kwargs: str = "{}") -> str` | `args` = target path (default `.`); `kwargs` = `{force: bool, template: str \| None, interactive: bool}`. | First-time project setup: writes `pyproject.toml`, `CLAUDE.md`, `example.mcp.json`, `settings/local.yaml`. |
-| `suggest_agents(task_description: str = "", project_type: str = "python", current_context: str = "") -> str` | Keyword-driven recommender. | Returns structured suggestions for `crackerjack-architect`, `refactoring-specialist`, `security-auditor`, `performance-engineer`, etc. based on task text. |
+| `init_crackerjack(args: str = "", kwargs: str = "{}") -> str` | `args` = target path (default `.`); `kwargs` = `{force: bool, template: str \| None, interactive: bool}`. | First-time project setup: writes `pyproject.toml`, `.gitignore`, `CLAUDE.md`, `RULES.md`, `example.mcp.json` (per `crackerjack/services/initialization.py::_get_config_files`). |
+| `suggest_agents(task_description: str = "", project_type: str = "python", current_context: str = "") -> str` | Keyword-driven recommender. | Returns structured suggestions for `TestCreationAgent`, `RefactoringAgent`, `SecurityAgent`, `PerformanceAgent`, `DocumentationAgent`, `ImportOptimizationAgent` based on task text (per `crackerjack/mcp/tools/execution_tools.py::_analyze_task_for_agents`). |
 
 ### 3.3 `utility_tools` (`utility_tools.py`) — STANDARD+
 
 | Tool | Signature | Description |
 |---|---|---|
-| `clean_crackerjack(args: str = "", kwargs: str = "{}") -> str` | `args` = scope in `{temp, progress, cache, all}`; `kwargs` = `{dry_run: bool, older_than: int}`. | Delete old `crackerjack-*.log`, `.coverage.*`, `progress_dir/*.json`. |
+| `clean_crackerjack(args: str = "", kwargs: str = "{}") -> str` | `args` = scope in `{temp, progress, cache, all}`; `kwargs` = `{dry_run: bool, older_than: int}`. | Delete old `crackerjack-*.log`, `.coverage.*`, `progress_dir/*.json`. **Note:** `cache` scope is currently a no-op (`pass` in `_execute_cleanup_operations`); only `temp` and `progress` perform real work. |
 | `config_crackerjack(args: str = "", kwargs: str = "{}") -> str` | `args` = `list \| get <key> \| validate`. | Read-only dump of `CrackerjackSettings.model_dump()`. |
 | `analyze_crackerjack(args: str = "", kwargs: str = "{}") -> str` | `args` = scope; `kwargs` = `{report_format: str}`. | **MOCKED.** Returns `{"status": "mock_success", ...}`. Real implementation pending. |
 | `validate_claude_md(args: str = "", kwargs: str = "{}") -> str` | `args` may contain `--update`; `kwargs` = `{update: bool, project_path: str}`. | Validates `CLAUDE.md` against Crackerjack integration markers + essential principles. With `update=true`, may rewrite `CLAUDE.md` via `InitializationService.initialize_project_full(force=True)`. |
@@ -137,12 +137,12 @@ are not callable through the MCP server.
 ### 3.5 `eventbridge_tools` (`eventbridge_tools_wrapper.py` → `eventbridge_tools.py`) — FULL (conditional)
 
 Wrapper `register_crackerjack_eventbridge` honors
-`crackerjack.yaml::eventbridge.enabled` (default `false`). When false, the
+`settings/crackerjack.yaml::eventbridge.enabled` (default `false`). When false, the
 inner registrar is a no-op and no tools from this group are exposed.
 
 | Tool | Signature | Description |
 |---|---|---|
-| `publish_to_eventbridge(topic: str, payload: dict, async_callback: bool = False) -> dict` | `topic` ∈ `{test.started, test.completed, test.failed}`; `payload` keys validated per topic. | Bodai EventBridge publisher. With `async_callback=True`, returns `{workflow_id, status: queued}` and schedules `_dispatch_topic` as a background task. |
+| `publish_to_eventbridge(topic: str, payload: dict, async_callback: bool = False) -> dict` | `topic` ∈ `{test.started, test.completed, test.failed}`; only hardcoded keys are read by the dispatcher (see below) — unknown topics log a warning and are ignored. | Bodai EventBridge publisher. With `async_callback=True`, returns `{workflow_id, status: queued}` and schedules `_dispatch_topic` as a background task. |
 
 ### 3.6 `language_tools` (`language_tools.py`) — FULL
 
@@ -175,7 +175,7 @@ return the documented error JSON).
 
 | Tool | Signature | Description |
 |---|---|---|
-| `query_local_traces(task_class: str, time_range_minutes: int = 60, system_id: str \| None = None, limit: int = 100) -> list[dict]` | Proxies to `mcp__akosha__query_local_traces` over HTTP at `$AKOSHA_MCP_ENDPOINT` (default `http://localhost: 8682`). | Read-only proxy. Errors are swallowed and `[]` is returned. |
+| `query_local_traces(task_class: str, time_range_minutes: int = 60, system_id: str \| None = None, limit: int = 100) -> list[dict]` | Proxies to `mcp__akosha__query_local_traces` over HTTP at `$AKOSHA_MCP_ENDPOINT` (default `http://localhost:8682`). | Read-only proxy. Errors are swallowed and `[]` is returned. |
 
 ### 3.9 `progress_tools` (`progress_tools.py`) — FULL
 
@@ -247,10 +247,10 @@ non-required dependencies (`session_buddy` at `:8678`, `mahavishnu` at
 |---|---|---|
 | `get_liveness() -> dict` | Liveness probe (no I/O). | Standard liveness signal for orchestrators. |
 | `get_readiness() -> dict` | Probes both `session_buddy` and `mahavishnu`. | Readiness signal — degraded when any dependency is unreachable. |
-| `health_check_service(service_name: str, host: str = "localhost", port: int = 8080, timeout: int = 5, use_tls: bool = False, health_path: str = "/health") -> dict` | Single-service HTTP `GET` to `health_path`. | Reachability probe for any registered dependency. |
+| `health_check_service(service_name_arg: str, host: str = "localhost", port: int = 8080, timeout: int = 5, use_tls: bool = False, health_path: str = "/health") -> dict` | Single-service HTTP `GET` to `health_path`. | Reachability probe for any registered dependency. |
 | `health_check_all() -> dict` | Iterates every dependency in `_HEALTH_DEPENDENCIES`. | Bulk reachability snapshot. |
-| `wait_for_dependency(service_name: str, host: str = "localhost", port: int = 8080, timeout: int = 30, required: bool = True, use_tls: bool = False, health_path: str = "/health") -> dict` | Exponential-backoff loop. | Blocks until the target is healthy or the timeout elapses. |
-| `wait_for_all_dependencies(timeout: int = 30) -> dict` | Same backoff semantics across the allowlist. | Blocks until every registered dependency is healthy or the timeout elapses. |
+| `wait_for_dependency(dep_service_name: str, host: str = "localhost", port: int = 8080, timeout: int = 30, required: bool = True, use_tls: bool = False, health_path: str = "/health") -> dict` | Exponential-backoff loop. | Blocks until the target is healthy or the timeout elapses. |
+| `wait_for_all_dependencies() -> dict` | Same backoff semantics across the allowlist. | Blocks until every registered dependency is healthy or the timeout elapses. |
 
 ---
 

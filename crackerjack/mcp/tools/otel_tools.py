@@ -14,7 +14,7 @@ def register_otel_tools(mcp_app: Any) -> None:
 def _get_akosha_endpoint() -> str:
     import os
 
-    return os.environ.get("AKOSHA_MCP_ENDPOINT", "http://localhost: 8682")
+    return os.environ.get("AKOSHA_MCP_ENDPOINT", "http://localhost:8682")
 
 
 async def _call_akosha_mcp_tool(

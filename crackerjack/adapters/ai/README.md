@@ -10,7 +10,7 @@ AI-powered code fixing helpers following the crackerjack adapter pattern. The bu
 
 - Async `init()` lifecycle (inherited from `BaseCodeFixer`)
 - Validates generated code (regex + AST), sanitizes errors, enforces file-size limits
-- Uses the `mcp_common.FallbackChain` provider gateway — provider config flows through `settings/llms.yaml`, not this adapter
+- Uses the `mcp_common.FallbackChain` provider gateway — provider settings are built inline by `crackerjack.adapters.ai.unified._build_llm_settings()`; no external config file
 - Designed to fit end-to-end QA flows and orchestrations
 
 ## Built-in Implementation
@@ -30,7 +30,7 @@ Settings class: `FallbackChainSettings`
 - `llama_server_url` (str; default `http://localhost:8081`)
 - Inherited from `BaseCodeFixerSettings`: `max_tokens`, `temperature`, `confidence_threshold`, `max_retries`, `max_file_size_bytes`
 
-Provider routing (`minimax` → `llama_server` → `ollama`) lives in `settings/llms.yaml`; the `FallbackChainCodeFixer` reads from `mcp_common.llm_settings` at `init()` time.
+Provider routing (`minimax` → `llama_server` → `ollama`) is built inline by `crackerjack.adapters.ai.unified._build_llm_settings()` (no external `settings/llms.yaml`); the `FallbackChainCodeFixer` reads from `mcp_common.llm_settings` at `init()` time.
 
 ## Basic Usage
 
@@ -59,7 +59,7 @@ async def fix_with_ai() -> None:
 - Keep `temperature` low for predictable refactors
 - Gate changes by `confidence_threshold` and validate diffs in CI
 - Provider keys live in env vars (`MINIMAX_API_KEY`, etc.) — never log secrets
-- The provider chain (MiniMax → llama_server → ollama) is configured in `settings/llms.yaml`, not in this adapter
+- The provider chain (MiniMax → llama_server → ollama) is built inline by `crackerjack.adapters.ai.unified._build_llm_settings()`, not via any external config file
 
 ## Related
 

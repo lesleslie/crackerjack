@@ -1,4 +1,14 @@
-______________________________________________________________________
+---
+title: Crackerjack Changelog
+generated: 2026-09-09
+status: active
+role: canonical
+date: 2026-09-09
+last_reviewed: 2026-09-09
+superseded_by: null
+blocks_on: []
+topic: changelog
+---
 
 ## [Unreleased]
 
@@ -24,6 +34,7 @@ ______________________________________________________________________
 
 - `crackerjack.language_adapters` entry-point group now includes the Web adapter
   (joining Python, Swift, and Kotlin from earlier phases).
+- **BREAKING**: Rename `BodaiCLIBase` → `OneiricCLIBase` (oneiric 0.20)
 
 ### Not yet shipped
 
@@ -262,12 +273,6 @@ ______________________________________________________________________
 
 - crackerjack: Bump oneiric floor to >=0.20 for OneiricCLIBase
 - Deprecate crackerjack.interactive (Plan Task 3.2.4)
-
-## [Unreleased]
-
-### Changed
-
-- **BREAKING**: Rename `BodaiCLIBase` → `OneiricCLIBase` (oneiric 0.20)
 
 ## [0.76.2] - 2026-08-28
 
