@@ -1,354 +1,275 @@
 ---
 status: complete
 role: canonical
-date: 2026-07-17
-last_reviewed: 2026-07-17
+date: 2026-09-09
+last_reviewed: 2026-09-09
 superseded_by: null
 blocks_on: []
 topic: mcp-design
 ---
 
-# Mahavishnu Pool Integration - Quick Start Guide
+# Mahavishnu Pool Integration — Quick Start
 
-## Current Status
+## Status
 
-✅ **Mahavishnu MCP Server**: Connected and healthy
-✅ **Pool Tools Available**: 9 tools registered
-✅ **mcp-common upgraded**: 0.7.0 → 0.9.0 (includes websocket support)
-⚠️ **MCP Server restart needed**: To pick up the new mcp-common version
+This is the **current** quickstart. The previous version described a
+pre-AI-fix-removal integration plan; the design was scoped out during
+the **2026-08-06 AI-fix subsystem removal**, and the references to
+`pool_spawn("kubernetes", ...)`, `worker_type="container"`, and the
+`from mcp__mahavishnu import ...` Python idiom were all wrong or
+removed. See `docs/MAHAVISHNU_POOL_INTEGRATION.md` for the full
+ground-truth rewrite and `docs/audits/2026-09-09-crackerjack-docs-audit.md`
+finding **F7** for the audit history.
 
-## Next Steps
+What you should know to use Mahavishnu pools today, in three short
+sections:
 
-### 1. Restart Mahavishnu MCP Server
+1. The pool types and tools that are actually wired.
+1. The correct Python client idiom (JSON-RPC over HTTP).
+1. The troubleshooting commands that work today.
 
-The mahavishnu MCP server needs to be restarted to load the upgraded `mcp-common` package:
+______________________________________________________________________
+
+## 1. Pool Types and Tools (Verified)
+
+### Pool types (canonical hyphen form)
+
+Source of truth: `mahavishnu/pools/_registry.py`.
+
+| `pool_type` | What it does |
+|-------------|--------------|
+| `mahavishnu` | Local MahavishnuPool — direct `WorkerManager` |
+| `session-buddy` | SessionBuddyPool — delegates to a Session-Buddy instance (3 fixed workers) |
+| `runpod` | RunPodPool — RunPod Flash serverless GPU |
+| `pi` | PiPool — `@earendil-works/pi-coding-agent` subprocess bridge |
+| `gpu-handler` | RunPod GPU-handler variant |
+
+`kubernetes`, `container`, `mahavishnu_pool`, `session_buddy_pool`,
+`runpod_pool`, `pi_pool` are **not** valid pool-type values. The
+underscored forms (`session_buddy_pool`, etc.) are accepted only by
+the CLI whitelist, which translates them to the canonical hyphen form
+before registry lookup (`mahavishnu/pools/_registry.py:69-80`).
+
+### Pool tools (10 MCP tools, verified)
+
+Source of truth: `mahavishnu/mcp/tools/pool_tools.py` +
+`mahavishnu/core/skill_mcp_validator.py::KNOWN_TOOLS` +
+`bodai/docs/memory/TOOL_ALIAS_INVENTORY.md`.
+
+```text
+pool_list           # List active pools
+pool_monitor        # Status + metrics for one or many pools
+pool_scale          # Scale a pool's worker count
+pool_close          # Close one pool
+pool_close_all      # Close every active pool
+pool_health         # Cross-pool health snapshot
+pool_search_memory  # Cross-pool memory search
+pool_execute        # Execute a prompt on a specific pool
+pool_route_execute  # Auto-route a prompt to the best pool
+budget_enforce      # Declare a per-workflow budget (Phase 3 v2)
+```
+
+The earlier draft claimed **9** pool tools; the live count is **10**.
+
+______________________________________________________________________
+
+## 2. Calling The Mahavishnu MCP Server From Python
+
+The correct client idiom is **JSON-RPC 2.0 over HTTP** against
+`http://localhost:8680/mcp`. There is **no Python package named
+`mcp__mahavishnu`**.
+
+### Quick health check
 
 ```bash
-# Stop the current mahavishnu server
-pkill -f mahavishnu
-
-# Restart it (use your normal startup method)
-# For example:
-cd /Users/les/Projects/mahavishnu
-python -m mahavishnu
+curl -sS http://localhost:8680/health | python -m json.tool
 ```
 
-Or if you're using a specific startup script/service:
-
-```bash
-# Your normal startup command
-```
-
-### 2. Verify Pool Tools
-
-After restart, verify the pool tools work:
+### Minimal Python client (no SDK dependency)
 
 ```python
-# Via MCP (from Claude Code or other MCP client)
-from mcp__mahavishnu import pool_spawn, pool_list, pool_health
+"""Minimal Mahavishnu MCP client — JSON-RPC over HTTP."""
 
-# Check health
-health = await pool_health()
-print(f"Status: {health['status']}")
+from __future__ import annotations
 
-# Spawn a test pool
-pool = await pool_spawn(
-    pool_type="mahavishnu",
-    name="test-pool",
-    min_workers=1,
-    max_workers=2,
-    worker_type="terminal-qwen",
-)
-print(f"Pool ID: {pool['pool_id']}")
+import json
+from typing import Any
 
-# List pools
-pools = await pool_list()
-print(f"Active pools: {pools}")
+import httpx
+
+MAHAVISHNU_MCP_URL = "http://localhost:8680/mcp"
+
+
+async def call_mcp_tool(tool_name: str, arguments: dict[str, Any]) -> dict[str, Any]:
+    payload = {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "tools/call",
+        "params": {"name": tool_name, "arguments": arguments},
+    }
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        response = await client.post(MAHAVISHNU_MCP_URL, json=payload)
+        response.raise_for_status()
+        envelope = response.json()
+    if "error" in envelope:
+        raise RuntimeError(f"MCP error from {tool_name}: {envelope['error']}")
+    text_payload = envelope["result"]["content"][0]["text"]
+    return json.loads(text_payload)
 ```
 
-### 3. Test Pool Execution
+### End-to-end smoke test
 
-```python
-# Execute a task in the pool
-result = await pool_execute(
-    pool_id=pool["pool_id"], prompt="echo 'Hello from worker!'", timeout=30
-)
-print(f"Result: {result['output']}")
-```
-
-______________________________________________________________________
-
-## Architecture Overview
-
-### Pool Types Available
-
-1. **MahavishnuPool** (Local)
-
-   - Direct worker management
-   - Best for: Local development, testing
-   - Workers: `terminal-qwen`, `terminal-claude`, `container`
-
-1. **SessionBuddyPool** (Memory-augmented)
-
-   - Workers with session-buddy memory access
-   - Best for: Complex analysis, pattern recognition
-   - Workers: Same as above, plus memory integration
-
-1. **KubernetesPool** (Distributed)
-
-   - Kubernetes pod-based workers
-   - Best for: Large-scale scanning, CI/CD
-   - Workers: Container-based
-
-### Pool Management Tools
-
-| Tool | Purpose | Example |
-|------|---------|---------|
-| `pool_spawn` | Create new pool | `pool_spawn("mahavishnu", "my-pool", 1, 8)` |
-| `pool_execute` | Execute task on specific pool | `pool_execute(pool_id, "command")` |
-| `pool_route_execute` | Auto-route to best pool | `pool_route_execute("command", "least-loaded")` |
-| `pool_list` | List all active pools | `pool_list()` |
-| `pool_monitor` | Get pool metrics | `pool_monitor(pool_id)` |
-| `pool_health` | System health check | `pool_health()` |
-| `pool_scale` | Adjust worker count | `pool_scale(pool_id, worker_count=16)` |
-| `pool_close` | Close specific pool | `pool_close(pool_id)` |
-| `pool_close_all` | Close all pools | `pool_close_all()` |
-| `pool_search_memory` | Search memory across pools | `pool_search_memory(query)` |
-
-______________________________________________________________________
-
-## Crackerjack Integration Pattern
-
-### Basic Pattern (No Pools)
-
-```python
-# Current: Sequential execution
-for tool in ["refurb", "complexipy", "skylos"]:
-    result = run_tool(tool, files)
-    print(result)
-```
-
-### With Pools (Parallel Execution)
-
-```python
-# With mahavishna pools: Parallel execution
-import asyncio
-
-
-async def scan_with_pools(files):
-    # Spawn pool
-    pool = await pool_spawn(
-        pool_type="mahavishnu", name="quality-scanners", min_workers=2, max_workers=8
-    )
-
-    # Split files into chunks
-    chunks = split_files(files, chunk_size=10)
-
-    # Execute tools in parallel
-    tasks = []
-    for tool in ["refurb", "complexipy", "skylos"]:
-        for chunk in chunks:
-            task = pool_execute(
-                pool_id=pool["pool_id"], prompt=f"{tool} {' '.join(chunk)}", timeout=300
-            )
-            tasks.append(task)
-
-    # Wait for all tasks
-    results = await asyncio.gather(*tasks)
-
-    # Close pool
-    await pool_close(pool["pool_id"])
-
-    return results
-```
-
-______________________________________________________________________
-
-## Performance Expectations
-
-### Without Pools (Current)
-
-| Scenario | Time |
-|----------|------|
-| Full scan (all tools) | 10+ min |
-| Incremental scan | 3-5 min |
-| Small commit | 3-5 min |
-
-### With Pools (8 Workers)
-
-| Scenario | Time | Speedup |
-|----------|------|---------|
-| Full scan (all tools) | 3-4 min | 2.5-3x |
-| Incremental scan | 30-60s | 3-6x |
-| Small commit | 10-20s | 10-20x |
-
-### With Incremental + Pools (Recommended)
-
-| Scenario | Time | Total Speedup |
-|----------|------|---------------|
-| Small commit (5-10 files) | 10-20s | 30-60x |
-| Medium commit (10-50 files) | 20-40s | 15-30x |
-| Large commit (50+ files) | 2-3 min | 3-5x |
-
-______________________________________________________________________
-
-## Configuration Example
-
-```yaml
-# .crackerjack.yaml
-
-pool_scanning:
-  # Enable Mahavishnu pool integration
-  enabled: true
-
-  # Pool configuration
-  pool:
-    name: "crackerjack-quality-scanners"
-    pool_type: "mahavishnu"
-    min_workers: 2
-    max_workers: 8
-    worker_type: "terminal-qwen"
-    auto_scale: true
-
-  # Tools to run in pools
-  pooled_tools:
-    - refurb
-    - complexipy
-    - skylos
-    - semgrep
-    - gitleaks
-
-  # Incremental scanning (combine with pools)
-  incremental:
-    enabled: true
-    use_git_diff: true
-    fallback_to_full: true
-    full_scan_interval_days: 7
-
-  # Auto-scaling
-  autoscaling:
-    enabled: true
-    scale_up_threshold: 10     # Pending tasks
-    scale_down_threshold: 300   # Idle seconds
-    max_workers: 16
-```
-
-______________________________________________________________________
-
-## Troubleshooting
-
-### Issue: "No module named 'mahavishnu.mcp.pools'"
-
-**Cause**: Mahavishnu MCP server started before mcp-common was upgraded
-**Fix**: Restart mahavishnu MCP server
-
-```bash
-pkill -f mahavishnu
-# Restart with your normal startup command
-```
-
-### Issue: "No module named 'mcp_common.websocket'"
-
-**Cause**: Old version of mcp-common (< 0.9.0)
-**Fix**: Upgrade mcp-common
-
-```bash
-pip install --upgrade mcp-common==0.9.0
-```
-
-### Issue: Pool spawn fails with timeout
-
-**Cause**: Workers taking too long to initialize
-**Fix**: Increase timeout or check worker availability
-
-```python
-pool = await pool_spawn(
-    ...,
-    timeout=60,  # Increase from default 30
-)
-```
-
-______________________________________________________________________
-
-## Quick Test Script
-
-Save this as `test_pools.py`:
+Save this as `test_mahavishnu_pool.py` and run it against a live
+`mahavishnu` server.
 
 ```python
 #!/usr/bin/env python3
-"""Test mahavishnu pool integration."""
+"""Smoke-test the Mahavishnu pool surface from Python."""
+
+from __future__ import annotations
 
 import asyncio
-from mcp__mahavishnu import (
-    pool_health,
-    pool_spawn,
-    pool_execute,
-    pool_list,
-    pool_close,
-)
+
+from test_mahavishnu_pool import call_mcp_tool
 
 
-async def main():
-    print("🔍 Checking mahavishnu health...")
-    health = await pool_health()
-    print(f"Status: {health['status']}")
-    print(f"Active pools: {health['pools_active']}")
+async def main() -> None:
+    print("Checking pool health...")
+    health = await call_mcp_tool("pool_health", {})
+    print(f"  status: {health.get('status')}")
 
-    print("\n🚀 Spawning test pool...")
-    pool = await pool_spawn(
-        pool_type="mahavishnu",
-        name="test-pool",
-        min_workers=1,
-        max_workers=2,
-        worker_type="terminal-qwen",
+    print("Listing active pools...")
+    pools = await call_mcp_tool("pool_list", {})
+    print(f"  active pools: {len(pools)}")
+
+    print("Routing a tiny prompt to the least-loaded pool...")
+    result = await call_mcp_tool(
+        "pool_route_execute",
+        {"prompt": "echo hello-from-mahavishnu", "pool_selector": "least_loaded"},
     )
-    print(f"✅ Pool spawned: {pool['pool_id']}")
-
-    print("\n📋 Listing pools...")
-    pools = await pool_list()
-    print(f"Active pools: {len(pools)}")
-    for p in pools:
-        print(f"  - {p['name']} ({p['pool_id']})")
-
-    print("\n🧪 Executing test command...")
-    result = await pool_execute(
-        pool_id=pool["pool_id"], prompt="echo 'Hello from Mahavishnu pool!'", timeout=30
-    )
-    print(f"Output: {result.get('output', 'No output')}")
-
-    print("\n🧹 Closing pool...")
-    await pool_close(pool["pool_id"])
-    print("✅ Pool closed")
-
-    print("\n✅ All tests passed!")
+    print(f"  result: {result}")
 
 
 if __name__ == "__main__":
     asyncio.run(main())
 ```
 
-Run with:
+```bash
+python test_mahavishnu_pool.py
+```
+
+This is the modern replacement for the older `from mcp__mahavishnu
+import pool_spawn, pool_list, pool_health` snippet. The earlier form
+was a fiction; the Python import path `mcp__mahavishnu` is the
+FastMCP-tool-namespace token used inside an MCP-capable Claude
+session, not a Python import.
+
+______________________________________________________________________
+
+## 3. Troubleshooting
+
+### "Connection refused on http://localhost:8680"
+
+The Mahavishnu MCP server is not running. Use the user's normal
+launcher (launchd plist / `mahavishnu mcp start` / uv-managed
+process — do **not** hardcode an absolute `python` path).
 
 ```bash
-python test_pools.py
+# Confirm Mahavishnu is reachable
+curl -sS http://localhost:8680/health | python -m json.tool
+
+# Check pool health once it is
+mahavishnu pool health
+```
+
+The earlier draft's `cd /Users/les/Projects/mahavishnu && python -m mahavishnu`
+works but breaks if the venv is moved (see memory
+`mahavishnu-launcher-venv-discovery.md`); prefer the launcher.
+
+### "Pool spawn fails with timeout"
+
+Workers can take time to spin up, especially on first start
+(embedding model warm-up, tmux session creation). Pass a longer
+timeout to the spawn call.
+
+```python
+result = await call_mcp_tool(
+    "pool_route_execute",
+    {"prompt": prompt, "pool_selector": "least_loaded", "timeout": 60},
+)
+```
+
+If `pool_scale` returns `NotImplementedError` (`{"status": "failed",
+"error": "Pool does not support scaling (e.g., SessionBuddyPool is
+fixed at 3 workers)"}`), the pool type is the constraint, not your
+call — pick `mahavishnu` if you need to scale.
+
+### "Unknown pool type 'kubernetes'"
+
+The pool type string is wrong. Use one of the five canonical names
+above (`mahavishnu`, `session-buddy`, `runpod`, `pi`, `gpu-handler`).
+The error comes from `mahavishnu/pools/_registry.py::get_pool_factory`
+via the manager dispatch.
+
+### "No module named 'mahavishnu.mcp.pools'"
+
+This error was real for the **2026-07-17** version of mcp-common. It
+is not a current symptom — mcp-common has since shipped the relevant
+modules. If you still see this, your mcp-common install is older than
+the version Mahavishnu expects; reinstall with `uv sync` against the
+current `mahavishnu/pyproject.toml` rather than guessing.
+
+### "Mahavishnu tool count in docs does not match the live server"
+
+Run:
+
+```bash
+python -c "from mahavishnu.core.skill_mcp_validator import KNOWN_TOOLS; print(sorted(t for t in KNOWN_TOOLS if 'pool' in t))"
+```
+
+If that returns more pool tools than this doc lists, the doc is
+stale. Update the table at the top of section 1 to match — the live
+`KNOWN_TOOLS` whitelist is the source of truth, not this doc.
+
+______________________________________________________________________
+
+## 4. Quick Reference — What Crackerjack Actually Uses
+
+For cross-project observability and pattern queries, the **crackerjack
+MCP server** (port 8676) has the wired-in tools. Use these instead
+of the Mahavishnu pool surface:
+
+```text
+mcp__crackerjack__get_cross_project_git_dashboard
+mcp__crackerjack__get_repository_health
+mcp__crackerjack__clone_detect_ecosystem
+mcp__crackerjack__get_cross_project_patterns
+mcp__mahavishnu__get_health         # system-level, not pool-specific
+mcp__mahavishnu__list_repos
+mcp__mahavishnu__search_otel_traces
+```
+
+For a live inventory at any time:
+
+```python
+from mcp.client.streamable_http import streamablehttp_client
+
+async with streamablehttp_client("http://localhost:8680/mcp") as (read, write, _):
+    async with ClientSession(read, write) as session:
+        await session.initialize()
+        tools = await session.list_tools()
+        print([t.name for t in tools.tools if "pool" in t.name])
 ```
 
 ______________________________________________________________________
 
-## Next Steps After Restart
+## Related Docs
 
-1. **✅ Verify pool tools work**: Run the test script above
-1. **✅ Spawn a test pool**: Confirm pool creation works
-1. **✅ Execute test command**: Verify workers can run commands
-1. **📋 Implement Crackerjack integration**:
-   - Create `crackerjack/services/pool_client.py`
-   - Add pool-based hooks
-   - Update configuration
-1. **📊 Benchmark performance**: Measure speedup with real workloads
-1. **🚀 Production rollout**: Enable for all workflows
-
-______________________________________________________________________
-
-**Status**: Ready for testing after mahavishnu restart <!-- legacy status — see YAML frontmatter -->
-**Last Updated**: 2026-02-13
-**Dependencies**: mahavishnu MCP server, mcp-common >= 0.9.0
+- `docs/MAHAVISHNU_POOL_INTEGRATION.md` — full ground-truth rewrite,
+  pool types, worker backends, out-of-scope notes.
+- `mahavishnu/CLAUDE.md` — Mahavishnu orchestration overview, port
+  table, MCP tool profile tiers.
+- `bodai/docs/memory/TOOL_ALIAS_INVENTORY.md` — canonical
+  cross-component MCP-tool whitelist.
+- `docs/audits/2026-09-09-crackerjack-docs-audit.md` — finding **F7**
+  for the history this quickstart corrects.
