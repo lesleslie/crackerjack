@@ -1,3 +1,10 @@
+---
+status: complete
+role: canonical
+created: 2026-09-07
+last_reviewed: 2026-09-09
+---
+
 # Crackerjack Multi-Language Extension
 
 > **Status:** Rev 2 — post-11-agent-review. All blocker + high findings from the review at `docs/superpowers/specs/reviews/2026-09-07-*.md` are incorporated.

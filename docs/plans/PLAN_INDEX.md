@@ -112,6 +112,8 @@ One table per store. Entries are sorted by `date` DESC, with ties broken by path
 | [`docs/superpowers/specs/2026-07-10-validation-coordinator-serialization-design.md`](../superpowers/specs/2026-07-10-validation-coordinator-serialization-design.md) | 2026-07-17 | `draft` | `implementation` | `lifecycle` | ValidationCoordinator Concurrency Serialization — Design |
 | [`docs/superpowers/specs/2026-07-11-ai-fix-no-op-circuit-breaker-design.md`](../superpowers/specs/2026-07-11-ai-fix-no-op-circuit-breaker-design.md) | 2026-07-17 | `draft` | `implementation` | `lifecycle` | AI-fix no-op circuit breaker — design |
 | [`docs/superpowers/specs/2026-07-11-ai-fix-regen-timeout-design.md`](../superpowers/specs/2026-07-11-ai-fix-regen-timeout-design.md) | 2026-07-17 | `draft` | `implementation` | `lifecycle` | AI-fix plan-regeneration timeout — design |
+| [`docs/superpowers/specs/2026-08-11-bodai-coverage-ratchet-standard-design.md`](../superpowers/specs/2026-08-11-bodai-coverage-ratchet-standard-design.md) | — | `complete` | `canonical` | `—` | Coverage-Ratchet Standardization — Design |
+| [`docs/superpowers/specs/2026-09-07-crackerjack-multi-language-design.md`](../superpowers/specs/2026-09-07-crackerjack-multi-language-design.md) | — | `complete` | `canonical` | `—` | Crackerjack Multi-Language Extension |
 
 ### Superpowers Plans (`docs/superpowers/plans/`)
 
@@ -134,6 +136,11 @@ One table per store. Entries are sorted by `date` DESC, with ties broken by path
 | [`docs/superpowers/plans/2026-07-11-ai-fix-no-op-circuit-breaker.md`](../superpowers/plans/2026-07-11-ai-fix-no-op-circuit-breaker.md) | 2026-07-17 | `active` | `implementation` | `lifecycle` | AI-fix no-op circuit breaker — Implementation Plan |
 | [`docs/superpowers/plans/2026-07-11-ai-fix-regen-timeout.md`](../superpowers/plans/2026-07-11-ai-fix-regen-timeout.md) | 2026-07-17 | `active` | `implementation` | `lifecycle` | AI-fix plan-regeneration timeout — Implementation Plan |
 | [`docs/superpowers/plans/2026-07-12-eventbridge-publisher.md`](../superpowers/plans/2026-07-12-eventbridge-publisher.md) | 2026-07-17 | `active` | `implementation` | `lifecycle` | Crackerjack EventBridge Publisher Implementation Plan |
+| [`docs/superpowers/plans/2026-08-06-ai-fix-external-loop.md`](../superpowers/plans/2026-08-06-ai-fix-external-loop.md) | — | `historical` | `superseded` | `—` | AI-Fix External Loop + Akosha Hook Implementation Plan |
+| [`docs/superpowers/plans/2026-08-10-ai-fix-loop-task-1-kickoff.md`](../superpowers/plans/2026-08-10-ai-fix-loop-task-1-kickoff.md) | — | `draft` | `implementation` | `—` | AI-Fix Loop Plan — Task 1 Execution Kickoff |
+| [`docs/superpowers/plans/2026-08-11-bodai-coverage-ratchet-followups.md`](../superpowers/plans/2026-08-11-bodai-coverage-ratchet-followups.md) | — | `shipped` | `implementation` | `—` | Coverage-Ratchet Follow-ups — Implementation Plan |
+| [`docs/superpowers/plans/2026-08-11-bodai-coverage-ratchet-standard.md`](../superpowers/plans/2026-08-11-bodai-coverage-ratchet-standard.md) | — | `shipped` | `implementation` | `—` | Coverage-Ratchet Standardization Implementation Plan |
+| [`docs/superpowers/plans/2026-08-11-skill-coverage-out-of-fast-hooks.md`](../superpowers/plans/2026-08-11-skill-coverage-out-of-fast-hooks.md) | — | `shipped` | `implementation` | `—` | Move Skill-Coverage Out of Fast Hooks Plan |
 
 ### Repo-local Decisions (`.claude/decisions/`)
 
@@ -151,12 +158,12 @@ One table per store. Entries are sorted by `date` DESC, with ties broken by path
 
 Counts of entries per (lifecycle, role) cell across all six stores. Useful as a sanity check that the registry above is internally consistent.
 
-| Role \\ Lifecycle | draft | active | partial | shipped | complete | Total |
-|---|---|---|---|---|---|---|
-| `canonical` | · | 4 | · | · | · | **4** |
-| `implementation` | 12 | 13 | · | 5 | · | **30** |
-| `umbrella` | · | · | · | · | · | **0** |
-| `historical` | · | · | · | · | 5 | **5** |
-| `superseded` | · | · | · | · | · | **0** |
+| Role \\ Lifecycle | draft | active | partial | shipped | complete | archived | Total |
+|---|---|---|---|---|---|---|---|
+| `canonical` | · | 4 | · | · | 2 | · | **6** |
+| `implementation` | 13 | 13 | · | 8 | · | · | **34** |
+| `umbrella` | · | · | · | · | · | · | **0** |
+| `historical` | · | · | · | · | 5 | · | **5** |
+| `superseded` | · | · | · | · | · | · | **0** |
 
-| **Total** | **12** | **17** | **·** | **5** | **5** | **39** |
+| **Total** | **13** | **17** | **·** | **8** | **7** | **·** | **45** |

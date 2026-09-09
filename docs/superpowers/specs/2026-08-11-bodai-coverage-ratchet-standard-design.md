@@ -1,3 +1,10 @@
+---
+status: complete
+role: canonical
+created: 2026-08-11
+last_reviewed: 2026-09-09
+---
+
 # Coverage-Ratchet Standardization — Design
 
 **Status:** design

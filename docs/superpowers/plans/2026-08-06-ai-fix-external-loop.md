@@ -1,3 +1,10 @@
+---
+status: historical
+role: superseded
+created: 2026-08-06
+last_reviewed: 2026-09-09
+---
+
 # AI-Fix External Loop + Akosha Hook Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.

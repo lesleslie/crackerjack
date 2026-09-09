@@ -1,3 +1,10 @@
+---
+status: shipped
+role: implementation
+created: 2026-08-11
+last_reviewed: 2026-09-09
+---
+
 # Move Skill-Coverage Out of Fast Hooks Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.

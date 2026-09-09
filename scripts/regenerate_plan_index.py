@@ -18,6 +18,7 @@ LIFECYCLE_VALUES: tuple[str, ...] = (
     "partial",
     "shipped",
     "complete",
+    "archived",
 )
 ROLE_VALUES: tuple[str, ...] = (
     "canonical",

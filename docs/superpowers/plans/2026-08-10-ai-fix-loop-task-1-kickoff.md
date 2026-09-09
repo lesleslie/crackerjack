@@ -1,3 +1,10 @@
+---
+status: draft
+role: implementation
+created: 2026-08-10
+last_reviewed: 2026-09-09
+---
+
 # AI-Fix Loop Plan — Task 1 Execution Kickoff
 
 > **Status:** DRAFT — pre-execution checklist. Not yet executed.
