@@ -19,13 +19,14 @@ This schema unifies the eight ad-hoc status conventions currently scattered acro
 
 ## Vocabulary — Lifecycle
 
-Five values, applied to the `status` field. A file carries exactly one lifecycle value.
+Six values, applied to the `status` field. A file carries exactly one lifecycle value.
 
 - **`draft`** — In preparation; not yet approved for implementation or adoption.
 - **`active`** — Approved and in current use; either being executed or being applied as policy.
 - **`partial`** — Approved and partially implemented; remaining work is documented but not closed.
 - **`shipped`** — Delivered and verified in production; closed, no follow-up expected.
 - **`complete`** — Delivered; verification or follow-up may still be open. Distinguished from `shipped` by the absence of post-delivery verification.
+- **`archived`** — Moved to an archive directory and explicitly preserved for traceability only; no longer in current use. Pairs with a populated `superseded_by` field when the successor is known, or a populated archive note in the directory README.
 
 ## Vocabulary — Role
 
@@ -55,7 +56,7 @@ id: 014-honcho-peer-model-routing-precedence
 
 | Key | Required | Format | Notes |
 |---|---|---|---|
-| `status` | yes | one of the five lifecycle values | |
+| `status` | yes | one of the six lifecycle values | |
 | `role` | yes | one of the five role values | |
 | `date` | yes | ISO-8601 `YYYY-MM-DD` | The document's authoring or last substantive update date. |
 | `last_reviewed` | yes | ISO-8601 `YYYY-MM-DD` | When the frontmatter was last verified accurate. |
@@ -78,6 +79,22 @@ topic: decision-index
 ```
 
 Eight keys total: `status`, `role`, `date`, `last_reviewed`, `topic`, plus `decision_date` and `id` where applicable (the `id` row from the full schema remains optional in lite context). The two chaining fields are dropped because `.claude/decisions/` files do not point at successors and are not gated on external prerequisites.
+
+## Archive Schema
+
+Applied to files under `docs/archive/*/`. Archived documents retain their original role semantics (a `complete` doc archived becomes `status: archived, role: historical`; a `canonical` doc archived becomes `status: archived, role: historical`; an `implementation` doc archived becomes `status: archived, role: historical`).
+
+```yaml
+status: archived
+role: historical
+date: 2026-09-09
+last_reviewed: 2026-09-09
+superseded_by: null
+blocks_on: []
+topic: archive-cleanup
+```
+
+The archive directory README is the human-readable pointer to successor docs; individual archived files do not require `superseded_by` to be populated when the archive README itself enumerates the chain.
 
 ## Legacy Mapping
 
