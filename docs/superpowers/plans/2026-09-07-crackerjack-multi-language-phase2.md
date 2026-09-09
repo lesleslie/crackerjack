@@ -1,3 +1,13 @@
+---
+status: shipped
+role: implementation
+topic: architecture
+date: 2026-09-08
+last_reviewed: 2026-09-09
+superseded_by: null
+blocks_on: []
+---
+
 # Crackerjack Multi-Language Extension — Phase 2 (Swift) Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
