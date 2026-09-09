@@ -45,7 +45,7 @@ class TestRealCli:
         if shutil.which("npx") is None:
             pytest.skip("npx not available")
         result = subprocess.run(
-            ["npx", "--no", "tsc", "--noEmit"],
+            ["npx", "--no", "--", "tsc", "--noEmit"],
             capture_output=True,
             text=True,
             cwd=FIXTURE,
