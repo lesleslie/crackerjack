@@ -243,18 +243,25 @@ project root:
 - `package.json` is present at the root, **or**
 - `pyproject.toml` contains `[tool.crackerjack.web] enabled = true`
 
-Once activated, the four Web hooks below are **registered** as
-entry-points in `crackerjack/adapters/web/hooks.py`, but they are **not
-automatically invoked by `python -m crackerjack run`** — the run-path
-hook dispatcher has no `run_web_hooks` consumer, and the Web hooks are
-absent from the comprehensive-hook stage. To run them, use one of:
+Once activated, the four Web hooks below are registered as
+`Hook` instances returned by `crackerjack/adapters/web/hooks.py::web_hooks()`,
+but they are **not automatically invoked by `python -m crackerjack run`**
+— the run-path hook dispatcher has no `run_web_hooks` consumer, and the
+Web hooks are absent from the comprehensive-hook stage. Note: the only
+declared entry point in `pyproject.toml:107-111` is the `web` adapter
+itself (under the `crackerjack.language_adapters` group); the four hook
+names below are `Hook.name` values, not package entry points. To run
+them, use one of:
 
 - the `check_web_lint` MCP tool (documented in
-  [`MCP_TOOLS_SPECIFICATION.md` §3.6](./MCP_TOOLS_SPECIFICATION.md)),
-- the `detect_languages` MCP tool to surface the registered Web hook
-  surface, or
-- invoke them via their registered entry-point names (`web.stylelint`,
-  `web.eslint`, `web.tsc`, `web.html_validate`) from a custom stage.
+  [`MCP_TOOLS_SPECIFICATION.md` §3.6](./MCP_TOOLS_SPECIFICATION.md)), or
+- invoke them via their registered `Hook.name` values
+  (`web.stylelint`, `web.eslint`, `web.tsc`, `web.html_validate`) from
+  a custom stage.
+
+Note: `detect_languages` does **not** surface the Web hook surface;
+it only returns adapter-level booleans
+(`crackerjack/mcp/tools/language_tools.py:237-248`).
 
 ### Web hook names
 
@@ -262,7 +269,7 @@ absent from the comprehensive-hook stage. To run them, use one of:
 | --- | --- | --- | --- |
 | `web.stylelint` | `stylelint` (or `npx --no stylelint`) | `**/*.css` | 300 s |
 | `web.eslint` | `eslint` (or `npx --no eslint`) | `.`, `--ext .ts,.tsx,.js,.jsx` | 300 s |
-| `web.tsc` | `tsc --noEmit` (or `npx --no tsc -- --noEmit`) | entire project | 600 s |
+| `web.tsc` | `tsc --noEmit` (or `npx --no tsc --noEmit`) | entire project | 600 s |
 | `web.html_validate` | `html-validate` (or `npx --no html-validate`) | `**/*.html` | 300 s |
 
 The hook resolver (`crackerjack/adapters/web/hooks.py::_resolve`) prefers
@@ -302,10 +309,12 @@ in `pyproject.toml` (six keys: `block_start`, `block_end`,
 The AI auto-fix loop is **not** a shell flag. The previous `--ai-fix` flag
 was removed on 2026-08-06 along with the 12-agent internal subsystem it
 dispatched to. The following flags are **still available** as top-level
-`crackerjack run` options (see `crackerjack/cli/options.py`):
+`crackerjack run` options (see `crackerjack/cli/options.py`), but they
+do **not** enable any auto-fix — the auto-fix capability was removed in
+0.80.x:
 
-- `--ai-debug` — verbose debugging for AI auto-fixing mode (still implies the removed `--ai-fix`)
-- `--dry-run` — preview fixes without modifying files (still implies the removed `--ai-fix`)
+- `--ai-debug` — verbose debugging for AI auto-fixing mode
+- `--dry-run` — preview fixes without modifying files
 - `--max-iterations` — maximum auto-fix iterations (default: 10)
 - `--quick` — quick mode (3 iterations max, ideal for CI/CD)
 - `--thorough` — thorough mode (8 iterations max, for complex refactoring)

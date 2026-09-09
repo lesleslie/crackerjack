@@ -48,25 +48,32 @@ Crackerjack uses **profiles** to provide progressive complexity:
 # View overall quality metrics
 crackerjack status
 
-# View execution history
-crackerjack history
+# View execution history — PLANNED: not yet implemented as a CLI subcommand
+# crackerjack history
 
-# View current configuration
-crackerjack config show
+# View current configuration — PLANNED: no `crackerjack config show` subcommand exists today
+# crackerjack config show
 ```
 
 ### List Available Profiles
 
 ```bash
-# List all profiles
-crackerjack profile list
+# List all profiles — PLANNED: no `crackerjack profile list` subcommand exists today
+# crackerjack profile list
 
-# Show profile details
-crackerjack profile show standard
+# Show profile details — PLANNED: no `crackerjack profile show` subcommand exists today
+# crackerjack profile show standard
 
-# Compare profiles
-crackerjack profile compare quick comprehensive
+# Compare profiles — PLANNED: no `crackerjack profile compare` subcommand exists today
+# crackerjack profile compare quick comprehensive
 ```
+
+> **Profile management.** No `config` or `profile` Typer sub-app is
+> attached in `crackerjack/__main__.py:125-131`; `crackerjack/cli/base.py:45-49`
+> only wires lifecycle commands. Profile helper functions exist at
+> `crackerjack/cli/profile_handlers.py` but are not exposed as a CLI
+> group. Profile selection today is via `crackerjack run --quick` /
+> `--thorough` or the `profile.name` setting in `crackerjack.toml`.
 
 ## Level 2: CI/CD Integration (2 minutes) 🚀
 
@@ -77,14 +84,14 @@ Integrate Crackerjack into your CI/CD pipeline for automated quality checks.
 ### Pre-commit Hooks
 
 ```bash
-# Install pre-commit hooks
-crackerjack install-hooks
+# Install pre-commit hooks — PLANNED: no `crackerjack install-hooks` subcommand exists today
+# crackerjack install-hooks
 
 # Run pre-commit checks manually
 crackerjack run
 
-# Uninstall hooks
-crackerjack uninstall-hooks
+# Uninstall hooks — PLANNED: no `crackerjack uninstall-hooks` subcommand exists today
+# crackerjack uninstall-hooks
 ```
 
 ### Quality Gates
@@ -93,12 +100,18 @@ crackerjack uninstall-hooks
 # Run with default quality gates
 crackerjack run
 
-# Check if project passes quality gates
-crackerjack check-gate
+# Check if project passes quality gates — PLANNED: no `crackerjack check-gate` subcommand exists today
+# crackerjack check-gate
 
-# View gate requirements
-crackerjack gate show default
+# View gate requirements — PLANNED: no `crackerjack gate show` subcommand exists today
+# crackerjack gate show default
 ```
+
+> **Gate management.** Quality gates are configured statically in
+> `crackerjack.toml` under `[quality_gates]` (keys: `fail_on_test_errors`,
+> `fail_on_coverage`, `coverage_threshold`, `fail_on_complexity`). Gate
+> selection today is via the active config profile (`quick` /
+> `standard` / `comprehensive`).
 
 ## Level 3: Custom Quality Gates (2 minutes) 🚦
 
@@ -107,14 +120,20 @@ Configure custom quality thresholds and checks for your project.
 ### Set Custom Thresholds
 
 ```bash
-# Set coverage threshold
-crackerjack config set coverage.min_coverage 80
+# Set coverage threshold — PLANNED: no `crackerjack config set` subcommand exists today
+# crackerjack config set coverage.min_coverage 80
 
-# Set complexity threshold
-crackerjack config set complexity.max_complexity 15
+# Set complexity threshold — PLANNED: no `crackerjack config set` subcommand exists today
+# crackerjack config set complexity.max_complexity 15
 ```
 
-> Note: There is no `crackerjack set-threshold` subcommand. Multi-threshold configuration belongs in `crackerjack.toml` under `[quality_gates]` (or use `crackerjack config set <key> <value>`). See `crackerjack/cli/options.py` for the actual `Config.set` surface.
+> Note: There is no `crackerjack set-threshold` subcommand and no
+> `crackerjack config set` subcommand. Multi-threshold configuration
+> belongs in `crackerjack.toml` under `[quality_gates]` (keys:
+> `fail_on_test_errors`, `fail_on_coverage`, `coverage_threshold`,
+> `fail_on_complexity`). See `crackerjack/cli/options.py` for the
+> actual `Config.set` surface (programmatic only — no CLI group is
+> attached).
 
 ### Add Custom Checks
 
@@ -220,25 +239,29 @@ crackerjack run
 # 2. Verify fixes (AI auto-fix now lives in the workflow tool)
 crackerjack run
 
-# 3. Check if ready for commit
-crackerjack check-gate
+# 3. Check if ready for commit — PLANNED: no `crackerjack check-gate` subcommand exists today
+# crackerjack check-gate
 ```
 
 ### Continuous Monitoring
 
 ```bash
-# Start background monitoring
-crackerjack monitor start
+# Start background monitoring — PLANNED: no `crackerjack monitor` subcommands exist today
+# crackerjack monitor start
 
-# Check monitor status
-crackerjack monitor status
+# Check monitor status — PLANNED: no `crackerjack monitor status` subcommand exists today
+# crackerjack monitor status
 
-# View monitor logs
-crackerjack monitor logs
+# View monitor logs — PLANNED: no `crackerjack monitor logs` subcommand exists today
+# crackerjack monitor logs
 
-# Stop monitoring
-crackerjack monitor stop
+# Stop monitoring — PLANNED: no `crackerjack monitor stop` subcommand exists today
+# crackerjack monitor stop
 ```
+
+> **Monitor management.** Service health is via `crackerjack mcp status`
+> / `crackerjack mcp health`. Quality history is not exposed as a CLI
+> subcommand today (`crackerjack history` is planned).
 
 ## Progressive Complexity
 
@@ -266,7 +289,7 @@ crackerjack --help
 
 # Command-specific help
 crackerjack run --help
-crackerjack profile --help
+# crackerjack profile --help  # PLANNED: no `crackerjack profile` subcommand exists today
 
 # Version info
 crackerjack --version
@@ -283,21 +306,25 @@ crackerjack run --verbose
 # Run specific check in isolation
 crackerjack run --tool ruff-check --verbose
 
-# Check configuration
-crackerjack config show
+# Check configuration — PLANNED: no `crackerjack config show` subcommand exists today
+# crackerjack config show
 ```
+
+> **Configuration inspection.** Inspect `crackerjack.toml` (or the
+> `[tool.crackerjack]` table in `pyproject.toml`) directly. There is
+> no `crackerjack config show` subcommand.
 
 ### Profile Not Found
 
 ```bash
-# List available profiles
-crackerjack profile list
+# List available profiles — PLANNED: no `crackerjack profile list` subcommand exists today
+# crackerjack profile list
 
-# Show profile details
-crackerjack profile show standard
+# Show profile details — PLANNED: no `crackerjack profile show` subcommand exists today
+# crackerjack profile show standard
 
-# Compare profiles to understand differences
-crackerjack profile compare quick standard
+# Compare profiles to understand differences — PLANNED: no `crackerjack profile compare` subcommand exists today
+# crackerjack profile compare quick standard
 ```
 
 ### Performance Issues
@@ -338,11 +365,11 @@ tail -f .crackerjack/runs/$(ls -t .crackerjack/runs | head -1)/events.jsonl
 | `crackerjack run --quick` | Run quick checks (1 minute) |
 | `crackerjack run --thorough` | Run comprehensive checks (10-15 minutes) |
 | `crackerjack run` | Run with the default standard profile (no `--profile` flag; use `--quick` / `--thorough` or set the active profile in `crackerjack.toml`) |
-| `crackerjack profile list` | List all profiles |
-| `crackerjack profile show <name>` | Show profile details |
+| ~~`crackerjack profile list`~~ | PLANNED — not implemented as a CLI subcommand |
+| ~~`crackerjack profile show <name>`~~ | PLANNED — not implemented as a CLI subcommand |
 | `crackerjack status` | View quality metrics |
-| `crackerjack history` | View execution history |
-| `crackerjack config show` | View configuration |
+| ~~`crackerjack history`~~ | PLANNED — not implemented as a CLI subcommand |
+| ~~`crackerjack config show`~~ | PLANNED — not implemented as a CLI subcommand |
 
 ______________________________________________________________________
 

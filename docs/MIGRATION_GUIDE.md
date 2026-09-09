@@ -726,10 +726,15 @@ After successful migration:
 
 1. **Enable AI Integration**:
 
-```bash
-export ANTHROPIC_API_KEY=sk-ant-...
-python -m crackerjack run --ai-fix --run-tests
-```
+> **Note: `--ai-fix` was removed on 2026-08-06.** The 12-agent internal
+> AI auto-fix subsystem it dispatched to was removed; the replacement is
+> the Claude Code `Workflow`-tool loop at
+> `.claude/workflows/ai-fix-loop.js`. See
+> `docs/superpowers/specs/2026-08-06-ai-fix-removal-external-loop-design.md`
+> and the [CLI Reference § AI Integration Commands](./CLI_REFERENCE.md#ai-integration-commands).
+> Setting `ANTHROPIC_API_KEY` is still supported (consumed by AI SDK
+> clients), but `python -m crackerjack run --ai-fix` is no longer a
+> runnable command.
 
 2. **Set Quality Tier**:
 

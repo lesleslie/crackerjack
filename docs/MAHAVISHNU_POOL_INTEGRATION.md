@@ -72,14 +72,20 @@ Verified against `mahavishnu/pools/_registry.py` (canonical hyphen form):
 The `pool_type` values `kubernetes`, `container`, `mahavishnu_pool`,
 `session_buddy_pool`, `runpod_pool`, `pi_pool` (underscored forms in
 client config) shown in earlier drafts of this document do **not**
-exist. The underscored forms (`session_buddy_pool`) are accepted by
-the CLI whitelist and translated to the canonical hyphen form
+exist as registered pool types. The pool CLI whitelist
+(`mahavishnu/_main_cli.py:1542-1548`) accepts only the `session_buddy`
+alias; it is translated to the canonical hyphen form
 (`session-buddy`) before registry lookup
-(`mahavishnu/pools/_registry.py:69-80`).
+(`mahavishnu/pools/_registry.py:69-80`). `session_buddy_pool`
+canonicalizes to `session-buddy-pool` which is **not** registered —
+pass the bare alias (`session_buddy`) or the canonical hyphen form
+(`session-buddy`), never the fully-qualified underscored form.
 
 To discover the canonical names at runtime use
 `mahavishnu/pools/_registry.py::list_pool_types()` or the CLI:
-`mahavishnu pool types`.
+`mahavishnu workers list-types` (see
+`mahavishnu/_main_cli.py:1449`). Note: `mahavishnu pool types` is **not**
+a registered subcommand.
 
 ### Real Pool MCP Tools (8 Verified)
 
@@ -191,6 +197,15 @@ async def example_pool_list() -> list[dict[str, Any]]:
     return await call_mcp_tool("pool_list", {})
 ```
 
+> **Illustrative only — NOT runnable as-is.** The Streamable HTTP
+> transport requires the `initialize` handshake (an `Accept:
+> application/json, text/event-stream` request header, a `Mcp-Session-Id`
+> header carried across requests, and an explicit `initialize` request
+> before `tools/call`); see
+> `docs/superpowers/plans/2026-05-07-bodai-phase1-harden-control-plane.md:53`
+> for the full requirements. For a runnable client, use the official
+> `mcp` Python SDK shown below.
+
 ### Using the official MCP Python client
 
 ```python
@@ -221,13 +236,26 @@ ships:
 |-------------|--------|
 | `terminal-claude` | Production — default |
 | `terminal-qwen` | Production — alternate terminal adapter |
-| Apple Container (`apple_container`) | Production on Apple silicon |
-| E2B sandbox (`e2b_sandbox`) | Production cloud sandbox |
-| Cloud worker (`cloud_worker`) | Production — MiniMax M3 default |
+| Apple Container (`apple-container`) | Production on Apple silicon |
+| E2B sandbox (`e2b-sandbox`) | Production cloud sandbox |
+| Cloud worker (`terminal-cloud`) | Production — MiniMax routing target (see Cloud Worker default note below) |
+
+> **Cloud worker default model.** The Cloud worker's
+> `CloudWorkerConfig.model` defaults to `MiniMax-M2.7`
+> (`mahavishnu/workers/cloud_worker.py:65`). `MiniMax-M3` is the
+> routing target for CODE_GENERATION / CODE_REVIEW / DEBUGGING /
+> REFACTORING / TESTING / REASONING / ANALYSIS / DOCUMENTATION /
+> VISION / EMBEDDING / ML_INFERENCE task categories
+> (`mahavishnu/workers/task_router.py`); it is **not** the
+> unconditional configuration default.
 
 The earlier draft's `worker_type="container"` is **not** a valid
-Mahavishnu worker type; Docker/OrbStack workers were removed in
-2026-07 per `mahavishnu/CLAUDE.md` (Docker/OrbStack removed 2026-07).
+Mahavishnu pool CLI worker type. `worker_type="container"` is a
+recognized registry alias (`mahavishnu/workers/registry.py:408-420`)
+but the pool CLI's whitelist is narrower (`mahavishnu/_main_cli.py:1542-1548`)
+and only accepts the hyphenated forms (`apple-container`,
+`e2b-sandbox`, `terminal-cloud`). Docker/OrbStack workers were removed
+in 2026-07 per `mahavishnu/CLAUDE.md` (Docker/OrbStack removed 2026-07).
 
 For a full list, see `mahavishnu/mcp/tools/terminal_tools.py` and the
 worker-type enumeration in `mahavishnu/terminal/adapters/`.
@@ -263,7 +291,7 @@ scoped out during the **2026-08-06 AI-fix subsystem removal** (see
 | `pool_scanning:` Crackerjack config block | `crackerjack/config/settings.py` `pooled_tools`, `local_tools`, `autoscaling`, `memory` | These config keys still exist for forward compatibility but no production code reads them. |
 | `crackerjack/hooks/pool_based_hooks.py` | Earlier drafts of this document | File does not exist. The hook-based pool router was removed with the AI-fix subsystem. |
 | `crackerjack/services/pool_client.py` | Earlier drafts of this document | File EXISTS (180 lines, `crackerjack/services/pool_client.py`). Not consumed by any production code path; carried for forward compatibility. |
-| `crackerjack/services/pool_router.py` | Earlier drafts of this document | File EXISTS (147 lines, `crackerjack/services/pool_router.py`). Carries `TOOL_WORKER_MAP` routing keys for `refurb`, `complexipy`, `pylint`, `mypy`, `bandit`, `skylos`, `ruff`, `vulture`, `codespell`, `check-jsonschema`, `semgrep`, `gitleaks`. Not invoked by the current hook executor. |
+| `crackerjack/services/pool_router.py` | Earlier drafts of this document | File EXISTS (147 lines, `crackerjack/services/pool_router.py`). Carries `TOOL_WORKER_MAP` routing keys for `refurb`, `complexipy`, `pylint`, `mypy`, `bandit`, `skylos`, `ruff`, `codespell`, `check-jsonschema`, `semgrep`, `gitleaks`. `vulture` was removed from `TOOL_WORKER_MAP` in commits `a1efeef5` and `335da71b`. Not invoked by the current hook executor. |
 | `crackerjack/services/pool_scaler.py` | Earlier drafts of this document | File EXISTS (159 lines, `crackerjack/services/pool_scaler.py`). Not consumed by any production code path; carried for forward compatibility. |
 | `crackerjack/services/memory_aware_scanner.py` | Earlier drafts of this document | File EXISTS (`crackerjack/services/memory_aware_scanner.py`). The earlier drafts incorrectly listed this path as `crackerjack/integration/memory_aware_scanner.py` — the actual location is `crackerjack/services/`. |
 
@@ -277,24 +305,45 @@ ______________________________________________________________________
 ## What Crackerjack Should Actually Use
 
 For cross-project observability and pattern queries today, use the
-**crackerjack-side** tools, not the Mahavishnu pool surface:
+**Mahavishnu-side** health/workflow tools or the live
+`crackerjack__discover_tools(query="...")` inventory. The four
+crackerjack tools listed in earlier drafts of this section
+(`get_cross_project_git_dashboard`, `get_repository_health`,
+`clone_detect_ecosystem`, `get_cross_project_patterns`) are **not
+exposed via the Crackerjack MCP server** today:
+
+- `get_cross_project_git_dashboard`, `get_repository_health`,
+  `get_cross_project_patterns` are defined in
+  `crackerjack/mcp/tools/mahavishnu_tools.py` but are absent from the
+  `REGISTRATION_MAP` / `PROFILE_REGISTRATIONS` tables in
+  `crackerjack/mcp/tools/profiles.py:117-131`, and their runtime
+  methods raise `NotImplementedError`
+  (`crackerjack/integration/mahavishnu_integration.py:22-24,102-142`).
+- `clone_detect_ecosystem` is a Mahavishnu tool (port 8680), not a
+  Crackerjack tool — call it via `mcp__mahavishnu__clone_detect_ecosystem`,
+  not `mcp__crackerjack__clone_detect_ecosystem`.
+
+The actual wired-in Crackerjack-side cross-project surface today is
+sparse; reach for the Mahavishnu MCP server for cross-project queries:
 
 ```text
-# Cross-project git velocity (real, wired, in tree today)
-mcp__crackerjack__get_cross_project_git_dashboard
-mcp__crackerjack__get_repository_health
-
-# Pattern detection (real, wired, in tree today)
-mcp__crackerjack__clone_detect_ecosystem
-mcp__crackerjack__get_cross_project_patterns
-
-# Mahavishnu health + workflow (real, exposed by mahavishnu server)
+# Mahavishnu health + repo catalog (real, exposed by mahavishnu server)
 mcp__mahavishnu__get_health
 mcp__mahavishnu__list_repos
+mcp__mahavishnu__clone_detect_ecosystem    # cross-repo clone scan
+mcp__mahavishnu__get_cross_project_patterns  # cross-project pattern detection
 ```
 
-For the full inventory, run `crackerjack__discover_tools(query="...")`
-on the live MCP server.
+For the full inventory of what Crackerjack actually exposes today, run
+`crackerjack__discover_tools(query="...")` on the live MCP server.
+
+> **Pool-type aliasing note.** Earlier drafts listed underscored pool
+> types such as `session_buddy_pool`, `runpod_pool`, `pi_pool`. The
+> Mahavishnu pool CLI's whitelist accepts only the `session_buddy`
+> alias (translated to `session-buddy`); `session_buddy_pool`
+> canonicalizes to `session-buddy-pool` which is **not** a registered
+> pool type. Use the canonical hyphenated forms (`session-buddy`,
+> `runpod`, `pi`) shown in the **Real Pool Types** table above.
 
 ______________________________________________________________________
 

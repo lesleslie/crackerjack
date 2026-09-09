@@ -147,7 +147,7 @@ Both surfaces are also exposed as MCP tools:
 
 - `check_web_lint(project_root) -> dict` — read-only; returns
   `{adapter: "web", enabled: bool, hooks: [{name, cli_command, timeout_seconds}]}`.
-  See [`MCP_TOOLS_SPECIFICATION.md` §3.6](./MCP_TOOLS_SPECIFICATION.md).
+  See [`MCP_TOOLS_SPECIFICATION.md` §3.6](../MCP_TOOLS_SPECIFICATION.md).
 - `format_jinja_templates(projects, dry_run=True) -> dict` — mutation;
   `dry_run` defaults to `True`. Returns `{files, errors, mode}`.
 

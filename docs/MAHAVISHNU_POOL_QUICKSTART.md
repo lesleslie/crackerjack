@@ -51,10 +51,15 @@ Source of truth: `mahavishnu/pools/_registry.py`.
 > `pool_spawn` / registry dispatch.
 
 `kubernetes`, `container`, `mahavishnu_pool`, `session_buddy_pool`,
-`runpod_pool`, `pi_pool` are **not** valid pool-type values. The
-underscored forms (`session_buddy_pool`, etc.) are accepted only by
-the CLI whitelist, which translates them to the canonical hyphen form
-before registry lookup (`mahavishnu/pools/_registry.py:69-80`).
+`runpod_pool`, `pi_pool` are **not** valid pool-type values. The pool
+CLI whitelist (`mahavishnu/_main_cli.py:1542-1548`) accepts only the
+`session_buddy` alias; it is translated to the canonical hyphen form
+(`session-buddy`) before registry lookup
+(`mahavishnu/pools/_registry.py:69-80`). The fully-qualified
+underscored form `session_buddy_pool` canonicalizes to
+`session-buddy-pool` which is **not** registered — pass the bare
+alias or the canonical hyphen form, never the fully-qualified
+underscored form.
 
 ### Pool tools (8 MCP tools, verified)
 
@@ -124,6 +129,17 @@ async def call_mcp_tool(tool_name: str, arguments: dict[str, Any]) -> dict[str, 
     text_payload = envelope["result"]["content"][0]["text"]
     return json.loads(text_payload)
 ```
+
+> **Illustrative only — NOT runnable as-is.** The Streamable HTTP
+> transport requires the `initialize` handshake (an `Accept:
+> application/json, text/event-stream` request header, a `Mcp-Session-Id`
+> header carried across requests, and an explicit `initialize` request
+> before `tools/call`); see
+> `docs/superpowers/plans/2026-05-07-bodai-phase1-harden-control-plane.md:53`
+> for the full requirements. For a runnable client, use the official
+> `mcp` Python SDK (`streamablehttp_client` + `ClientSession`) shown in
+> `docs/MAHAVISHNU_POOL_INTEGRATION.md` §"Using the official MCP Python
+> client".
 
 ### End-to-end smoke test
 
@@ -256,23 +272,37 @@ ______________________________________________________________________
 
 ## 4. Quick Reference — What Crackerjack Actually Uses
 
-For cross-project observability and pattern queries, the **crackerjack
-MCP server** (port 8676) has the wired-in tools. Use these instead
-of the Mahavishnu pool surface:
+The four `mcp__crackerjack__*` tools listed in earlier drafts of this
+section (`get_cross_project_git_dashboard`, `get_repository_health`,
+`clone_detect_ecosystem`, `get_cross_project_patterns`) are **not
+exposed via the Crackerjack MCP server** today:
+
+- `get_cross_project_git_dashboard`, `get_repository_health`,
+  `get_cross_project_patterns` are defined in
+  `crackerjack/mcp/tools/mahavishnu_tools.py` but are absent from the
+  `REGISTRATION_MAP` / `PROFILE_REGISTRATIONS` tables in
+  `crackerjack/mcp/tools/profiles.py:117-131`, and their runtime
+  methods raise `NotImplementedError`
+  (`crackerjack/integration/mahavishnu_integration.py:22-24,102-142`).
+- `clone_detect_ecosystem` is a **Mahavishnu** tool, not a Crackerjack
+  tool — invoke it via `mcp__mahavishnu__clone_detect_ecosystem`, not
+  `mcp__crackerjack__clone_detect_ecosystem`.
+
+For cross-project queries today, reach for the Mahavishnu MCP server
+(port 8680) instead:
 
 ```text
-mcp__crackerjack__get_cross_project_git_dashboard
-mcp__crackerjack__get_repository_health
-mcp__crackerjack__clone_detect_ecosystem
-mcp__crackerjack__get_cross_project_patterns
-mcp__mahavishnu__get_health         # system-level, not pool-specific
-mcp__mahavishnu__list_repos
-mcp__mahavishnu__search_otel_traces
+mcp__mahavishnu__get_health                       # system-level
+mcp__mahavishnu__list_repos                       # repo catalog
+mcp__mahavishnu__clone_detect_ecosystem           # cross-repo clone scan
+mcp__mahavishnu__get_cross_project_patterns       # cross-project patterns
+mcp__mahavishnu__search_otel_traces               # OTel trace search
 ```
 
 For a live inventory at any time:
 
 ```python
+from mcp import ClientSession
 from mcp.client.streamable_http import streamablehttp_client
 
 async with streamablehttp_client("http://localhost:8680/mcp") as (read, write, _):
