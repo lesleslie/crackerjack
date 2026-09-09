@@ -13,6 +13,12 @@ from crackerjack.adapters.swift import SwiftAdapter
 from crackerjack.adapters.swift.git_backend import make_git_backend
 from crackerjack.adapters.swift.lifecycle import SwiftLifecycle
 from crackerjack.adapters.swift.version_source import GitTagVersionSource
+from crackerjack.adapters.web import WebAdapter, web_enabled
+from crackerjack.adapters.web.jinja_formatter import (
+    JINJA_SUFFIXES,
+    _load_jinja_config,
+    format_template,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -345,3 +351,94 @@ def register_language_tools(mcp_app: FastMCP) -> None:
             }
             for h in caps.hooks
         }
+
+    @mcp_app.tool()
+    async def check_web_lint(project_root: str) -> dict:
+        """Return Web hook metadata for the given project (read-only, no auth).
+
+        Activates the Web adapter (requires ``package.json`` at root OR
+        ``[tool.crackerjack.web] enabled = true``). Each hook is CLI-primary
+        with JSON output parsing per spec Writing F2.
+
+        Args:
+            project_root: Absolute path to the project root. Must be in
+                ``MAHAVISHNU_PROJECT_ROOTS`` allowlist.
+
+        Returns:
+            dict with keys: ``adapter`` (``"web"``), ``enabled`` (bool),
+            ``hooks`` (list of ``{name, cli_command, timeout_seconds}``).
+
+        Raises:
+            PermissionError: if ``project_root`` is not in
+                ``MAHAVISHNU_PROJECT_ROOTS`` allowlist.
+            ValueError: if the Web adapter is not enabled for the project.
+        """
+        root = _validate_project_root(project_root)
+        if not web_enabled(root):
+            raise ValueError(
+                f"Web adapter not enabled at {root}. "
+                f"Add `package.json` or set `[tool.crackerjack.web] enabled = true`.",
+            )
+        hooks = [
+            {
+                "name": h.name,
+                "cli_command": list(h.cli_command),
+                "timeout_seconds": h.timeout_seconds,
+            }
+            for h in WebAdapter().capabilities(root).hooks
+        ]
+        return {"adapter": "web", "enabled": True, "hooks": hooks}
+
+    @mcp_app.tool()
+    async def format_jinja_templates(
+        projects: list[str],
+        dry_run: bool = True,
+    ) -> dict:
+        """Format Jinja templates in the given project directories (mutation; auth required).
+
+        Phase 4 ships Tier 1 only (trailing newline + no trailing whitespace).
+        Tier 2 normalization is deferred. Per-project delimiter config is read
+        from ``[tool.crackerjack.jinja]`` in pyproject.toml.
+
+        Args:
+            projects: List of project root directories to scan.
+            dry_run: If True (default), return the list of files that would be
+                reformatted without writing. If False, write the reformatted
+                content back to disk.
+
+        Returns:
+            dict with keys ``files`` (rewritten paths), ``errors`` (per-file
+            failure records), ``mode`` (``"dry_run"`` or ``"write"``).
+
+        Raises:
+            PermissionError: if auth env vars are not configured.
+            ValueError: if any project is not Web-enabled (per Writing F3).
+        """
+        _require_auth_config()
+        for project_dir in projects:
+            _validate_project_root(project_dir)
+        files: list[str] = []
+        errors: list[dict[str, str]] = []
+        for project_dir in projects:
+            root = Path(project_dir)
+            if not web_enabled(root):
+                raise ValueError(
+                    f"Web adapter not enabled at {root}. "
+                    f"Add `package.json` or set `[tool.crackerjack.web] enabled = true`.",
+                )
+            delims, _ = await asyncio.to_thread(_load_jinja_config, root)
+            for path in root.rglob("*"):
+                # Symlink guard: do not follow symlinks (Security F-1).
+                if path.is_symlink():
+                    continue
+                if not path.is_file() or path.suffix not in JINJA_SUFFIXES:
+                    continue
+                try:
+                    raw = await asyncio.to_thread(path.read_text)
+                    formatted = await asyncio.to_thread(format_template, raw, delims)
+                    if formatted != raw and not dry_run:
+                        await asyncio.to_thread(path.write_text, formatted)
+                    files.append(str(path))
+                except (OSError, UnicodeDecodeError) as exc:
+                    errors.append({"path": str(path), "kind": type(exc).__name__, "error": str(exc)})
+        return {"files": files, "errors": errors, "mode": "dry_run" if dry_run else "write"}

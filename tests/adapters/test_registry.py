@@ -120,3 +120,12 @@ def test_discover_adapters_skips_classes_that_fail_to_instantiate() -> None:
         adapters = discover_adapters()
 
     assert "broken" not in adapters
+
+
+def test_discover_adapters_includes_web() -> None:
+    """Phase 4: discover_adapters() must include the Web adapter."""
+    from crackerjack.adapters.web import WebAdapter
+
+    adapters = discover_adapters()
+    assert "web" in adapters
+    assert isinstance(adapters["web"], WebAdapter)
