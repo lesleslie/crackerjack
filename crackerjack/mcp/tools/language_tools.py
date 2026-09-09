@@ -30,14 +30,17 @@ def _require_auth_config() -> None:
     (e.g., ``jwt.decode(token, secret, algorithms=[...], audience=...)``)
     and bind the validated ``sub`` claim to the commit/tag message for audit.
     """
-    if os.environ.get("MAHAVISHNU_AUTH_ENABLED") != "true":
+    current = os.environ.get("MAHAVISHNU_AUTH_ENABLED")
+    if current != "true":
         raise PermissionError(
-            "MAHAVISHNU_AUTH_ENABLED=true required for mutation tools. "
-            "Set this env var before invoking swift_bump_version.",
+            f"Mutation tools require MAHAVISHNU_AUTH_ENABLED=true; "
+            f"current value: {current!r}",
         )
-    if not os.environ.get("MAHAVISHNU_JWT_SECRET"):
+    secret = os.environ.get("MAHAVISHNU_JWT_SECRET")
+    if not secret:
         raise PermissionError(
-            "MAHAVISHNU_JWT_SECRET unset. Mutation tools require auth.",
+            f"Mutation tools require MAHAVISHNU_JWT_SECRET; "
+            f"current length: {len(secret) if secret else 0} chars",
         )
 
 
@@ -52,9 +55,11 @@ def _validate_project_root(project_root: str) -> Path:
     Per Security F2: rejects traversal patterns (``..``), NUL bytes, and
     paths outside the configured allowlist. Returns the resolved Path.
 
-    When ``MAHAVISHNU_PROJECT_ROOTS`` is unset (common in dev), the
-    allowlist check is skipped — the caller still gets NUL + traversal
-    rejection. Production deployments MUST set this var.
+    Per Phase 2 final-review IMPORTANT-1: fails closed when
+    ``MAHAVISHNU_PROJECT_ROOTS`` is unset — previously this branch silently
+    skipped the allowlist check, which was a latent privilege-escalation
+    vector (any caller could target any path). Production deployments MUST
+    set this var to colon-separated absolute paths.
     """
     if "\x00" in project_root:
         raise PermissionError(f"project_root contains NUL byte: {project_root!r}")
@@ -68,14 +73,14 @@ def _validate_project_root(project_root: str) -> Path:
     # form — the allowlist check then reports the policy verdict.
     root = Path(project_root).resolve(strict=False)
 
-    # Allowlist check: project_root must be under one of MAHAVISHNU_PROJECT_ROOTS
+    # Allowlist check: project_root must be under one of MAHAVISHNU_PROJECT_ROOTS.
+    # Fail-closed: if the env var is unset, refuse ALL access.
     allowed_env = os.environ.get("MAHAVISHNU_PROJECT_ROOTS", "")
     if not allowed_env:
-        logger.debug(
-            "MAHAVISHNU_PROJECT_ROOTS unset; allowlist check skipped. "
-            "Production deployments MUST configure this env var.",
+        raise PermissionError(
+            "MAHAVISHNU_PROJECT_ROOTS unset. Configure with colon-separated "
+            "absolute paths to allow.",
         )
-        return root
     allowed = [Path(p).resolve() for p in allowed_env.split(":") if p.strip()]
     if not any(_is_within(root, a) for a in allowed):
         raise PermissionError(
@@ -126,6 +131,41 @@ def _run_swift_lifecycle_sync(
         "tag_name": result.tag_name,
         "release_url": result.release_url,
     }
+
+
+def _run_kotlin_lifecycle_sync(
+    root: Path,
+    level: Literal["major", "minor", "patch"],
+    dry_run: bool,
+    release: bool,
+) -> "LifecycleResult":
+    """Run the Kotlin lifecycle synchronously.
+
+    Wrapped by async MCP handlers via ``asyncio.to_thread``. Mirrors
+    :func:`_run_swift_lifecycle_sync` (MCP MEDIUM 2 carry-over from Phase 2
+    final-review) — keeps the tool function readable and matches the Phase 2
+    precedent. Per Security F-5 (Phase 2 CF-4 analog), the caller MUST have
+    already verified ``adapter.detect(root)`` is True before invoking this
+    helper (lifecycle raises if gradle.properties is missing).
+    """
+    from crackerjack.adapters.base import LifecycleOptions, LifecycleResult
+    from crackerjack.adapters.kotlin.git_backend import make_git_backend
+    from crackerjack.adapters.kotlin.lifecycle import KotlinLifecycle
+    from crackerjack.adapters.kotlin.version_source import GradlePropertiesVersionSource
+
+    version_source = GradlePropertiesVersionSource(root)
+    commit, tag, push, delete_tag, reset, gh_release = make_git_backend(root)
+    lifecycle = KotlinLifecycle(
+        version_source=version_source,
+        project_root=root,
+        commit=commit,
+        tag=tag,
+        push=push,
+        delete_tag=delete_tag,
+        reset=reset,
+        gh_release=gh_release,
+    )
+    return lifecycle.run(LifecycleOptions(level=level, dry_run=dry_run, release=release))
 
 
 # ---------------------------------------------------------------------------
@@ -201,3 +241,107 @@ def register_language_tools(mcp_app: FastMCP) -> None:
         root = _validate_project_root(project_root)
         adapters = discover_adapters()
         return {name: adapter.detect(root) for name, adapter in adapters.items()}
+
+    @mcp_app.tool()
+    async def kotlin_bump_version(
+        level: Literal["major", "minor", "patch"],
+        project_root: str,
+        dry_run: bool = False,
+        release: bool = False,
+    ) -> dict:
+        """Bump a Kotlin/Gradle project's version. Writes the new version to
+        ``gradle.properties`` (NOT ``build.gradle.kts``), then commits, tags,
+        pushes, and optionally creates a GitHub release. Rolls back all
+        mutations on failure.
+
+        Args:
+            level: Semver component to bump — ``major``, ``minor``, or ``patch``.
+                Pre-release qualifiers (e.g. ``-SNAPSHOT``, ``-RC1``) and build
+                metadata (e.g. ``+build.5``) are preserved unchanged.
+            project_root: Absolute path to the project root. Must contain
+                ``build.gradle.kts`` (or ``build.gradle``) and
+                ``gradle.properties``. Must be in ``MAHAVISHNU_PROJECT_ROOTS``
+                allowlist.
+            dry_run: If True, compute the new version but make NO mutations
+                (no gradle.properties write, no commit, no tag, no push).
+            release: If True, create a GitHub release via ``gh release create``
+                after pushing the tag.
+
+        Returns:
+            dict with keys ``new_version``, ``commit_sha``, ``tag_name``,
+            ``release_url``, ``skipped_steps`` (tuple of steps that were
+            skipped, e.g. ``("dry_run",)`` when ``dry_run=True``).
+
+        Raises:
+            PermissionError: if ``MAHAVISHNU_AUTH_ENABLED`` is not ``true``,
+                ``MAHAVISHNU_JWT_SECRET`` is unset, or ``project_root`` is
+                not in ``MAHAVISHNU_PROJECT_ROOTS`` allowlist.
+            ValueError: if ``build.gradle.kts`` is missing or ``level`` is
+                not one of the literal values.
+            FileNotFoundError: if ``gradle.properties`` is missing.
+            RuntimeError: on git/gh subprocess failure (after rollback).
+        """
+        _require_auth_config()
+        root = _validate_project_root(project_root)
+        from crackerjack.adapters.kotlin import KotlinAdapter
+
+        adapter = KotlinAdapter()
+        if not adapter.detect(root):
+            raise ValueError(
+                f"No build.gradle(.kts) at {root}. "
+                f"Run `gradle init --type kotlin-library` to scaffold.",
+            )
+        result = await asyncio.to_thread(
+            _run_kotlin_lifecycle_sync, root, level, dry_run, release,
+        )
+        return {
+            "new_version": result.new_version,
+            "commit_sha": result.commit_sha,
+            "tag_name": result.tag_name,
+            "release_url": result.release_url,
+            "skipped_steps": list(result.skipped_steps),
+        }
+
+    @mcp_app.tool()
+    async def kotlin_list_hooks(project_root: str) -> dict[str, dict]:
+        """Return Kotlin/Gradle hook metadata for the given project.
+
+        Probes ``./gradlew tasks --all`` to detect which plugins are
+        available. Hooks whose tasks are absent (e.g. ``ktlintCheck`` if no
+        ktlint plugin) are filtered out with a logged warning.
+        ``kotlin.test`` is always emitted (every Kotlin project has the
+        ``test`` task).
+
+        Args:
+            project_root: Absolute path to the project root. Must contain
+                ``build.gradle.kts`` (or ``build.gradle``). Must be in
+                ``MAHAVISHNU_PROJECT_ROOTS`` allowlist (read-only access).
+
+        Returns:
+            dict mapping hook name to metadata: ``cli_command`` (argv list,
+                e.g. ``["./gradlew", "ktlintCheck"]``), ``autofix``, and
+                ``timeout_seconds``.
+
+        Raises:
+            PermissionError: if ``project_root`` is not in
+                ``MAHAVISHNU_PROJECT_ROOTS`` allowlist.
+            ValueError: if ``build.gradle.kts`` is missing.
+        """
+        root = _validate_project_root(project_root)
+        from crackerjack.adapters.kotlin import KotlinAdapter
+
+        adapter = KotlinAdapter()
+        if not adapter.detect(root):
+            raise ValueError(
+                f"No build.gradle(.kts) at {root}. "
+                f"Run `gradle init --type kotlin-library` to scaffold.",
+            )
+        caps = adapter.capabilities(root)
+        return {
+            h.name: {
+                "cli_command": list(h.cli_command),
+                "autofix": h.autofix,
+                "timeout_seconds": h.timeout_seconds,
+            }
+            for h in caps.hooks
+        }
