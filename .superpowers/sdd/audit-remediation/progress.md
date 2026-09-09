@@ -22,6 +22,7 @@
 - **Ruling 11 (2026-09-09 follow-up — `status: archived` lifecycle value):** User chose option A — add `archived` to the 5-value lifecycle enum in `docs/schemas/document-frontmatter-v1.md`. Apply to all 15+ currently-misclassified archived files. Cleaner long-term fix than reclassifying to `complete`.
 - **Ruling 12 (2026-09-09 follow-up — symlink strategy):** User chose option C — convert `docs/guides/{AGENTS,CLAUDE}.md` from symlinks to real files with their own content; replace root `{AGENTS,CLAUDE}.md` with symlinks pointing to docs/guides/. Solves the dual-context link-validity problem because root symlinks resolve to the canonical docs/guides/ files.
 - **Ruling 13 (2026-09-09 follow-up — parallel batches):** 3 implementers dispatched in parallel with disjoint file scopes. Each scoped to ≤9 files. No conflict because file sets are disjoint. Reviewer (me) checks each commit's diff as it lands before considering any follow-up dispatches.
+- **Ruling 14 (2026-09-09 — known followup post-merge):** Batch A's PLAN_INDEX regenerator (`c49241f9`) silently skips plan files lacking YAML frontmatter. 6 plan files in `docs/superpowers/plans/` lack frontmatter (`2026-08-06-ai-fix-external-loop.md`, `2026-08-10-ai-fix-loop-task-1-kickoff.md`, `2026-08-11-bodai-coverage-ratchet-{standard,followups}.md`, `2026-08-11-skill-coverage-out-of-fast-hooks.md`, plus 2 specs misreported as plans: `2026-08-11-bodai-coverage-ratchet-standard-design.md` and `2026-09-07-crackerjack-multi-language-design.md` which live in `docs/superpowers/specs/`). Adding frontmatter requires per-file status verification (shipped vs draft vs historical); not safe inline without that audit. Document as known followup; defer to post-merge session.
 
 ## Pre-flight conflict scan
 
@@ -57,4 +58,22 @@ The 13 audit-remediation commits, in chronological order (oldest → newest):
 | 12 | `911dc57e` | Cat B 2/2 | correct CLI flag/subcommand/env drift in 4 more files |
 | 13 | `66a87745` | Cat C | push Phase 4 web adapter docs into README/CLI_REFERENCE/api reference |
 
-Follow-up round in progress at time of ledger population.
+Post-2nd-reviewer round (Rulings 11-13, parent session inline):
+
+| # | Hash | Category | Summary |
+|---|------|----------|---------|
+| 14 | `94fdc2f5` | Cat D+Cat E+Cat F | Batch M (MCP spec contracts + AI/README + CHANGELOG) — 8 spec drifts, AI config path, frontmatter+dedup |
+| 15 | `a4fb09b7` | Cat B+Cat C+Cat H | Batch P (Pool + Web + Quickstart/Migration) — 11+ nonexistent CLI commands, broken MCP link, web-hooks entry-point wording |
+| 16 | `e9227942` | Cat A schema | Ruling 11: add `archived` lifecycle value (6-value enum) |
+| 17 | `f4c97e9b` | Cat I | Ruling 12: flip `docs/guides/{AGENTS,CLAUDE}.md` to real files; root becomes symlinks |
+| 18 | `dfbf21ea` | Cat F | Batch A: archive README scope+date+enumeration+path fixes |
+| 19 | `c9640231` | Cat H | Batch A: strike-through dead `PROVIDER_ARCHITECTURE.md` link in `OLLAMA_PROVIDER.md` |
+| 20 | `fd8a3a0b` | Cat F | Batch A: reclassify 15 archived files to `status:archived`, `role:historical` |
+| 21 | `c3a4ef03` | Cat F | Batch A: update `_frontmatter_apply_C1.py` to current archive paths (14, not 6) |
+| 22 | `c49241f9` | Cat K | Batch A: regenerate `PLAN_INDEX.md` after archive + phase-plan shipped updates |
+| 23 | `011b9818` | Cat B+Cat C | Inline: 4 residual `--ai-fix` examples + 2 broken MCP spec links in `CLI_REFERENCE.md` |
+| 24 | `7eba9440` | PROCESS | SDD ledger update with Rulings 11-13 |
+
+**Total commits on `docs-audit-remediation/2026-09-09`: 24** (13 original + 11 post-reviewer-round).
+
+**Known followup (Ruling 14):** 6 plan files lack YAML frontmatter (per `c49241f9` regenerator gap). Deferred to post-merge session — requires per-file status audit before adding frontmatter.
