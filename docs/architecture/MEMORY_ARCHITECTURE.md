@@ -52,7 +52,7 @@ EventBridge envelope).
 | **fix-attempt memory** | SQLite (stdlib `sqlite3`, thread-local conn) | `fix_attempts.issue_fingerprint` (`sha256("hook::issue_type::<file-replaced-error>")`) | `.crackerjack/fix_strategy_memory.db` (overridable via `CrackerjackSettings.fix_strategy_memory.db_path`; default in `crackerjack/config/settings.py:69`) | `crackerjack/memory/fix_strategy_storage.py::FixStrategyStorage` — every Crackerjack agent invocation records a row (`record_attempt`); `crackerjack/memory/strategy_recommender.py::StrategyRecommender` reads it back. Triggered by `crackerjack/intelligence/agent_orchestrator.py:_record_fix_attempt` after each `analyze_and_fix` returns. |
 | **strategy effectiveness** | SQLite (same DB) | `strategy_effectiveness.agent_strategy` (PK, `"agent:strategy"`) | same | `fix_strategy_schema.sql` trigger `update_strategy_effectiveness_after_insert` (note: trigger only fires when the row already exists; first insert is a no-op — `update_strategy_effectiveness` is the canonical full-rebuild path) |
 | **git-metrics time-series** | SQLite (stdlib `sqlite3`, thread-local conn) | `(repository_path, timestamp, metric_type)` (composite PK) | `.crackerjack/git_metrics.db` (or `.git/git_metrics.db` per repo) | `crackerjack/memory/git_metrics_storage.py::GitMetricsStorage` (Pydantic `GitMetric` dataclass + raw SQL); consumed by `crackerjack/memory/git_metrics_collector.py::GitMetricsCollector` and `crackerjack/mcp/tools/git_metrics_tools.py` (`collect_git_metrics`, `get_repository_velocity`, `get_repository_health`, `get_conventional_compliance`) |
-| **git events log** | SQLite (same DB as git-metrics) | `(repository_path, timestamp, event_type)` (composite PK) | same | `git_metrics_schema.sql` table `git_events`; written by `_GitRepository._check_merge_conflicts` and `get_reflog_events`. **The shipped schema has a SQL syntax error** that prevents `executescript` from running (see [Contract 5.1](#contract-51--crackers-shell-git_metrics_schema-sql-fails-executescript)). |
+| **git events log** | SQLite (same DB as git-metrics) | `(repository_path, timestamp, event_type)` (composite PK) | same | `git_metrics_schema.sql` table `git_events`; written by `_GitRepository._check_merge_conflicts` and `get_reflog_events`. **The shipped schema has a SQL syntax error** that prevents `executescript` from running (see [Contract 5.1](#contract-51--crackerjackmemorygit_metrics_schemasql-fails-executescript)). |
 | **adapter learning** | SQLite (Dhara or local SQLite via Dhara integration) | `adapter_attempts.adapter_name` + `file_type` | `.crackerjack/adapter_learning.db` (override via `LearningSettings.adapter_learning_db`; default in `crackerjack/config/settings.py:354`) | `crackerjack/integration/dhara_integration.py::DharaLearningIntegration` — every hook adapter (Ruff, Pyright, Bandit, etc.) records `(adapter_name, file_type, success, execution_time_ms)`. PhaseCoordinator wires this through `PhaseCoordinator.__init__` (`crackerjack/core/phase_coordinator.py:107-125`) and feeds it back to `HookManagerImpl` for tool selection. |
 | **fix-strategy strategy_effectiveness mirror** | SQLite (same DB) | `agent_strategy` PK | same as fix-attempts | Tracked alongside fix_attempts; updated by `FixStrategyStorage.update_strategy_effectiveness` (called from `crackerjack/skills/coverage.py` and after `record_attempt`). |
 | **Oneiric workflow checkpoints** | SQLite (managed by `oneiric`) | `workflow_key` (composite of DAG run id + workflow name) | `.crackerjack/oneiric_cache/workflow_checkpoints.sqlite` (fallback to `${tempdir}/crackerjack/oneiric_cache/`) | `crackerjack/runtime/oneiric_workflow.py::_resolve_workflow_checkpoints_path` resolves; `WorkflowPipeline._clear_oneiric_cache` wipes `workflow_key="crackerjack"` runs at the start of every `run_complete_workflow` |
@@ -305,7 +305,7 @@ if Akosha reports a sudden downward changepoint via
 `ImprovementGenerator.maybe_generate` is **fire-and-forget**: it returns
 a job id, but no actual diff generation runs (the
 `_build_generation_prompt` helper exists but is not invoked by
-`maybe_generate` — see [Contract 5.8](#contract-58--improvementgenerator-maybegenerate-is-fire-and-forget)).
+`maybe_generate` — see [Contract 5.8](#contract-58--improvementgeneratormaybe_generate-is-fire-and-forget)).
 
 ______________________________________________________________________
 
@@ -345,7 +345,7 @@ cluster (`get_comprehensive_status`, `get_server_stats`) for dashboards.
 |------|-------|----------|
 | `search_code(pattern, file_pattern=None)` | `PyCharmMCPAdapter.search_regex` (returns `SearchResult[]`); errors when PyCharm MCP is not running → `"MCP server not connected"` | Cross-IDE regex search |
 | `get_ide_diagnostics(file_path, errors_only=False)` | `PyCharmMCPAdapter.get_file_problems` | Inline IDE problem pull |
-| `get_symbol_info(symbol_name, include_usages=False)` | PyCharm MCP — **not yet implemented**, always returns `status: not_implemented` (see [Contract 5.9](#contract-59--crackerjack-pycharm-symbol-and-find-usages-tools-are-stubs)) | Symbol-level queries (intentionally limited) |
+| `get_symbol_info(symbol_name, include_usages=False)` | PyCharm MCP — **not yet implemented**, always returns `status: not_implemented` (see [Contract 5.9](#contract-59--crackerjack-pycharm-symbol_info-and-find_usages-tools-are-stubs)) | Symbol-level queries (intentionally limited) |
 | `find_usages(symbol_name, file_path=None, limit=50)` | Same as above (stub) | Reference lookups (intentionally limited) |
 | `pycharm_health()` | `PyCharmMCPAdapter.health_check` | PyCharm MCP connection check (returns `status: healthy | degraded`) |
 | `search_git_history(query, limit, days_back, repository_path="")` | `GitSemanticSearchConfig` + `embeddings` rows for git events | "When was this last touched?" — semantic over commit messages + diffs |
@@ -803,10 +803,10 @@ documented in ADRs but not yet the runtime authority.
 | Gap | Where it's defined | Today's runtime | Regression path / tracker |
 |-----|--------------------|-----------------|---------------------------|
 | `crackerjack_run` as a single canonical MCP tool | docs (multiple); `commands/crackerjack-run.md` | Split into `execute_crackerjack` (full) + `run_crackerjack_stage` (stub, see [Contract 5.10](#contract-510--run_crackerjack_stage-is-currently-a-phase-2-removal-stub)) | Phase 3 Oneiric integration; rename `run_crackerjack_stage` to canonical form once Phase 3 lands |
-| `discover_tools` MCP meta-tool | Mahavishnu, Akosha, Session-Buddy all ship it | Missing from `crackerjack/mcp/server_core.py:227-265` | See [Contract 5.5](#contract-55--discover_tools-meta-tool-is-missing-from-crackers) |
+| `discover_tools` MCP meta-tool | Mahavishnu, Akosha, Session-Buddy all ship it | Missing from `crackerjack/mcp/server_core.py:227-265` | See [Contract 5.5](#contract-55--discover_tools-meta-tool-is-missing-from-crackerjack) |
 | `run_crackerjack_stage` Phase 3 Oneiric wiring | TODO note in `crackerjack/mcp/tools/core_tools.py:346` | Stub returns error JSON | See [Contract 5.10](#contract-510--run_crackerjack_stage-is-currently-a-phase-2-removal-stub) |
 | Workspace manager backend | `crackerjack/mahavishnu/workspace.py` (referenced in `workspace_tools.py:17` docstring) | `_get_manager` raises `NotImplementedError` | See [Contract 5.7](#contract-57--crackerjack-workspace-tools-are-stubbed) |
-| ImprovementGenerator diff generation | `_build_generation_prompt` exists in `crackerjack/services/improvement_generator.py:112-127`; `maybe_generate` does not call it | Fire-and-forget; no consumer of the returned `improvement_job_id` | See [Contract 5.8](#contract-58--improvementgenerator-maybegenerate-is-fire-and-forget) |
+| ImprovementGenerator diff generation | `_build_generation_prompt` exists in `crackerjack/services/improvement_generator.py:112-127`; `maybe_generate` does not call it | Fire-and-forget; no consumer of the returned `improvement_job_id` | See [Contract 5.8](#contract-58--improvementgeneratormaybe_generate-is-fire-and-forget) |
 | Oneiric workflow cache cleanup | `WorkflowPipeline._clear_oneiric_cache` exists | Wipes `workflow_key="crackerjack"` on every `run_complete_workflow` — but does NOT clean up other workflow keys | Add `_clear_all_keys` or accept the limit |
 | `analyze_crackerjack` real implementation | `analyze_project` in `utility_tools.py:319-328` | Returns `status: "mock_success"` literal | See [Contract 5.6](#contract-56--analyze_crackerjack-is-mocked) |
 | `crackerjack_run` 0.70 split into workflow + stage | Phase 3 plan (not yet filed) | Two sibling tools, one of which is a stub | Once Phase 3 lands, deprecate `run_crackerjack_stage` and rename to canonical |
@@ -868,7 +868,7 @@ absence of a `profiles.py` is a stable contract.
 `register_skill_tools` from inside `main()` and via
 `crackerjack_doc_frontmatter_validate` from a different path).
 This drift is not a contract violation today; see
-[Contract 5.5](#contract-55--discover_tools-meta-tool-is-missing-from-crackers)
+[Contract 5.5](#contract-55--discover_tools-meta-tool-is-missing-from-crackerjack)
 for the missing `discover_tools` and the broader gap on tool-profile gating.
 
 ______________________________________________________________________
@@ -1260,7 +1260,7 @@ ______________________________________________________________________
   `status: degraded`; `search_code` and `get_ide_diagnostics`
   return `{"error": "MCP server not connected", "success": false}`.
   `get_symbol_info` and `find_usages` are stubs (see
-  [Contract 5.9](#contract-59--crackerjack-pycharm-symbol-and-find-usages-tools-are-stubs)).
+  [Contract 5.9](#contract-59--crackerjack-pycharm-symbol_info-and-find_usages-tools-are-stubs)).
 - **Embedding model unavailable** (`sentence-transformers` not
   installed): `crackerjack/memory/issue_embedder.py::get_issue_embedder`
   returns a `FallbackIssueEmbedder` (TF-IDF via `scikit-learn`). The
@@ -1382,7 +1382,7 @@ ______________________________________________________________________
 - `crackerjack/memory/git_history_embedder.py` — `GitHistoryEmbedder` (per-commit embeddings into `git_history_embeddings`).
 - `crackerjack/services/failure_recorder.py` — `FailureRecorder` (Dhara + Session-Buddy reflection fan-out) and `_compute_fingerprint` (the cross-component join key).
 - `crackerjack/services/failure_metrics_repository.py` — `FailureMetricsRepository` (Dhara `fix-failures` series; consumed by `ImprovementGenerator.count_similar`).
-- `crackerjack/services/improvement_generator.py` — `ImprovementGenerator.maybe_generate` (fire-and-forget; see [Contract 5.8](#contract-58--improvementgenerator-maybegenerate-is-fire-and-forget)).
+- `crackerjack/services/improvement_generator.py` — `ImprovementGenerator.maybe_generate` (fire-and-forget; see [Contract 5.8](#contract-58--improvementgeneratormaybe_generate-is-fire-and-forget)).
 - `crackerjack/services/improvement_overseer.py` — `ImprovementOverseer.review_diff` (the future Phase 3 reviewer; currently unused).
 - `crackerjack/core/workflow_orchestrator.py` — `WorkflowPipeline` (one-step `WorkflowPipeline.run_complete_workflow`; wires EventBridge publisher via `bridge_resolver`).
 - `crackerjack/core/phase_coordinator.py` — `PhaseCoordinator` (the 13 phase methods; `failure_recorder` is passed in for exhaustion tracking; see
@@ -1441,13 +1441,13 @@ ______________________________________________________________________
 - `tests/unit/memory/test_git_history_embedder.py` — Documents the `__init__` + `close` + `find_similar_embeddings` source bugs (the test file ships a `_FIXED_SCHEMA` constant and a monkey-patched `sqlite3.adapt_compression`).
 - `tests/unit/memory/test_failure_recorder.py` — `_compute_fingerprint` determinism + `_sanitize_field` injection prevention.
 - `tests/unit/memory/test_failure_metrics_repository.py` — Dhara `count_similar` + `record` + `query_by_fingerprint` (with `_sanitize_record`).
-- `tests/unit/services/test_improvement_generator.py` — `maybe_generate` noise gate (3) + rate limit (5/day) + `ImprovementProposal` (the fire-and-forget contract — see [Contract 5.8](#contract-58--improvementgenerator-maybegenerate-is-fire-and-forget)).
+- `tests/unit/services/test_improvement_generator.py` — `maybe_generate` noise gate (3) + rate limit (5/day) + `ImprovementProposal` (the fire-and-forget contract — see [Contract 5.8](#contract-58--improvementgeneratormaybe_generate-is-fire-and-forget)).
 - `tests/unit/core/test_workflow_pipeline_eventbridge_wiring.py` — `WorkflowPipeline._wire_event_publisher` opt-in behavior (the production wiring test).
 - `tests/unit/core/test_eventbridge_resolver.py` — `resolve_event_publisher` settings + bridge resolution.
 - `tests/unit/config/test_eventbridge_settings.py` — `EventBridgeSettings` defaults (the `enabled=False` / `dry_run=True` defaults).
 - `tests/unit/test_eventbridge_publisher.py` — `publish_test_started` / `completed` / `failed` round-trip + envelope shape.
 - `tests/unit/test_eventbridge_adapter.py` — `EventBridgeAdapter` round-trip.
-- `tests/mcp_test_helpers/tools/test_pycharm_tools.py` — Documents the `not_implemented` status of `get_symbol_info` and `find_usages` (see [Contract 5.9](#contract-59--crackerjack-pycharm-symbol-and-find-usages-tools-are-stubs)).
+- `tests/mcp_test_helpers/tools/test_pycharm_tools.py` — Documents the `not_implemented` status of `get_symbol_info` and `find_usages` (see [Contract 5.9](#contract-59--crackerjack-pycharm-symbol_info-and-find_usages-tools-are-stubs)).
 - `tests/mcp_test_helpers/tools/test_semantic_tools.py` — Documents the `Path`-serialization bug in `index_file_semantic` and `remove_file_from_semantic_index` (the tests pin the bug; the success path leaks into the exception branch).
 - `tests/mcp_test_helpers/tools/test_execution_tools.py` — `execute_crackerjack` + `smart_error_analysis` + `init_crackerjack` + `suggest_agents` (uses `get_context`; `init_crackerjack` is the constructor that fails gracefully).
 - `tests/mcp_test_helpers/tools/test_monitoring_tools.py` — `get_stage_status` / `get_next_action` / `get_server_stats` / `get_comprehensive_status` / `get_filtered_status` (the `auth_fails` + `security_validation_fails` paths).

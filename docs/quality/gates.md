@@ -43,4 +43,4 @@ Crackerjack runs comprehensive quality checks in a **specific workflow order**.
 
 ## See Also
 
-- [CLAUDE.md](../README.md#quality-process) - Complete quality guidelines
+- CLAUDE.md - Complete quality guidelines

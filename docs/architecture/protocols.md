@@ -35,5 +35,5 @@ from rich.console import Console as RichConsole
 
 ## See Also
 
-- [CLAUDE.md](../README.md#architecture) - Complete architecture guidelines
+- CLAUDE.md - Complete architecture guidelines
 - [Protocol Definitions](../api/reference.md#protocols)

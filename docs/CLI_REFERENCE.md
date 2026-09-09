@@ -13,7 +13,7 @@ Complete command-line interface reference for Crackerjack.
 - [AI Integration Commands](#ai-integration-commands)
 - [Testing Commands](#testing-commands)
 - [Coverage Commands](#coverage-commands)
-- [MCP Server Commands](#mcp-server-commands)
+- MCP Server Commands (see Core Commands and Advanced Options for `crackerjack start`, `crackerjack health`, and `--start-mcp-server`)
 - [Publishing Commands](#publishing-commands)
 - [Monitoring Commands](#monitoring-commands)
 - [Configuration Commands](#configuration-commands)
