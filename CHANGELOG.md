@@ -66,6 +66,24 @@ ______________________________________________________________________
   group now registers Python, Swift, and Kotlin adapters. New fixture at
   `tests/fixtures/gradle-vanilla/` exercises the full lifecycle end-to-end.
 
+## [0.80.8] - 2026-09-07
+
+### Changed
+
+- Patch version bump during Phase 4 Web adapter rollout (see [Unreleased] above)
+
+## [0.80.7] - 2026-09-07
+
+### Changed
+
+- Patch version bump during Phase 4 Web adapter rollout (see [Unreleased] above)
+
+## [0.80.6] - 2026-09-07
+
+### Changed
+
+- Patch version bump during Phase 4 Web adapter rollout (see [Unreleased] above)
+
 ## [0.80.5] - 2026-09-07
 
 ### Build
