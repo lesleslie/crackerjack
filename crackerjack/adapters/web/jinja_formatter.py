@@ -107,13 +107,18 @@ def format_template(
 
 
 def _delimiters_match_source(delims: Mapping[str, str], source: str) -> bool:
-    """Return True iff `source` contains no standard delimiters when non-standard
-    delimiters are configured (or vice versa).
+    """Return True iff `source` is safe to lex with `delims` configured.
 
-    Standard delimiter markers: `{%`, `%}`, `{{`, `}}`, `{#`, `#}`.
-    When the env is configured with non-standard delimiters, any appearance of
-    a standard marker in the source indicates a delimiter mismatch that jinja2's
-    `lex()` will silently swallow.
+    One-directional check: when the env is configured with non-standard
+    delimiters, this returns False if the source contains any *standard*
+    marker (`{%`, `%}`, `{{`, `}}`, `{#`, `#}`) — a mismatch that jinja2's
+    `lex()` would silently swallow as plain DATA, causing downstream
+    `_apply_tier1` to mangle content.
+
+    The reverse case (standard config + non-standard markers in source) is
+    not caught here; `lex()` will treat the non-standard markers as plain
+    DATA too, but `_apply_tier1` is a no-op on DATA so the result is
+    benign. Documented here rather than silently asymmetric.
     """
     standard_markers = ("{%", "%}", "{{", "}}", "{#", "#}")
     is_standard_config = all(
