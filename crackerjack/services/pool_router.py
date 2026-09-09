@@ -68,7 +68,6 @@ class PoolRouter:
             ("heavy-cpu-worker", "bandit"): "Bandit requires deep security analysis",
             ("fast-worker", "skylos"): "Skylos is Rust-based, already optimized",
             ("fast-worker", "ruff"): "Ruff is fast enough for shared workers",
-            ("fast-worker", "vulture"): "Vulture is quick AST scanner",
             ("fast-worker", "codespell"): "Codespell is fast spell checker",
             (
                 "fast-worker",
