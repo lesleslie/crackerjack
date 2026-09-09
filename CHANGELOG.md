@@ -2,7 +2,35 @@ ______________________________________________________________________
 
 ## [Unreleased]
 
-### Added
+### Added (Phase 4)
+
+- Web language adapter (`crackerjack.adapters.web`): activates on projects with
+  `package.json` at root OR `[tool.crackerjack.web] enabled = true` opt-in.
+- 4 CLI hooks: `web.stylelint`, `web.eslint`, `web.tsc`, `web.html_validate`.
+  Each emits issues via JSON output parsing (`stylelint -f json`,
+  `eslint -f json`, `html-validate -f json`, `tsc --noEmit` line-oriented).
+  When the CLI is unresolvable, `WebHookError` is raised with install
+  instructions (Swift/Kotlin precedent — no Python fallbacks).
+- Jinja template formatter (`format_template`): Tier 1 only (trailing newline
+  + no trailing whitespace + preserve `{%-` / `-%}` markers). Uses
+  `Environment.lex()` as a syntax-validation gate; Tier 2 normalization
+  (`[tool.crackerjack.jinja] normalize = true`) is deferred.
+- 2 new MCP tools: `check_web_lint` (read-only, returns hook metadata) and
+  `format_jinja_templates` (mutation, `dry_run=True` default, per-project
+  delimiter config from `[tool.crackerjack.jinja]`, symlink guard).
+- `jinja2>=3.1.6` direct dependency (was previously transitive).
+
+### Changed
+
+- `crackerjack.language_adapters` entry-point group now includes the Web adapter
+  (joining Python, Swift, and Kotlin from earlier phases).
+
+### Not yet shipped
+
+- Tier 2 normalization (`[tool.crackerjack.jinja] normalize = true`).
+- Shared `jinja-test-fixtures/` Bodai sibling package (spec line 420).
+- PyCharm parity script (spec Jinja F10).
+- CLI subcommand `crackerjack web jinja format` (CLI mirror per spec).
 
 - Multi-language extension foundation (Phase 1): new `crackerjack/adapters/`
   package with `LanguageAdapter` Protocol, `LanguageAdapterBase` ABC,

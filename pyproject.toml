@@ -535,6 +535,7 @@ markers = [
     "chaos: marks test as chaos engineering test",
     "ai_generated: marks test as AI-generated test",
     "breakthrough: marks test as breakthrough frontier test",
+    "real_web_smoke: requires npx + stylelint + eslint + tsc + html-validate",
 ]
 
 [tool.coverage.run]

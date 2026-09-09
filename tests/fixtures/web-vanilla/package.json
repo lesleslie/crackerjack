@@ -1,0 +1,18 @@
+{
+  "name": "web-vanilla-fixture",
+  "version": "0.0.1",
+  "description": "Minimal web fixture for crackerjack Phase 4 Web adapter smoke tests.",
+  "private": true,
+  "scripts": {
+    "lint:css": "stylelint \"src/**/*.css\"",
+    "lint:js": "eslint . --ext .ts,.tsx,.js,.jsx",
+    "typecheck": "tsc --noEmit",
+    "validate:html": "html-validate \"**/*.html\""
+  },
+  "devDependencies": {
+    "stylelint": "^15.0.0",
+    "eslint": "^8.0.0",
+    "typescript": "^5.0.0",
+    "html-validate": "^8.0.0"
+  }
+}

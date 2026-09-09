@@ -96,3 +96,20 @@ class TestLoadJinjaConfig:
 class TestJinjaSuffixes:
     def test_suffixes_match_policy(self) -> None:
         assert JINJA_SUFFIXES == frozenset({".html", ".j2", ".jinja"})
+
+
+@pytest.mark.parametrize(
+    "fixture_name",
+    ["basic.html.j2", "custom_delimiters.html.j2", "whitespace.html.j2"],
+)
+class TestGoldenMaster:
+    CORPUS = Path(__file__).parent.parent.parent / "fixtures" / "jinja-templates"
+
+    def test_format_matches_golden_master(self, fixture_name: str) -> None:
+        """Per spec Testing F9: round-trip + golden-master expected output."""
+        src = (self.CORPUS / fixture_name).read_text()
+        expected = (self.CORPUS / f"{fixture_name}.expected").read_text()
+        actual = format_template(src)
+        assert actual == expected
+        # Round-trip: golden output is its own fixed point.
+        assert format_template(actual) == actual

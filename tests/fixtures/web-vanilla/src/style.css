@@ -1,0 +1,9 @@
+/* Minimal web fixture stylesheet: one valid rule + one invalid (intentional). */
+
+body {
+  color: #333;
+}
+
+.bad-color {
+  color: #ZZZ;
+}
