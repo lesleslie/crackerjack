@@ -5,6 +5,7 @@ import shutil
 from pathlib import Path
 
 from crackerjack.adapters.base import Hook
+from crackerjack.adapters.swift.platforms import parse_platforms
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +41,7 @@ def swift_hooks(package_swift_path: Path) -> tuple[Hook, ...]:
     Per spec Swift F4: the original destination-detection requirement is
     broken at the spec level, so no destination flag is emitted here.
     """
+    parse_platforms(package_swift_path)  # validates the file; result discarded
     format_cmd = _swift_format_command()
 
     return (

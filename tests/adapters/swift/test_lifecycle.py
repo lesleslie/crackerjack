@@ -105,11 +105,15 @@ def test_swift_lifecycle_rollback_on_gh_release_failure(tmp_path: Path) -> None:
     lifecycle._reset.assert_called_once_with("abc123")
 
 
-def test_swift_lifecycle_rejects_invalid_level(tmp_path: Path) -> None:
-    """Per MEDIUM M2: invalid level values raise ValueError."""
-    _version_source, lifecycle = _make_lifecycle(tmp_path)
+def test_lifecycle_options_rejects_invalid_level() -> None:
+    """LifecycleOptions.__post_init__ validates level before run is invoked.
+
+    Per MEDIUM M2: invalid level values raise ValueError in the dataclass
+    __post_init__ hook (crackerjack/adapters/base.py:LifecycleOptions),
+    not in SwiftLifecycle.run.
+    """
     with pytest.raises(ValueError, match="level must be"):
-        lifecycle.run(LifecycleOptions(level="epic"))  # type: ignore[arg-type]
+        LifecycleOptions(level="epic")  # type: ignore[arg-type]
 
 
 def test_swift_lifecycle_does_not_mutate_package_swift(tmp_path: Path) -> None:
