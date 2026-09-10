@@ -111,7 +111,7 @@ ______________________________________________________________________
 
 **Key Classes**:
 
-```python
+```text
 @dataclass
 class CommitData:
     """Single commit with metadata."""
@@ -191,7 +191,7 @@ WHERE (repository_path, timestamp, metric_type) IN (
 
 **Purpose**: ACID transactions for concurrent git metric writes
 
-```python
+```text
 class GitMetricsStorage:
     """Persistent storage for git metrics with ACID guarantees."""
 
@@ -255,7 +255,7 @@ class IssueEmbedder:
 
 **Purpose**: Learn from historical fix attempts to recommend strategies
 
-```python
+```text
 class StrategyRecommender:
     """Recommend fix strategies based on historical patterns."""
 
@@ -294,7 +294,7 @@ Enable **semantic search over git history** using Akosha's embedding and vector 
 
 #### Key Classes
 
-```python
+```text
 @dataclass
 class GitEvent:
     """Git event with semantic search metadata."""
@@ -375,7 +375,7 @@ ______________________________________________________________________
 
 #### Key Classes
 
-```python
+```text
 @dataclass(frozen=True)
 class RepositoryVelocity:
     """Per-velocity metrics."""
@@ -416,7 +416,7 @@ class MahavishnuAggregator:
 
 #### Pattern Detection Algorithms
 
-```python
+```text
 # Declining velocity detection
 if velocity_current < velocity_baseline * 0.7:
     patterns.append(CrossProjectPattern(
@@ -463,7 +463,7 @@ ______________________________________________________________________
 
 #### Key Classes
 
-```python
+```text
 @dataclass
 class ExtendedSessionMetrics:
     """Session metrics enriched with git velocity data."""
@@ -560,7 +560,7 @@ Enable cross-project Git analytics and dashboard visualization via Mahavishnu's 
 
 **File Structure:**
 
-```python
+```text
 crackerjack/mahavishnu/mcp/tools/git_analytics.py
 ├── PortfolioVelocityDashboard     # Velocity aggregation
 ├── MergePatternAnalysis           # Rebase vs. merge detection
