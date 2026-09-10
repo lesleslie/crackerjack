@@ -333,7 +333,7 @@ def _execute_init_stage(orchestrator: WorkflowPipeline) -> bool:
 
 
 def register_core_tools(mcp_app: t.Any) -> None:
-    @mcp_app.tool()  # type: ignore[misc]
+    @mcp_app.tool(name="crackerjack_run_stage")  # type: ignore[misc]
     async def run_crackerjack_stage(args: str, kwargs: str) -> str:
         context = get_context()
         rate_limiter = context.rate_limiter if context else None

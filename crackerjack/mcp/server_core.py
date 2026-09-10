@@ -130,14 +130,72 @@ async def create_mcp_server(config: dict[str, t.Any] | None = None) -> t.Any | N
     if config is None:
         config = {"http_port": 8676, "http_host": "127.0.0.1"}
 
+    # Initialize the skills_signer feed state (Phase 1.5 of
+    # docs/plans/2026-09-09-bodai-skill-agent-distribution.md).
+    # Crackerjack has no async lifespan, so the state is built
+    # lazily at create_mcp_server() time using the mahavishnu
+    # no-lifespan singleton pattern (plan §10.3.2 option c). The
+    # failure is logged but does NOT crash server startup — the
+    # static /health route below falls back to 503 if init failed.
+    try:
+        from crackerjack.mcp.signer_feed import init_signer_feed_state
+
+        init_signer_feed_state()
+    except Exception as e:
+        console.print(
+            f"[yellow]Warning: skills_signer init failed: {e}[/yellow]",
+        )
+
     mcp_app = FastMCP("crackerjack-mcp-server", version=__version__)
 
     @mcp_app.custom_route("/health", methods=["GET"])
     async def health_check(request: t.Any) -> t.Any:
         from starlette.responses import JSONResponse
 
+        from crackerjack.mcp.signer_feed import get_signer_feed_state
+
+        state = get_signer_feed_state()
+        if state is None:
+            # Pre-init warm-up window OR init failed inside
+            # create_mcp_server. Return 503 per the plan §10.3.2
+            # warm-up contract.
+            return JSONResponse(
+                {
+                    "status": "degraded",
+                    "service": "crackerjack",
+                    "version": __version__,
+                    "checks": {
+                        "skills_signer": {
+                            "ok": False,
+                            "error": "not initialized",
+                        },
+                    },
+                },
+                status_code=503,
+            )
+
+        signer_dict = state.as_dict()
+        signer_ok = bool(signer_dict.get("ok"))
+        if not signer_ok:
+            # Signer feed is degraded (empty manifest). Return 503
+            # per mcp-backend-wiring-discipline.md.
+            return JSONResponse(
+                {
+                    "status": "degraded",
+                    "service": "crackerjack",
+                    "version": __version__,
+                    "checks": {"skills_signer": signer_dict},
+                },
+                status_code=503,
+            )
+
         return JSONResponse(
-            {"status": "ok", "service": "crackerjack", "version": __version__}
+            {
+                "status": "ok",
+                "service": "crackerjack",
+                "version": __version__,
+                "checks": {"skills_signer": signer_dict},
+            }
         )
 
     @mcp_app.custom_route("/healthz", methods=["GET"])

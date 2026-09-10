@@ -126,7 +126,7 @@ def _check_file_eligibility(file: Path, cutoff: t.Any) -> tuple[int, bool] | Non
 
 
 def _register_clean_tool(mcp_app: t.Any) -> None:
-    @mcp_app.tool()
+    @mcp_app.tool(name="crackerjack_clean")
     async def clean_crackerjack(args: str = "", kwargs: str = "{}") -> str:
         context = get_context()
         if not context:
@@ -281,7 +281,7 @@ def _create_cleanup_response(
 
 
 def _register_config_tool(mcp_app: t.Any) -> None:
-    @mcp_app.tool()
+    @mcp_app.tool(name="crackerjack_config")
     async def config_crackerjack(args: str = "", kwargs: str = "{}") -> str:
         from crackerjack.config import CrackerjackSettings
 
@@ -330,7 +330,7 @@ async def analyze_project(
 
 
 def _register_analyze_tool(mcp_app: t.Any) -> None:
-    @mcp_app.tool()
+    @mcp_app.tool(name="crackerjack_analyze")
     async def analyze_crackerjack(args: str = "", kwargs: str = "{}") -> str:
         context = get_context()
         if not context:
@@ -367,7 +367,7 @@ def _register_analyze_tool(mcp_app: t.Any) -> None:
 
 
 def _register_claude_md_validator_tool(mcp_app: t.Any) -> None:
-    @mcp_app.tool()
+    @mcp_app.tool(name="crackerjack_validate_claude_md")
     async def validate_claude_md(args: str = "", kwargs: str = "{}") -> str:
         context = get_context()
         if not context:

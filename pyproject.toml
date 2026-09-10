@@ -33,6 +33,7 @@ dependencies = [
     "codespell>=2.4.2",
     "complexipy>=5.6.1",
     "creosote>=5.2.0",
+    "cryptography>=50.0.0",  # Phase 1.5 skills_signer (ed25519)
     "docstring-to-markdown>=0.17",
     "fastapi>=0.138.0",
     "fastmcp>=3.4.2",
