@@ -1,14 +1,6 @@
----
-title: Crackerjack MCP Tools Specification
-generated: 2026-09-09
-status: active
-role: canonical
-date: 2026-09-09
-last_reviewed: 2026-09-09
-superseded_by: null
-blocks_on: []
-topic: mcp-design
----
+______________________________________________________________________
+
+## title: Crackerjack MCP Tools Specification generated: 2026-09-09 status: active role: canonical date: 2026-09-09 last_reviewed: 2026-09-09 superseded_by: null blocks_on: [] topic: mcp-design
 
 # Crackerjack MCP Tools Specification
 
@@ -22,7 +14,7 @@ This document was rewritten 2026-09-09 as part of the docs-audit remediation
 registrations, and an internally contradictory profile model. None of that
 survives.
 
----
+______________________________________________________________________
 
 ## 1. Registration model
 
@@ -46,8 +38,6 @@ additional guarantees:
 - **`discover_tools` meta-tool** — auto-registered by the W0 helper at every
   tier using `crackerjack/mcp/tools/discover_query.py::crackerjack_discovery`.
 
-[mcp-common]: https://github.com/lesleslie/mcp-common
-
 ### 1.1 Per-profile tool counts (verified 2026-09-09)
 
 Verified by grepping every `@mcp_app.tool()` / `@mcp.tool()` decorator under
@@ -66,18 +56,17 @@ conditional — the `publish_to_eventbridge` tool only appears when
 ### 1.2 Tools NOT in the wire surface (defined but never registered)
 
 Two orphan groups exist in `crackerjack/mcp/tools/` but are absent from
-both `REGISTRATION_MAP` and `PROFILE_REGISTRATIONS` — calling `crackerjack mcp
-start` does not expose them:
+both `REGISTRATION_MAP` and `PROFILE_REGISTRATIONS` — calling `crackerjack mcp start` does not expose them:
 
 | Module | Tools | Status |
 |---|---|---|
 | `crackerjack/mcp/tools/mahavishnu_tools.py` | `get_cross_project_git_dashboard`, `get_repository_health`, `get_cross_project_patterns`, `get_velocity_comparison` | **Orphan.** Defined but never wired. Wire-up requires adding `"mahavishnu_tools"` to `REGISTRATION_MAP` (with a corresponding register function) and assigning a tier in `PROFILE_REGISTRATIONS`. As of 2026-09-09 the module does not expose any `register_*` function. |
-| `crackerjack/mcp/tools/workspace_tools.py` | `create_workspace`, `list_workspaces`, `get_workspace_info`, `remove_workspace` | **Orphan + stubs.** Defined but never wired; even when wired, `_get_manager()` raises `NotImplementedError` until the Phase 3 Oneiric workspace backend lands. |
+| `crackerjack/mcp/tools/workspace_tools.py` | `create_workspace`, `list_workspaces`, `get_workspace_info`, `remove_workspace` | **Phase 3 deferred — intentional placeholder.** Not in `REGISTRATION_MAP` by design. The module's internal `_get_manager()` raises `NotImplementedError` because the Oneiric workspace backend (`crackerjack.mahavishnu.workspace`) was removed in Phase 2; Phase 3 is the planned reimplementation target (per `MEMORY_ARCHITECTURE.md` Contract 5.7). The `register_workspace_tools` function exists in the module but is intentionally not wired. The API contract is verified by `tests/unit/mcp/tools/test_workspace_tools.py` (4 handlers × happy-path + edge-cases), so when Phase 3 lands only the manager backend needs implementation. Wiring now would expose tools that always fail with `NotImplementedError`, which is strictly worse than the current "not registered" posture. |
 
 These tools are intentionally **not** documented in §3 below because they
 are not callable through the MCP server.
 
----
+______________________________________________________________________
 
 ## 2. Profile → tool group matrix
 
@@ -100,7 +89,7 @@ are not callable through the MCP server.
 
 ¹ Conditional on `settings/crackerjack.yaml::eventbridge.enabled=true`.
 
----
+______________________________________________________________________
 
 ## 3. Per-tool reference
 
@@ -216,7 +205,7 @@ All tools return a structured error if PyCharm is not connected.
 | `get_embeddings(texts: str, config_json: str = "") -> str` | `texts` = JSON array of strings. | Returns raw embedding vectors from the configured model (default `sentence-transformers/all-MiniLM-L6-v2`, dim 384). |
 | `calculate_similarity_semantic(embedding1: str, embedding2: str, config_json: str = "") -> str` | Embeddings are JSON arrays of floats. | Returns `{similarity_score, embedding1_dimension, embedding2_dimension}`. |
 
----
+______________________________________________________________________
 
 ## 4. `discover_tools` meta-tool (always-on)
 
@@ -233,7 +222,7 @@ The `group` field is sourced from `tests/fixtures/_tool_groups_mapping.json`
 (a snapshot of the historical tool-name → group mapping). If the fixture
 is missing, the field silently degrades to `None`.
 
----
+______________________________________________________________________
 
 ## 5. `health_tools` probes (always-on via `CRACKERJACK_MANDATORY_GROUPS`)
 
@@ -252,7 +241,7 @@ non-required dependencies (`session_buddy` at `:8678`, `mahavishnu` at
 | `wait_for_dependency(dep_service_name: str, host: str = "localhost", port: int = 8080, timeout: int = 30, required: bool = True, use_tls: bool = False, health_path: str = "/health") -> dict` | Exponential-backoff loop. | Blocks until the target is healthy or the timeout elapses. |
 | `wait_for_all_dependencies() -> dict` | Same backoff semantics across the allowlist. | Blocks until every registered dependency is healthy or the timeout elapses. |
 
----
+______________________________________________________________________
 
 ## 6. Tools that proxy to other components
 
@@ -264,7 +253,7 @@ non-required dependencies (`session_buddy` at `:8678`, `mahavishnu` at
 | `get_symbol_info`, `find_usages` | PyCharm MCP (planned) | HTTP via `PyCharmMCPAdapter` | Returns `status: "not_implemented"`; pending PyCharm MCP extension. |
 | `get_cross_project_*`, `get_repository_health`, `get_velocity_comparison` (orphan) | Mahavishnu aggregator (planned) | In-process via `crackerjack.integration.mahavishnu_integration` | **Not reachable** — `mahavishnu_tools` is not wired into any profile. |
 
----
+______________________________________________________________________
 
 ## 7. Tool groups by access pattern
 
@@ -272,16 +261,16 @@ non-required dependencies (`session_buddy` at `:8678`, `mahavishnu` at
 |---|---|---|
 | **Hot execution** (`execute_crackerjack`, `run_crackerjack_stage`) | Up to 600s with rate-limit 12 req/s + burst 35 | Mahavishnu worker dispatch, CI |
 | **Language mutation** (`swift_bump_version`, `kotlin_bump_version`, `format_jinja_templates`) | 1-30s per project, blocked on auth + allowlist | Manual operator + CI release pipeline |
-| **Language introspection** (`swift_list_hooks`, `kotlin_list_hooks`, `detect_languages`, `check_web_lint`) | <1s | Editor / IDE integration |
-| **Monitoring** (`get_comprehensive_status`, `get_filtered_status`, `get_server_stats`, `get_stage_status`, `get_next_action`, `list_slash_commands`) | <100ms | Operator dashboards |
+| **Language introspection** (`swift_list_hooks`, `kotlin_list_hooks`, `detect_languages`, `check_web_lint`) | \<1s | Editor / IDE integration |
+| **Monitoring** (`get_comprehensive_status`, `get_filtered_status`, `get_server_stats`, `get_stage_status`, `get_next_action`, `list_slash_commands`) | \<100ms | Operator dashboards |
 | **OTel** (`query_local_traces`) | Network-bound, 30s default timeout | Mahavishnu observability layer |
 | **Code intelligence** (`search_code`, `get_ide_diagnostics`, `pycharm_health`) | Network-bound, 30s timeout | PyCharm IDE |
 | **Semantic search** (`index_file_semantic`, `search_semantic`, `get_semantic_stats`, `get_embeddings`, `calculate_similarity_semantic`, `remove_file_from_semantic_index`) | Index build is O(file size); search is vector-cosine | RAG pipelines, `mahavishnu/ingesters/content_ingester.py:611` |
-| **Admin / utility** (`clean_crackerjack`, `config_crackerjack`, `analyze_crackerjack`, `validate_claude_md`, `crackerjack_doc_frontmatter_validate`) | <1s | Operator one-offs |
-| **Proactive** (`plan_development`, `validate_architecture`, `suggest_patterns`) | <10ms (in-process rule dispatch) | Claude / agent workflows |
-| **Progress** (`get_job_progress`, `session_management`) | <50ms (JSON file I/O) | Workflow dashboards |
+| **Admin / utility** (`clean_crackerjack`, `config_crackerjack`, `analyze_crackerjack`, `validate_claude_md`, `crackerjack_doc_frontmatter_validate`) | \<1s | Operator one-offs |
+| **Proactive** (`plan_development`, `validate_architecture`, `suggest_patterns`) | \<10ms (in-process rule dispatch) | Claude / agent workflows |
+| **Progress** (`get_job_progress`, `session_management`) | \<50ms (JSON file I/O) | Workflow dashboards |
 
----
+______________________________________________________________________
 
 ## 8. Tool groups by persistence side-effect
 
@@ -294,7 +283,7 @@ non-required dependencies (`session_buddy` at `:8678`, `mahavishnu` at
 | Progress | `progress_dir/job-<id>.json`, `current_session.json` | Same files |
 | Admin / utility | `CrackerjackSettings`, `CLAUDE.md` | `CLAUDE.md` (conditional via `update=true`) |
 
----
+______________________________________________________________________
 
 ## 9. Registration map (function → tool group)
 
@@ -324,9 +313,9 @@ The mechanical single source of truth, mirroring `REGISTRATION_MAP` in
 | Tool group | Tools | Why excluded |
 |---|---|---|
 | `mahavishnu_tools` | `get_cross_project_git_dashboard`, `get_repository_health`, `get_cross_project_patterns`, `get_velocity_comparison` | Not present in `REGISTRATION_MAP`. Wire-up deferred pending an integration test that asserts non-empty results (per `.claude/decisions/mcp-backend-wiring-discipline.md`). |
-| `workspace_tools` | `create_workspace`, `list_workspaces`, `get_workspace_info`, `remove_workspace` | Not present in `REGISTRATION_MAP`. The internal `_get_manager()` raises `NotImplementedError` because the Oneiric workspace backend (`crackerjack.mahavishnu.workspace`) was removed in Phase 2; Phase 3 is the planned reimplementation target. |
+| `workspace_tools` | `create_workspace`, `list_workspaces`, `get_workspace_info`, `remove_workspace` | **Phase 3 deferred — intentional placeholder.** Not present in `REGISTRATION_MAP` by design. See §1 row above for rationale (Phase 3 Oneiric workspace backend reimplementation). The `register_workspace_tools` function exists in the module but is not wired. API contract verified by `tests/unit/mcp/tools/test_workspace_tools.py`. |
 
----
+______________________________________________________________________
 
 ## 10. Cross-references
 
@@ -338,7 +327,7 @@ The mechanical single source of truth, mirroring `REGISTRATION_MAP` in
 - **Drift regression tests** — `tests/unit/mcp/test_mcp_tool_drift.py` (mechanical enforcement of registration drift).
 - **Wiring policy** — `.claude/decisions/mcp-backend-wiring-discipline.md` (every tool must have `feed.entities_count`, `feed.last_updated_timestamp`, `feed.errors_total`, `cycles_total` and a passing `tests/integration/test_<tool>_e2e.py`).
 
----
+______________________________________________________________________
 
 ## 11. Status legend
 
@@ -346,3 +335,5 @@ The mechanical single source of truth, mirroring `REGISTRATION_MAP` in
 - **Stub** — function defined but returns a canned "not implemented" / "Phase X reimplementation" payload (`run_crackerjack_stage`, `analyze_crackerjack`, `get_symbol_info`, `find_usages`).
 - **Conditional** — only registered when a config setting enables the group (`publish_to_eventbridge` requires `eventbridge.enabled=true`).
 - **Orphan** — defined in `crackerjack/mcp/tools/` but not wired into `REGISTRATION_MAP` (not in the wire surface). See §9.1.
+
+[mcp-common]: https://github.com/lesleslie/mcp-common
