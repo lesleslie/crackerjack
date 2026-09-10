@@ -265,6 +265,8 @@ session_handoff_*.md
 # ============================================================================
 *.pyd
 example.mcp.json
+# Crackerjack test selection report (runtime artifact emitted by test selectors)
+report.txt
 
 # ============================================================================
 # Bodai-wide gitignore patterns (added 2026-09-07; cross-repo cleanup sweep)
