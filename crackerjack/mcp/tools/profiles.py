@@ -20,6 +20,13 @@ lines) with the W0 helper. Health probes are mandatory at every profile
 tier so load balancers / orchestrators can always reach them. The
 ``crackerjack_discovery`` discovery_fn override preserves the historical
 query filter behavior (case-insensitive substring on name + description).
+
+Phase 3: ``agent_registry`` is added to CRACKERJACK_MANDATORY_GROUPS so
+the ``crackerjack_list_agents`` / ``crackerjack_get_agent`` tools are
+reachable at every profile tier (matching the Phase 1 wiring where
+``skill_registry`` is in STANDARD_REGISTRATIONS but the agent
+registry's discovery surface is required for the Phase 3 installer
+even when the operator runs in MINIMAL profile).
 """
 
 from __future__ import annotations
@@ -98,6 +105,7 @@ def _build_registration_map() -> dict[str, Callable[[FastMCP], Awaitable[None] |
     Local import keeps ``crackerjack.mcp.tools.profiles`` importable without
     forcing every per-group register module to load at import time.
     """
+    from crackerjack.mcp.tools.agent_registry import register_agent_registry
     from crackerjack.mcp.tools.core_tools import register_core_tools
     from crackerjack.mcp.tools.doc_tools import register_doc_tools
     from crackerjack.mcp.tools.eventbridge_tools_wrapper import (
@@ -118,6 +126,7 @@ def _build_registration_map() -> dict[str, Callable[[FastMCP], Awaitable[None] |
     from crackerjack.mcp.tools.utility_tools import register_utility_tools
 
     return {
+        "agent_registry": register_agent_registry,
         "core_tools": register_core_tools,
         "doc_tools": register_doc_tools,
         "eventbridge_tools": register_crackerjack_eventbridge,
@@ -142,8 +151,10 @@ REGISTRATION_MAP: dict[str, Callable[[FastMCP], Awaitable[None] | None]] = (
 
 # Always-on groups: registered at every profile level in addition to the
 # per-profile list. Health checks must be reachable from any profile tier
-# (load balancers / orchestrators depend on them).
-CRACKERJACK_MANDATORY_GROUPS: set[str] = {"health_tools"}
+# (load balancers / orchestrators depend on them). Phase 3 also pins
+# ``agent_registry`` here so the Phase 3 installer can fetch agents
+# regardless of profile tier.
+CRACKERJACK_MANDATORY_GROUPS: set[str] = {"health_tools", "agent_registry"}
 
 
 def register_all_tool_groups(server: FastMCP) -> None:
