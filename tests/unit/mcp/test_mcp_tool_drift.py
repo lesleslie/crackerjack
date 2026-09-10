@@ -71,13 +71,11 @@ SERVER_CORE_SKILL_CALL_LINE = 497
 # ``test_no_orphan_register_modules`` test subtracts this set from the
 # orphan list before asserting.
 #
-# Current entries:
-# - ``register_workspace_tools``: workspace manager backend was removed in
-#   Phase 2; awaiting Phase 3 (Oneiric integration) reimplementation
-#   per MEMORY_ARCHITECTURE.md Contract 5.7.
-INTENTIONAL_DEFERRED_REGISTERS: frozenset[str] = frozenset({
-    "register_workspace_tools",
-})
+# Empty as of 2026-09-09 — both ``mahavishnu_tools`` and ``workspace_tools``
+# were removed from the codebase, leaving no intentionally-deferred
+# register functions. If a future module is added with a deliberate
+# deferral, append it here with the rationale.
+INTENTIONAL_DEFERRED_REGISTERS: frozenset[str] = frozenset()
 
 
 # ---------------------------------------------------------------------------
@@ -179,7 +177,7 @@ def _function_registers_tool(
     * a nested ``async def`` / ``def`` directly inside ``func`` carrying
       ``@mcp_app.tool(...)`` (common for one-shot register functions);
     * a call to ``mcp_app.tool(...)`` / ``mcp.tool(...)`` inside ``func``
-      (used by ``workspace_tools``-style adapters);
+      (used by adapter-style modules);
     * a call from ``func`` to a module-level ``_register_<helper>`` that
       contains the decorator on one of its nested functions (the dominant
       pattern across ``crackerjack/mcp/tools/*.py``).

@@ -55,16 +55,13 @@ conditional — the `publish_to_eventbridge` tool only appears when
 
 ### 1.2 Tools NOT in the wire surface (defined but never registered)
 
-Two orphan groups exist in `crackerjack/mcp/tools/` but are absent from
-both `REGISTRATION_MAP` and `PROFILE_REGISTRATIONS` — calling `crackerjack mcp start` does not expose them:
-
-| Module | Tools | Status |
-|---|---|---|
-| `crackerjack/mcp/tools/mahavishnu_tools.py` | `get_cross_project_git_dashboard`, `get_repository_health`, `get_cross_project_patterns`, `get_velocity_comparison` | **Orphan.** Defined but never wired. Wire-up requires adding `"mahavishnu_tools"` to `REGISTRATION_MAP` (with a corresponding register function) and assigning a tier in `PROFILE_REGISTRATIONS`. As of 2026-09-09 the module does not expose any `register_*` function. |
-| `crackerjack/mcp/tools/workspace_tools.py` | `create_workspace`, `list_workspaces`, `get_workspace_info`, `remove_workspace` | **Phase 3 deferred — intentional placeholder.** Not in `REGISTRATION_MAP` by design. The module's internal `_get_manager()` raises `NotImplementedError` because the Oneiric workspace backend (`crackerjack.mahavishnu.workspace`) was removed in Phase 2; Phase 3 is the planned reimplementation target (per `MEMORY_ARCHITECTURE.md` Contract 5.7). The `register_workspace_tools` function exists in the module but is intentionally not wired. The API contract is verified by `tests/unit/mcp/tools/test_workspace_tools.py` (4 handlers × happy-path + edge-cases), so when Phase 3 lands only the manager backend needs implementation. Wiring now would expose tools that always fail with `NotImplementedError`, which is strictly worse than the current "not registered" posture. |
-
-These tools are intentionally **not** documented in §3 below because they
-are not callable through the MCP server.
+No orphan groups exist as of 2026-09-09. All tool groups in
+`crackerjack/mcp/tools/` are wired through `REGISTRATION_MAP` and assigned
+to a profile tier. Removed 2026-09-09: `mahavishnu_tools` (superseded by
+the standalone `crackerjack-mahavishnu-git-analytics` MCP server at
+`crackerjack/mahavishnu/mcp/tools/git_analytics.py`) and `workspace_tools`
+(stubbed backend never landed; no replacement planned). See §9.1 for the
+removal log.
 
 ______________________________________________________________________
 
@@ -251,7 +248,7 @@ ______________________________________________________________________
 | `query_local_traces` | `mcp__akosha__query_local_traces` | HTTP POST to `AKOSHA_MCP_ENDPOINT/mcp` (JSON-RPC 2.0) | Swallowed errors → `[]` returned. |
 | `search_code`, `get_ide_diagnostics`, `pycharm_health` | PyCharm MCP | HTTP via `PyCharmMCPAdapter` (timeout 30s) | Structured error JSON when PyCharm MCP unreachable; circuit-breaker trips after repeated failures. |
 | `get_symbol_info`, `find_usages` | PyCharm MCP (planned) | HTTP via `PyCharmMCPAdapter` | Returns `status: "not_implemented"`; pending PyCharm MCP extension. |
-| `get_cross_project_*`, `get_repository_health`, `get_velocity_comparison` (orphan) | Mahavishnu aggregator (planned) | In-process via `crackerjack.integration.mahavishnu_integration` | **Not reachable** — `mahavishnu_tools` is not wired into any profile. |
+| `get_cross_project_*`, `get_repository_health`, `get_velocity_comparison` (moved to `crackerjack-mahavishnu-git-analytics`) | Mahavishnu aggregator | In-process via `crackerjack.integration.mahavishnu_integration` | Moved 2026-09-09: lives on the standalone `crackerjack-mahavishnu-git-analytics` MCP server (see `crackerjack/mahavishnu/mcp/tools/git_analytics.py`). Not part of the crackerjack MCP wire surface. |
 
 ______________________________________________________________________
 
@@ -308,12 +305,12 @@ The mechanical single source of truth, mirroring `REGISTRATION_MAP` in
 | `_apply_tool_profile` (W0 helper) | `discover_tools` (meta-tool, always-on) | `crackerjack/mcp/server_core.py` (uses `crackerjack/mcp/tools/discover_query.py`) |
 | `register_all_tool_groups` | Bulk registrar passed as `register_all_fn=` to `_apply_tool_profile`; iterates every group in `REGISTRATION_MAP` | `crackerjack/mcp/tools/profiles.py` |
 
-### 9.1 Not in the registration map
+### 9.1 Removed groups (not in the registration map because the modules are deleted)
 
-| Tool group | Tools | Why excluded |
+| Tool group | Tools | Removal log |
 |---|---|---|
-| `mahavishnu_tools` | `get_cross_project_git_dashboard`, `get_repository_health`, `get_cross_project_patterns`, `get_velocity_comparison` | Not present in `REGISTRATION_MAP`. Wire-up deferred pending an integration test that asserts non-empty results (per `.claude/decisions/mcp-backend-wiring-discipline.md`). |
-| `workspace_tools` | `create_workspace`, `list_workspaces`, `get_workspace_info`, `remove_workspace` | **Phase 3 deferred — intentional placeholder.** Not present in `REGISTRATION_MAP` by design. See §1 row above for rationale (Phase 3 Oneiric workspace backend reimplementation). The `register_workspace_tools` function exists in the module but is not wired. API contract verified by `tests/unit/mcp/tools/test_workspace_tools.py`. |
+| `mahavishnu_tools` | `get_cross_project_git_dashboard`, `get_repository_health`, `get_cross_project_patterns`, `get_velocity_comparison` | Removed 2026-09-09. Superseded by the standalone `crackerjack-mahavishnu-git-analytics` MCP server (`crackerjack/mahavishnu/mcp/tools/git_analytics.py`), which exposes an equivalent surface (`get_portfolio_velocity_dashboard`, `get_repository_health_dashboard`, etc.) over the same shared `crackerjack.integration.mahavishnu_integration` aggregator. |
+| `workspace_tools` | `create_workspace`, `list_workspaces`, `get_workspace_info`, `remove_workspace` | Removed 2026-09-09. The module was a Phase 3 placeholder with `_get_manager()` raising `NotImplementedError` because the Oneiric workspace backend was removed in Phase 2. No replacement planned; the workspace concept was deemed obsolete in favor of native git worktrees. `MEMORY_ARCHITECTURE.md` Contract 5.7 was struck at the same time. |
 
 ______________________________________________________________________
 

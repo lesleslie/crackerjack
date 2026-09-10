@@ -1,14 +1,10 @@
----
-status: complete
-role: historical
-date: 2026-07-17
-last_reviewed: 2026-07-17
-superseded_by: null
-blocks_on: []
-topic: lifecycle
----
+______________________________________________________________________
+
+## status: complete role: historical date: 2026-07-17 last_reviewed: 2026-09-09 superseded_by: null blocks_on: [] topic: lifecycle
 
 # Symbiotic Ecosystem Integration - Detailed Task Breakdown
+
+> **Note (2026-09-09)**: `mahavishnu_tools` and `workspace_tools` orphan modules were removed. References to `get_cross_project_git_dashboard`, `get_repository_health`, `get_cross_project_patterns`, `get_velocity_comparison`, `create_workspace`, `list_workspaces`, `get_workspace_info`, and `remove_workspace` in this historical doc are stale — those tools no longer exist on the crackerjack MCP server. The equivalent git-analytics surface lives on `crackerjack-mahavishnu-git-analytics` (`crackerjack/mahavishnu/mcp/tools/git_analytics.py`).
 
 **Total Estimated Effort:** 120-160 hours (3-4 weeks)
 **Parallel Execution Potential:** 3-5 agents simultaneously

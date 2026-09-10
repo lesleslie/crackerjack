@@ -1124,9 +1124,6 @@ def _fix_unresolved_import_with_ty_ignore(
     if "# ty: ignore" in line:
         return content, []
 
-    if "workspace_tools" in (issue.file_path or ""):
-        return content, []
-
     # Both branches are byte-for-byte identical in the original -- preserved
     # verbatim, not simplified. See the module docstring's "Preserved
     # quirks" section, item 4.

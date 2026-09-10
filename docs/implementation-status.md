@@ -1,12 +1,6 @@
----
-status: complete
-role: historical
-date: 2026-07-17
-last_reviewed: 2026-07-17
-superseded_by: null
-blocks_on: []
-topic: lifecycle
----
+______________________________________________________________________
+
+## status: complete role: historical date: 2026-07-17 last_reviewed: 2026-07-17 superseded_by: null blocks_on: [] topic: lifecycle
 
 # Symbiotic Ecosystem Integration - Implementation Status
 
@@ -154,9 +148,9 @@ ______________________________________________________________________
 1. **Git Analytics MCP Tools** ❌
 
    - File: `mahavishnu/mcp/tools/git_analytics.py` (NEW)
-   - `get_git_velocity_dashboard(project_paths)` → per-project velocity
-   - `get_repository_health(repo_path)` → stale PRs, branches
-   - `get_cross_project_patterns(days_back=90)` → patterns across repos
+   - `get_portfolio_velocity_dashboard(project_paths)` → per-project velocity (live tool as of 2026-09-09)
+   - `get_repository_health_dashboard(repository_paths, days_back)` → stale PRs, branches (live tool)
+   - ~~`get_cross_project_patterns(days_back=90)`~~ → *removed 2026-09-09 with orphan `mahavishnu_tools.py`; closest live equivalent is `get_best_practices_propagation` in `git_analytics.py:298`*
    - Estimated: 1 day
 
 1. **Aggregation Queries** ❌

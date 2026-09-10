@@ -708,21 +708,6 @@ class TestPhaseGTyHandlers:
         assert new_content == content
         assert fixes == []
 
-    def test_unresolved_import_skips_workspace_tools(self) -> None:
-        """workspace_tools.py has its own documented suppression; don't double-up."""
-        content = "from crackerjack.mahavishnu.workspace import Manager\n"
-        issue = self._issue(
-            "crackerjack/mcp/tools/workspace_tools.py:10:6: error[unresolved-import] "
-            "No module named 'crackerjack.mahavishnu.workspace'",
-            1,
-            file_path="crackerjack/mcp/tools/workspace_tools.py",
-        )
-        new_content, fixes = type_errors._fix_unresolved_import_with_ty_ignore(
-            content, issue
-        )
-        assert new_content == content
-        assert fixes == []
-
 
 class TestFixTypeErrorIssue:
     """Real-file-I/O tests for the ``fix_type_error_issue`` entry point."""

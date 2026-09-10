@@ -1,16 +1,21 @@
----
-status: active
-role: canonical
-date: 2026-07-17
-last_reviewed: 2026-07-17
-superseded_by: null
-blocks_on: []
-topic: lifecycle
----
+______________________________________________________________________
+
+## status: active role: canonical date: 2026-07-17 last_reviewed: 2026-07-17 superseded_by: null blocks_on: [] topic: lifecycle
 
 # Git Metrics Symbiotic Ecosystem Integration
 
 > **Status**: ✅ **COMPLETE** - All 4 Phases Implemented (February 2026)
+>
+> **Note (2026-09-09)**: Phase 3.5 ("Mahavishnu Tools" planned for
+> `crackerjack/mcp/tools/mahavishnu_tools.py`) was struck — the 4
+> orphan tools (`get_cross_project_git_dashboard`, `get_repository_health`,
+> `get_cross_project_patterns`, `get_velocity_comparison`) were never
+> wired and are now removed. The equivalent live surface lives on
+> the standalone `crackerjack-mahavishnu-git-analytics` MCP server
+> (`crackerjack/mahavishnu/mcp/tools/git_analytics.py`). Phase 3.6
+> ("workspace_tools" with stubbed `_get_manager` raising
+> `NotImplementedError`) was likewise struck. Inline code references
+> to the orphans below are kept as historical artifacts.
 
 **Repository**: [crackerjack/crackerjack](https://github.com/lesleslie/crackerjack)
 

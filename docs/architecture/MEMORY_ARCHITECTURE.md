@@ -222,8 +222,8 @@ Each is a separate `_register_*_tools` function imported from
 | `execute_smart_task(...)` | `intelligence_tool_registry` | Writes `fix_attempts` (via `_record_fix_attempt` after every agent) |
 | `get_comprehensive_status()` | `monitoring_tools` | None — but `get_filtered_status(components="jobs")` reads `progress_dir/*.json` |
 | `query_local_traces(task_class, time_range_minutes, system_id, limit)` | `otel_tools` | None — proxies to Akosha MCP `query_local_traces` over HTTP; writes nothing locally |
-| `get_cross_project_git_dashboard(...)` / `get_repository_health(...)` / `get_velocity_comparison(...)` / `get_cross_project_patterns(...)` | `mahavishnu_tools` | None (each tool calls the Mahavishnu aggregator which reads from the same `git_metrics` schema + cross-project SQLite) |
-| `create_workspace(...)` / `list_workspaces(...)` / `get_workspace_info(...)` / `remove_workspace(...)` | `workspace_tools` | None — `_get_manager` raises `NotImplementedError`; see [Contract 5.7](#contract-57--crackerjack-workspace-tools-are-stubbed) |
+| `get_cross_project_git_dashboard(...)` / `get_repository_health(...)` / `get_velocity_comparison(...)` / `get_cross_project_patterns(...)` | (moved to `crackerjack-mahavishnu-git-analytics` MCP server 2026-09-09) | None — see `crackerjack/mahavishnu/mcp/tools/git_analytics.py` for the live surface; `mahavishnu_tools.py` was removed |
+| `create_workspace(...)` / `list_workspaces(...)` / `get_workspace_info(...)` / `remove_workspace(...)` | (removed 2026-09-09 — workspace concept obsolete in favor of native git worktrees) | None — `workspace_tools.py` was removed; see §9.1 removal log in `MCP_TOOLS_SPECIFICATION.md` |
 
 ### Phase-order / dependency map
 
@@ -678,23 +678,15 @@ the supplied `scope`). Until that lands, callers must treat
 `tests/test_mcp_utility_tools.py::test_analyze_crackerjack_returns_real_analysis`
 to pin the contract.
 
-### Contract 5.7 — Crackerjack workspace tools are stubbed
+### Contract 5.7 — (struck 2026-09-09)
 
-**Bug**: `crackerjack/mcp/tools/workspace_tools.py::_get_manager` raises
-`NotImplementedError` with the message
-`"Workspace manager backend (crackerjack.mahavishnu.workspace) was removed; workspace tools are temporarily disabled."`. All four
-workspace tools (`create_workspace`, `list_workspaces`,
-`get_workspace_info`, `remove_workspace`) call `_get_manager()` and
-will fail at runtime.
-
-**Contract**: Either re-implement the workspace manager backend
-in `crackerjack/mahavishnu/workspace.py` or remove the four tools from
-the MCP surface. Today, the four tools are registered and will fail
-on every call.
-
-**Regression test**: None today. Add
-`tests/test_mcp_workspace_tools.py::test_create_workspace_returns_201_when_backend_restored`
-to pin the contract when the backend is re-introduced.
+**Resolution**: `crackerjack/mcp/tools/workspace_tools.py` and the
+`crackerjack-mahavishnu-workspace` MCP server surface were removed in
+commit removing the orphan modules. The workspace concept was deemed
+obsolete in favor of native git worktrees. The 4 stubbed tools
+(`create_workspace`, `list_workspaces`, `get_workspace_info`,
+`remove_workspace`) no longer exist on any crackerjack MCP server. No
+replacement was created; the contract is closed.
 
 ### Contract 5.8 — `ImprovementGenerator.maybe_generate` is fire-and-forget
 
@@ -1011,18 +1003,13 @@ the searcher immediately after the query).
 
 ### Q9 — Cross-project velocity comparison for a single repo
 
-**Goal**: Mahavishnu aggregator wants to compare periods.
-
-```python
-mcp__crackerjack__get_velocity_comparison(
-    repo_path="/Users/les/Projects/crackerjack",
-    compare_period_days=30,
-)
-```
-
-Returns `{"repository": ..., "current_period": {...}, "previous_period": {...}, "change": {"commits": N, "velocity": float, "velocity_percent": float}, "trend": "increasing|stable|decreasing"}`.
-The aggregator requires `.git/` to exist on the path; otherwise it
-raises `ValueError: Not a git repository`.
+**Status**: struck 2026-09-09. The `mcp__crackerjack__get_velocity_comparison`
+tool was removed with the orphan `mahavishnu_tools.py` module.
+Period-over-period velocity comparison for a single repo is not
+available on any current crackerjack MCP server. Multi-repo comparison
+in a single window is available via
+`mcp__crackerjack-mahavishnu-git-analytics__get_repository_comparison`
+(see `crackerjack/mahavishnu/mcp/tools/git_analytics.py:399`).
 
 ### Q10 — Publish a `test.failed` event to the Bodai EventBridge
 
@@ -1218,8 +1205,8 @@ ______________________________________________________________________
 | `search_semantic` | 5-50 ms (TF-IDF) or 50-200 ms (sentence-transformers) | No | |
 | `search_git_history` | 5-100 ms (post `index_git_history`) | No | `index_git_history(days_back=30)` is the precondition |
 | `collect_git_metrics` | 5-30 s for `days_back=30` (live `git log`) | No (operator-only) | |
-| `get_repository_health` | 3-10 s | No | |
-| `get_velocity_comparison` | 6-20 s (two windows) | No | |
+| `get_repository_health` (moved to `crackerjack-mahavishnu-git-analytics`) | n/a | n/a | Struck 2026-09-09; use `mcp__crackerjack-mahavishnu-git-analytics__get_repository_health_dashboard` |
+| `get_velocity_comparison` (moved) | n/a | n/a | Struck 2026-09-09; period-over-period comparison removed with the orphan |
 | `agent_performance_analysis` | 50-500 ms | No | |
 | `find_best_skill` | 5-20 ms (in-memory `can_handle` eval) | Yes (when invoked) | |
 | `analyze_crackerjack` | n/a (mock) | No | Returns the mock payload; see [Contract 5.6](#contract-56--analyze_crackerjack-is-mocked) |
@@ -1403,10 +1390,10 @@ ______________________________________________________________________
 - `crackerjack/mcp/tools/skill_tools.py` — `list_skills` + `get_skill_info` + `search_skills` + `get_skills_for_issue` + `get_skill_statistics` + `execute_skill` + `find_best_skill`.
 - `crackerjack/mcp/tools/monitoring_tools.py` — `get_stage_status` + `get_next_action` + `get_server_stats` + `get_comprehensive_status` + `list_slash_commands` + `get_filtered_status` (the secure-status path; backed by `StatusSecurityManager`).
 - `crackerjack/mcp/tools/git_metrics_tools.py` — `collect_git_metrics` + `get_repository_velocity` + `get_repository_health` + `get_conventional_compliance`.
-- `crackerjack/mcp/tools/mahavishnu_tools.py` — `get_cross_project_git_dashboard` + `get_cross_project_patterns` + `get_velocity_comparison` + `get_repository_health` (the cross-repo aggregator).
+- `crackerjack/mcp/tools/mahavishnu_tools.py` — *removed 2026-09-09.* Superseded by `crackerjack/mahavishnu/mcp/tools/git_analytics.py` (the standalone `crackerjack-mahavishnu-git-analytics` MCP server), which exposes `get_portfolio_velocity_dashboard`, `get_repository_health_dashboard`, `get_repository_comparison`, `get_cross_project_conflicts`, `get_active_branches_analysis`, `get_workflow_recommendations`, and `get_best_practices_propagation` over the same shared `crackerjack.integration.mahavishnu_integration` aggregator.
 - `crackerjack/mcp/tools/otel_tools.py` — `query_local_traces` (HTTP proxy to Akosha).
 - `crackerjack/mcp/tools/eventbridge_tools.py` — `publish_to_eventbridge` (the only EventBridge-emit tool; gated by `enabled`).
-- `crackerjack/mcp/tools/workspace_tools.py` — `create_workspace` + `list_workspaces` + `get_workspace_info` + `remove_workspace` (currently stubbed; see [Contract 5.7](#contract-57--crackerjack-workspace-tools-are-stubbed)).
+- `crackerjack/mcp/tools/workspace_tools.py` — *removed 2026-09-09.* Workspace concept obsolete in favor of native git worktrees. See [Contract 5.7](#contract-57--struck-2026-09-09) for the closure log.
 - `crackerjack/mcp/tools/semantic_tools.py` — `index_file_semantic` + `search_semantic` + `get_semantic_stats` + `remove_file_from_semantic_index` + `get_embeddings` + `calculate_similarity_semantic`.
 - `crackerjack/mcp/tools/git_semantic_tools.py` — `search_git_history` + `find_workflow_patterns` + `recommend_git_practices` + `index_git_history`.
 - `crackerjack/mcp/tools/pycharm_tools.py` — `get_ide_diagnostics` + `search_code` + `get_symbol_info` (stub) + `find_usages` (stub) + `pycharm_health`.
@@ -1427,7 +1414,7 @@ ______________________________________________________________________
 - `tests/integration/test_skills_tracking.py` — `NoOpSkillsTracker` / `SessionBuddyDirectTracker` / `SessionBuddyMCPTracker` + `create_skills_tracker` factory.
 - `tests/integration/test_skills_recommender.py` — `SkillExecutionContext` + `agent_context.get_skill_recommendations`.
 - `tests/integration/test_skill_coverage_report.py` — `skill_coverage_report` with mocked SB MCP (the A3 + Q3 contract).
-- `tests/integration/test_ai_fix_workflow.py` — ~~`FallbackChainCodeFixer` + `MetricsCollector` + `EnhancedAgentCoordinator` end-to-end (the one place that exercises the metrics DB).~~ [removed 2026-08-06 — see `docs/archive/2026-08-06-ai-fix-removal-cleanup/`]
+- `tests/integration/test_ai_fix_workflow.py` — ~~`FallbackChainCodeFixer` + `MetricsCollector` + `EnhancedAgentCoordinator` end-to-end (the one place that exercises the metrics DB).~~ \[removed 2026-08-06 — see `docs/archive/2026-08-06-ai-fix-removal-cleanup/`\]
 - `tests/integration/test_eventbridge_e2e.py` — `publish_test_started` / `completed` / `failed` round-trip with a `RecordingTransport`; pins `headers.source="crackerjack"` and `headers.version="1.0.0"`.
 - `tests/integration/test_migration.py` — the skills-migration script (with a stub for the removed `validate_migration` function).
 - `tests/integration/test_two_stage_workflow.py` / `test_sandboxed_fix.py` / `test_tier_architecture_e2e.py` / `test_phase8_direct_invocation.py` / `test_phase_coordinator_integration.py` — workflow-level integration tests.

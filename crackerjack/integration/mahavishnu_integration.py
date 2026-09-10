@@ -2,9 +2,8 @@
 
 This module exists so the type checker can resolve
 ``crackerjack.integration.mahavishnu_integration`` and so the call
-sites in ``crackerjack/mahavishnu/mcp/tools/git_analytics.py`` and
-``crackerjack/mcp/tools/mahavishnu_tools.py`` have the surface they
-need at static-analysis time.
+sites in ``crackerjack/mahavishnu/mcp/tools/git_analytics.py`` have
+the surface they need at static-analysis time.
 
 Production entry points:
 
@@ -15,10 +14,10 @@ Production entry points:
   the runtime surface, NOT this stub class.
 - **Cross-component analytics**: cross-project Git velocity / health /
   pattern data flows through the FastMCP tools registered at
-  ``crackerjack/mcp/tools/mahavishnu_tools.py`` (and the
-  ``crackerjack/mahavishnu/mcp/tools/git_analytics.py`` aggregators
-  that back them). Vishnu consumes those tools via the MCP wire
-  protocol; Crackerjack remains the canonical source.
+  ``crackerjack/mahavishnu/mcp/tools/git_analytics.py`` (the standalone
+  ``crackerjack-mahavishnu-git-analytics`` MCP server). Vishnu consumes
+  those tools via the MCP wire protocol; Crackerjack remains the
+  canonical source.
 
 The runtime bodies of this stub raise ``NotImplementedError``; the
 class is a **type-checker shim** only and is not on the production
@@ -110,8 +109,8 @@ class MahavishnuAggregator:
 
     For cross-component analytics, the production surface is the
     FastMCP tools registered at
-    ``crackerjack/mcp/tools/mahavishnu_tools.py`` and the aggregator
-    implementations at ``crackerjack/mahavishnu/mcp/tools/git_analytics.py``.
+    ``crackerjack/mahavishnu/mcp/tools/git_analytics.py`` (standalone
+    ``crackerjack-mahavishnu-git-analytics`` MCP server).
     Methods on this shim exist only so the ty gate can resolve the
     cross-module call sites; their runtime bodies raise
     ``NotImplementedError``.
