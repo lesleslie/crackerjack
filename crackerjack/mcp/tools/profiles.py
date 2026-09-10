@@ -56,6 +56,7 @@ STANDARD_REGISTRATIONS: list[str | Callable[[FastMCP], Awaitable[None] | None]] 
     "execution_tools",
     "utility_tools",
     "doc_tools",
+    "skill_registry",
 ]
 
 FULL_REGISTRATIONS: list[str | Callable[[FastMCP], Awaitable[None] | None]] = [
@@ -113,6 +114,7 @@ def _build_registration_map() -> dict[str, Callable[[FastMCP], Awaitable[None] |
     from crackerjack.mcp.tools.progress_tools import register_progress_tools
     from crackerjack.mcp.tools.pycharm_tools import register_pycharm_tools
     from crackerjack.mcp.tools.semantic_tools import register_semantic_tools
+    from crackerjack.mcp.tools.skill_registry import register_skill_registry
     from crackerjack.mcp.tools.utility_tools import register_utility_tools
 
     return {
@@ -128,6 +130,7 @@ def _build_registration_map() -> dict[str, Callable[[FastMCP], Awaitable[None] |
         "progress_tools": register_progress_tools,
         "pycharm_tools": register_pycharm_tools,
         "semantic_tools": register_semantic_tools,
+        "skill_registry": register_skill_registry,
         "utility_tools": register_utility_tools,
     }
 

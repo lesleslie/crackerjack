@@ -43,7 +43,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from crackerjack.skills_signer import PubkeyManifest
+    from crackerjack.skills_signer import PubkeyManifest, SkillsSigner
 
 logger = logging.getLogger(__name__)
 
@@ -77,6 +77,7 @@ def init_signer_feed_state() -> SignerFeedState:
             PEM private key.
     """
     from crackerjack.skills_signer import (
+        SkillsSigner,
         build_pubkey_manifest,
         load_or_create_keypair,
     )
@@ -86,16 +87,22 @@ def init_signer_feed_state() -> SignerFeedState:
     key_path = _resolve_crackerjack_signer_key_path()
     keypair = load_or_create_keypair(key_path)
     manifest = build_pubkey_manifest(keypair)
+    # Phase 1: SkillsSigner wraps the same keypair so list_skills /
+    # get_skill MCP tools can produce signatures without re-reading the
+    # PEM from disk. Lives only on SignerFeedState; tools read it via
+    # get_signer_feed_state().
+    signer = SkillsSigner.from_keypair(keypair)
 
     if _signer_feed_state is not None:
         # Re-init: bump the generation token so the old probe's
         # captured state is invalidated.
         new_state = SignerFeedState(
             manifest=manifest,
+            signer=signer,
             generation=_signer_feed_state.generation + 1,
         )
     else:
-        new_state = SignerFeedState(manifest=manifest)
+        new_state = SignerFeedState(manifest=manifest, signer=signer)
 
     _signer_feed_state = new_state
     logger.info(
@@ -137,6 +144,10 @@ class SignerFeedState:
 
     Attributes:
         manifest: the :class:`PubkeyManifest` published in ``/health``.
+        signer: the :class:`SkillsSigner` for producing Phase 1
+            ``get_skill`` / ``get_agent`` response signatures. Built at
+            ``init_signer_feed_state`` time from the same keypair that
+            produces the manifest.
         last_updated_timestamp: unix timestamp of the most recent update
             (initial creation or last :meth:`record_cycle`).
         cycles_total: count of successful feed update cycles since startup.
@@ -147,6 +158,7 @@ class SignerFeedState:
     """
 
     manifest: PubkeyManifest
+    signer: SkillsSigner
     last_updated_timestamp: float = field(default_factory=time.time)
     cycles_total: int = 0
     errors_total: int = 0
