@@ -703,7 +703,7 @@ wheels = [
 
 [[package]]
 name = "crackerjack"
-version = "0.80.8"
+version = "0.81.0"
 source = { editable = "." }
 dependencies = [
     { name = "aiofiles" },
@@ -714,6 +714,7 @@ dependencies = [
     { name = "cohesion" },
     { name = "complexipy" },
     { name = "creosote" },
+    { name = "cryptography" },
     { name = "docstring-to-markdown" },
     { name = "fastapi" },
     { name = "fastmcp" },
@@ -799,6 +800,7 @@ requires-dist = [
     { name = "cohesion", specifier = ">=1.2.0" },
     { name = "complexipy", specifier = ">=5.6.1" },
     { name = "creosote", specifier = ">=5.2.0" },
+    { name = "cryptography", specifier = ">=50.0.0" },
     { name = "docstring-to-markdown", specifier = ">=0.17" },
     { name = "fastapi", specifier = ">=0.138.0" },
     { name = "fastmcp", specifier = ">=3.4.2" },

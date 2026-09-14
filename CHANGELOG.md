@@ -10,6 +10,21 @@ blocks_on: []
 topic: changelog
 ---
 
+## [0.81.1] - 2026-09-14
+
+### Fixed
+
+- validator: Suppress null-marker NOTEs and exclude reviews/ subdirs
+
+### Documentation
+
+- Complete frontmatter for 7 superpowers plans/specs
+- superpowers: Add frontmatter to ruff-fix-policy implementation plan
+
+### Testing
+
+- crackerjack: Smoke test for mcp-common CommonMCPClient SDK (Phase 3)
+
 ## [0.81.0] - 2026-09-13
 
 ### Added
