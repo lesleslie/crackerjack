@@ -10,6 +10,130 @@ blocks_on: []
 topic: changelog
 ---
 
+## [0.81.0] - 2026-09-13
+
+### Added
+
+- adapters.kotlin: Default git/gh subprocess backend (mirror Swift)
+- adapters.kotlin: GradlePropertiesVersionSource reads from gradle.properties
+- adapters.kotlin: KotlinAdapter wires VersionSource + hooks
+- adapters.kotlin: KotlinHooks with GradleTaskProbe
+- adapters.kotlin: KotlinLifecycle with real-semver bump and gradle.properties write
+- adapters.python: Hooks aggregator — exposes existing hooks as Hook tuple
+- adapters.python: PyprojectVersionSource — reads [project] version
+- adapters.python: PythonAdapter + PythonLifecycle
+- adapters.swift: GitTagVersionSource reads version from git tags
+- adapters.swift: Package.swift platforms directive parser
+- adapters.swift: SwiftAdapter wires VersionSource + hooks
+- adapters.swift: SwiftHooks aggregator
+- adapters.swift: SwiftLifecycle with constructor-injected methods
+- adapters.web: 4 CLI hooks with JSON parsing, _resolve() resolver, WebHookError on missing CLI
+- adapters.web: Detection guard (package.json OR [tool.crackerjack.web] opt-in)
+- adapters.web: Tier 1 Jinja formatter (raw-source ops + lex validation; Tier 2 deferred)
+- adapters.web: WebAdapter wires detection + 4 hooks into Capabilities
+- adapters: Foundation types — LanguageAdapter Protocol + Capabilities
+- adapters: Register Web entry-point + add jinja2>=3.1.6 direct dep
+- adapters: Registry — entry-point discovery
+- core: Language_detector — adapter auto-detect
+- mcp: Check_web_lint (read-only) + format_jinja_templates (dry_run default, Web guard, symlink safe)
+- mcp: Kotlin_bump_version + kotlin_list_hooks + Phase 2 carry-over auth fixes
+- mcp: Language_tools group — Swift lifecycle + hooks + detect
+- mcp: Phase 1 server-published skills (list_skills + get_skill)
+- mcp: Phase 3 server-published agents (list_agents + get_agent + AgentMetadata schema)
+- Register Kotlin entry-point under crackerjack.language_adapters
+- Register Swift entry-point under crackerjack.language_adapters
+- skills_signer: Phase 1.5 ed25519 signing infrastructure for crackerjack
+
+### Changed
+
+- mcp: Remove obsolete mahavishnu_tools + workspace_tools modules
+
+### Fixed
+
+- mcp: Drop str_strip_whitespace from AgentMetadata config (B-6 hash-pin)
+- phase2: Final-review cleanups (dead code, fake-green test, CHANGELOG registry fix note)
+- phase2: Restore swift_hooks() Package.swift validation (CF-4 regression)
+- phase3: Task 2 trailing newlines + drop dead gradle_properties_version_source factory
+- phase3: Task 4 trailing newlines + widen gh_release return to str | None (Rev 2 Ruling 11)
+- phase3: Task 5 trailing newlines
+- phase3: Task 6 trailing newlines
+- phase3: Task 7 trailing newlines
+- scripts: Update _frontmatter_apply_C1.py to current archive paths (Batch A from 2026-09-09 audit)
+- services.pool_router: Drop stale 'vulture' mapping (replaced by skylos)
+- services.pool_router: Drop stale 'vulture' reason entry
+- swift+registry: Phase 2 Task 7 review fixes
+
+### Documentation
+
+- adapters.web: Clarify _delimiters_match_source is one-directional (drop 'or vice versa' claim)
+- Add 3 missing CHANGELOG entries + archive reference CHANGELOG (Cat E from 2026-09-09 audit)
+- Add docs/assets/images/ + .scratch/ convention
+- agents: Flag python -m crackerjack as canonical in-repo invocation
+- Archive 9 orphaned remediation/audit files (Cat F from 2026-09-09 audit)
+- archive: Fix scope claim, removal date, full file enumeration, PROVIDER_ARCHITECTURE path (Batch A from 2026-09-09 audit)
+- audit: Add frontmatter to 4 phase plans (Cat K-followup)
+- audit: Add Rulings 11-13 to SDD ledger (post-2nd-reviewer follow-up)
+- audit: Correct CLI flag/subcommand/env drift in 4 more files (Cat B)
+- audit: Correct MAHAVISHNU_POOL_INTEGRATION factual errors (Cat H-fix)
+- audit: Correct MAHAVISHNU_POOL_QUICKSTART factual errors (Cat H-fix)
+- audit: Correct Web hooks overclaim (Cat C-followup)
+- audit: Extend Cat B to 4 active files + add 2 env vars to README (Cat B-followup)
+- audit: Fix 4 residual --ai-fix examples + 2 broken MCP spec links (post-Batch-P inline cleanup)
+- audit: Fix regenerate_plan_index.py fidelity defect (Ruling 14)
+- audit: Flip docs/guides/{AGENTS,CLAUDE}.md to real files; root becomes symlinks (Ruling 12)
+- audit: Patch 4 in-place files for deleted AI-fix surface (Cat F-followup)
+- audit: Populate SDD ledger with landed-task summary
+- audit: Record post-reviewer-round commits + Ruling 14 in SDD ledger
+- audit: Restore YAML frontmatter on docs/reference/CHANGELOG.md (Cat E-followup)
+- changelog: Phase 1 — LanguageAdapter foundation
+- changelog: Phase 2 — Swift adapter + real SwiftPM fixture
+- changelog: Phase 3 — Kotlin/Gradle adapter + real Gradle fixture
+- Clarify workspace_tools Phase-3 deferral in MCP spec
+- Correct 8 MCP spec drifts, AI config path, CHANGELOG frontmatter+dedup (Batch M from 2026-09-09 audit)
+- Correct CLI flag/subcommand/env drift (Cat B from 2026-09-09 audit)
+- Fix 6 dead internal links (Cat I from 2026-09-09 audit)
+- Fix tool/CLI references in pool+cli+quickstart docs (Batch P from 2026-09-09 audit)
+- mcp: Document 4-step tool registration pipeline
+- OLLAMA_PROVIDER: Strike-through archived Qwen/Provider Architecture links (Batch A from 2026-09-09 audit)
+- plan: Phase 1 — foundation + Python refactor
+- plan: Phase 2 — Swift adapter Rev 2 (post-multi-agent review)
+- plan: Phase 2 — Swift lifecycle + hooks + MCP tools
+- plans: Phase 2 — 8-lens multi-agent review findings
+- plans: Phase 3 Kotlin/Gradle adapter plan (Rev 2, post-8-lens review)
+- plans: Phase 3 — 8-lens multi-agent review findings
+- plans: Phase 4 plan Rev 2 + 8-lens review files
+- plans: Phase 4 Rev 2 amendments (9th-lens integration fixes)
+- plans: Phase 4 Rev 2 integration / spec fidelity / cross-adapter lens review
+- plans: Phase 4 Web (CSS/HTML/JS/TS) adapter plan
+- plans: Regenerate PLAN_INDEX after archive + phase-plan shipped updates (Batch A from 2026-09-09 audit)
+- Push Phase 4 web adapter docs into README/CLI_REFERENCE/api reference (Cat C from 2026-09-09 audit)
+- Reclassify 15 archived files to status:archived, role:historical (Batch A from 2026-09-09 audit)
+- Refresh archive count to 47 files (Cat F-followup from 2026-09-09 audit)
+- Regenerate PLAN_INDEX.md (Cat K from 2026-09-09 audit)
+- Repair 10+2+3 broken anchor slugs (Cat J from 2026-09-09 audit)
+- Restore YAML frontmatter on 183 files (Cat A from 2026-09-09 audit)
+- reviews: 11-agent multi-language extension spec review
+- Rewrite MAHAVISHNU_POOL_INTEGRATION.md to reflect current reality (Cat H from 2026-09-09 audit)
+- Rewrite MAHAVISHNU_POOL_QUICKSTART.md to reflect current reality (Cat H from 2026-09-09 audit)
+- Rewrite MCP_TOOLS_SPECIFICATION.md to match profiles.py (Cat D from 2026-09-09 audit)
+- schemas: Add 'archived' lifecycle value (Ruling 11)
+- spec: Crackerjack multi-language extension (Phase 0 design)
+- spec: Rev 2 — incorporate 11-agent review findings
+- symbiotic-ecosystem: Fix mdformat by changing 8 illustrative code fences to text
+- Track the 2026-09-09 audit report on the remediation branch
+- Update ADR-001 port stance to match live 8696 WS (Cat G from 2026-09-09 audit)
+
+### Testing
+
+- adapters.registry: Fix mock iteration pattern
+- adapters.web: Use double-dash separator for npx tsc to bypass npm 12 flag-parsing
+- adapters.web: Web-vanilla fixture + golden-master Jinja corpus + Phase 4 CHANGELOG
+- phase3: Add fixture-reference test for gradle-vanilla (final-review Important)
+
+### Internal
+
+- Gitignore report.txt (crackerjack test selection output)
+
 ## [Unreleased]
 
 ### Added (Phase 4)
