@@ -33,6 +33,10 @@ DEFAULT_STORES = (
 ALWAYS_EXCLUDE_REL = ("docs/plans/PLAN_INDEX.md",)
 ALWAYS_EXCLUDE_DIRS_REL = ("docs/plans/drafts/",)
 ALWAYS_EXCLUDE_SUFFIXES = (".backup", ".backup.json")
+# Review subdirectories carry reviewer feedback, not authoritative documents,
+# and intentionally lack the contract frontmatter. Excluding them by path-part
+# means existing convention is preserved without a per-file frontmatter patch.
+ALWAYS_EXCLUDE_PATH_PARTS = ("archive", ".archive", "reviews")
 
 
 DECISIONS_DIR = Path(".claude/decisions")
@@ -433,6 +437,12 @@ def _validate_superseded_by_link(
 ) -> None:
     if "superseded_by" not in front:
         return
+    value = front.get("superseded_by")
+    # Suppress NOTE for intentional null markers (``null`` / ``""`` / ``[]``).
+    # Authors use ``superseded_by: null`` to declare "no successor tracked"
+    # without committing to a path; firing a NOTE on those is noise.
+    if value is None or value == "" or value == []:
+        return
     link_line = (field_lines or {}).get("superseded_by", 0)
     if validate_links:
         _validate_superseded_by(
@@ -464,6 +474,11 @@ def _validate_blocks_on_link(
     field_lines: dict[str, int] | None = None,
 ) -> None:
     if "blocks_on" not in front:
+        return
+    value = front.get("blocks_on")
+    # Same null-marker suppression as ``superseded_by``: an empty ``blocks_on``
+    # list ("nothing blocks this") should not produce a NOTE.
+    if value is None or value == []:
         return
     link_line = (field_lines or {}).get("blocks_on", 0)
     if validate_links:
@@ -611,7 +626,7 @@ def _is_excluded(rel: str) -> bool:
             return True
 
     parts = rel.split("/")
-    if "archive" in parts or ".archive" in parts:
+    if any(part in ALWAYS_EXCLUDE_PATH_PARTS for part in parts):
         return True
     for suffix in ALWAYS_EXCLUDE_SUFFIXES:
         if rel.endswith(suffix):

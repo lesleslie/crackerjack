@@ -168,3 +168,150 @@ def test_extract_frontmatter_still_parses_dash_delimited_block() -> None:
         "last_reviewed": _dt.date(2026, 7, 17),
         "topic": "persistence",
     }, front
+
+
+def test_null_superseded_by_does_not_emit_skip_link_note(tmp_path: Path) -> None:
+    """``superseded_by: null`` is an intentional "no successor tracked" marker; suppress NOTE.
+
+    Authors use the null marker to declare "intentionally not superseded" without
+    committing to a path. Firing ``link_validation_skipped`` on every such file
+    floods the validator output and obscures real warnings.
+    """
+    md = tmp_path / "ok.md"
+    md.write_text(
+        "---\n"
+        "status: draft\n"
+        "role: implementation\n"
+        "date: 2026-01-01\n"
+        "last_reviewed: 2026-01-01\n"
+        "topic: example-topic\n"
+        "superseded_by: null\n"
+        "---\n"
+        "# Title\n",
+        encoding="utf-8",
+    )
+    result = validator_module.validate_file(
+        md,
+        rel="ok.md",
+        repo_root=tmp_path,
+        known_files=set(),
+        known_topics={"example-topic"},
+        strict=False,
+        allow_nonstandard=False,
+        validate_links=False,
+        skip_link_note=True,
+    )
+    assert result.status == "ok"
+    assert result.errors == []
+    assert result.warnings == [], (
+        f"null superseded_by should not emit NOTE; got {[(i.rule, i.message) for i in result.warnings]}"
+    )
+
+
+def test_empty_blocks_on_does_not_emit_skip_link_note(tmp_path: Path) -> None:
+    """``blocks_on: []`` is an intentional "nothing blocks this" marker; suppress NOTE."""
+    md = tmp_path / "ok.md"
+    md.write_text(
+        "---\n"
+        "status: draft\n"
+        "role: implementation\n"
+        "date: 2026-01-01\n"
+        "last_reviewed: 2026-01-01\n"
+        "topic: example-topic\n"
+        "blocks_on: []\n"
+        "---\n"
+        "# Title\n",
+        encoding="utf-8",
+    )
+    result = validator_module.validate_file(
+        md,
+        rel="ok.md",
+        repo_root=tmp_path,
+        known_files=set(),
+        known_topics={"example-topic"},
+        strict=False,
+        allow_nonstandard=False,
+        validate_links=False,
+        skip_link_note=True,
+    )
+    assert result.status == "ok"
+    assert result.warnings == []
+
+
+def test_populated_superseded_by_still_emits_skip_link_note(tmp_path: Path) -> None:
+    """Real ``superseded_by: path`` references still produce the NOTE when link-validation is off.
+
+    Regression guard for the null-marker suppression: must not swallow NOTE for
+    actual references.
+    """
+    md = tmp_path / "ok.md"
+    md.write_text(
+        "---\n"
+        "status: draft\n"
+        "role: implementation\n"
+        "date: 2026-01-01\n"
+        "last_reviewed: 2026-01-01\n"
+        "topic: example-topic\n"
+        "superseded_by: docs/some-other.md\n"
+        "---\n"
+        "# Title\n",
+        encoding="utf-8",
+    )
+    result = validator_module.validate_file(
+        md,
+        rel="ok.md",
+        repo_root=tmp_path,
+        known_files={"docs/some-other.md"},
+        known_topics={"example-topic"},
+        strict=False,
+        allow_nonstandard=False,
+        validate_links=False,
+        skip_link_note=True,
+    )
+    notes = [i for i in result.warnings if i.rule == "link_validation_skipped"]
+    assert len(notes) == 1, f"expected one NOTE for populated reference, got {notes}"
+
+
+def test_reviews_subdirectory_is_excluded_from_discovery(tmp_path: Path) -> None:
+    """Files under ``reviews/`` subdirs are excluded from the validator scan.
+
+    Review subdirectories hold reviewer feedback, not authoritative documents,
+    and intentionally lack contract frontmatter. Excluding them by path-part
+    means existing convention is preserved without a per-file frontmatter patch.
+    """
+    plans = tmp_path / "docs" / "plans"
+    plans.mkdir(parents=True)
+    plans_reviews = tmp_path / "docs" / "plans" / "reviews"
+    plans_reviews.mkdir(parents=True)
+    (plans / "real-plan.md").write_text(
+        "---\n"
+        "status: draft\n"
+        "role: implementation\n"
+        "date: 2026-01-01\n"
+        "last_reviewed: 2026-01-01\n"
+        "topic: example-topic\n"
+        "---\n"
+        "# Plan\n",
+        encoding="utf-8",
+    )
+    (plans_reviews / "2026-09-07-reviewer.md").write_text(
+        "# Reviewer feedback\n\nNo frontmatter, intentionally.\n",
+        encoding="utf-8",
+    )
+
+    from crackerjack.services.frontmatter import discover_files
+
+    files = discover_files(tmp_path, [tmp_path / "docs" / "plans"], [])
+    rels = sorted(rel for _, rel in files)
+    assert rels == ["docs/plans/real-plan.md"], f"expected only the plan, got {rels}"
+
+
+def test_exclude_known_path_parts_constant_includes_reviews() -> None:
+    """``ALWAYS_EXCLUDE_PATH_PARTS`` advertises the ``reviews`` exclusion.
+
+    Discoverability guard: anyone auditing exclusion policy should find this
+    constant without grepping for the literal "reviews" string.
+    """
+    assert "reviews" in validator_module.ALWAYS_EXCLUDE_PATH_PARTS
+    assert "archive" in validator_module.ALWAYS_EXCLUDE_PATH_PARTS
+    assert ".archive" in validator_module.ALWAYS_EXCLUDE_PATH_PARTS
