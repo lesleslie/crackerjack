@@ -1,7 +1,8 @@
 ---
-status: historical
-role: superseded
-created: 2026-08-06
+status: complete
+role: historical
+topic: lifecycle
+date: 2026-08-06
 last_reviewed: 2026-09-09
 ---
 

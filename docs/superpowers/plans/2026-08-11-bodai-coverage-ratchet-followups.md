@@ -1,7 +1,8 @@
 ---
 status: shipped
 role: implementation
-created: 2026-08-11
+topic: lifecycle
+date: 2026-08-11
 last_reviewed: 2026-09-09
 ---
 

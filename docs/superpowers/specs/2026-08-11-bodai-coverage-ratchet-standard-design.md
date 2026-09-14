@@ -1,7 +1,8 @@
 ---
 status: complete
 role: canonical
-created: 2026-08-11
+topic: architecture
+date: 2026-08-11
 last_reviewed: 2026-09-09
 ---
 
