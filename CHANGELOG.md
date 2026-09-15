@@ -10,6 +10,16 @@ blocks_on: []
 topic: changelog
 ---
 
+## [0.81.2] - 2026-09-15
+
+### Changed
+
+- integration: Migrate dhara + session-buddy MCP clients to CommonMCPClient
+
+### Documentation
+
+- followups: Add deferred followup to delete dhara_mcp_client.py after Dhara decomposition
+
 ## [0.81.1] - 2026-09-14
 
 ### Fixed
