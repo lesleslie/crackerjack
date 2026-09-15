@@ -1,5 +1,11 @@
 """Test suite for SessionBuddyMCP git metrics methods.
 
+Post-migration (2026-09-14): the wrapper delegates transport to
+:meth:`mcp_common.clients.CommonMCPClient.call_tool`. These tests mock
+the SDK call directly via a stand-in ``client._client`` whose
+``.call_tool`` returns a ``MagicMock`` shaped like the real SDK result
+(``.data`` populated, ``.content`` empty).
+
 Tests the MCP client integration for recording git metrics and
 retrieving workflow recommendations from session-buddy.
 """
@@ -57,52 +63,30 @@ def mcp_client_config():
 
 
 @pytest.fixture
-def mock_mcp_client():
-    """Mock SessionBuddyMCPClient for testing."""
-    client = MagicMock(spec=SessionBuddyMCPClient)
+def mock_common_result():
+    """Build a MagicMock that mimics CommonMCPClient.call_tool's return value.
+
+    ``.data`` is the FastMCP structured-output attribute the wrapper's
+    ``_extract_payload`` prefers.
+    """
+    result = MagicMock(spec=["data", "content"])
+    result.content = []
+    return result
+
+
+@pytest.fixture
+def client_with_common():
+    """A SessionBuddyMCPClient with a fake SDK client pre-attached.
+
+    Replaces the pre-migration ``client._call_tool = AsyncMock(...)`` pattern.
+    Tests that use this fixture should set ``mock_common.call_tool.return_value``
+    directly on the returned client._client.call_tool.
+    """
+    client = SessionBuddyMCPClient(session_id="test-session")
+    client._client = AsyncMock()
+    client._client.call_tool = AsyncMock()
     client._is_connected = True
-    client._client = MagicMock()
-    client._fallback_tracker = None
-    client._last_health_check = 0.0
-    client.session_id = "test-session-mock"
-
-    # Mock async methods
-    client._ensure_connection = AsyncMock(return_value=True)
-    client._call_tool = AsyncMock()
-    client.connect = AsyncMock(return_value=True)
-    client.disconnect = AsyncMock()
-
     return client
-
-
-@pytest.fixture
-def mock_mcp_response_success():
-    """Mock successful MCP tool call response."""
-    return {
-        "status": "success",
-        "data": {
-            "recorded": True,
-            "timestamp": datetime.now().isoformat(),
-        },
-    }
-
-
-@pytest.fixture
-def mock_mcp_response_recommendations():
-    """Mock MCP response with workflow recommendations."""
-    return {
-        "status": "success",
-        "recommendations": [
-            {
-                "priority": "high",
-                "action": "Improve commit message structure",
-                "title": "Better conventional commits",
-                "description": "Increase compliance for better changelogs",
-                "expected_impact": "Improved automation",
-                "effort": "low",
-            }
-        ],
-    }
 
 
 # ============================================================================
@@ -158,35 +142,33 @@ def test_create_mcp_client_with_custom_config(mcp_client_config):
 
 
 @pytest.mark.asyncio
-async def test_record_git_metrics_success(sample_session_metrics):
+async def test_record_git_metrics_success(sample_session_metrics, client_with_common):
     """Test successful git metrics recording via MCP."""
-    client = SessionBuddyMCPClient(session_id="test-record-success")
-    client._is_connected = True
-    client._ensure_connection = AsyncMock(return_value=True)
-    client._call_tool = AsyncMock(return_value={"status": "success"})
+    client_with_common._client.call_tool.return_value = MagicMock(
+        spec=["data", "content"], data={"status": "success"}, content=[]
+    )
 
     # Should not raise exception
-    await client.record_git_metrics(sample_session_metrics)
+    await client_with_common.record_git_metrics(sample_session_metrics)
 
-    # Verify _call_tool was invoked with correct parameters
-    client._call_tool.assert_called_once()
-    call_args = client._call_tool.call_args
-    assert call_args[0][0] == "record_git_metrics"
-    assert "metrics" in call_args[0][1]
+    # Verify call_tool was invoked with correct parameters
+    client_with_common._client.call_tool.assert_awaited_once()
+    call_args = client_with_common._client.call_tool.await_args
+    assert call_args.args[0] == "record_git_metrics"
+    assert "metrics" in call_args.kwargs["arguments"]
 
 
 @pytest.mark.asyncio
-async def test_record_git_metrics_fields(sample_session_metrics):
+async def test_record_git_metrics_fields(sample_session_metrics, client_with_common):
     """Test that all git metric fields are passed correctly."""
-    client = SessionBuddyMCPClient(session_id="test-record-fields")
-    client._is_connected = True
-    client._ensure_connection = AsyncMock(return_value=True)
-    client._call_tool = AsyncMock(return_value={"status": "success"})
+    client_with_common._client.call_tool.return_value = MagicMock(
+        spec=["data", "content"], data={"status": "success"}, content=[]
+    )
 
-    await client.record_git_metrics(sample_session_metrics)
+    await client_with_common.record_git_metrics(sample_session_metrics)
 
-    call_args = client._call_tool.call_args
-    metrics_arg = call_args[0][1]["metrics"]
+    call_args = client_with_common._client.call_tool.await_args
+    metrics_arg = call_args.kwargs["arguments"]["metrics"]
 
     assert metrics_arg["commit_velocity"] == 3.8
     assert metrics_arg["branch_count"] == 6
@@ -197,23 +179,20 @@ async def test_record_git_metrics_fields(sample_session_metrics):
 
 @pytest.mark.asyncio
 async def test_record_git_metrics_fallback(sample_session_metrics):
-    """Test fallback to direct tracker on MCP failure."""
+    """Test fallback to direct tracker when MCP connect fails."""
     client = SessionBuddyMCPClient(
         session_id="test-fallback",
         config=MCPClientConfig(enable_fallback=True),
     )
-    client._is_connected = False
-    client._ensure_connection = AsyncMock(return_value=False)
+    # Force connect() to fail so the fallback path runs.
+    client.connect = AsyncMock(return_value=False)
 
-    # Mock the fallback tracker
     mock_tracker = MagicMock()
     mock_tracker.record_git_metrics = AsyncMock()
     client._fallback_tracker = mock_tracker
 
-    # Should fall back to direct tracker
     await client.record_git_metrics(sample_session_metrics)
 
-    # Verify fallback was called
     mock_tracker.record_git_metrics.assert_called_once_with(sample_session_metrics)
 
 
@@ -224,18 +203,16 @@ async def test_record_git_metrics_no_fallback_when_disabled(sample_session_metri
         session_id="test-no-fallback",
         config=MCPClientConfig(enable_fallback=False),
     )
-    client._is_connected = False
-    client._ensure_connection = AsyncMock(return_value=False)
+    client.connect = AsyncMock(return_value=False)
 
     # Should not raise exception, just log warning
     await client.record_git_metrics(sample_session_metrics)
 
-    # Verify no fallback tracker was used
     assert client._fallback_tracker is None
 
 
 @pytest.mark.asyncio
-async def test_record_git_metrics_with_none_values():
+async def test_record_git_metrics_with_none_values(client_with_common):
     """Test recording metrics with None values."""
     metrics = SessionMetrics(
         session_id="none-metrics",
@@ -248,16 +225,15 @@ async def test_record_git_metrics_with_none_values():
         git_workflow_efficiency_score=None,
     )
 
-    client = SessionBuddyMCPClient(session_id="test-none-values")
-    client._is_connected = True
-    client._ensure_connection = AsyncMock(return_value=True)
-    client._call_tool = AsyncMock(return_value={"status": "success"})
+    client_with_common._client.call_tool.return_value = MagicMock(
+        spec=["data", "content"], data=None, content=[]
+    )
 
     # Should handle None values gracefully
-    await client.record_git_metrics(metrics)
+    await client_with_common.record_git_metrics(metrics)
 
-    call_args = client._call_tool.call_args
-    metrics_arg = call_args[0][1]["metrics"]
+    call_args = client_with_common._client.call_tool.await_args
+    metrics_arg = call_args.kwargs["arguments"]["metrics"]
 
     assert metrics_arg["commit_velocity"] is None
     assert metrics_arg["branch_count"] is None
@@ -272,28 +248,27 @@ async def test_record_git_metrics_with_none_values():
 
 
 @pytest.mark.asyncio
-async def test_get_workflow_recommendations_success():
+async def test_get_workflow_recommendations_success(client_with_common):
     """Test successful workflow recommendations retrieval."""
-    client = SessionBuddyMCPClient(session_id="test-recs-success")
-    client._is_connected = True
-    client._ensure_connection = AsyncMock(return_value=True)
+    client_with_common._client.call_tool.return_value = MagicMock(
+        spec=["data", "content"],
+        data={
+            "status": "success",
+            "recommendations": [
+                {
+                    "priority": "high",
+                    "action": "Improve branch hygiene",
+                    "title": "Reduce branch count",
+                    "description": "Too many active branches",
+                    "expected_impact": "Faster integration",
+                    "effort": "medium",
+                }
+            ],
+        },
+        content=[],
+    )
 
-    mock_response = {
-        "status": "success",
-        "recommendations": [
-            {
-                "priority": "high",
-                "action": "Improve branch hygiene",
-                "title": "Reduce branch count",
-                "description": "Too many active branches",
-                "expected_impact": "Faster integration",
-                "effort": "medium",
-            }
-        ],
-    }
-    client._call_tool = AsyncMock(return_value=mock_response)
-
-    recommendations = await client.get_workflow_recommendations(
+    recommendations = await client_with_common.get_workflow_recommendations(
         session_id="test-session-123"
     )
 
@@ -302,14 +277,13 @@ async def test_get_workflow_recommendations_success():
 
 
 @pytest.mark.asyncio
-async def test_get_workflow_recommendations_empty_on_error():
-    """Test that empty list is returned on MCP error."""
-    client = SessionBuddyMCPClient(session_id="test-recs-error")
-    client._is_connected = True
-    client._ensure_connection = AsyncMock(return_value=True)
-    client._call_tool = AsyncMock(side_effect=Exception("MCP connection failed"))
+async def test_get_workflow_recommendations_empty_on_error(client_with_common):
+    """Test that empty list is returned on MCP transport failure."""
+    client_with_common._client.call_tool.side_effect = RuntimeError(
+        "MCP connection failed"
+    )
 
-    recommendations = await client.get_workflow_recommendations(
+    recommendations = await client_with_common.get_workflow_recommendations(
         session_id="test-session-456"
     )
 
@@ -317,20 +291,19 @@ async def test_get_workflow_recommendations_empty_on_error():
 
 
 @pytest.mark.asyncio
-async def test_get_workflow_recommendations_session_id():
+async def test_get_workflow_recommendations_session_id(client_with_common):
     """Test that session_id is passed correctly."""
-    client = SessionBuddyMCPClient(session_id="test-recs-session-id")
-    client._is_connected = True
-    client._ensure_connection = AsyncMock(return_value=True)
-    client._call_tool = AsyncMock(
-        return_value={"status": "success", "recommendations": []}
+    client_with_common._client.call_tool.return_value = MagicMock(
+        spec=["data", "content"],
+        data={"status": "success", "recommendations": []},
+        content=[],
     )
 
-    await client.get_workflow_recommendations(session_id="target-session-789")
+    await client_with_common.get_workflow_recommendations(session_id="target-session-789")
 
-    call_args = client._call_tool.call_args
-    assert call_args[0][0] == "get_workflow_recommendations"
-    assert call_args[0][1]["session_id"] == "target-session-789"
+    call_args = client_with_common._client.call_tool.await_args
+    assert call_args.args[0] == "get_workflow_recommendations"
+    assert call_args.kwargs["arguments"]["session_id"] == "target-session-789"
 
 
 @pytest.mark.asyncio
@@ -340,10 +313,8 @@ async def test_get_workflow_recommendations_no_fallback():
         session_id="test-recs-no-fallback",
         config=MCPClientConfig(enable_fallback=True),
     )
-    client._is_connected = False
-    client._ensure_connection = AsyncMock(return_value=False)
+    client.connect = AsyncMock(return_value=False)
 
-    # Should return empty list, not use fallback
     recommendations = await client.get_workflow_recommendations(
         session_id="test-session-no-fallback"
     )
@@ -352,49 +323,56 @@ async def test_get_workflow_recommendations_no_fallback():
 
 
 # ============================================================================
-# Connection and Health Check Tests
+# Connection and Disconnect Tests (post-migration)
 # ============================================================================
 
 
 @pytest.mark.asyncio
-async def test_connect_success():
-    """Test successful connection to MCP server."""
-    client = SessionBuddyMCPClient(session_id="test-connect")
+async def test_connect_returns_false_when_sdk_raises(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """``connect()`` returns False when ``CommonMCPClient.__aenter__`` raises."""
+    from mcp_common.clients import common_mcp_client as cmc
 
+    class _BoomClient:
+        def __init__(self, *args: object, **kwargs: object) -> None:
+            pass
+
+        async def __aenter__(self) -> None:
+            raise ConnectionError("refused")
+
+        async def __aexit__(self, *args: object) -> None:
+            return None
+
+    monkeypatch.setattr(cmc, "CommonMCPClient", _BoomClient)
+
+    client = SessionBuddyMCPClient(session_id="test-connect-fail")
     result = await client.connect()
 
-    assert result is True
-    assert client._is_connected is True
+    assert result is False
+    assert client._is_connected is False
+    assert client._client is None
 
 
 @pytest.mark.asyncio
-async def test_connect_failure():
-    """Test connection failure handling."""
-    client = SessionBuddyMCPClient(session_id="test-connect-fail")
-
-    # Mock connection failure
-    with patch.object(
-        client, "_health_check", side_effect=Exception("Connection failed")
-    ):
-        # Should not raise exception
-        result = await client.connect()
-
-        # Currently implementation returns True even on "failure" in mock
-        # In real scenario, would handle actual connection errors
-        assert isinstance(result, bool)
-
-
-@pytest.mark.asyncio
-async def test_disconnect():
-    """Test disconnection from MCP server."""
+async def test_disconnect_with_attached_sdk_client() -> None:
+    """``disconnect()`` clears the SDK client and flips the connected flag."""
     client = SessionBuddyMCPClient(session_id="test-disconnect")
+    sdk = AsyncMock()
+    sdk.aclose = AsyncMock()
+    client._client = sdk
     client._is_connected = True
-    client._client = MagicMock()
 
     await client.disconnect()
 
+    sdk.aclose.assert_awaited_once()
     assert client._is_connected is False
     assert client._client is None
+
+
+# ============================================================================
+# Introspection Tests
+# ============================================================================
 
 
 def test_is_connected():
@@ -469,37 +447,6 @@ def test_git_metrics_type_safety_import():
 
 
 # ============================================================================
-# Error Handling Tests
-# ============================================================================
-
-
-# Note: Tests for retry mechanism removed as the retry logic is internal
-# to _call_tool and cannot be tested by mocking the method itself.
-# The retry behavior is tested indirectly through integration tests.
-
-
-@pytest.mark.asyncio
-async def test_ensure_connection_reconnect():
-    """Test that _ensure_connection triggers reconnection when unhealthy."""
-    client = SessionBuddyMCPClient(
-        session_id="test-reconnect",
-        config=MCPClientConfig(health_check_interval=1),
-    )
-    client._is_connected = True
-    client._last_health_check = 0.0
-
-    # Mock health check to return False, triggering reconnect
-    client._health_check = AsyncMock(return_value=False)
-    client.connect = AsyncMock(return_value=True)
-
-    result = await client._ensure_connection()
-
-    assert result is True
-    client._health_check.assert_called_once()
-    client.connect.assert_called_once()
-
-
-# ============================================================================
 # Configuration Tests
 # ============================================================================
 
@@ -533,3 +480,42 @@ def test_mcp_config_custom_values():
     assert config.retry_delay_seconds == 2.0
     assert config.health_check_interval == 60
     assert config.enable_fallback is False
+
+
+# ============================================================================
+# Extract-payload helpers
+# ============================================================================
+
+
+@pytest.mark.asyncio
+async def test_extract_payload_handles_structured_data() -> None:
+    """``result.data`` dict is returned verbatim."""
+    from crackerjack.integration.session_buddy_mcp import _extract_payload
+
+    result = MagicMock(spec=["data", "content"])
+    result.data = {"ok": True, "value": 42}
+    result.content = []
+    assert _extract_payload(result) == {"ok": True, "value": 42}
+
+
+@pytest.mark.asyncio
+async def test_extract_payload_handles_content_only_json() -> None:
+    """``result.content[0].text`` JSON is parsed into a dict."""
+    import json as _json
+
+    from crackerjack.integration.session_buddy_mcp import _extract_payload
+
+    result = MagicMock(spec=["content"])
+    result.content = [MagicMock(spec=["text"], text=_json.dumps({"k": "v"}))]
+    assert _extract_payload(result) == {"k": "v"}
+
+
+@pytest.mark.asyncio
+async def test_extract_payload_returns_none_when_empty() -> None:
+    """Empty content + no data → None."""
+    from crackerjack.integration.session_buddy_mcp import _extract_payload
+
+    result = MagicMock(spec=["data", "content"])
+    result.data = None
+    result.content = []
+    assert _extract_payload(result) is None

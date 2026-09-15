@@ -1,12 +1,48 @@
+"""Async MCP client for Session-Buddy's MCP server.
+
+Transport migrated to :class:`mcp_common.clients.CommonMCPClient` on
+2026-09-14 (see
+``mahavishnu/docs/plans/2026-09-14-common-mcp-client-transport-unification.md``).
+
+Before the migration, this module shipped its own
+``streamable_http_client`` lifecycle, a manual retry loop, an
+httpx-based HTTP fallback, and a custom JSON-RPC content parser —
+all of which :class:`CommonMCPClient` now provides natively. The
+bespoke transport surface area was ~150 LOC.
+
+What survives:
+- :class:`MCPClientConfig` — shape preserved (including
+  ``max_retries``/``retry_delay_seconds`` which are no-ops post-migration;
+  callers passing them continue to work but the values are ignored).
+- :class:`SessionBuddyMCPClient` public methods:
+  ``track_invocation``, ``get_recommendations``,
+  ``record_git_metrics``, ``get_workflow_recommendations``,
+  ``connect``/``disconnect``, ``is_connected``, ``is_enabled``,
+  ``get_backend``.
+- :func:`create_mcp_client` factory.
+- ``SessionBuddyDirectTracker`` fallback — orthogonal to the transport
+  migration; still used when MCP is unavailable.
+
+What's gone:
+- ``_ensure_connection``, ``_health_check`` — periodic-recheck was tied
+  to the bespoke session model and is no longer needed.
+- ``_call_tool``, ``_call_mcp_session``, ``_call_http_endpoint``,
+  ``_parse_mcp_content`` — replaced by direct delegation to
+  ``CommonMCPClient.call_tool``.
+- ``_should_retry``, ``_sleep_before_retry`` — SDK surfaces failures via
+  typed exceptions; callers should branch on ``MCPClientError`` rather
+  than retrying blindly.
+- ``_connect_http_fallback`` — SDK handles all transport concerns.
+"""
+
 from __future__ import annotations
 
-import asyncio
+import json
 import logging
-from contextlib import suppress
+import typing as t
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from collections.abc import Callable
 
     from crackerjack.models.session_metrics import SessionMetrics
@@ -19,96 +55,50 @@ logger = logging.getLogger(__name__)
 class MCPClientConfig:
     server_url: str = "http://localhost:8678"
     timeout_seconds: int = 5
-    max_retries: int = 3
-    retry_delay_seconds: float = 1.0
-    health_check_interval: int = 30
+    max_retries: int = 3  # Deprecated: SDK surfaces typed errors now; ignored.
+    retry_delay_seconds: float = 1.0  # Deprecated: see ``max_retries``.
+    health_check_interval: int = 30  # Deprecated: see ``_last_health_check`` docstring.
     enable_fallback: bool = True
+
+
+def _extract_payload(result: t.Any) -> dict[str, t.Any] | None:
+    """Unwrap an MCP tool-call result to a dict (or None).
+
+    Handles the two wire shapes the upstream MCP SDK may return:
+    1. Structured output: ``result.data`` is set to a dict.
+    2. Plain text: ``result.content[0].text`` is JSON.
+    """
+    data = getattr(result, "data", None)
+    if isinstance(data, dict):
+        return data
+
+    content = getattr(result, "content", None)
+    if content:
+        for item in content:
+            text = getattr(item, "text", None)
+            if text:
+                try:
+                    parsed = json.loads(text)
+                except json.JSONDecodeError:
+                    return None
+                if isinstance(parsed, dict):
+                    return parsed
+                return None
+
+    return None
 
 
 @dataclass
 class SessionBuddyMCPClient:
     config: MCPClientConfig = field(default_factory=MCPClientConfig)
     session_id: str = "default"
-    _client: Any | None = field(init=False, default=None)
-    _session: Any | None = field(init=False, default=None)
+    _client: t.Any | None = field(init=False, default=None)
     _is_connected: bool = field(init=False, default=False)
-    _fallback_tracker: Any | None = field(init=False, default=None)
-    _last_health_check: float = field(init=False, default=0)
+    _fallback_tracker: t.Any | None = field(init=False, default=None)
 
     def __post_init__(self) -> None:
         if self.config.enable_fallback:
             self._initialize_fallback()
-
-    async def connect(self) -> bool:
-        try:
-            try:
-                from mcp import ClientSession
-                from mcp.client.streamable_http import streamablehttp_client
-
-                server_url = self.config.server_url.rstrip("/")
-
-                logger.info(f"Connecting to session-buddy MCP server at {server_url}")
-
-                # streamablehttp_client returns an async context manager
-                # that yields (read_stream, write_stream, _). Enter it
-                # first to get the streams, then construct ClientSession
-                # with them — the older ``ClientSession(self._client)``
-                # shape stopped working when the MCP SDK started
-                # requiring explicit read/write streams.
-                self._client = streamablehttp_client(url=f"{server_url}/mcp")
-                streams = await self._client.__aenter__()
-                read_stream, write_stream = streams[0], streams[1]
-                self._session = ClientSession(read_stream, write_stream)
-
-                await self._session.__aenter__()
-                self._is_connected = True
-                self._last_health_check = asyncio.get_event_loop().time()
-
-                logger.info("✅ Connected to session-buddy MCP server")
-                return True
-
-            except ImportError:
-                logger.info("MCP package not available, using HTTP fallback")
-                return await self._connect_http_fallback()
-
-        except Exception as e:
-            logger.warning(f"Failed to connect to MCP server: {e}")
-            self._is_connected = False
-            return False
-
-    async def _connect_http_fallback(self) -> bool:
-        try:
-            import httpx2 as httpx
-
-            self._http_client = httpx.AsyncClient(
-                timeout=self.config.timeout_seconds,
-                base_url=self.config.server_url,
-            )
-            self._is_connected = True
-            self._last_health_check = asyncio.get_event_loop().time()
-            logger.info("✅ Session-Buddy HTTP fallback connected")
-            return True
-        except Exception as e:
-            logger.error(f"Failed to initialize HTTP fallback: {e}")
-            self._is_connected = False
-            return False
-
-    async def disconnect(self) -> None:
-        if self._session:
-            try:
-                await self._session.__aexit__(None, None, None)
-            except Exception as e:
-                logger.warning(f"Error during MCP disconnect: {e}")
-
-        if hasattr(self, "_http_client") and self._http_client:
-            try:
-                await self._http_client.aclose()
-            except Exception as e:
-                logger.warning(f"Error during HTTP disconnect: {e}")
-
-        self._is_connected = False
-        self._client = None
-        self._session = None
 
     def _initialize_fallback(self) -> None:
         try:
@@ -126,132 +116,87 @@ class SessionBuddyMCPClient:
             logger.warning(f"Failed to initialize fallback tracker: {e}")
             self._fallback_tracker = None
 
-    async def _ensure_connection(self) -> bool:
-        current_time = asyncio.get_event_loop().time()
+    def _mcp_url(self) -> str:
+        base = self.config.server_url.rstrip("/")
+        return base if base.endswith("/mcp") else f"{base}/mcp"
 
-        if (
-            self._is_connected
-            and (current_time - self._last_health_check)
-            < self.config.health_check_interval
-        ):
+    async def connect(self) -> bool:
+        """Open the MCP session via :class:`CommonMCPClient`.
+
+        Returns True on success, False on any error or when MCP isn't
+        reachable. Idempotent: calling connect when already connected
+        is a no-op and returns True.
+        """
+        if self._is_connected and self._client is not None:
             return True
 
-        is_healthy = await self._health_check()
+        await self._safe_close()
 
-        if not is_healthy:
-            logger.info("MCP server unhealthy, attempting reconnection...")
-            return await self.connect()
+        from mcp_common.clients.common_mcp_client import CommonMCPClient
 
-        return True
-
-    async def _health_check(self) -> bool:
         try:
-            if self._session:
-                with suppress(Exception):
-                    await self._session.call_tool("health_check", {})
-                    self._last_health_check = asyncio.get_event_loop().time()
-                    return True
-
-            if hasattr(self, "_http_client") and self._http_client:
-                with suppress(Exception):
-                    response = await self._http_client.get("/health")
-                    if response.status_code == 200:
-                        self._last_health_check = asyncio.get_event_loop().time()
-                        return True
-
-            return self._is_connected
-
-        except Exception as e:
-            logger.warning(f"Health check failed: {e}")
+            client = CommonMCPClient(
+                base_url=self._mcp_url(),
+                timeout=float(self.config.timeout_seconds),
+            )
+            await client.__aenter__()
+        except Exception as exc:
+            logger.warning(
+                f"SessionBuddyMCPClient.connect failed: {type(exc).__name__}: {exc!r}"
+            )
+            await self._safe_close()
+            self._is_connected = False
             return False
 
-    async def _call_tool(
-        self,
-        tool_name: str,
-        arguments: dict[str, Any],
-    ) -> Any:
-        for attempt in range(self.config.max_retries):
+        self._client = client
+        self._is_connected = True
+        logger.info(f"✅ Connected to session-buddy MCP server at {self.config.server_url}")
+        return True
+
+    async def _safe_close(self) -> None:
+        if self._client is not None:
             try:
-                result = await self._execute_tool_call(tool_name, arguments)
-                if result is not None:
-                    return result
-            except Exception as e:
-                if not self._should_retry(attempt, e):
-                    raise
-                await self._sleep_before_retry(attempt)
+                await self._client.aclose()
+            except RuntimeError as exc:
+                if "different task" not in str(exc):
+                    logger.debug(
+                        f"SessionBuddyMCPClient: aclose runtime error: {exc!r}"
+                    )
+            except Exception as exc:
+                logger.debug(
+                    f"SessionBuddyMCPClient: aclose failed: {type(exc).__name__}: {exc!r}"
+                )
+            finally:
+                self._client = None
+        self._is_connected = False
 
-        return {"status": "error", "data": None}
+    async def disconnect(self) -> None:
+        await self._safe_close()
 
-    async def _execute_tool_call(
-        self,
-        tool_name: str,
-        arguments: dict[str, Any],
-    ) -> Any | None:
-        if not await self._ensure_connection():
-            raise RuntimeError("Not connected to MCP server")
+    async def _call_tool(
+        self, tool_name: str, arguments: dict[str, t.Any]
+    ) -> dict[str, t.Any] | None:
+        """Delegate to :meth:`CommonMCPClient.call_tool` and unwrap the payload.
 
-        if self._session:
-            return await self._call_mcp_session(tool_name, arguments)
-
-        if hasattr(self, "_http_client") and self._http_client:
-            return await self._call_http_endpoint(tool_name, arguments)
-
-        raise RuntimeError("No available connection method")
-
-    async def _call_mcp_session(
-        self,
-        tool_name: str,
-        arguments: dict[str, Any],
-    ) -> Any | None:
-        if self._session is None:
+        Returns None if not connected, on transport failure, or when the
+        SDK response carries no structured-data attribute.
+        """
+        if not self._is_connected or self._client is None:
+            logger.debug(
+                f"SessionBuddyMCPClient._call_tool({tool_name}): not connected"
+            )
             return None
         try:
-            result = await self._session.call_tool(tool_name, arguments)
-            if hasattr(result, "content"):
-                return self._parse_mcp_content(result.content)
-            return {"status": "success", "data": result}
-        except Exception as e:
-            logger.debug(f"MCP call failed: {e}, trying HTTP fallback")
+            result = await self._client.call_tool(
+                tool_name, arguments=arguments, timeout=float(self.config.timeout_seconds)
+            )
+        except Exception as exc:
+            logger.warning(
+                f"SessionBuddyMCPClient._call_tool({tool_name}) failed: "
+                f"{type(exc).__name__}: {exc!r}"
+            )
             return None
-
-    def _parse_mcp_content(self, content: Any) -> dict[str, Any]:
-        import json
-
-        for item in content:
-            if hasattr(item, "text"):
-                try:
-                    return json.loads(item.text)
-                except json.JSONDecodeError:
-                    return {"status": "success", "data": item.text}
-        return {"status": "success", "data": None}
-
-    async def _call_http_endpoint(
-        self,
-        tool_name: str,
-        arguments: dict[str, Any],
-    ) -> Any | None:
-        response = await self._http_client.post(
-            f"/tools/{tool_name}",
-            json=arguments,
-        )
-        response.raise_for_status()
-        return response.json()
-
-    def _should_retry(self, attempt: int, error: Exception) -> bool:
-        if attempt < self.config.max_retries - 1:
-            return True
-        logger.error(
-            f"Tool call failed after {self.config.max_retries} attempts: {error}"
-        )
-        return False
-
-    async def _sleep_before_retry(self, attempt: int) -> None:
-        wait_time = self.config.retry_delay_seconds * (2**attempt)
-        logger.warning(
-            f"Tool call failed (attempt {attempt + 1}/{self.config.max_retries}): "
-            f"Retrying in {wait_time}s..."
-        )
-        await asyncio.sleep(wait_time)
+        return _extract_payload(result)
 
     async def track_invocation(
         self,
@@ -260,50 +205,47 @@ class SessionBuddyMCPClient:
         alternatives_considered: list[str] | None = None,
         selection_rank: int | None = None,
         workflow_phase: str | None = None,
-    ) -> Callable[..., Any] | None:
+    ) -> Callable[..., t.Any] | None:
 
-        try:
-            if await self._ensure_connection():
+        if not await self.connect():
+            logger.warning(
+                "SessionBuddyMCPClient.track_invocation: connect() failed"
+            )
+        else:
+            await self._call_tool(
+                "track_invocation",
+                {
+                    "session_id": self.session_id,
+                    "skill_name": skill_name,
+                    "user_query": user_query,
+                    "alternatives_considered": alternatives_considered or [],
+                    "selection_rank": selection_rank,
+                    "workflow_phase": workflow_phase,
+                },
+            )
+
+            async def completer(
+                *,
+                completed: bool = True,
+                follow_up_actions: list[str] | None = None,
+                error_type: str | None = None,
+            ) -> None:
                 await self._call_tool(
-                    "track_invocation",
+                    "complete_invocation",
                     {
                         "session_id": self.session_id,
                         "skill_name": skill_name,
-                        "user_query": user_query,
-                        "alternatives_considered": alternatives_considered or [],
-                        "selection_rank": selection_rank,
-                        "workflow_phase": workflow_phase,
+                        "completed": completed,
+                        "follow_up_actions": follow_up_actions or [],
+                        "error_type": error_type,
                     },
                 )
+                logger.debug(
+                    f"Skills tracking (MCP): {skill_name} - "
+                    f"completed={completed}, phase={workflow_phase}"
+                )
 
-                async def completer(
-                    *,
-                    completed: bool = True,
-                    follow_up_actions: list[str] | None = None,
-                    error_type: str | None = None,
-                ) -> None:
-                    try:
-                        await self._call_tool(
-                            "complete_invocation",
-                            {
-                                "session_id": self.session_id,
-                                "skill_name": skill_name,
-                                "completed": completed,
-                                "follow_up_actions": follow_up_actions or [],
-                                "error_type": error_type,
-                            },
-                        )
-                        logger.debug(
-                            f"Skills tracking (MCP): {skill_name} - "
-                            f"completed={completed}, phase={workflow_phase}"
-                        )
-                    except Exception as e:
-                        logger.warning(f"Failed to complete tracking via MCP: {e}")
-
-                return completer
-
-        except Exception as e:
-            logger.warning(f"MCP tracking failed, using fallback: {e}")
+            return completer
 
         if self._fallback_tracker:
             logger.debug("Using fallback direct tracker")
@@ -337,27 +279,31 @@ class SessionBuddyMCPClient:
         user_query: str,
         limit: int = 5,
         workflow_phase: str | None = None,
-    ) -> list[dict[str, Any]]:
+    ) -> list[dict[str, t.Any]]:
 
-        try:
-            if await self._ensure_connection():
-                result = await self._call_tool(
-                    "recommend_skills",
-                    {
-                        "session_id": self.session_id,
-                        "user_query": user_query,
-                        "limit": limit,
-                        "workflow_phase": workflow_phase,
-                    },
-                )
+        if not await self.connect():
+            logger.warning(
+                "SessionBuddyMCPClient.get_recommendations: connect() failed"
+            )
+        else:
+            result = await self._call_tool(
+                "recommend_skills",
+                {
+                    "session_id": self.session_id,
+                    "user_query": user_query,
+                    "limit": limit,
+                    "workflow_phase": workflow_phase,
+                },
+            )
 
-                # TODO: Parse actual MCP result
+            if isinstance(result, dict):
                 recommendations = result.get("recommendations", [])
-                logger.debug(f"Got {len(recommendations)} recommendations via MCP")
-                return recommendations
-
-        except Exception as e:
-            logger.warning(f"MCP recommendations failed, using fallback: {e}")
+                if isinstance(recommendations, list):
+                    logger.debug(
+                        f"Got {len(recommendations)} recommendations via MCP"
+                    )
+                    return [r for r in recommendations if isinstance(r, dict)]
+                logger.debug("MCP recommendations returned non-list 'recommendations'")
 
         if self._fallback_tracker:
             logger.debug("Using fallback direct tracker for recommendations")
@@ -369,61 +315,62 @@ class SessionBuddyMCPClient:
 
         return []
 
-    async def record_git_metrics(self, metrics: SessionMetrics) -> None:
-        try:
-            if await self._ensure_connection():
-                await self._call_tool(
-                    "record_git_metrics",
-                    {
-                        "session_id": self.session_id,
-                        "metrics": {
-                            "commit_velocity": metrics.git_commit_velocity,
-                            "branch_count": metrics.git_branch_count,
-                            "merge_success_rate": metrics.git_merge_success_rate,
-                            "conventional_compliance": (
-                                metrics.conventional_commit_compliance
-                            ),
-                            "workflow_efficiency": metrics.git_workflow_efficiency_score,
-                        },
-                    },
-                )
-                logger.debug(
-                    f"Git metrics recorded via MCP for session {self.session_id}"
-                )
-                return
+    async def record_git_metrics(self, metrics: "SessionMetrics") -> None:
+        if not await self.connect():
+            logger.warning(
+                "SessionBuddyMCPClient.record_git_metrics: connect() failed"
+            )
+            if self._fallback_tracker:
+                try:
+                    await self._fallback_tracker.record_git_metrics(metrics)
+                except Exception as exc:
+                    logger.warning(
+                        f"Fallback git metrics recording failed: {exc}"
+                    )
+            return
 
-        except Exception as e:
-            logger.warning(f"MCP git metrics recording failed: {e}")
-
-        if self._fallback_tracker:
-            logger.debug("Using fallback direct tracker for git metrics")
-            try:
-                await self._fallback_tracker.record_git_metrics(metrics)
-            except Exception as e:
-                logger.warning(f"Fallback git metrics recording failed: {e}")
+        await self._call_tool(
+            "record_git_metrics",
+            {
+                "session_id": self.session_id,
+                "metrics": {
+                    "commit_velocity": metrics.git_commit_velocity,
+                    "branch_count": metrics.git_branch_count,
+                    "merge_success_rate": metrics.git_merge_success_rate,
+                    "conventional_compliance": (
+                        metrics.conventional_commit_compliance
+                    ),
+                    "workflow_efficiency": metrics.git_workflow_efficiency_score,
+                },
+            },
+        )
+        logger.debug(
+            f"Git metrics recorded via MCP for session {self.session_id}"
+        )
 
     async def get_workflow_recommendations(
         self,
         session_id: str,
-    ) -> list[dict[str, Any]]:
-        try:
-            if await self._ensure_connection():
-                result = await self._call_tool(
-                    "get_workflow_recommendations",
-                    {
-                        "session_id": session_id,
-                    },
-                )
+    ) -> list[dict[str, t.Any]]:
+        if not await self.connect():
+            logger.warning(
+                "SessionBuddyMCPClient.get_workflow_recommendations: connect() failed"
+            )
+            return []
 
-                recommendations = result.get("recommendations", [])
+        result = await self._call_tool(
+            "get_workflow_recommendations",
+            {"session_id": session_id},
+        )
+
+        if isinstance(result, dict):
+            recommendations = result.get("recommendations", [])
+            if isinstance(recommendations, list):
                 logger.debug(
                     f"Got {len(recommendations)} workflow recommendations via MCP"
                 )
-                return recommendations
-
-        except Exception as e:
-            logger.warning(f"MCP workflow recommendations failed: {e}")
-
+                return [r for r in recommendations if isinstance(r, dict)]
+            logger.debug("MCP workflow recommendations returned non-list 'recommendations'")
         return []
 
     def is_connected(self) -> bool:
@@ -435,9 +382,8 @@ class SessionBuddyMCPClient:
     def get_backend(self) -> str:
         if self._is_connected:
             return "mcp"
-        elif self._fallback_tracker:
+        if self._fallback_tracker:
             return f"direct-fallback ({self._fallback_tracker.get_backend()})"
-
         return "none"
 
 
@@ -449,5 +395,4 @@ def create_mcp_client(
         session_id=session_id,
         config=config or MCPClientConfig(),
     )
-
     return client
