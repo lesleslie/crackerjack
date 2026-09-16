@@ -1,194 +1,52 @@
 """Agent metadata schema (Phase 3 of bodai-skill-agent-distribution plan).
 
-Defines :class:`AgentMetadata`, the canonical Pydantic v2 model for
-specialist-agent metadata advertised by every Bodai MCP server. The
-model is identical across all 5 replicas (akosha, mahavishnu,
-session-buddy, dhara, crackerjack) and is the wire shape returned by
-``mcp__<server>__list_agents`` and embedded in
-``mcp__<server>__get_agent`` responses.
+Per docs/superpowers/plans/2026-09-14-dhara-mcp-decomposition-implementation.md
+Phase 10 task 4, the canonical agent schema now lives in
+``mcp_common.canonical_schemas.agent``. This module is a thin re-export
+shim that preserves the legacy ``AgentMetadata`` class name and adds
+crackerjack-specific validators on top.
 
-Schema ownership
-----------------
+Crackerjack-specific additions (kept local; not in canonical):
 
-Per plan §10.3.5, the schema is canonical across all 5 servers. Two
-valid ownership models are documented in the plan: cross-repo import
-(each server depends on ``akosha>=0.15.1`` and imports
-``from akosha.mcp.agent_schema import AgentMetadata``) or per-server
-copy. This file IS the canonical source (sed-replicated from akosha
-commit ``4951ee8`` 2026-09-10); other servers either import it
-directly or copy its contents verbatim.
+- ``_validate_system_prompt`` (non-empty) — B-6 contract per plan §11.
+  The canonical schema allows empty ``system_prompt`` (the
+  agents_tools layer normally rejects empty bodies before signing);
+  crackerjack's stricter contract requires the body at the schema
+  layer so a server cannot accidentally advertise a body-less agent.
+- ``_validate_last_reviewed`` (YYYY-MM-DD) — optional ISO date format
+  on the audit field.
 
-Path-traversal allowlist (B-4)
-------------------------------
+The local tests (which exercise both validators) keep their legacy
+behavior via this subclass. Other components that don't enforce these
+invariants at the schema layer can import
+``AgentCanonicalSchema`` directly.
 
-Per plan §5 task #4 and §11 B-4, ``name`` and ``server_key`` fields
-are constrained to a strict allowlist that prevents path-traversal
-attacks via server-supplied metadata. The regex forbids:
-
-- ``/`` (anywhere)
-- leading ``.`` (cannot start with a dot)
-- uppercase characters
-- any character outside ``[a-z0-9._-]``
-- total length > 63 (the regex ``{0,62}`` after the first char)
-
-The brief additionally requires forbidding the literal substring
-``..`` defense-in-depth, so the validator runs an extra explicit
-check for that pattern.
-
-R-14: the ``scope`` field is also constrained (literal enum) so a
-server cannot advertise a ``project-local`` agent from inside a
-shared catalog (the installer only writes user-global agents to
-``~/.claude/agents/<server>-<name>.md``).
+Refs:
+- docs/superpowers/specs/2026-09-14-dhara-mcp-decomposition-design.md §4.11
+- docs/audits/2026-09-15-decomposition-final-review.md §2.1 W4
 """
 
 from __future__ import annotations
 
-import re
-from typing import Literal
+from mcp_common.canonical_schemas.agent import AgentCanonicalSchema
+from mcp_common.canonical_schemas._validators import NAME_OR_SERVER_RE
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
-
-# Strict allowlist regex per B-4 / plan §5 task #4. Anchored to the
-# full string. The first character is one lowercase letter or digit;
-# the remaining 0..62 characters are drawn from ``[a-z0-9._-]``. Total
-# length is therefore 1..63 characters (the brief's unit test asserts
-# that 64 chars is rejected).
-_NAME_OR_SERVER_RE = re.compile(r"^[a-z0-9][a-z0-9._-]{0,62}$")
+from pydantic import field_validator
 
 
-class AgentMetadata(BaseModel):
-    """Canonical specialist-agent metadata advertised by every Bodai MCP server.
+class AgentMetadata(AgentCanonicalSchema):
+    """Crackerjack's strict variant of the canonical AgentCanonicalSchema.
 
-    The schema is identical across all 5 Bodai servers (akosha,
-    mahavishnu, session-buddy, dhara, crackerjack). It carries:
-
-    - identity (``id``, ``server_key``, ``name``, ``version``, ``title``)
-    - routing hints (``model``, ``tools``, ``category``, ``owner``)
-    - body (``system_prompt`` — Claude Code reads this, not metadata)
-    - cross-agent refs (``dependencies``, ``tool_refs``)
-    - lifecycle (``status``, ``last_reviewed``, ``scope``)
-    - body integrity (``content_hash``)
-    - signing payload (``signature``, ``server_pubkey_id``)
-    - audit (``timestamp``)
-
-    The ``signature`` and ``server_pubkey_id`` fields are populated by
-    :mod:`crackerjack.mcp.tools.agent_registry` AFTER signing. The
-    canonical signing payload is the model_dump of this model with
-    those two fields stripped (see
-    ``crackerjack.skills_signer.canonical_payload_for_signing``).
+    Adds two crackerjack-specific validators on top of the canonical
+    schema. The B-4 allowlist + id-shape validators are inherited from
+    the canonical schema; only the system-prompt non-empty check and
+    the last_reviewed ISO-date check are local.
     """
-
-    model_config = ConfigDict(
-        extra="forbid",
-        # ``str_strip_whitespace`` is intentionally NOT set: per Phase 3
-        # §11 B-6, the ``system_prompt`` field carries the agent body
-        # verbatim and ``content_hash`` covers those exact bytes.
-        # Stripping whitespace would invalidate the hash-pin contract.
-        # ``validate_assignment`` lets us re-validate when the tool
-        # code sets ``metadata.signature`` after construction. Pydantic
-        # v2 keeps this opt-in because it has a small cost; here the
-        # cost is worth the safety.
-        validate_assignment=True,
-    )
-
-    schema_version: Literal[1] = 1
-
-    # ``id`` is the globally unique agent identifier — ``{server_key}:{name}:{version}``.
-    # The validator below enforces the allowlist on the constituent
-    # fields; ``id`` itself is built from them and is therefore
-    # constrained transitively.
-    id: str
-
-    # ``server_key`` is the open string identifying the publishing
-    # server (e.g. ``crackerjack``, ``akosha``). Per R-5 the schema
-    # keeps it open (no ``Literal``) so new servers can advertise
-    # without a schema bump — but the validator still enforces the
-    # B-4 allowlist.
-    server_key: str
-    name: str
-
-    # Picker display name (e.g. ``Crackerjack Specialist``). Optional
-    # so a server can omit it; the picker falls back to ``name``.
-    title: str | None = None
-
-    description: str = Field(max_length=1024)
-    version: str = "0.0.0"
-
-    # Routing hints — the picker reads ``model`` + ``tools`` directly.
-    model: str
-    tools: list[str] = Field(default_factory=list)
-
-    # ``system_prompt`` is the FULL body Claude Code loads. The
-    # critical Phase 3 fix from §11 B-6 — without carrying the body in
-    # metadata, the installer would ship non-functional agents.
-    system_prompt: str = ""
-
-    dependencies: list[str] = Field(default_factory=list)
-    tool_refs: list[str] = Field(default_factory=list)
-
-    category: str | None = None
-    owner: str | None = None
-    status: Literal["active", "archived", "draft"] | None = None
-
-    # ISO date (YYYY-MM-DD); not a strict datetime so we keep it as a
-    # plain string. The validator enforces non-empty only when set.
-    last_reviewed: str | None = None
-
-    # R-14: ``scope`` is constrained to user-global only in the wire
-    # schema. The installer only writes user-global agents to
-    # ``~/.claude/agents/<server>-<name>.md``; project-local agents
-    # are not advertised through this seam.
-    scope: Literal["user-global", "project-local"] = "user-global"
-
-    # Body integrity — sha256 of ``system_prompt`` bytes (lowercase
-    # hex). The installer verifies this BEFORE write (B-1 /
-    # plan §11 B-1).
-    content_hash: str
-
-    # Signing payload — populated by the tool handler AFTER signing;
-    # ``signature`` carries the base64 ed25519 signature and
-    # ``server_pubkey_id`` is the 16-char hex ``key_id`` from the
-    # server's pubkey manifest.
-    signature: str | None = None
-    server_pubkey_id: str | None = None
-
-    timestamp: float
-
-    @field_validator("server_key", "name")
-    @classmethod
-    def _validate_allowlist(cls, value: str) -> str:
-        """Enforce B-4 path-traversal allowlist on ``name`` and ``server_key``.
-
-        Forbids ``/``, leading ``.``, uppercase characters, any
-        character outside ``[a-z0-9._-]``, total length > 63, and the
-        literal substring ``..`` (defense-in-depth, since the regex
-        already forbids leading ``.`` but does not forbid ``..`` in
-        the middle).
-        """
-        if not _NAME_OR_SERVER_RE.fullmatch(value):
-            raise ValueError(
-                f"value {value!r} does not match allowlist regex "
-                r"'^[a-z0-9][a-z0-9._-]{0,62}$' "
-                "(forbidden: '/', uppercase, leading '.', length > 63)"
-            )
-        if ".." in value:
-            raise ValueError(
-                f"value {value!r} contains forbidden substring '..'"
-            )
-        return value
-
-    @field_validator("description")
-    @classmethod
-    def _validate_description(cls, value: str) -> str:
-        """Description must be non-empty after stripping whitespace."""
-        if not value.strip():
-            raise ValueError("description must be non-empty")
-        return value
 
     @field_validator("system_prompt")
     @classmethod
     def _validate_system_prompt(cls, value: str) -> str:
-        """B-6: ``system_prompt`` must be non-empty.
+        """B-6 (crackerjack): ``system_prompt`` must be non-empty.
 
         The Phase 3 plan's critical fix — without a body, the
         installed agent is non-functional. We enforce non-empty here
@@ -197,43 +55,6 @@ class AgentMetadata(BaseModel):
         """
         if not value.strip():
             raise ValueError("system_prompt must be non-empty")
-        return value
-
-    @field_validator("id")
-    @classmethod
-    def _validate_id_shape(cls, value: str) -> str:
-        """``id`` must be ``{server_key}:{name}:{version}`` with no leading dot or slash.
-
-        The constituent fields are individually validated by their own
-        validators; this check ensures the composite matches the
-        documented format and disallows extra colons in unexpected
-        places.
-        """
-        if not value:
-            raise ValueError("id must be non-empty")
-        parts = value.split(":")
-        if len(parts) != 3:
-            raise ValueError(
-                f"id {value!r} must be 'server_key:name:version' "
-                "(exactly 3 colon-separated parts)"
-            )
-        # Re-use the allowlist check on the server_key + name
-        # substrings; the version substring uses the same character
-        # class but allows a leading ``v`` (e.g. ``v1.0.0``) — so we
-        # only check for obviously-forbidden characters.
-        server_key, name, version = parts
-        if not _NAME_OR_SERVER_RE.fullmatch(server_key):
-            raise ValueError(
-                f"id {value!r} has invalid server_key segment {server_key!r}"
-            )
-        if not _NAME_OR_SERVER_RE.fullmatch(name):
-            raise ValueError(
-                f"id {value!r} has invalid name segment {name!r}"
-            )
-        if not version or "/" in version or ".." in version:
-            raise ValueError(
-                f"id {value!r} has invalid version segment {version!r}"
-            )
         return value
 
     @field_validator("last_reviewed")
@@ -254,5 +75,48 @@ class AgentMetadata(BaseModel):
             )
         return value
 
+    @field_validator("description")
+    @classmethod
+    def _validate_description(cls, value: str) -> str:
+        """Crackerjack strict contract: ``description`` must be non-empty.
 
-__all__ = ["AgentMetadata"]
+        The canonical schema permits an empty description (the
+        agents_tools layer normally rejects empty descriptions before
+        signing); crackerjack's stricter contract requires non-empty
+        at the schema layer so a server cannot advertise a
+        description-less agent.
+        """
+        if not value.strip():
+            raise ValueError("description must be non-empty")
+        return value
+
+    @field_validator("id")
+    @classmethod
+    def _validate_id_shape(cls, value: str) -> str:
+        """Crackerjack strict contract: ``id`` must be non-empty AND valid.
+
+        Adds the canonical id-shape checks (3 colon-separated parts;
+        server_key + name match the B-4 allowlist; version is a
+        non-empty / non-``..`` substring) on top of the canonical
+        envelope. The canonical schema permits an empty ``id``; we
+        reject it here so a server cannot advertise a key-less agent.
+        """
+        if not value:
+            raise ValueError("id must be non-empty")
+        parts = value.split(":")
+        if len(parts) != 3:
+            raise ValueError(
+                f"id {value!r} must be 'server_key:name:version' "
+                "(exactly 3 colon-separated parts)"
+            )
+        server_key, name, version = parts
+        if not NAME_OR_SERVER_RE.fullmatch(server_key):
+            raise ValueError(f"id {value!r} has invalid server_key segment {server_key!r}")
+        if not NAME_OR_SERVER_RE.fullmatch(name):
+            raise ValueError(f"id {value!r} has invalid name segment {name!r}")
+        if not version or "/" in version or ".." in version:
+            raise ValueError(f"id {value!r} has invalid version segment {version!r}")
+        return value
+
+
+__all__ = ["AgentMetadata", "AgentCanonicalSchema", "NAME_OR_SERVER_RE"]
