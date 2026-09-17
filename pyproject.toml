@@ -128,11 +128,10 @@ session = [
     "session-buddy>=0.19.18",
 ]
 
-# Adapter-learning group: dhara adapter persistence + aiosqlite.
-# Install when developing or running crackerjack adapters against dhara.
+# Adapter-learning group: aiosqlite-backed offline test fixtures.
+# Install when developing or running crackerjack adapter tests.
 adapter-learning = [
     "aiosqlite>=0.22.1",
-    "dhara>=0.11.2",
 ]
 
 # Type-checking group: experimental type checkers.
@@ -616,7 +615,6 @@ required-environments = [
 [tool.uv.exclude-newer-package]
 # Bodai ecosystem — see also CLAUDE.md "Memory Routing" / ecosystem map.
 mcp-common = "2099-12-31T23:59:59Z"
-dhara = "2099-12-31T23:59:59Z"
 oneiric = "2099-12-31T23:59:59Z"
 session-buddy = "2099-12-31T23:59:59Z"
 
@@ -631,9 +629,6 @@ paths = [
 ]
 deps-file = "pyproject.toml"
 exclude-deps = [
-    # aiosqlite is consumed by dhara.storage.sqlite (its URL driver);
-    # crackerjack never imports it by name. Without this exclude, creosote
-    # flags it as unused every time aiosqlite is added as a main dep.
     "aiosqlite",
     "hatchling",
     "pytest",

@@ -14,7 +14,6 @@ exclude-newer = "0001-01-01T00:00:00Z" # This has no effect and is included for 
 exclude-newer-span = "P7D"
 
 [options.exclude-newer-package]
-dhara = "2099-12-31T23:59:59Z"
 mcp-common = "2099-12-31T23:59:59Z"
 oneiric = "2099-12-31T23:59:59Z"
 session-buddy = "2099-12-31T23:59:59Z"
@@ -703,7 +702,7 @@ wheels = [
 
 [[package]]
 name = "crackerjack"
-version = "0.81.0"
+version = "0.81.2"
 source = { editable = "." }
 dependencies = [
     { name = "aiofiles" },
@@ -775,7 +774,6 @@ dependencies = [
 [package.dev-dependencies]
 adapter-learning = [
     { name = "aiosqlite" },
-    { name = "dhara" },
 ]
 dev = [
     { name = "crackerjack" },
@@ -859,10 +857,7 @@ requires-dist = [
 ]
 
 [package.metadata.requires-dev]
-adapter-learning = [
-    { name = "aiosqlite", specifier = ">=0.22.1" },
-    { name = "dhara", specifier = ">=0.11.2" },
-]
+adapter-learning = [{ name = "aiosqlite", specifier = ">=0.22.1" }]
 dev = [
     { name = "crackerjack" },
     { name = "duckdb", specifier = ">=1.5.4" },
