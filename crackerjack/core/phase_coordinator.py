@@ -871,6 +871,26 @@ class PhaseCoordinator:
         if elapsed_time is None:
             return False
 
+        # --fail-first: bail after the first failing hook, print that
+        # hook's details via the existing panel format, and skip the
+        # full results table. Distinct from TimeoutStrategy.FAIL_FAST
+        # (timeout_manager.py:52), which is an internal timeout-failure
+        # strategy. Useful for the loop-iteration workflow where the
+        # caller fixes one issue at a time and re-runs cj after each fix.
+        if getattr(options, "fail_first", False):
+            first_failure = next(
+                (
+                    r
+                    for r in self._last_hook_results
+                    if r.status.lower() in {"failed", "error", "timeout"}
+                ),
+                None,
+            )
+            if first_failure is not None:
+                self._format_failing_hooks(suite_name, [first_failure])
+                self._print_single_hook_failure(first_failure)
+                return False
+
         return self._process_hook_results(suite_name, elapsed_time, attempt)
 
     def _create_progress_bar(self) -> Progress:

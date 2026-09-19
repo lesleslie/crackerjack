@@ -1,18 +1,37 @@
 """Tests for PhaseCoordinator methods."""
 
+import io
 import logging
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from crackerjack.core.console import CrackerjackConsole
 from crackerjack.core.phase_coordinator import PhaseCoordinator
+from crackerjack.models.task import HookResult
 
 
 @pytest.fixture
 def coordinator() -> PhaseCoordinator:
     """Create a PhaseCoordinator instance for testing."""
     return PhaseCoordinator()
+
+
+@pytest.fixture
+def capturing_coordinator() -> PhaseCoordinator:
+    """PhaseCoordinator with a console backed by an in-memory StringIO.
+
+    Lets tests assert on captured Rich output via .console.file.getvalue().
+    """
+    buffer = io.StringIO()
+    console = CrackerjackConsole(
+        file=buffer,
+        force_terminal=False,
+        no_color=True,
+        width=200,
+    )
+    return PhaseCoordinator(console=console)
 
 
 @pytest.fixture
@@ -404,3 +423,231 @@ class TestDocumentationCleanupPhase:
         assert result is True, (
             "cleanup phase must succeed despite missing-frontmatter"
         )
+
+
+class TestExecuteHooksOnceFailFirst:
+    """Tests for the --fail-first bail-on-first-failure flag.
+
+    The flag is plumbed via Options.fail_first (boolean). When set,
+    _execute_hooks_once must return False after the FIRST failing hook,
+    print that hook's details via the existing _format_failing_hooks
+    + _print_single_hook_failure helpers, and skip the full results
+    table rendering.
+
+    Distinct from TimeoutStrategy.FAIL_FAST (timeout_manager.py:52),
+    which is an internal timeout-failure strategy.
+    """
+
+    @staticmethod
+    def _make_hook_result(
+        name: str,
+        status: str,
+        *,
+        exit_code: int | None = None,
+        issues_found: list[str] | None = None,
+    ) -> HookResult:
+        return HookResult(
+            name=name,
+            status=status,
+            exit_code=exit_code,
+            issues_found=issues_found or [],
+        )
+
+    def test_bails_on_first_failure_when_fail_first_true(
+        self,
+        capturing_coordinator: PhaseCoordinator,
+    ) -> None:
+        """--fail-first bails on the first failing hook and prints its details."""
+        options = MagicMock()
+        options.fail_first = True
+        options.verbose = False
+        options.ai_debug = False
+
+        first_failure = self._make_hook_result(
+            "ruff-check",
+            "failed",
+            exit_code=1,
+            issues_found=[
+                "/path/to/file.py:45: N818 Exception name should end with Error",
+            ],
+        )
+        hook_runner = MagicMock(return_value=[first_failure])
+
+        def populate_results(*args: object, **kwargs: object) -> float:
+            # _run_hooks_with_progress normally sets self._last_hook_results
+            # from the runner; the mock bypasses that, so we populate here.
+            capturing_coordinator._last_hook_results = [first_failure]
+            return 1.0
+
+        with (
+            patch.object(
+                capturing_coordinator,
+                "_run_hooks_with_progress",
+                side_effect=populate_results,
+            ),
+            patch.object(
+                capturing_coordinator,
+                "_process_hook_results",
+                return_value=False,
+            ) as mock_process,
+        ):
+            result = capturing_coordinator._execute_hooks_once(
+                "fast",
+                hook_runner,
+                options,
+                attempt=1,
+            )
+
+        assert result is False, "should bail with False on first failure"
+        mock_process.assert_not_called(), (
+            "full results table must NOT render in bail mode"
+        )
+        output = capturing_coordinator.console.file.getvalue()
+        assert "Details for failing fast hooks" in output, (
+            f"expected failure-details header in output, got:\n{output}"
+        )
+        assert "ruff-check" in output, (
+            f"expected failing hook name in output, got:\n{output}"
+        )
+
+    def test_no_bail_when_all_hooks_pass(
+        self,
+        capturing_coordinator: PhaseCoordinator,
+    ) -> None:
+        """--fail-first does not bail when every hook passes."""
+        options = MagicMock()
+        options.fail_first = True
+        options.verbose = False
+        options.ai_debug = False
+
+        passing = self._make_hook_result("ruff-check", "passed", exit_code=0)
+        hook_runner = MagicMock(return_value=[passing])
+
+        def populate_results(*args: object, **kwargs: object) -> float:
+            capturing_coordinator._last_hook_results = [passing]
+            return 1.0
+
+        with (
+            patch.object(
+                capturing_coordinator,
+                "_run_hooks_with_progress",
+                side_effect=populate_results,
+            ),
+            patch.object(
+                capturing_coordinator,
+                "_process_hook_results",
+                return_value=True,
+            ) as mock_process,
+        ):
+            result = capturing_coordinator._execute_hooks_once(
+                "fast",
+                hook_runner,
+                options,
+                attempt=1,
+            )
+
+        assert result is True
+        mock_process.assert_called_once(), (
+            "normal results table must render when no hooks fail"
+        )
+        output = capturing_coordinator.console.file.getvalue()
+        assert "Details for failing" not in output, (
+            f"no failure panel expected when all hooks pass, got:\n{output}"
+        )
+
+    def test_no_bail_when_fail_first_false(
+        self,
+        capturing_coordinator: PhaseCoordinator,
+    ) -> None:
+        """Without --fail-first, existing behavior is preserved (full table on failure)."""
+        options = MagicMock()
+        options.fail_first = False
+        options.verbose = False
+        options.ai_debug = False
+
+        failing = self._make_hook_result(
+            "ruff-check",
+            "failed",
+            exit_code=1,
+            issues_found=["some issue"],
+        )
+        hook_runner = MagicMock(return_value=[failing])
+
+        with (
+            patch.object(
+                capturing_coordinator,
+                "_run_hooks_with_progress",
+                return_value=1.0,
+            ),
+            patch.object(
+                capturing_coordinator,
+                "_process_hook_results",
+                return_value=False,
+            ) as mock_process,
+        ):
+            result = capturing_coordinator._execute_hooks_once(
+                "fast",
+                hook_runner,
+                options,
+                attempt=1,
+            )
+
+        assert result is False
+        mock_process.assert_called_once(), (
+            "without --fail-first, full results table must still render"
+        )
+
+    def test_bail_skips_results_after_first_failure_even_if_more_fail(
+        self,
+        capturing_coordinator: PhaseCoordinator,
+    ) -> None:
+        """--fail-first reports ONLY the first failing hook, not subsequent ones."""
+        options = MagicMock()
+        options.fail_first = True
+        options.verbose = False
+        options.ai_debug = False
+
+        first = self._make_hook_result(
+            "ruff-check",
+            "failed",
+            exit_code=1,
+            issues_found=["first issue"],
+        )
+        second = self._make_hook_result(
+            "mypy",
+            "failed",
+            exit_code=1,
+            issues_found=["second issue"],
+        )
+        hook_runner = MagicMock(return_value=[first, second])
+
+        def populate_results(*args: object, **kwargs: object) -> float:
+            capturing_coordinator._last_hook_results = [first, second]
+            return 1.0
+
+        with (
+            patch.object(
+                capturing_coordinator,
+                "_run_hooks_with_progress",
+                side_effect=populate_results,
+            ),
+            patch.object(
+                capturing_coordinator,
+                "_process_hook_results",
+                return_value=False,
+            ) as mock_process,
+        ):
+            capturing_coordinator._execute_hooks_once(
+                "fast",
+                hook_runner,
+                options,
+                attempt=1,
+            )
+
+        output = capturing_coordinator.console.file.getvalue()
+        assert "ruff-check" in output
+        assert "first issue" in output
+        mock_process.assert_not_called(), (
+            "second hook should not be reported in bail mode"
+        )
+

@@ -97,6 +97,7 @@ class Options(BaseModel):
     changed_only: bool = False
     all_files: bool = False
     experimental_hooks: bool = False
+    fail_first: bool = False
     enable_pyrefly: bool = False
     enable_ty: bool = False
     enable_zuban: bool = False
@@ -410,6 +411,17 @@ CLI_OPTIONS = {
         False,
         "--experimental-hooks",
         help="Enable experimental hooks (includes pyrefly and ty).",
+    ),
+    "fail_first": typer.Option(
+        False,
+        "--fail-first",
+        help=(
+            "Bail after the first failing hook, print its details via the "
+            "'Details for failing fast hooks' panel, and skip the full "
+            "results table. Useful for loop-iteration workflows where one "
+            "issue is fixed at a time between cj runs. Distinct from the "
+            "internal TimeoutStrategy.FAIL_FAST."
+        ),
     ),
     "allow_unsafe_fixes": typer.Option(
         False,
@@ -1008,6 +1020,7 @@ def create_options(
     all_files: bool = False,
     create_pr: bool = False,
     experimental_hooks: bool = False,
+    fail_first: bool = False,
     enable_pyrefly: bool = False,
     enable_ty: bool = False,
     enable_zuban: bool = False,
