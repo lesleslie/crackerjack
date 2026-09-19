@@ -1062,12 +1062,23 @@ class HookExecutor:
 
     _TY_RATCHET_SUMMARY_RE = re.compile(
         r"^ty ratchet \[split\] (?P<side>prod|test):\s+(?P<status>PASS|FAIL)"
-        r"\s+\((?P<count>\d+)/(?P<max>\d+)\)\s*$"
+        r"\s+\((?P<count>\d+)/(?P<max>\d+)\)"
     )
+    # Diagnostic line emitted by ``ty check``: ``  error[code] message`` or
+    # ``  warning[code] message``. Used by ``_ty_actual_count`` as a
+    # secondary signal when no ratchet summary is present (e.g. a fresh
+    # run on a repo without a configured ratchet baseline).
+    _TY_DIAGNOSTIC_RE = re.compile(r"^(?:error|warning)\[")
 
     def _ty_actual_count(self, error_output: str) -> int:
         if not error_output or not error_output.strip():
             return 0
+
+        # Detect ratchet mode ONCE so we don't fall through to the
+        # diagnostic-line fallback when the summary lines are present
+        # (otherwise bare ``error[..]`` lines that belong to the
+        # ratchet count would double-count).
+        ratchet_mode = bool(self._TY_RATCHET_SUMMARY_RE.search(error_output))
 
         prod_count = 0
         for raw in error_output.splitlines():
@@ -1077,6 +1088,12 @@ class HookExecutor:
             m = self._TY_RATCHET_SUMMARY_RE.match(line)
             if m and m.group("side") == "prod":
                 prod_count += int(m.group("count"))
+                continue
+            # Outside ratchet mode: count bare diagnostic lines so the
+            # Fast Hook Results panel shows the real count for
+            # non-ratchet repos (the mdinject 2026-09-19 case).
+            if not ratchet_mode and self._TY_DIAGNOSTIC_RE.match(line):
+                prod_count += 1
         return prod_count
 
     @staticmethod
@@ -1694,11 +1711,26 @@ class HookExecutor:
         return parse_result
 
     def _parse_ty_ratchet_issues(self, error_output: str) -> list[str]:
-
-        return parse_ty_ratchet_issues(
+        ratchet_issues = parse_ty_ratchet_issues(
             error_output,
             test_dir=self._ty_test_dir,
         )
+        # Ratchet mode active (summary line present) → parser is the
+        # sole source of truth. Its empty result for PASS/0 means
+        # "no prod findings" — do NOT fall back to generic extraction
+        # because that would surface the summary lines themselves as
+        # issues and break the Fast Hook Results panel.
+        if self._TY_RATCHET_SUMMARY_RE.search(error_output):
+            return ratchet_issues
+        if ratchet_issues:
+            return ratchet_issues
+        # No ratchet summary lines (e.g. a fresh ``ty check`` run on a
+        # repo without a configured ratchet baseline). Fall back to the
+        # generic issue-line extractor so the file:line + diagnostic
+        # detail reaches the Fast Hook Results panel — otherwise the
+        # panel would show ``issues=0`` and the user would have to
+        # re-run ``ty check`` manually to see what failed.
+        return self._extract_filtered_error_lines(error_output)
 
     def _is_semgrep_output(self, output: str, args_str: str) -> bool:
         return "semgrep" in output.lower() or "semgrep" in args_str.lower()
