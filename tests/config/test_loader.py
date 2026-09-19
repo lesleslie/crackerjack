@@ -15,7 +15,9 @@ from crackerjack.config.loader import (
     _load_single_yaml_file,
     _filter_relevant_data,
     _log_filtered_fields,
-    _log_load_info
+    _log_load_info,
+    _validate_pyproject_subtables,
+    _KNOWN_PYPROJECT_SUBTABLES,
 )
 
 
@@ -634,3 +636,129 @@ def test_log_load_info_empty_data(caplog):
         _log_load_info(MockSettings, {})
     assert "Loaded 0 configuration values" in caplog.text
     assert "MockSettings" in caplog.text
+
+
+# --------------------------------------------------------------------------- #
+# _validate_pyproject_subtables — warn on unknown [tool.crackerjack.X] blocks.
+#
+# Reproduces the 2026-09-19 mdinject followup where users wrote
+# ``[tool.crackerjack.betterleaks]`` and ``[tool.crackerjack.lychee]`` in
+# pyproject.toml — both keys are fictional; betterleaks reads
+# ``.betterleaks.toml`` and lychee reads ``.lycheeignore``. The warning
+# surfaces that mistake at run-time so users don't write dead config.
+# --------------------------------------------------------------------------- #
+
+
+def test_validate_pyproject_subtables_warns_on_unknown_block(caplog):
+    """``[tool.crackerjack.betterleaks]`` (fictional) must produce a
+    WARNING that names the key and points to the auto-discovery hint.
+    The existing DEBUG-level filter on top-level keys does not catch
+    sub-tables, so this is the only line of defense for nested keys.
+    """
+    import logging
+
+    config = {
+        "betterleaks": {"config_file": "custom.toml"},
+        "lychee": {"exclude": ["foo"]},
+    }
+    with caplog.at_level(logging.WARNING, logger="crackerjack.config.loader"):
+        _validate_pyproject_subtables(config)
+
+    # Both unknown sub-tables must surface; neither key is in the
+    # known-good set today.
+    warnings = [r.getMessage() for r in caplog.records if r.levelno == logging.WARNING]
+    assert any(
+        "[tool.crackerjack.betterleaks]" in m for m in warnings
+    ), f"missing betterleaks warning; got: {warnings}"
+    assert any(
+        "[tool.crackerjack.lychee]" in m for m in warnings
+    ), f"missing lychee warning; got: {warnings}"
+    # Message must hint at the auto-discovery mechanism so the user
+    # knows where to look next.
+    for m in warnings:
+        assert ".betterleaks.toml" in m or ".lycheeignore" in m or ".gitleaks.toml" in m
+    # Message must list the VALID sub-tables for a fast self-service
+    # fix.
+    for m in warnings:
+        assert "jinja" in m and "web" in m
+
+
+def test_validate_pyproject_subtables_silent_on_known_blocks(caplog):
+    """``[tool.crackerjack.jinja]`` and ``[tool.crackerjack.web]`` ARE
+    real sub-tables (read by the Web adapter). They must NOT trigger
+    the unknown-block warning — that would be noise on every run.
+    """
+    import logging
+
+    config = {
+        "jinja": {"block_start": "{%"},
+        "web": {"enabled": True},
+    }
+    with caplog.at_level(logging.WARNING, logger="crackerjack.config.loader"):
+        _validate_pyproject_subtables(config)
+
+    warnings = [r.getMessage() for r in caplog.records if r.levelno == logging.WARNING]
+    assert warnings == [], (
+        f"known sub-tables must not warn; got: {warnings}"
+    )
+
+
+def test_validate_pyproject_subtables_ignores_top_level_keys(caplog):
+    """Top-level scalars/lists (e.g. ``name = "x"``, ``banned_imports =
+    []``) are filtered by ``_log_filtered_fields`` at DEBUG level, not
+    by this validator. Passing them through must produce NO WARNING —
+    otherwise the validator would double-log every unrecognised key.
+    """
+    import logging
+
+    config = {
+        "name": "some_value",       # top-level scalar
+        "value": 42,                # top-level scalar
+        "banned_imports": ["x"],    # top-level list
+        "jinja": {"block_start": "{%"},  # known sub-table
+    }
+    with caplog.at_level(logging.WARNING, logger="crackerjack.config.loader"):
+        _validate_pyproject_subtables(config)
+
+    warnings = [r.getMessage() for r in caplog.records if r.levelno == logging.WARNING]
+    assert warnings == [], (
+        f"top-level scalars/lists + known sub-table must be silent; "
+        f"got: {warnings}"
+    )
+
+
+def test_load_pyproject_toml_emits_warning_for_fictional_block(
+    tmp_path, caplog
+) -> None:
+    """End-to-end: a real ``pyproject.toml`` with a fictional
+    ``[tool.crackerjack.betterleaks]`` block must emit the WARNING
+    when ``_load_pyproject_toml`` is called (this is the function that
+    crackerjack invokes at startup, so the warning reaches the user).
+    """
+    import logging
+
+    outer = tmp_path
+    pyproject = outer / "pyproject.toml"
+    pyproject.write_text(
+        "[tool.crackerjack.betterleaks]\nconfig_file = 'custom.toml'\n",
+        encoding="utf-8",
+    )
+    settings_dir = outer / "settings"
+    settings_dir.mkdir()
+
+    with caplog.at_level(logging.WARNING, logger="crackerjack.config.loader"):
+        _load_pyproject_toml(settings_dir)
+
+    warnings = [r.getMessage() for r in caplog.records if r.levelno == logging.WARNING]
+    assert any(
+        "[tool.crackerjack.betterleaks]" in m for m in warnings
+    ), f"end-to-end load must surface the fictional-block warning; got: {warnings}"
+
+
+def test_known_pyproject_subtables_constant_is_explicit():
+    """The known-subtable set must stay short and explicit so the
+    warning message stays actionable. Guard against accidental
+    expansion (which would silence the warning for future
+    fictional-but-common typos like ``[tool.crackerjack.refurb]``).
+    """
+    assert _KNOWN_PYPROJECT_SUBTABLES == frozenset({"jinja", "web"})
