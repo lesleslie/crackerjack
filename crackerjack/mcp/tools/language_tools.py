@@ -110,7 +110,9 @@ def _is_within(path: Path, root: Path) -> bool:
 
 
 def _run_swift_lifecycle_sync(
-    project_root: Path, level: str, release: bool,
+    project_root: Path,
+    level: Literal["major", "minor", "patch"],
+    release: bool,
 ) -> dict[str, str | None]:
     """Run the Swift lifecycle synchronously.
 

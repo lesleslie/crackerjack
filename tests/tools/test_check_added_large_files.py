@@ -440,3 +440,152 @@ class TestIntegration:
             # 1 byte over should fail
             mock_git.return_value = [over_file]
             assert main([]) == 1
+
+
+class TestExcludePatterns:
+    """``pyproject.toml [tool.check_added_large_files.exclude_patterns]``.
+
+    Vendored assets, model weights, and similar legitimately-large tracked
+    files should not trip the gate. The hook reads the config from the
+    nearest ``pyproject.toml`` walking up from CWD, then matches patterns
+    against both the POSIX-style path and the bare filename.
+    """
+
+    def _write_pyproject(
+        self, tmp_path: Path, exclude_patterns: object | None
+    ) -> Path:
+        """Create a minimal ``pyproject.toml`` with the requested config.
+
+        Writes the file at ``tmp_path`` and returns the directory so
+        tests can ``monkeypatch.chdir()`` into it. Setting
+        ``exclude_patterns=None`` omits the key entirely; pass a non-list
+        value (e.g. a string) to exercise the non-list branch.
+        """
+        lines = ["[tool.check_added_large_files]"]
+        if exclude_patterns is not None:
+            import json
+
+            lines.append(f"exclude_patterns = {json.dumps(exclude_patterns)}")
+        (tmp_path / "pyproject.toml").write_text("\n".join(lines) + "\n")
+        return tmp_path
+
+    def test_empty_patterns_returns_empty_list(self, tmp_path, monkeypatch):
+        self._write_pyproject(tmp_path, [])
+        monkeypatch.chdir(tmp_path)
+        from crackerjack.tools.check_added_large_files import (
+            _load_exclude_patterns,
+        )
+
+        assert _load_exclude_patterns() == []
+
+    def test_missing_section_returns_empty_list(self, tmp_path, monkeypatch):
+        (tmp_path / "pyproject.toml").write_text("[tool.other]\nkey = 1\n")
+        monkeypatch.chdir(tmp_path)
+        from crackerjack.tools.check_added_large_files import (
+            _load_exclude_patterns,
+        )
+
+        assert _load_exclude_patterns() == []
+
+    def test_no_pyproject_toml_returns_empty_list(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        from crackerjack.tools.check_added_large_files import (
+            _load_exclude_patterns,
+        )
+
+        assert _load_exclude_patterns() == []
+
+    def test_non_list_value_returns_empty_list(self, tmp_path, monkeypatch):
+        self._write_pyproject(tmp_path, "vendor/**")  # string, not list
+        monkeypatch.chdir(tmp_path)
+        from crackerjack.tools.check_added_large_files import (
+            _load_exclude_patterns,
+        )
+
+        assert _load_exclude_patterns() == []
+
+    def test_invalid_toml_returns_empty_list(self, tmp_path, monkeypatch):
+        (tmp_path / "pyproject.toml").write_text("not valid = [toml\n")
+        monkeypatch.chdir(tmp_path)
+        from crackerjack.tools.check_added_large_files import (
+            _load_exclude_patterns,
+        )
+
+        assert _load_exclude_patterns() == []
+
+    def test_loads_valid_patterns(self, tmp_path, monkeypatch):
+        self._write_pyproject(
+            tmp_path, ["*/vendor/*", "*.pkl", "models/*.safetensors"]
+        )
+        monkeypatch.chdir(tmp_path)
+        from crackerjack.tools.check_added_large_files import (
+            _load_exclude_patterns,
+        )
+
+        patterns = _load_exclude_patterns()
+        assert patterns == ["*/vendor/*", "*.pkl", "models/*.safetensors"]
+
+    def test_finds_pyproject_in_parent_directory(self, tmp_path, monkeypatch):
+        self._write_pyproject(tmp_path, ["*.pkl"])
+        nested = tmp_path / "deep" / "nested" / "dir"
+        nested.mkdir(parents=True)
+        monkeypatch.chdir(nested)
+        from crackerjack.tools.check_added_large_files import (
+            _load_exclude_patterns,
+        )
+
+        assert _load_exclude_patterns() == ["*.pkl"]
+
+    def test_is_excluded_matches_path(self, tmp_path):
+        from crackerjack.tools.check_added_large_files import _is_excluded
+
+        file_path = tmp_path / "match_path" / "assets" / "vendor" / "big.js"
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+        file_path.touch()
+        assert _is_excluded(file_path, ["*/vendor/*"]) is True
+
+    def test_is_excluded_matches_filename(self, tmp_path):
+        from crackerjack.tools.check_added_large_files import _is_excluded
+
+        file_path = tmp_path / "match_filename" / "weights.pkl"
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+        file_path.touch()
+        assert _is_excluded(file_path, ["*.pkl"]) is True
+
+    def test_is_excluded_no_match(self, tmp_path):
+        from crackerjack.tools.check_added_large_files import _is_excluded
+
+        file_path = tmp_path / "no_match" / "src" / "module.py"
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+        file_path.touch()
+        assert _is_excluded(file_path, ["*/vendor/*", "*.pkl"]) is False
+
+    def test_is_excluded_empty_patterns(self, tmp_path):
+        from crackerjack.tools.check_added_large_files import _is_excluded
+
+        file_path = tmp_path / "empty_patterns" / "assets" / "vendor" / "big.js"
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+        file_path.touch()
+        assert _is_excluded(file_path, []) is False
+
+    def test_is_excluded_multiple_patterns_first_matches(self, tmp_path):
+        from crackerjack.tools.check_added_large_files import _is_excluded
+
+        file_path = tmp_path / "first_match" / "vendor" / "lib.js"
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+        file_path.touch()
+        # First pattern matches; later ones shouldn't be consulted.
+        assert (
+            _is_excluded(file_path, ["vendor/*", "*.py", "*.js"]) is True
+        )
+
+    def test_is_excluded_multiple_patterns_later_matches(self, tmp_path):
+        from crackerjack.tools.check_added_large_files import _is_excluded
+
+        file_path = tmp_path / "later_match" / "weights.pkl"
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+        file_path.touch()
+        # First two patterns miss; third filename match hits.
+        assert (
+            _is_excluded(file_path, ["*/vendor/*", "*.js", "*.pkl"]) is True
+        )

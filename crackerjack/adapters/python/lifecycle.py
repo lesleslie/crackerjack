@@ -188,15 +188,15 @@ class PythonLifecycle(Lifecycle):
     def _publish_pypi(self, tag_name: str) -> str | None:
         """Build and upload to PyPI; return the project URL.
 
-        Delegates to :class:`crackerjack.managers.publish_manager.PublishManager`.
+        Delegates to :class:`crackerjack.managers.publish_manager.PublishManagerImpl`.
         Falls back to the PyPI project page URL on success.
         """
-        from crackerjack.managers.publish_manager import PublishManager
+        from crackerjack.managers.publish_manager import PublishManagerImpl
 
         package_root = self._version_source._project_root
-        manager = PublishManager(pkg_path=package_root)
+        manager = PublishManagerImpl(pkg_path=package_root)
         if not manager.publish_package():
-            raise RuntimeError("PublishManager.publish_package failed")
+            raise RuntimeError("PublishManagerImpl.publish_package failed")
         project_url = (
             f"https://pypi.org/project/{manager._get_package_name() or ''}/"
         )

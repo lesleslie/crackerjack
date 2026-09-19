@@ -1,1 +1,1 @@
-exclude = ["commands/*.md"]
+exclude = ["commands/*.md", "templates/*.md"]

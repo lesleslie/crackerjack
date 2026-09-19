@@ -5,7 +5,7 @@ from functools import wraps
 
 
 def is_async_function(func: t.Callable[..., t.Any]) -> bool:
-    return asyncio.iscoroutinefunction(func)
+    return inspect.iscoroutinefunction(func)
 
 
 def preserve_signature[F: t.Callable[..., t.Any]](

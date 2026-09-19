@@ -29,7 +29,7 @@ out = re.sub(pattern, repl, out, flags=re.DOTALL)
 |---|---|
 | `{%if x%}A{%endif%}` | `{% f  %}A{% ndi %}` |
 | `{{var}}` | `{{ a }}` |
-| `{#note#}` | `{# ot #}` |
+| `{#note#}` | `{# nte #}` |
 | `{% if x %}A{% endif %}` | `{% if x %}A{% endif %}` (no match) |
 
 Two consequences:

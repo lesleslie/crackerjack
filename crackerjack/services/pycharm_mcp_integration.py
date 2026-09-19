@@ -441,9 +441,9 @@ class MahavishnuPycharmMCPClient:
 
         try:
             from mcp import ClientSession
-            from mcp.client.streamable_http import streamablehttp_client
+            from mcp.client.streamable_http import streamable_http_client
 
-            self._client = streamablehttp_client(url=f"{self.server_url}/mcp")
+            self._client = streamable_http_client(url=f"{self.server_url}/mcp")
 
             _streams = await t.cast(
                 "t.AsyncGenerator[tuple[t.Any, t.Any, t.Callable[[], str | None]]]",

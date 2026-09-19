@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "crackerjack"
-version = "0.81.2"
+version = "0.82.0"
 description = "Crackerjack Python project management tool"
 readme = "README.md"
 authors = [
@@ -704,7 +704,8 @@ exclude_patterns = [
 max_complexity = 25  # Matches [tool.ruff.lint.mccabe] max-complexity = 25
 
 [tool.mdformat]
-skip = [
+exclude = [
+    "templates/*.md",
     "docs/archive/**",
     "**/archives/**",
     "*_COMPLETE.md",

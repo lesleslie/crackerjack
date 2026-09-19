@@ -2,9 +2,19 @@ from __future__ import annotations
 
 import argparse
 import sys
+import tomllib
+from collections.abc import Iterable
+from fnmatch import fnmatch
 from pathlib import Path
 
 from crackerjack.tools._git_utils import get_git_tracked_files
+
+
+# Sentinel value: ``Path.cwd().resolve()`` once at module load is OK because
+# the tool runs from the project root in practice. The lookup walks
+# parents so a sub-directory invocation still finds the project
+# ``pyproject.toml``.
+_REPO_ROOT = Path.cwd().resolve()
 
 
 def get_file_size(file_path: Path) -> int:
@@ -62,6 +72,55 @@ def suggest_gitignore_action(file_path: Path) -> str | None:
     return None
 
 
+def _load_exclude_patterns() -> list[str]:
+    """Read ``tool.check_added_large_files.exclude_patterns`` from the nearest
+    ``pyproject.toml`` walking up from CWD.
+
+    Used to let repositories skip vendored / archive / model-weight files
+    that are legitimately large but should still be tracked (e.g.
+    ``assets/vendor/*.js``). Patterns use ``fnmatch`` glob semantics and
+    are matched against both the path (POSIX form) and the filename.
+    Missing section, missing key, or non-list value all return ``[]``
+    (no exclusion) rather than raising — a missing config must not break
+    the hook.
+    """
+    current = Path.cwd().resolve()
+    for directory in (current, *current.parents):
+        candidate = directory / "pyproject.toml"
+        if not candidate.is_file():
+            continue
+        try:
+            with candidate.open("rb") as f:
+                data = tomllib.load(f)
+        except (OSError, tomllib.TOMLDecodeError):
+            return []
+        section = data.get("tool", {}).get("check_added_large_files", {})
+        patterns = section.get("exclude_patterns", [])
+        if isinstance(patterns, list):
+            return [str(p) for p in patterns if isinstance(p, str)]
+        return []
+    return []
+
+
+def _is_excluded(file_path: Path, patterns: list[str]) -> bool:
+    """Match ``file_path`` against ``patterns`` using fnmatch.
+
+    Two matches per pattern: the POSIX-style path (so ``*/vendor/*``
+    excludes ``assets/vendor/foo.js``) and the bare filename (so
+    ``*.pkl`` excludes any file with that extension regardless of
+    location). This mirrors ``crackerjack/services/file_filter.py`` —
+    the convention is "either the path or the filename matches" so a
+    pattern authored against either surface works.
+    """
+    if not patterns:
+        return False
+    posix_path = file_path.as_posix()
+    for pattern in patterns:
+        if fnmatch(posix_path, pattern) or fnmatch(file_path.name, pattern):
+            return True
+    return False
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description="Check for large files in git repository",
@@ -95,11 +154,14 @@ def main(argv: list[str] | None = None) -> int:
 
     max_size_bytes = args.maxkb * 1024
     files = _get_files_to_check(args)
+    exclude_patterns = _load_exclude_patterns()
 
     if not files:
         return 0
 
-    large_files = _find_large_files(files, max_size_bytes, args.suggest_gitignore)
+    large_files = _find_large_files(
+        files, max_size_bytes, args.suggest_gitignore, exclude_patterns
+    )
 
     if not large_files:
         print("All files are under size limit")
@@ -116,7 +178,10 @@ def _get_files_to_check(args: argparse.Namespace) -> list[Path]:
 
 
 def _find_large_files(
-    files: list[Path], max_size_bytes: int, suggest_gitignore: bool
+    files: Iterable[Path],
+    max_size_bytes: int,
+    suggest_gitignore: bool,
+    exclude_patterns: list[str] | None = None,
 ) -> list[tuple[Path, int]]:
     size_check_exempt = {
         "uv.lock",
@@ -126,9 +191,12 @@ def _find_large_files(
         "yarn.lock",
     }
 
+    patterns = exclude_patterns or []
     large_files: list[tuple[Path, int]] = []
     for file_path in files:
         if file_path.name in size_check_exempt:
+            continue
+        if _is_excluded(file_path, patterns):
             continue
         size = get_file_size(file_path)
         if size > max_size_bytes:

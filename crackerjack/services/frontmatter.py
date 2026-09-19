@@ -441,7 +441,7 @@ def _validate_superseded_by_link(
     # Suppress NOTE for intentional null markers (``null`` / ``""`` / ``[]``).
     # Authors use ``superseded_by: null`` to declare "no successor tracked"
     # without committing to a path; firing a NOTE on those is noise.
-    if value is None or value == "" or value == []:
+    if value in (None, "", []):
         return
     link_line = (field_lines or {}).get("superseded_by", 0)
     if validate_links:

@@ -32,7 +32,7 @@ ai:
   ai_provider: claude  # Options: "claude" (default) or "qwen"
 ```
 
-**See Also**: [Qwen Provider Documentation](../features/QWEN_PROVIDER.md)
+**See Also**: [Qwen Provider Documentation](../archive/2026-08-06-ai-fix-removal-cleanup/QWEN_PROVIDER.md)
 
 ### AI Agent Configuration
 
@@ -355,7 +355,7 @@ ai:
 1. Verify API key is set: `echo $QWEN_API_KEY` or `echo $ANTHROPIC_API_KEY`
 1. Check provider is valid: Must be "claude" or "qwen"
 1. Test connection: Run with `--verbose` flag
-1. Check documentation: [Qwen Provider](../features/QWEN_PROVIDER.md)
+1. Check documentation: [Qwen Provider](../archive/2026-08-06-ai-fix-removal-cleanup/QWEN_PROVIDER.md)
 
 ### Tests Not Running in Parallel
 
@@ -370,6 +370,6 @@ ai:
 
 ## Related Documentation
 
-- [Qwen Provider Documentation](../features/QWEN_PROVIDER.md)
+- [Qwen Provider Documentation](../archive/2026-08-06-ai-fix-removal-cleanup/QWEN_PROVIDER.md)
 - [Security Documentation](SECURITY.md)
 - [Coverage Policy](COVERAGE_POLICY.md)

@@ -86,12 +86,15 @@ class SwiftLifecycle(Lifecycle):
                 skipped_steps=("dry_run",),
             )
 
-        commit_sha = self._commit(
-            message=f"bump: swift v{current} → v{new_version}",
+        commit_sha = self._commit(  # ty: ignore[missing-argument]
+            message=f"bump: swift v{current} → v{new_version}",  # ty: ignore[unknown-argument]
         )
 
         tag_name = f"v{new_version}"
-        self._tag(tag_name, message=f"Release v{new_version}")
+        self._tag(  # ty: ignore[missing-argument]
+            tag_name,
+            message=f"Release v{new_version}",  # ty: ignore[unknown-argument]
+        )
 
         try:
             self._push(commit_sha, tag_name)

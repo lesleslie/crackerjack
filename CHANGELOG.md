@@ -10,6 +10,28 @@ blocks_on: []
 topic: changelog
 ---
 
+## [0.82.0] - 2026-09-19
+
+### Added
+
+- crackerjack: Add --fail-first flag to bail on first failing hook
+
+### Changed
+
+- crackerjack: Re-export canonical SkillMetadata + strict AgentMetadata subclass (Phase 10 task 4)
+
+### Fixed
+
+- tests: Resolve pre-existing test failures + venv reversion
+
+### Documentation
+
+- followup: Add plan to retire root-level MCP lifecycle verbs
+
+### Build
+
+- deps: Drop dhara from adapter-learning group + uv cooldown (Phase 8 T13)
+
 ## [0.81.2] - 2026-09-15
 
 ### Changed

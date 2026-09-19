@@ -20,7 +20,7 @@ __all__ = ["KotlinAdapter"]
 class KotlinAdapter(LanguageAdapterBase):
     """Kotlin/Gradle language adapter — activates on build.gradle(.kts) presence."""
 
-    name: str = "kotlin"
+    name = "kotlin"
 
     def detect(self, project_root: Path) -> bool:
         return (project_root / "build.gradle.kts").is_file() or (project_root / "build.gradle").is_file()

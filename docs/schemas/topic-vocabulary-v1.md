@@ -52,6 +52,9 @@ contribution workflow below.
 | `lifecycle` | Wiring lifecycle for components, plans, and followups — drafted/active/partial/shipped/complete transitions, completion reports, plan-to-followup handoffs. |
 | `plugin-standardization` | Claude Code plugin manifest, marketplace layout, slash command namespace, plugin validation scaffold (introduced for Bodai plugin rollout 2026-07-16). |
 | `architecture` | Project-wide architecture, module boundaries, integration diagrams, design docs, ADR source material. (Crackerjack addition 2026-07-17.) |
+| `gitignore-conformance` | Shared `.gitignore` patterns and crackerjack enforcement (per-repo canonical `.gitignore` snippet, archive/runtime artifact patterns, fleet-wide rollout). |
+| `integration` | Cross-component integration followups (decommissioning a component, replacing an inter-MCP path, dep graph changes). |
+| `cli-lifecycle` | CLI subcommand registration, `--ai-fix`-style flag lifecycles, MCP-to-CLI bridge wiring, deprecation handoffs. |
 
 ## Contribution Workflow
 

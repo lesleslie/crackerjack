@@ -144,7 +144,7 @@ def gh_release(tag_name: str, release_name: str | None = None) -> str | None:
     --generate-notes which would leak commit messages).
     """
     root = _active_root()
-    title = release_name if release_name else tag_name
+    title = release_name or tag_name
     # Write a brief notes file to avoid --generate-notes commit-message leak.
     notes_file = root / ".crackerjack-release-notes.tmp"
     notes = (
@@ -263,7 +263,7 @@ def make_git_backend(
         )
 
     def _gh_release(tag_name: str, release_name: str | None = None) -> str | None:
-        title = release_name if release_name else tag_name
+        title = release_name or tag_name
         notes_file = project_root / ".crackerjack-release-notes.tmp"
         notes = (
             f"# Release {tag_name}\n\n"

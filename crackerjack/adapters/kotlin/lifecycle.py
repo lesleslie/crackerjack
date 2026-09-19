@@ -152,15 +152,11 @@ class KotlinLifecycle(Lifecycle):
         # gradle.properties change that _reset(commit_sha) cannot undo
         # (reset targets a prior commit, not working-tree files).
         original_content = _snapshot_gradle_properties(self._project_root)
-        try:
-            self._version_source.write(new_version)
-        except Exception:
-            # write() failed before any git side effect; nothing to roll back.
-            raise
+        self._version_source.write(new_version)
 
         try:
-            commit_sha = self._commit(
-                message=f"bump: kotlin v{current} → v{new_version}",
+            commit_sha = self._commit(  # ty: ignore[missing-argument]
+                message=f"bump: kotlin v{current} → v{new_version}",  # ty: ignore[unknown-argument]
             )
         except Exception:
             logger.exception(

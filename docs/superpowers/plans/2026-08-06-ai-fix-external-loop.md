@@ -18,7 +18,7 @@ last_reviewed: 2026-09-09
 
 **Tech Stack:** Claude Code `Workflow` tool (JS, no TypeScript, no `Date.now()`/`Math.random()`), `crackerjack run -v`'s existing human-readable output (interpreted per-iteration by an `agent()` call, not machine-parsed), Akosha MCP tools (exact tool names TBD via `ToolSearch` — see Task 7).
 
-**Reference spec:** [docs/superpowers/specs/2026-08-06-ai-fix-removal-external-loop-design.md](../specs/2026-08-06-ai-fix-removal-external-loop-design.md), sections 5-6.
+**Reference spec:** [docs/archive/2026-08-06-ai-fix-removal-cleanup/2026-08-06-ai-fix-removal-external-loop-design.md](../../archive/2026-08-06-ai-fix-removal-cleanup/2026-08-06-ai-fix-removal-external-loop-design.md), sections 5-6.
 
 ## Review Findings Addressed (2026-08-10)
 

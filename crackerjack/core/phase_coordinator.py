@@ -706,6 +706,7 @@ class PhaseCoordinator:
         self.session.track_task(
             "frontmatter_validation",
             f"Frontmatter: {vresult.error_count} errors, {vresult.warning_count} warnings",
+            details=self._format_frontmatter_warnings(vresult),
         )
 
         cleanup_service = DocumentationCleanup(
@@ -750,6 +751,29 @@ class PhaseCoordinator:
             location = f"{err.file}:{err.line}" if err.line else err.file
             lines.append(f"  {location} {err.code}: {err.message}")
         header = f"  {len(errors)} frontmatter error(s):\n"
+        return header + "\n".join(lines)
+
+    @staticmethod
+    def _format_frontmatter_warnings(
+        vresult: FrontmatterValidationResult,
+    ) -> str:
+        """Render every warning as one ``file:line code: message`` line.
+
+        Symmetric counterpart to :meth:`_format_frontmatter_errors`. Verbose
+        mode dumps this verbatim so the user can see exactly which files
+        carry unknown topic slugs, missing optional keys, etc. Returns an
+        empty string when ``vresult`` has no warnings — the success-path
+        call site then omits ``details=`` and the track_task summary line
+        stays uncluttered in non-verbose mode.
+        """
+        warnings = vresult.warnings
+        if not warnings:
+            return ""
+        lines: list[str] = []
+        for warn in warnings:
+            location = f"{warn.file}:{warn.line}" if warn.line else warn.file
+            lines.append(f"  {location} {warn.code}: {warn.message}")
+        header = f"  {len(warnings)} frontmatter warning(s):\n"
         return header + "\n".join(lines)
 
     @handle_errors

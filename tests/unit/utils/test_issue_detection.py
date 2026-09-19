@@ -331,3 +331,39 @@ Total: 2 errors
         # Should get: 1 mypy error + 2 ruff errors = 3 total
         # (the mypy note is filtered)
         assert len(issues) == 3
+
+
+class TestToolSpecificSkipPatterns:
+    """Tool-aware skip patterns — each tool has its own output dialect.
+
+    Without these, the Fast Hook Results panel over-counts lines that
+    are not actually issues. The two known offenders as of 2026-09:
+
+    - linkcheckmd prints ``X seconds to check links in <file>`` between
+      scan results; this looked like 3 extra issues alongside the one
+      real broken link.
+    - check-added-large-files prints ``Large files detected:`` once
+      followed by one line per offender; the header was being counted
+      as an extra issue.
+    """
+
+    def test_linkcheckmd_timing_line_filtered(self):
+        line = "0.42 seconds to check links in docs/README.md"
+        assert should_count_as_issue(line, "linkcheckmd") is False
+
+    def test_linkcheckmd_broken_link_still_counted(self):
+        # Use a non-bracket prefix — the JSON-bracket filter would
+        # otherwise treat this as JSON output. Real linkcheckmd broken
+        # lines start with the unicode X mark then a file:line prefix.
+        line = "✖ docs/README.md: BROKEN LINK"
+        assert should_count_as_issue(line, "linkcheckmd") is True
+
+    def test_check_added_large_files_header_filtered(self):
+        line = "Large files detected:"
+        assert should_count_as_issue(line, "check-added-large-files") is False
+
+    def test_check_added_large_files_offender_still_counted(self):
+        line = " assets/big.bin: 5.2MB"
+        assert (
+            should_count_as_issue(line, "check-added-large-files") is True
+        )
