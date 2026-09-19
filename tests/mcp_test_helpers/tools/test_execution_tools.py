@@ -38,7 +38,7 @@ class TestRegisterExecutionTools:
         mock_app = MagicMock()
         registered: list[str] = []
 
-        def decorator() -> t.Any:
+        def decorator(*args: t.Any, **kwargs: t.Any) -> t.Any:
             def wrap(func: t.Any) -> t.Any:
                 registered.append(func.__name__)
                 return func
@@ -393,7 +393,7 @@ def _captured_tool(name: str) -> t.Any:
     mock_app = MagicMock()
     captured: list[t.Any] = []
 
-    def decorator() -> t.Any:
+    def decorator(*args: t.Any, **kwargs: t.Any) -> t.Any:
         def wrap(func: t.Any) -> t.Any:
             captured.append(func)
             return func

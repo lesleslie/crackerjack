@@ -187,9 +187,9 @@ def _function_registers_tool(
     # sit on the line immediately preceding ``body[0]``.
     func_text = "\n".join(source_lines[func.lineno - 1 : func.end_lineno])
 
-    if re.search(r"@mcp(?:_app)?\.tool\s*\(", func_text):
+    if re.search(r"@(?:mcp(?:_app)?|app)\.tool\s*\(", func_text):
         return True
-    if re.search(r"\bmcp(?:_app)?\.tool\s*\(", func_text):
+    if re.search(r"\b(?:mcp(?:_app)?|app)\.tool\s*\(", func_text):
         return True
 
     # Indirect: ``func`` calls a ``_register_<helper>(mcp_app)`` and that

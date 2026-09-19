@@ -424,14 +424,19 @@ class TestOsvScannerJSONParser:
     def test_parse_valid_osv_scanner_output(self, parser):
         """Test parsing valid osv-scanner JSON output."""
         data = {
-            "dependencies": [
+            "results": [
                 {
-                    "name": "requests",
-                    "vulns": [
+                    "source": {"path": "Pipfile.lock"},
+                    "packages": [
                         {
-                            "id": "CVE-2023-1234",
-                            "description": "Security vulnerability",
-                            "severity": "HIGH",
+                            "package": {"name": "requests", "version": "2.25.0"},
+                            "vulnerabilities": [
+                                {
+                                    "id": "CVE-2023-1234",
+                                    "summary": "Security vulnerability",
+                                    "aliases": [],
+                                }
+                            ],
                         }
                     ],
                 }
@@ -442,19 +447,31 @@ class TestOsvScannerJSONParser:
 
         assert len(issues) == 1
         assert issues[0].type == IssueType.SECURITY
-        assert issues[0].severity == Priority.CRITICAL
         assert "CVE-2023-1234" in issues[0].message
         assert "requests" in issues[0].details[0]
 
     def test_parse_multiple_vulnerabilities(self, parser):
         """Test parsing multiple vulnerabilities in one package."""
         data = {
-            "dependencies": [
+            "results": [
                 {
-                    "name": "package",
-                    "vulns": [
-                        {"id": "CVE-1", "description": "Vuln 1", "severity": "HIGH"},
-                        {"id": "CVE-2", "description": "Vuln 2", "severity": "MEDIUM"},
+                    "source": {"path": "Pipfile.lock"},
+                    "packages": [
+                        {
+                            "package": {"name": "package", "version": "1.0.0"},
+                            "vulnerabilities": [
+                                {
+                                    "id": "CVE-1",
+                                    "summary": "Vuln 1",
+                                    "aliases": [],
+                                },
+                                {
+                                    "id": "CVE-2",
+                                    "summary": "Vuln 2",
+                                    "aliases": [],
+                                },
+                            ],
+                        }
                     ],
                 }
             ]
@@ -505,20 +522,25 @@ class TestOsvScannerJSONParser:
     def test_get_issue_count(self, parser):
         """Test get_issue_count method."""
         data = {
-            "dependencies": [
+            "results": [
                 {
-                    "name": "pkg1",
-                    "vulns": [
-                        {"id": "CVE-1"},
-                        {"id": "CVE-2"},
+                    "source": {"path": "Pipfile.lock"},
+                    "packages": [
+                        {
+                            "package": {"name": "pkg1", "version": "1.0.0"},
+                            "vulnerabilities": [
+                                {"id": "CVE-1", "summary": "", "aliases": []},
+                                {"id": "CVE-2", "summary": "", "aliases": []},
+                            ],
+                        },
+                        {
+                            "package": {"name": "pkg2", "version": "2.0.0"},
+                            "vulnerabilities": [
+                                {"id": "CVE-3", "summary": "", "aliases": []},
+                            ],
+                        },
                     ],
-                },
-                {
-                    "name": "pkg2",
-                    "vulns": [
-                        {"id": "CVE-3"},
-                    ],
-                },
+                }
             ]
         }
 

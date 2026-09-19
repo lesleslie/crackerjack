@@ -214,12 +214,15 @@ class TestBodaiBuildSystemGuard:
         if registry is None:
             pytest.skip("BODAI_REPO_REGISTRY.md not found")
         repos = _extract_repos(registry)
-        # 2026-08-31 baseline: 36 active repos per current registry audit.
-        # Update this number when the registry's authoritative count
-        # changes (new repo added, or repo moved to Deprecated section).
-        assert len(repos) == 36, (
+        # 2026-09-19 baseline: 34 active repos per current registry audit.
+        # Updated from 36 → 34 after moving jinja2-custom-delimiters to
+        # "Excluded from scope" (it is an IntelliJ Platform Gradle plugin,
+        # not a Python project). Update this number when the registry's
+        # authoritative count changes (new repo added, or repo moved to
+        # Deprecated section).
+        assert len(repos) == 34, (
             f"BODAI_REPO_REGISTRY.md reports {len(repos)} active repos; "
-            f"expected 36 (2026-08-31 baseline). If the count legitimately "
+            f"expected 34 (2026-09-19 baseline). If the count legitimately "
             f"changed, update the test; if it changed accidentally, fix the "
             f"registry."
         )

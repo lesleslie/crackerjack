@@ -212,11 +212,17 @@ def test_perform_health_check_via_adapter_false() -> None:
     assert proxy._perform_health_check("zuban") is False
 
 
-def test_perform_health_check_adapter_returns_none() -> None:
+def test_perform_health_check_adapter_returns_none(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """If adapter factory returns None, falls through to subprocess fallback."""
     proxy = ToolProxy()
     proxy.tool_adapters["zuban"] = lambda: None
-    # The fallback path tries subprocess.run("uv run zuban --version").
+    # Mock subprocess.run — the real ``uv run zuban --version`` from this
+    # test's CWD would otherwise reconcile the venv against ``uv.lock``
+    # and downgrade ``mcp-common`` to the lockfile-pinned 0.24.5.
+    fake = MagicMock(return_value=MagicMock(returncode=1, stdout="", stderr=""))
+    monkeypatch.setattr(subprocess, "run", fake)
     # We don't care about the result here; just verify it doesn't raise.
     result = proxy._perform_health_check("zuban")
     assert isinstance(result, bool)

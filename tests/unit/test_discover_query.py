@@ -52,7 +52,7 @@ async def test_query_none_returns_full_set() -> None:
     # Sanity: discovery tool itself is in the surface
     assert "discover_tools" in names
     # Sanity: a few staples from the FULL profile
-    assert {"execute_crackerjack", "run_crackerjack_stage"}.issubset(names)
+    assert {"crackerjack_execute", "crackerjack_run_stage"}.issubset(names)
 
 
 @pytest.mark.asyncio

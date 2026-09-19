@@ -108,9 +108,9 @@ async def test_standard_has_core_execution_utility_doc(
     assert server is not None
     names = {t.name for t in await server.list_tools()}
     # STANDARD tools present
-    assert "execute_crackerjack" in names
-    assert "run_crackerjack_stage" in names
-    assert "clean_crackerjack" in names
+    assert "crackerjack_execute" in names
+    assert "crackerjack_run_stage" in names
+    assert "crackerjack_clean" in names
     assert "crackerjack_doc_frontmatter_validate" in names
     # FULL-only tools dropped
     assert "publish_to_eventbridge" not in names

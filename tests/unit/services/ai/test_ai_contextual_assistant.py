@@ -64,6 +64,30 @@ def assistant(fs: FileSystemInterface, console: Console) -> ContextualAIAssistan
     return ContextualAIAssistant(filesystem=fs, console=console)
 
 
+@pytest.fixture(autouse=True)
+def _no_real_subprocess(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Mock subprocess.run so analysis helpers don't shell out for real.
+
+    Without this autouse fixture, ``_analyze_project_context`` runs
+    ``uv run ruff check .`` and ``uv run coverage report`` against the
+    crackerjack CWD. From a test context those invocations can take
+    ~30 s each (subprocess timeout) and — critically — trigger ``uv`` to
+    reconcile the venv against ``uv.lock``, downgrading ``mcp-common``
+    back to the lockfile-pinned 0.24.5.
+
+    Tests in ``TestSubprocessBackedHelpers`` override this with their
+    own ``with patch(...)`` contexts that assert on call args.
+    """
+    fake_result = MagicMock()
+    fake_result.returncode = 0
+    fake_result.stdout = ""
+    fake_result.stderr = ""
+    monkeypatch.setattr(
+        "crackerjack.services.ai.contextual_ai_assistant.subprocess.run",
+        MagicMock(return_value=fake_result),
+    )
+
+
 # ---------------------------------------------------------------------------
 # Recommendation generation — direct unit tests
 # ---------------------------------------------------------------------------

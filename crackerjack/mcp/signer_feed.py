@@ -158,7 +158,7 @@ class SignerFeedState:
     """
 
     manifest: PubkeyManifest
-    signer: SkillsSigner
+    signer: SkillsSigner | None = None
     last_updated_timestamp: float = field(default_factory=time.time)
     cycles_total: int = 0
     errors_total: int = 0
