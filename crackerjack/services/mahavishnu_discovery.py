@@ -25,6 +25,7 @@ Layered precedence (matches ``crackerjack/config/ecosystem_synthesis.py:17-23``)
   3. **Mahavishnu MCP probe** (this module) — NEW
   4. ``None`` → ``uv publish`` (default = public PyPI)
 """
+
 from __future__ import annotations
 
 import logging
@@ -85,7 +86,7 @@ def _parse_mcp_response(payload: dict[str, object]) -> str | None:
     # returns just the publish_url as a plain string. Check this
     # BEFORE the dict branch so we don't reject it.
     if isinstance(result, str):
-        return result if result else None
+        return result or None
 
     if not isinstance(result, dict):
         return None
@@ -158,8 +159,7 @@ def probe_publish_url(repo_path: str) -> str | None:
     except (ValueError, KeyError, TypeError) as exc:
         # Malformed JSON, unexpected shape, etc.
         logger.debug(
-            "Mahavishnu MCP probe returned malformed response (%s); "
-            "soft fallback",
+            "Mahavishnu MCP probe returned malformed response (%s); soft fallback",
             exc,
         )
         return None

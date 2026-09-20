@@ -10,6 +10,12 @@ blocks_on: []
 topic: changelog
 ---
 
+## [0.83.3] - 2026-09-20
+
+### Added
+
+- Layer Mahavishnu MCP probe as fallback publish_url source
+
 ## [0.83.1] - 2026-09-20
 
 ### Fixed
