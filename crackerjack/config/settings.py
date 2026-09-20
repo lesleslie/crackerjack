@@ -56,6 +56,7 @@ class PublishSettings(OneiricMCPConfig):
     publish: str | None = None
     bump: str | None = None
     all: str | None = None
+    publish_url: str | None = None
     no_git_tags: bool = False
     skip_version_check: bool = False
 

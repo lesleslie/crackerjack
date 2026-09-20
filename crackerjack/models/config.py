@@ -153,6 +153,7 @@ class PublishConfig:
     publish: str | None = None
     bump: str | None = None
     all: str | None = None
+    publish_url: str | None = None
     cleanup_pypi: bool = False
     keep_releases: int = 10
     no_git_tags: bool = False
@@ -164,6 +165,7 @@ class PublishConfig:
             publish=settings.publish,
             bump=settings.bump,
             all=settings.all,
+            publish_url=settings.publish_url,
             cleanup_pypi=getattr(settings, "cleanup_pypi", False),
             keep_releases=getattr(settings, "keep_releases", 10),
             no_git_tags=settings.no_git_tags,
