@@ -10,6 +10,12 @@ blocks_on: []
 topic: changelog
 ---
 
+## [0.83.1] - 2026-09-20
+
+### Fixed
+
+- Thread publish_url through all PublishManagerImpl sites
+
 ## [0.83.0] - 2026-09-20
 
 ### Added
