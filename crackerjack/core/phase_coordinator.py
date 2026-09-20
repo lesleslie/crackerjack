@@ -144,7 +144,7 @@ class PhaseCoordinator:
         self.publish_manager = publish_manager or PublishManagerImpl(
             console=self.console,
             pkg_path=self.pkg_path,
-            publish_url=self._settings.publishing.publish_url,
+            publish_url=self._resolve_publish_url(),
         )
         self.config_merge_service = config_merge_service
 
@@ -187,6 +187,35 @@ class PhaseCoordinator:
 
         self._fast_hooks_started: bool = False
         self._event_publisher = event_publisher
+
+    def _resolve_publish_url(self) -> str | None:
+        """Layered resolution per crackerjack/config/ecosystem_synthesis.py:17-23.
+
+        Priority (highest → lowest):
+
+          1. ``Options.publish_url`` — handled separately in
+             ``_publish_to_pypi`` (per-invocation operator override via
+             --publish-url CLI flag or $CRACKERJACK_PUBLISH_URL env var).
+          2. ``settings.publishing.publish_url`` — already includes both
+             settings/local.yaml AND ``BODAI_ECOSYSTEM_CONFIG`` synthesis
+             (the loader runs the synthesis before returning settings).
+          3. **Mahavishnu MCP probe** — NEW layered fallback. Asks
+             Mahavishnu's MCP server whether this repo has a registered
+             publish target. Probed once at startup; result is cached
+             on ``self.publish_manager.publish_url`` for the lifetime
+             of this ``PhaseCoordinator``. Soft fallback on any failure.
+          4. ``None`` — falls through to ``uv publish`` (public PyPI).
+        """
+        settings_url = self._settings.publishing.publish_url
+        if settings_url:
+            return settings_url
+
+        # Layer 3: Mahavishnu MCP probe (soft fallback if unreachable).
+        # Imported lazily so importing PhaseCoordinator doesn't pull in
+        # httpx2 + JSON-RPC infrastructure on every CLI invocation.
+        from crackerjack.services.mahavishnu_discovery import probe_publish_url
+
+        return probe_publish_url(repo_path=str(self.pkg_path.resolve()))
 
     def set_event_publisher(self, event_publisher: t.Any | None) -> None:
         self._event_publisher = event_publisher
@@ -1705,8 +1734,11 @@ class PhaseCoordinator:
         # Priority order (matches crackerjack/config/ecosystem_synthesis.py:17-23):
         #   1. Options.publish_url (--publish-url CLI flag, $CRACKERJACK_PUBLISH_URL env)
         #   2. settings.publishing.publish_url (settings/local.yaml + ecosystem synthesis)
+        #   3. Mahavishnu MCP probe (Layer 3 of PhaseCoordinator._resolve_publish_url —
+        #      resolved once at __init__, cached on self.publish_manager.publish_url)
         # Options wins because it's a per-invocation operator override; the settings
-        # layer is the per-repo default. Without this branch, a one-off CLI override
+        # layer is the per-repo default; the Mahavishnu probe covers repos that don't
+        # ship a settings/local.yaml. Without this branch, a one-off CLI override
         # would be silently ignored and the repo's default URL would always win.
         cli_publish_url = t.cast("str | None", getattr(options, "publish_url", None))
         # ``OptionsProtocol`` doesn't declare ``publish_url`` (the actual

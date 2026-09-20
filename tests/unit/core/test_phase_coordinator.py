@@ -85,25 +85,102 @@ class TestPhaseCoordinatorInitialization:
         )
 
     def test_publish_manager_publish_url_none_when_settings_unset(self) -> None:
-        """Counterpart: when settings.publishing.publish_url is unset,
-        ``publish_manager.publish_url`` stays ``None`` so the default
-        ``uv publish`` (PyPI) branch is taken.
+        """Counterpart: when settings.publishing.publish_url is unset AND
+        the Mahavishnu probe fails (soft fallback), ``publish_manager
+        .publish_url`` stays ``None`` so the default ``uv publish``
+        (PyPI) branch is taken.
 
-        This locks in the priority documented in
-        ``crackerjack/config/ecosystem_synthesis.py:17-23``: only an
-        explicit ``publish_url`` routes to a custom index.
+        The probe is patched to simulate a Mahavishnu-down condition
+        (connection refused / timeout / 404) so the test is deterministic
+        across machines with or without a running Mahavishnu MCP.
+
+        Patch target note: ``_resolve_publish_url`` does ``from
+        crackerjack.services.mahavishnu_discovery import
+        probe_publish_url`` inside the function body, so the binding
+        lives in the function's local namespace at call time. Patch
+        the source module (not the importer) — that's the
+        ``monkeypatch-inline-import-target`` pattern.
         """
+        from unittest.mock import patch
+
         settings = CrackerjackSettings()
         assert settings.publishing.publish_url is None
 
-        coordinator = PhaseCoordinator(
-            console=MagicMock(),
-            pkg_path=Path("/tmp/test"),
-            session=MagicMock(),
-            settings=settings,
-        )
+        with patch(
+            "crackerjack.services.mahavishnu_discovery.probe_publish_url",
+            return_value=None,
+        ):
+            coordinator = PhaseCoordinator(
+                console=MagicMock(),
+                pkg_path=Path("/tmp/test"),
+                session=MagicMock(),
+                settings=settings,
+            )
 
         assert coordinator.publish_manager.publish_url is None
+
+    def test_publish_manager_uses_mahavishnu_probe_when_settings_unset(self) -> None:
+        """Layered fallback: when settings.publishing.publish_url is
+        None, PhaseCoordinator MUST consult Mahavishnu MCP for the
+        publish_url. Locks in layer 3 of the precedence documented in
+        ``crackerjack/config/ecosystem_synthesis.py:17-23`` and
+        ``_resolve_publish_url``.
+        """
+        from unittest.mock import patch
+
+        gitlab_url = "https://gitlab.example/api/v4/projects/42/packages/pypi/upload"
+        settings = CrackerjackSettings()
+        assert settings.publishing.publish_url is None
+
+        with patch(
+            "crackerjack.services.mahavishnu_discovery.probe_publish_url",
+            return_value=gitlab_url,
+        ) as probe:
+            coordinator = PhaseCoordinator(
+                console=MagicMock(),
+                pkg_path=Path("/Users/les/Projects/mdinject"),
+                session=MagicMock(),
+                settings=settings,
+            )
+
+        probe.assert_called_once()
+        # The probe must receive the absolute path so Mahavishnu can
+        # match it against its ecosystem registry. The call passes
+        # the path via the ``repo_path`` kwarg.
+        called_path = probe.call_args.kwargs["repo_path"]
+        assert str(Path("/Users/les/Projects/mdinject").resolve()) in str(
+            called_path,
+        )
+        assert coordinator.publish_manager.publish_url == gitlab_url
+
+    def test_settings_url_takes_priority_over_mahavishnu_probe(self) -> None:
+        """Layered precedence: settings.publishing.publish_url wins over
+        the Mahavishnu probe. Operators setting a per-repo URL in
+        ``settings/local.yaml`` should NOT be silently overridden by
+        the Mahavishnu probe (the repo's explicit config wins).
+        """
+        from unittest.mock import patch
+
+        settings_url = "https://settings.example/pypi"
+        mcp_url = "https://mcp.example/pypi"
+
+        settings = CrackerjackSettings()
+        settings.publishing.publish_url = settings_url
+
+        with patch(
+            "crackerjack.services.mahavishnu_discovery.probe_publish_url",
+            return_value=mcp_url,
+        ) as probe:
+            coordinator = PhaseCoordinator(
+                console=MagicMock(),
+                pkg_path=Path("/tmp/test"),
+                session=MagicMock(),
+                settings=settings,
+            )
+
+        # Settings wins → Mahavishnu probe should not even be called.
+        probe.assert_not_called()
+        assert coordinator.publish_manager.publish_url == settings_url
 
 
 class TestPhaseCoordinatorProperties:
