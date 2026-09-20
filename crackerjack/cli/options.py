@@ -74,6 +74,7 @@ class Options(BaseModel):
     interactive: bool = False
     no_config_updates: bool = False
     publish: BumpOption | None = None
+    publish_url: str | None = None
     all: BumpOption | None = None
     bump: BumpOption | None = None
     verbose: bool = False
@@ -302,6 +303,16 @@ CLI_OPTIONS = {
             "When used as a flag (-p), defaults to 'interactive'."
         ),
         case_sensitive=False,
+    ),
+    "publish_url": typer.Option(
+        None,
+        "--publish-url",
+        envvar="CRACKERJACK_PUBLISH_URL",
+        help=(
+            "PEP 517 repository URL for uploads (overrides PyPI default). "
+            "Example: https://gitlab.com/api/v4/projects/<id>/packages/pypi/upload. "
+            "When set, OIDC trusted publishing is disabled and token auth is used."
+        ),
     ),
     "all": typer.Option(
         None,
@@ -1014,6 +1025,7 @@ def create_options(
     skip_hooks: bool,
     fast: bool,
     comp: bool,
+    publish_url: str | None = None,
     fast_iteration: bool = False,
     tool: str | None = None,
     changed_only: bool = False,
