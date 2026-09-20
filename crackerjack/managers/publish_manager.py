@@ -756,6 +756,16 @@ class PublishManagerImpl:
         if self.publish_url:
             # --publish-url and --trusted-publishing are mutually exclusive in
             # `uv publish`; force token auth when targeting a custom index.
+            # If only OIDC is configured (no token), refuse with a clear
+            # error rather than crashing on sentinel.as_uv_publish_token().
+            if auth.is_trusted_publishing():
+                self.console.print(
+                    f"[red]❌[/red] --publish-url {self.publish_url} requires token "
+                    "auth, but only OIDC trusted publishing is available. "
+                    "Set UV_PUBLISH_TOKEN (or configure keyring) to publish "
+                    "to a custom index.",
+                )
+                return False
             cmd = ["uv", "publish", "--publish-url", self.publish_url]
             extra_env: dict[str, str] | None = {
                 "UV_PUBLISH_TOKEN": auth.as_uv_publish_token(),
