@@ -72,10 +72,12 @@ class PublishManagerImpl:
         console: ConsoleInterface | None = None,
         pkg_path: Path | None = None,
         dry_run: bool = False,
+        publish_url: str | None = None,
     ) -> None:
         self.console = self._resolve_console(console)
         self.pkg_path = self._resolve_pkg_path(pkg_path)
         self.dry_run = dry_run
+        self.publish_url = publish_url
 
         self._git_service = self._resolve_git_service(git_service)
         self._version_analyzer = self._resolve_version_analyzer(version_analyzer)
@@ -738,7 +740,12 @@ class PublishManagerImpl:
         return self._execute_publish()
 
     def _handle_dry_run_publish(self) -> bool:
-        self.console.print("[yellow]🔍[/yellow] Would publish package to PyPI")
+        if self.publish_url:
+            self.console.print(
+                f"[yellow]🔍[/yellow] Would publish package to {self.publish_url}",
+            )
+        else:
+            self.console.print("[yellow]🔍[/yellow] Would publish package to PyPI")
         return True
 
     def _execute_publish(self) -> bool:
@@ -746,7 +753,14 @@ class PublishManagerImpl:
         if auth is None:
             return False
 
-        if auth.is_trusted_publishing():
+        if self.publish_url:
+            # --publish-url and --trusted-publishing are mutually exclusive in
+            # `uv publish`; force token auth when targeting a custom index.
+            cmd = ["uv", "publish", "--publish-url", self.publish_url]
+            extra_env: dict[str, str] | None = {
+                "UV_PUBLISH_TOKEN": auth.as_uv_publish_token(),
+            }
+        elif auth.is_trusted_publishing():
             cmd = ["uv", "publish", "--trusted-publishing", "always"]
             extra_env: dict[str, str] | None = {"UV_PUBLISH_TOKEN": ""}
         else:
