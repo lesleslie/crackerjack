@@ -85,6 +85,37 @@ python -m crackerjack run --fast
 🎉 All quality checks passed!
 ```
 
+#### Hook Configuration Files
+
+Several hooks read **file-based config** rather than `[tool.crackerjack.X]` pyproject blocks. Writing a `[tool.crackerjack.betterleaks]` or `[tool.crackerjack.lychee]` section in `pyproject.toml` has NO effect — the loader emits a `WARNING` at startup. Use the actual file mechanism instead.
+
+**Hooks with file-based config:**
+
+| Hook                | File                                            | Format                                       | Discovery location    |
+| ------------------- | ----------------------------------------------- | -------------------------------------------- | --------------------- |
+| `lychee`            | `.lycheeignore`                                 | gitignore-like, one pattern per line         | repo root (`cwd`)     |
+| `betterleaks`       | `.betterleaks.toml` *or* `.gitleaks.toml`       | gitleaks schema — `[allowlist] paths = [...]` | git toplevel          |
+| `betterleaks`       | `.gitleaksignore`                               | gitleaks schema, line-noise filter           | git toplevel          |
+
+**Hooks with NO config file (built-in defaults only):**
+
+| Hook                          | Excluding files                                       |
+| ----------------------------- | ----------------------------------------------------- |
+| `creosote`                    | *(none today — see `crackerjack/adapters/refactor/creosote.py`)* |
+| `refurb`                      | *(tool defaults only)*                                 |
+| `check-added-large-files`     | `.gitignore` patterns (already honored)               |
+
+For every other hook, behaviour depends on the hook itself — see the hook's adapter source if you need to exclude something.
+
+When you DO need a pyproject setting, the valid sub-tables are:
+
+```toml
+[tool.crackerjack.jinja]   # read by crackerjack.adapters.web.jinja_formatter
+[tool.crackerjack.web]      # opt-in flag for the Web adapter
+```
+
+Anything else under `[tool.crackerjack.*]` triggers a startup warning.
+
 ### `crackerjack start`
 
 **Description**: Start MCP server for AI agent integration.
