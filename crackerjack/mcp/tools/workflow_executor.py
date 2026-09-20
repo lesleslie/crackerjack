@@ -218,6 +218,7 @@ def _create_standard_orchestrator(
 
 
 async def _register_core_services(container: t.Any, working_dir: t.Any) -> None:
+    from crackerjack.config import CrackerjackSettings, load_settings
     from crackerjack.core.console import CrackerjackConsole
     from crackerjack.managers.async_hook_manager import AsyncHookManager
     from crackerjack.managers.publish_manager import PublishManagerImpl
@@ -232,6 +233,14 @@ async def _register_core_services(container: t.Any, working_dir: t.Any) -> None:
 
     console = CrackerjackConsole()
 
+    # Pull publish_url from settings so private repos thread to their own
+    # index. The MCP workflow executor doesn't accept a CLI flag (no
+    # Typer) — settings YAML + BODAI_ECOSYSTEM_CONFIG synthesis are the
+    # only sources on this path. Mirrors PhaseCoordinator's init-time
+    # threading so the two paths stay symmetric.
+    settings = load_settings(CrackerjackSettings, settings_dir=working_dir / "settings")
+    publish_url = settings.publishing.publish_url
+
     container.register_singleton(
         HookManager,
         factory=lambda: AsyncHookManager(console, working_dir),
@@ -244,7 +253,11 @@ async def _register_core_services(container: t.Any, working_dir: t.Any) -> None:
 
     container.register_singleton(
         PublishManager,
-        factory=lambda: PublishManagerImpl,
+        factory=lambda: PublishManagerImpl(
+            console=console,
+            pkg_path=working_dir,
+            publish_url=publish_url,
+        ),
     )
 
     container.register_singleton(

@@ -144,6 +144,7 @@ class PhaseCoordinator:
         self.publish_manager = publish_manager or PublishManagerImpl(
             console=self.console,
             pkg_path=self.pkg_path,
+            publish_url=self._settings.publishing.publish_url,
         )
         self.config_merge_service = config_merge_service
 
@@ -1700,6 +1701,16 @@ class PhaseCoordinator:
         current_commit_hash: str | None,
     ) -> bool:
         self._display_publish_header()
+
+        # Priority order (matches crackerjack/config/ecosystem_synthesis.py:17-23):
+        #   1. Options.publish_url (--publish-url CLI flag, $CRACKERJACK_PUBLISH_URL env)
+        #   2. settings.publishing.publish_url (settings/local.yaml + ecosystem synthesis)
+        # Options wins because it's a per-invocation operator override; the settings
+        # layer is the per-repo default. Without this branch, a one-off CLI override
+        # would be silently ignored and the repo's default URL would always win.
+        cli_publish_url = getattr(options, "publish_url", None)
+        if cli_publish_url:
+            self.publish_manager.publish_url = cli_publish_url
 
         if not self.publish_manager.publish_package():
             self.session.fail_task("publishing", "Package publishing failed")

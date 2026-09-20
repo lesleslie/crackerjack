@@ -190,11 +190,22 @@ class PythonLifecycle(Lifecycle):
 
         Delegates to :class:`crackerjack.managers.publish_manager.PublishManagerImpl`.
         Falls back to the PyPI project page URL on success.
+
+        Reads ``publish_url`` from ``CrackerjackSettings.publishing`` so private
+        repos thread to their own index instead of public PyPI. The CLI flag
+        ``--publish-url`` doesn't apply on this path (the lifecycle adapter is
+        invoked by the package-version lifecycle, not the CLI) — settings YAML
+        and ``BODAI_ECOSYSTEM_CONFIG`` synthesis are the only sources.
         """
+        from crackerjack.config import CrackerjackSettings, load_settings
         from crackerjack.managers.publish_manager import PublishManagerImpl
 
         package_root = self._version_source._project_root
-        manager = PublishManagerImpl(pkg_path=package_root)
+        settings = load_settings(CrackerjackSettings, settings_dir=package_root / "settings")
+        manager = PublishManagerImpl(
+            pkg_path=package_root,
+            publish_url=settings.publishing.publish_url,
+        )
         if not manager.publish_package():
             raise RuntimeError("PublishManagerImpl.publish_package failed")
         project_url = f"https://pypi.org/project/{manager._get_package_name() or ''}/"

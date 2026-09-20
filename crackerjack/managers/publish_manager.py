@@ -609,7 +609,18 @@ class PublishManagerImpl:
         try:
             if not self._validate_prerequisites():
                 return False
-            self.console.print("[yellow]🚀[/yellow] Publishing to PyPI")
+            # Surface the actual publish target so operator eyeballs can
+            # sanity-check it BEFORE the build runs. A stale
+            # `publishing.publish_url` in settings/local.yaml is how
+            # mdincident 2026-09-19 (mdinject 0.2.0) leaked a private
+            # package to public PyPI — the header used to say "PyPI"
+            # unconditionally, so the wrong URL was easy to miss.
+            if self.publish_url:
+                self.console.print(
+                    f"[yellow]🚀[/yellow] Publishing to {self.publish_url}",
+                )
+            else:
+                self.console.print("[yellow]🚀[/yellow] Publishing to PyPI")
             success = self._perform_publish_workflow()
             if not success:
                 # Clean up stale build artifacts so the next attempt

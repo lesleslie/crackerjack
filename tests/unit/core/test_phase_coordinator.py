@@ -47,6 +47,64 @@ class TestPhaseCoordinatorInitialization:
         assert coordinator.session is session
         assert coordinator._settings is settings
 
+    def test_publish_manager_receives_publish_url_from_settings(self) -> None:
+        """Regression: PhaseCoordinator must thread ``settings.publishing.publish_url``
+        to ``PublishManagerImpl`` at construction time.
+
+        Background: mdinject 0.2.0 was published to public PyPI (2026-09-19)
+        because ``PhaseCoordinator.__init__`` constructed ``PublishManagerImpl``
+        with only ``console`` and ``pkg_path`` — ``publish_url`` was always
+        ``None`` regardless of what the settings YAML, ecosystem synthesis,
+        or CLI flag provided. The empty ``self.publish_url`` then fell
+        through to the default ``uv publish`` branch, which uses
+        ``upload.pypi.org/legacy/``.
+
+        This test pins the contract: when ``CrackerjackSettings.publishing
+        .publish_url`` is set (from settings/local.yaml, ecosystem synthesis,
+        or any other loader-time source), the coordinator's
+        ``publish_manager.publish_url`` reflects it.
+        """
+        from crackerjack.managers.publish_manager import PublishManagerImpl
+
+        gitlab_url = "https://gitlab.example/api/v4/projects/1/packages/pypi/upload"
+        settings = CrackerjackSettings()
+        settings.publishing.publish_url = gitlab_url
+
+        coordinator = PhaseCoordinator(
+            console=MagicMock(),
+            pkg_path=Path("/tmp/test"),
+            session=MagicMock(),
+            settings=settings,
+        )
+
+        assert isinstance(coordinator.publish_manager, PublishManagerImpl)
+        assert coordinator.publish_manager.publish_url == gitlab_url, (
+            "PhaseCoordinator must thread settings.publishing.publish_url "
+            "to PublishManagerImpl.publish_url — otherwise private repos "
+            "silently fall through to public PyPI."
+        )
+
+    def test_publish_manager_publish_url_none_when_settings_unset(self) -> None:
+        """Counterpart: when settings.publishing.publish_url is unset,
+        ``publish_manager.publish_url`` stays ``None`` so the default
+        ``uv publish`` (PyPI) branch is taken.
+
+        This locks in the priority documented in
+        ``crackerjack/config/ecosystem_synthesis.py:17-23``: only an
+        explicit ``publish_url`` routes to a custom index.
+        """
+        settings = CrackerjackSettings()
+        assert settings.publishing.publish_url is None
+
+        coordinator = PhaseCoordinator(
+            console=MagicMock(),
+            pkg_path=Path("/tmp/test"),
+            session=MagicMock(),
+            settings=settings,
+        )
+
+        assert coordinator.publish_manager.publish_url is None
+
 
 class TestPhaseCoordinatorProperties:
     """Test PhaseCoordinator properties."""
