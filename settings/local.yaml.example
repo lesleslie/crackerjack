@@ -18,3 +18,10 @@
 # Example: Enable dashboard
 # dashboard_enabled: true
 # dashboard_port: 8678
+
+# Example: publish to a private package index (e.g. GitLab PyPI, devpi,
+# AWS CodeArtifact, etc.) instead of PyPI. When set, --publish-url is
+# passed to `uv publish` and token auth is used (OIDC trusted publishing
+# is disabled).
+#
+# publish_url: "https://gitlab.com/api/v4/projects/<id>/packages/pypi/upload"
