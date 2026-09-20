@@ -284,6 +284,19 @@ def run(
     diff_config: str | None = CLI_OPTIONS["diff_config"],
     config_interactive: bool = CLI_OPTIONS["config_interactive"],
 ) -> None:
+    """Run quality checks (auto-discovery + pyproject reference).
+
+    Several hooks read FILE-BASED config rather than tool.crackerjack
+    pyproject blocks. Writing a tool.crackerjack.betterleaks or
+    tool.crackerjack.lychee section in pyproject.toml has NO effect —
+    the loader warns at startup. Instead use:
+
+        .lycheeignore            — repo root (cwd), gitignore-like syntax
+        .betterleaks.toml        — git toplevel, gitleaks-schema allowlist
+        .gitleaks.toml           — same schema, fallback name
+
+    See docs/CLI_REFERENCE.md (Hook Configuration Files) for the full table.
+    """
     settings = load_settings(CrackerjackSettings)
     _print_banner()
 

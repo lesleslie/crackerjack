@@ -125,8 +125,13 @@ def _load_pyproject_toml(settings_dir: Path) -> dict[str, t.Any]:
 
         if crackerjack_config:
             logger.debug("Loaded configuration from pyproject.toml")
-            _extract_adapter_timeouts(crackerjack_config)
+            # Validate BEFORE ``_extract_adapter_timeouts`` reshapes
+            # the dict — the reshape synthesises an ``adapter_timeouts``
+            # sub-dict from top-level ``*_timeout`` keys, which the
+            # validator would otherwise mistake for a user-written
+            # ``[tool.crackerjack.adapter_timeouts]`` block.
             _validate_pyproject_subtables(crackerjack_config)
+            _extract_adapter_timeouts(crackerjack_config)
 
         return crackerjack_config
 
@@ -141,8 +146,8 @@ def _load_pyproject_toml(settings_dir: Path) -> dict[str, t.Any]:
 
             if crackerjack_config:
                 logger.debug("Loaded configuration from pyproject.toml (via tomli)")
-                _extract_adapter_timeouts(crackerjack_config)
                 _validate_pyproject_subtables(crackerjack_config)
+                _extract_adapter_timeouts(crackerjack_config)
 
             return crackerjack_config
 

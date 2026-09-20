@@ -762,3 +762,49 @@ def test_known_pyproject_subtables_constant_is_explicit():
     fictional-but-common typos like ``[tool.crackerjack.refurb]``).
     """
     assert _KNOWN_PYPROJECT_SUBTABLES == frozenset({"jinja", "web"})
+
+
+def test_load_pyproject_toml_no_warning_on_internal_adapter_timeouts(
+    tmp_path, caplog
+) -> None:
+    """Regression for false-positive ``[tool.crackerjack.adapter_timeouts]``
+    warning that fired on every ``crackerjack --help`` / ``crackerjack
+    run --help`` invocation.
+
+    The bug: ``_extract_adapter_timeouts`` reshapes top-level
+    ``*_timeout`` keys (e.g. ``ruff_timeout = 45``) into a synthesized
+    ``adapter_timeouts`` sub-dict AFTER the validator ran — so the
+    validator saw ``adapter_timeouts`` as a user-written
+    ``[tool.crackerjack.adapter_timeouts]`` block and warned about it.
+    The user never wrote that block; crackerjack synthesised it.
+
+    Fix: validate BEFORE the reshape. The validator now sees only
+    user-written keys, so internal scaffolding never trips it.
+    """
+    import logging
+
+    outer = tmp_path
+    pyproject = outer / "pyproject.toml"
+    pyproject.write_text(
+        "[tool.crackerjack]\n"
+        "ruff_timeout = 45\n"
+        "mypy_timeout = 120\n",
+        encoding="utf-8",
+    )
+    settings_dir = outer / "settings"
+    settings_dir.mkdir()
+
+    with caplog.at_level(logging.WARNING, logger="crackerjack.config.loader"):
+        data = _load_pyproject_toml(settings_dir)
+
+    # The original ``*_timeout`` values must still be reshaped into the
+    # ``adapter_timeouts`` sub-dict (regression guard on the fix).
+    assert data["adapter_timeouts"]["ruff_timeout"] == 45
+    assert data["adapter_timeouts"]["mypy_timeout"] == 120
+
+    # But the validator must NOT have flagged the synthesised
+    # ``adapter_timeouts`` sub-dict as a fictional user block.
+    warnings = [r.getMessage() for r in caplog.records if r.levelno == logging.WARNING]
+    assert not any(
+        "[tool.crackerjack.adapter_timeouts]" in m for m in warnings
+    ), f"internal scaffolding must not warn; got: {warnings}"
