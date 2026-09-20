@@ -27,6 +27,7 @@ from crackerjack.services.mahavishnu_discovery import (
     _http_post,
     _mcp_endpoint_url,
     _parse_mcp_response,
+    _post_mcp,
     probe_publish_url,
 )
 
@@ -36,11 +37,17 @@ def _fake_response(
     status_code: int = 200,
     json_payload: dict | None = None,
     text: str | None = None,
+    headers: dict[str, str] | None = None,
 ) -> SimpleNamespace:
     """Build a minimal httpx2.Response-shaped stub for the test seam.
 
-    The seam ``_http_post`` is patched with this; tests assert on the
-    request the seam received and the response the seam returned.
+    The seam ``_post_mcp`` (and the lower-level ``_http_post``) is
+    patched with this; tests assert on the request the seam received
+    and the response the seam returned.
+
+    ``headers`` carries the FastMCP ``mcp-session-id`` set on the
+    ``initialize`` response so the probe can echo it on subsequent
+    calls. Defaults to an empty mapping.
     """
     payload = json_payload if json_payload is not None else None
     text_value = text if text is not None else (
@@ -58,9 +65,38 @@ def _fake_response(
     return SimpleNamespace(
         status_code=status_code,
         text=text_value,
+        headers=headers or {},
         raise_for_status=_raise_for_status,
         json=lambda: (json.loads(text_value) if text_value else None),
     )
+
+
+def _handshake_responses(
+    call_response: SimpleNamespace,
+    session_id: str = "test-session-123",
+) -> list[SimpleNamespace]:
+    """Build the 3-call handshake response sequence for ``_post_mcp``.
+
+    Order matches the probe:
+
+      1. ``initialize`` — carries the ``mcp-session-id`` response header
+      2. ``notifications/initialized`` — empty 202 (FastMCP convention)
+      3. ``tools/call`` — caller-supplied response (use ``call_response``)
+    """
+    init_response = _fake_response(
+        json_payload={
+            "jsonrpc": "2.0",
+            "id": 1,
+            "result": {
+                "protocolVersion": "2024-11-05",
+                "capabilities": {"tools": {"listChanged": True}},
+                "serverInfo": {"name": "test-server", "version": "0.0.0"},
+            },
+        },
+        headers={"mcp-session-id": session_id},
+    )
+    notif_response = _fake_response(status_code=202, text="")
+    return [init_response, notif_response, call_response]
 
 
 class TestEndpointUrl:
@@ -111,6 +147,41 @@ class TestParseMcpResponse:
         payload = {"jsonrpc": "2.0", "id": 1, "result": url}
         assert _parse_mcp_response(payload) == url
 
+    def test_fastmcp_structured_content_shape(self) -> None:
+        """FastMCP 3.x default for ``str`` tool returns: the URL lands in
+        ``structuredContent.result`` and ``content`` may be empty.
+
+        Verified 2026-09-20 against running Mahavishnu — without this
+        branch the probe returns ``None`` and crackerjack falls through
+        to public PyPI.
+        """
+        url = "https://gitlab.com/api/v4/projects/123/packages/pypi/upload"
+        payload = {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "result": {
+                "content": [],
+                "isError": False,
+                "structuredContent": {"result": url},
+            },
+        }
+        assert _parse_mcp_response(payload) == url
+
+    def test_fastmcp_structured_content_none(self) -> None:
+        """When the tool returns ``None`` (no matching repo), the
+        structuredContent.result lands as ``None`` in the wire format.
+        """
+        payload = {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "result": {
+                "content": [],
+                "isError": False,
+                "structuredContent": {"result": None},
+            },
+        }
+        assert _parse_mcp_response(payload) is None
+
     def test_is_error_returns_none(self) -> None:
         """``isError`` lives INSIDE ``result``, per MCP spec — not at top level."""
         payload = {
@@ -133,14 +204,22 @@ class TestParseMcpResponse:
 
 
 class TestProbePublishUrl:
-    """Pin the request shape and soft-fallback behaviour."""
+    """Pin the request shape and soft-fallback behaviour.
+
+    The probe performs the standard MCP three-call handshake
+    (initialize → notifications/initialized → tools/call). Tests patch
+    ``_post_mcp`` to feed canned responses in order; the response
+    sequence helper ``_handshake_responses`` builds the boilerplate
+    init + notification responses so each test only specifies the
+    ``tools/call`` response it cares about.
+    """
 
     def test_returns_url_on_success(self) -> None:
         url = "https://gitlab.com/api/v4/projects/77841268/packages/pypi/upload"
-        response = _fake_response(
+        call_response = _fake_response(
             json_payload={
                 "jsonrpc": "2.0",
-                "id": 1,
+                "id": 2,
                 "result": {
                     "content": [{"type": "text", "text": url}],
                     "isError": False,
@@ -149,18 +228,24 @@ class TestProbePublishUrl:
         )
 
         with patch(
-            "crackerjack.services.mahavishnu_discovery._http_post",
-            return_value=response,
+            "crackerjack.services.mahavishnu_discovery._post_mcp",
+            side_effect=_handshake_responses(call_response),
         ) as spy:
             result = probe_publish_url("/Users/les/Projects/mdinject")
 
         assert result == url
-        assert spy.call_args.args[0] == DEFAULT_MAHAVISHNU_MCP_URL
+        # All 3 calls hit the same endpoint.
+        for call in spy.call_args_list:
+            assert call.args[0] == DEFAULT_MAHAVISHNU_MCP_URL
 
     def test_request_shape_is_mcp_compliant(self) -> None:
-        """The probe must use the MCP JSON-RPC ``tools/call`` shape — Mahavishnu
-        exposes its tools via FastMCP, which speaks JSON-RPC 2.0 only."""
-        response = _fake_response(
+        """The third call (tools/call) must use the MCP JSON-RPC shape.
+
+        We assert on the LAST call's payload — that's the ``tools/call``
+        that fetches the URL. The first call is ``initialize`` and the
+        second is ``notifications/initialized``.
+        """
+        call_response = _fake_response(
             json_payload={
                 "result": {"content": [{"type": "text", "text": "https://x"}]},
                 "isError": False,
@@ -168,77 +253,178 @@ class TestProbePublishUrl:
         )
 
         with patch(
-            "crackerjack.services.mahavishnu_discovery._http_post",
-            return_value=response,
+            "crackerjack.services.mahavishnu_discovery._post_mcp",
+            side_effect=_handshake_responses(call_response),
         ) as spy:
             probe_publish_url("/Users/les/Projects/mdinject")
 
-        body = spy.call_args.kwargs["json"]
+        # 3 calls in order: initialize, notifications/initialized, tools/call.
+        assert len(spy.call_args_list) == 3
+        body = spy.call_args_list[2].kwargs["json"]
         assert body["jsonrpc"] == "2.0"
         assert body["method"] == "tools/call"
         assert body["params"]["name"] == PROBE_TOOL_NAME
         assert body["params"]["arguments"]["repo_path"] == "/Users/les/Projects/mdinject"
 
-    def test_uses_short_timeout(self) -> None:
-        """The probe budget must stay cheap — never block startup for long."""
-        response = _fake_response(
+    def test_session_id_echoed_on_subsequent_calls(self) -> None:
+        """After initialize, ``mcp-session-id`` must appear on the
+        notifications/initialized AND tools/call request headers —
+        FastMCP rejects subsequent calls without it.
+
+        Inspects the underlying ``_http_post`` seam because
+        ``mcp-session-id`` is added by ``_post_mcp`` itself.
+        """
+        call_response = _fake_response(
             json_payload={"result": {"content": [{"type": "text", "text": "x"}]}},
         )
 
         with patch(
             "crackerjack.services.mahavishnu_discovery._http_post",
-            return_value=response,
+            side_effect=_handshake_responses(call_response, session_id="abc123"),
         ) as spy:
             probe_publish_url("/Users/les/Projects/mdinject")
 
-        assert spy.call_args.kwargs["timeout"] == PROBE_TIMEOUT_SECONDS
-        assert PROBE_TIMEOUT_SECONDS <= 1.0
+        # Call 1 (initialize): no session header yet.
+        assert "mcp-session-id" not in (spy.call_args_list[0].kwargs.get("headers") or {})
+        # Call 2 (notifications): session id is present.
+        assert spy.call_args_list[1].kwargs["headers"]["mcp-session-id"] == "abc123"
+        # Call 3 (tools/call): session id is present.
+        assert spy.call_args_list[2].kwargs["headers"]["mcp-session-id"] == "abc123"
 
-    def test_404_returns_none(self) -> None:
-        response = _fake_response(status_code=404, text="not found")
+    def test_uses_short_timeout(self) -> None:
+        """The probe budget must stay cheap — never block startup for long.
+
+        Inspects the underlying ``_http_post`` seam because ``timeout``
+        is set inside ``_post_mcp``. Bumped from 0.2 s to 5.0 s after
+        verifying (2026-09-20) that FastMCP's SSE body reads need
+        well over 200 ms even for a sub-second tools/call.
+        """
+        call_response = _fake_response(
+            json_payload={"result": {"content": [{"type": "text", "text": "x"}]}},
+        )
 
         with patch(
             "crackerjack.services.mahavishnu_discovery._http_post",
+            side_effect=_handshake_responses(call_response),
+        ) as spy:
+            probe_publish_url("/Users/les/Projects/mdinject")
+
+        # Every call uses the configured timeout.
+        for call in spy.call_args_list:
+            assert call.kwargs["timeout"] == PROBE_TIMEOUT_SECONDS
+        # Total probe cost is at most 3 × timeout (3 calls in worst case).
+        # Keep the ceiling generous enough to allow for SSE body reads.
+        assert PROBE_TIMEOUT_SECONDS <= 10.0
+
+    def test_uses_correct_accept_header(self) -> None:
+        """FastMCP requires both ``application/json`` AND ``text/event-stream``
+        in the Accept header. Sending only JSON returns HTTP 406.
+
+        Inspects the underlying ``_http_post`` seam because the Accept
+        header is set inside ``_post_mcp``.
+        """
+        call_response = _fake_response(
+            json_payload={"result": {"content": [{"type": "text", "text": "x"}]}},
+        )
+
+        with patch(
+            "crackerjack.services.mahavishnu_discovery._http_post",
+            side_effect=_handshake_responses(call_response),
+        ) as spy:
+            probe_publish_url("/Users/les/Projects/mdinject")
+
+        for call in spy.call_args_list:
+            accept = call.kwargs["headers"]["Accept"]
+            assert "application/json" in accept
+            assert "text/event-stream" in accept
+
+    def test_initialize_without_session_id_returns_none(self) -> None:
+        """If the server's initialize response lacks ``mcp-session-id``,
+        we can't proceed to tools/call — soft fallback to default.
+        """
+        # init response has no session id in headers
+        init_response = _fake_response(
+            json_payload={"result": {"protocolVersion": "2024-11-05"}},
+            headers={},  # no mcp-session-id
+        )
+        call_response = _fake_response(
+            json_payload={"result": {"content": [{"type": "text", "text": "x"}]}},
+        )
+
+        with patch(
+            "crackerjack.services.mahavishnu_discovery._post_mcp",
+            side_effect=[init_response, _fake_response(), call_response],
+        ):
+            assert probe_publish_url("/Users/les/Projects/mdinject") is None
+
+    def test_initialize_404_returns_none(self) -> None:
+        response = _fake_response(status_code=404, text="not found")
+
+        with patch(
+            "crackerjack.services.mahavishnu_discovery._post_mcp",
             return_value=response,
         ):
             assert probe_publish_url("/Users/les/Projects/mdinject") is None
 
-    def test_500_returns_none(self) -> None:
-        response = _fake_response(status_code=500, text="boom")
+    def test_tools_call_500_returns_none(self) -> None:
+        init_response = _fake_response(
+            json_payload={"result": {"protocolVersion": "2024-11-05"}},
+            headers={"mcp-session-id": "abc"},
+        )
+        notif_response = _fake_response(status_code=202, text="")
+        call_response = _fake_response(status_code=500, text="boom")
 
         with patch(
-            "crackerjack.services.mahavishnu_discovery._http_post",
-            return_value=response,
+            "crackerjack.services.mahavishnu_discovery._post_mcp",
+            side_effect=[init_response, notif_response, call_response],
         ):
             assert probe_publish_url("/Users/les/Projects/mdinject") is None
 
     def test_empty_url_string_returns_none(self) -> None:
         """Mahavishnu can legitimately return empty string for 'no URL'."""
-        response = _fake_response(
+        call_response = _fake_response(
             json_payload={
                 "result": {"content": [{"type": "text", "text": ""}], "isError": False},
             },
         )
 
         with patch(
-            "crackerjack.services.mahavishnu_discovery._http_post",
-            return_value=response,
+            "crackerjack.services.mahavishnu_discovery._post_mcp",
+            side_effect=_handshake_responses(call_response),
         ):
             assert probe_publish_url("/Users/les/Projects/mdinject") is None
 
     def test_malformed_json_returns_none(self) -> None:
         """Soft fallback on non-JSON body — must not raise."""
-        response = _fake_response(text="not json at all")
+        call_response = _fake_response(text="not json at all")
 
         with patch(
-            "crackerjack.services.mahavishnu_discovery._http_post",
-            return_value=response,
+            "crackerjack.services.mahavishnu_discovery._post_mcp",
+            side_effect=_handshake_responses(call_response),
         ):
             assert probe_publish_url("/Users/les/Projects/mdinject") is None
 
+    def test_sse_wrapped_response_is_parsed(self) -> None:
+        """FastMCP returns SSE-formatted bodies even when JSON is accepted.
+        The probe must extract the ``data:`` line and parse that as JSON.
+        """
+        url = "https://gitlab.com/api/v4/projects/77841268/packages/pypi/upload"
+        sse_body = (
+            "event: message\n"
+            f"data: {{\"jsonrpc\":\"2.0\",\"id\":2,\"result\":{{\"content\":[{{\"type\":\"text\",\"text\":\"{url}\"}}],\"isError\":false}}}}\n"
+            "\n"
+        )
+        call_response = _fake_response(text=sse_body)
+
+        with patch(
+            "crackerjack.services.mahavishnu_discovery._post_mcp",
+            side_effect=_handshake_responses(call_response),
+        ):
+            assert probe_publish_url("/Users/les/Projects/mdinject") == url
+
     def test_is_error_in_result_returns_none(self) -> None:
         """MCP error responses carry ``isError: true`` INSIDE ``result``."""
-        response = _fake_response(
+        call_response = _fake_response(
             json_payload={
                 "result": {
                     "content": [{"type": "text", "text": "Tool not found"}],
@@ -248,8 +434,8 @@ class TestProbePublishUrl:
         )
 
         with patch(
-            "crackerjack.services.mahavishnu_discovery._http_post",
-            return_value=response,
+            "crackerjack.services.mahavishnu_discovery._post_mcp",
+            side_effect=_handshake_responses(call_response),
         ):
             assert probe_publish_url("/Users/les/Projects/mdinject") is None
 
@@ -260,7 +446,7 @@ class TestProbePublishUrl:
             raise httpx.ConnectError("Connection refused")
 
         with patch(
-            "crackerjack.services.mahavishnu_discovery._http_post",
+            "crackerjack.services.mahavishnu_discovery._post_mcp",
             side_effect=_raise,
         ):
             assert probe_publish_url("/Users/les/Projects/mdinject") is None
@@ -270,7 +456,7 @@ class TestProbePublishUrl:
             raise httpx.TimeoutException("read timed out")
 
         with patch(
-            "crackerjack.services.mahavishnu_discovery._http_post",
+            "crackerjack.services.mahavishnu_discovery._post_mcp",
             side_effect=_raise,
         ):
             assert probe_publish_url("/Users/les/Projects/mdinject") is None
@@ -283,17 +469,19 @@ class TestEndpointUrlDiscovery:
         """An override must be passed through to the actual HTTP call."""
         monkeypatch.setenv(ENV_VAR_URL_OVERRIDE, "http://vish-internal:9999")
 
-        response = _fake_response(
+        call_response = _fake_response(
             json_payload={"result": {"content": [{"type": "text", "text": "https://x"}]}},
         )
 
         with patch(
-            "crackerjack.services.mahavishnu_discovery._http_post",
-            return_value=response,
+            "crackerjack.services.mahavishnu_discovery._post_mcp",
+            side_effect=_handshake_responses(call_response),
         ) as spy:
             probe_publish_url("/Users/les/Projects/mdinject")
 
-        assert spy.call_args.args[0] == "http://vish-internal:9999/mcp"
+        # All 3 calls use the override endpoint.
+        for call in spy.call_args_list:
+            assert call.args[0] == "http://vish-internal:9999/mcp"
 
     def test_override_with_trailing_path_is_preserved(
         self,
@@ -301,15 +489,16 @@ class TestEndpointUrlDiscovery:
     ) -> None:
         monkeypatch.setenv(ENV_VAR_URL_OVERRIDE, "http://vish-internal:9999/mcp")
 
-        response = _fake_response(
+        call_response = _fake_response(
             json_payload={"result": {"content": [{"type": "text", "text": "https://x"}]}},
         )
 
         with patch(
-            "crackerjack.services.mahavishnu_discovery._http_post",
-            return_value=response,
+            "crackerjack.services.mahavishnu_discovery._post_mcp",
+            side_effect=_handshake_responses(call_response),
         ) as spy:
             probe_publish_url("/Users/les/Projects/mdinject")
 
         # Already has /mcp — no double-append.
-        assert spy.call_args.args[0] == "http://vish-internal:9999/mcp"
+        for call in spy.call_args_list:
+            assert call.args[0] == "http://vish-internal:9999/mcp"
