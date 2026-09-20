@@ -144,6 +144,81 @@ class TestPublishSettings:
         assert settings.all == "remote"
         assert settings.no_git_tags is True
 
+    def test_loader_populates_nested_publishing_block(self, tmp_path: Path):
+        """Regression guard for the loader bug: keys nested under
+        ``publishing:`` must populate ``PublishSettings``.
+
+        Earlier (pre-2026-09-19) versions of ``settings/crackerjack.yaml``
+        placed publish-related keys at the top level
+        (``publish_version``, ``bump_version``, ``all_workflow``,
+        ``no_git_tags``, ``skip_version_check``). The Oneiric loader
+        filters against ``CrackerjackSettings.model_fields`` (top-level
+        only), so those flat keys were silently dropped — the loader
+        returned defaults no matter what the operator wrote. The fix
+        is to nest them under ``publishing:`` so Pydantic's recursive
+        validation populates ``CrackerjackSettings.publishing``.
+
+        This test pins the new contract: every supported PublishSettings
+        field, written as ``publishing.<key>``, must surface on
+        ``CrackerjackSettings.publishing.<key>`` after a load.
+        """
+        from crackerjack.config import load_settings
+
+        settings_dir = tmp_path / "settings"
+        settings_dir.mkdir()
+        (settings_dir / "crackerjack.yaml").write_text(
+            "publishing:\n"
+            "  publish: '0.1.0'\n"
+            "  bump: minor\n"
+            "  all: remote\n"
+            "  publish_url: 'https://gitlab.example/api/v4/projects/1/packages/pypi/upload'\n"
+            "  no_git_tags: true\n"
+            "  skip_version_check: true\n"
+        )
+
+        loaded = load_settings(CrackerjackSettings, settings_dir=settings_dir)
+
+        assert loaded.publishing.publish == "0.1.0"
+        assert loaded.publishing.bump == "minor"
+        assert loaded.publishing.all == "remote"
+        assert (
+            loaded.publishing.publish_url
+            == "https://gitlab.example/api/v4/projects/1/packages/pypi/upload"
+        )
+        assert loaded.publishing.no_git_tags is True
+        assert loaded.publishing.skip_version_check is True
+
+    def test_loader_drops_dead_flat_publishing_keys(self, tmp_path: Path):
+        """Regression guard: flat top-level ``publish_*`` / ``bump_*``
+        / ``all_workflow`` keys must be silently filtered out by the
+        loader (not raise, not populate). The dead flat form is no
+        longer documented in ``settings/crackerjack.yaml``, but users
+        may have stale entries in their ``settings/local.yaml``; the
+        loader must ignore them rather than crash.
+        """
+        from crackerjack.config import load_settings
+
+        settings_dir = tmp_path / "settings"
+        settings_dir.mkdir()
+        (settings_dir / "crackerjack.yaml").write_text(
+            # All flat — none of these are valid CrackerjackSettings fields.
+            "publish_version: '0.1.0'\n"
+            "bump_version: minor\n"
+            "all_workflow: remote\n"
+            "no_git_tags: true\n"
+            "skip_version_check: true\n"
+        )
+
+        loaded = load_settings(CrackerjackSettings, settings_dir=settings_dir)
+
+        # Defaults — flat keys must not populate anything.
+        assert loaded.publishing.publish is None
+        assert loaded.publishing.bump is None
+        assert loaded.publishing.all is None
+        assert loaded.publishing.publish_url is None
+        assert loaded.publishing.no_git_tags is False
+        assert loaded.publishing.skip_version_check is False
+
 
 class TestAISettings:
     """Tests for AISettings."""

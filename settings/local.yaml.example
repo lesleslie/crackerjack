@@ -22,8 +22,11 @@
 # Example: publish to a private package index (e.g. GitLab PyPI, devpi,
 # AWS CodeArtifact, etc.) instead of PyPI. When set, --publish-url is
 # passed to `uv publish` and token auth is used (OIDC trusted publishing
-# is disabled). The key lives under the `publishing:` block — the flat
-# top-level form is silently ignored by the Oneiric loader.
+# is disabled). All keys live under the `publishing:` block — the flat
+# top-level form (publish_version, bump_version, etc.) is silently
+# ignored by the Oneiric loader.
 #
 # publishing:
 #   publish_url: "https://gitlab.com/api/v4/projects/<id>/packages/pypi/upload"
+#   no_git_tags: false
+#   skip_version_check: false

@@ -34,18 +34,28 @@ max_workers: 8  # Maximum parallel workers (safety limit)
 min_workers: 2  # Minimum parallel workers (when auto-detecting)
 memory_per_worker_gb: 2.0  # Minimum memory per worker (prevents OOM)
 
-# Publishing
-publish_version: null
-bump_version: null
-all_workflow: null
-no_git_tags: false
-skip_version_check: false
-
-# publish_url routes to PublishSettings via the nested publishing: key.
-# The flat form (publish_url: ...) is silently ignored by the loader — see
-# docs/CLI_REFERENCE.md "Private package indexes" for resolution order.
+# Publishing — these keys populate PublishSettings
+# (crackerjack/config/settings.py:55) when nested under `publishing:`.
+# The flat form (`publish_version`, `bump_version`, etc.) is silently
+# ignored by the Oneiric loader, which only respects fields declared on
+# CrackerjackSettings.model_fields. See docs/CLI_REFERENCE.md
+# "Private package indexes" for the full resolution order
+# (CLI flag > env var > publishing.publish_url in settings > PyPI default).
 publishing:
+  # Target package version to publish (e.g. "0.1.0"). null = use --publish CLI flag.
+  publish: null
+  # Bump level when --publish is auto (major|minor|patch). null = use --bump CLI flag.
+  bump: null
+  # Workflow selector for the publish stage. null = use CLI default.
+  all: null
+  # PEP 517 repository URL for uploads (e.g. private GitLab PyPI registry).
+  # null = PyPI default. When set, OIDC trusted publishing is disabled and
+  # token auth (UV_PUBLISH_TOKEN) is used instead.
   publish_url: null
+  # Skip git tag creation during the publish stage.
+  no_git_tags: false
+  # Skip the pre-publish version-bump check.
+  skip_version_check: false
 
 # Git
 commit: false
