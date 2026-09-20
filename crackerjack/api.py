@@ -323,6 +323,7 @@ class CrackerjackAPI:
         clean: bool = False,
         test: bool = False,
         publish: str | None = None,
+        publish_url: str | None = None,
         bump: str | None = None,
         commit: bool = False,
         create_pr: bool = False,
@@ -347,8 +348,12 @@ class CrackerjackAPI:
             options.cleaning = CleaningConfig(clean=True)
         if test:
             options.testing = TestConfig(test=True)
-        if publish or bump:
-            options.publishing = PublishConfig(publish=publish, bump=bump)
+        if publish or bump or publish_url:
+            options.publishing = PublishConfig(
+                publish=publish,
+                bump=bump,
+                publish_url=publish_url,
+            )
         if commit or create_pr:
             options.git = GitConfig(commit=commit, create_pr=create_pr)
         if verbose:

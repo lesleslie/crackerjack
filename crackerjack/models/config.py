@@ -817,6 +817,8 @@ class WorkflowOptions:
             publishing_kwargs["publish"] = attrs["publish"]
         if "bump" in attrs:
             publishing_kwargs["bump"] = attrs["bump"]
+        if "publish_url" in attrs:
+            publishing_kwargs["publish_url"] = attrs["publish_url"]
         publishing_config = PublishConfig(**publishing_kwargs)
 
         execution_kwargs = default_instance.execution.__dict__.copy()

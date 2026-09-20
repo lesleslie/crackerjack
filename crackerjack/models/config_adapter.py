@@ -89,6 +89,7 @@ class OptionsAdapter:
             ),
             publishing=PublishConfig(
                 publish=getattr(options, "publish", None),
+                publish_url=getattr(options, "publish_url", None),
                 bump=getattr(options, "bump", None),
                 all=getattr(options, "all", None),
                 cleanup_pypi=getattr(options, "cleanup_pypi", False),
