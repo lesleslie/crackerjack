@@ -831,6 +831,44 @@ class TestParseTyRatchetIssues:
                     f"parser leaked structured line {sentry!r}: {issue}"
                 )
 
+    def test_falls_back_to_generic_lines_when_no_ratchet_summary(
+        self, executor: HookExecutor
+    ) -> None:
+        """No ``ty ratchet [split]`` summary present (a fresh ``ty check``
+        run on a repo without a configured ratchet baseline): the parser
+        MUST fall back to ``_extract_filtered_error_lines`` so the
+        file:line + diagnostic detail reaches the Fast Hook Results
+        panel. Without this fallback the panel would show ``issues=0``
+        and the user would have to re-run ``ty check`` manually.
+
+        Reproduces the mdinject 2026-09-19 crackerjack noise (license
+        service orphan ty: ignore + asyncio.iscoroutinefunction
+        deprecations across orchestrator.py).
+        """
+        output = (
+            "mdinject/services/license_service.py:387\n"
+            "  warning[unused-ignore-comment]: Unused `ty: ignore` directive\n"
+            "mdinject/services/orchestrator.py:209\n"
+            "  warning[deprecated]: `asyncio.iscoroutinefunction` is deprecated\n"
+            "mdinject/services/orchestrator.py:251\n"
+            "  warning[deprecated]: `asyncio.iscoroutinefunction` is deprecated\n"
+        )
+        issues = executor._parse_ty_ratchet_issues(output)
+        # 3 file:line lines + 3 warning lines = 6 issue entries from
+        # ``extract_issue_lines``. The panel shows both because the
+        # user needs the file location AND the diagnostic message.
+        assert len(issues) == 6, (
+            f"fallback must surface all 6 lines (3 file:line + 3 "
+            f"warning); got {len(issues)}: {issues}"
+        )
+        # Sanity-check: the diagnostic detail survives intact.
+        assert any(
+            "warning[unused-ignore-comment]" in issue for issue in issues
+        ), f"diagnostic detail missing from fallback: {issues}"
+        assert any(
+            "asyncio.iscoroutinefunction" in issue for issue in issues
+        ), f"deprecated-call detail missing from fallback: {issues}"
+
 
 class TestTyActualCountExtraction:
     """``HookExecutor._ty_actual_count`` recovers the PROD-gate diagnostic
@@ -948,6 +986,56 @@ class TestTyActualCountExtraction:
         assert executor._ty_actual_count(output) == 12, (
             "PROD-only: 12, NOT the combined 12+45=57. Test count is "
             "advisory and shown via the split summary banner."
+        )
+
+    def test_counts_diagnostic_lines_when_no_ratchet_summary(
+        self, executor: HookExecutor
+    ) -> None:
+        """Fresh ``ty check`` run on a repo WITHOUT a configured ratchet
+        baseline: no ``ty ratchet [split]`` summary lines present. The
+        Fast Hook Results panel must still report the real diagnostic
+        count, not 0. Counts ``error[..]`` AND ``warning[..]`` lines —
+        both represent a real ty finding the user needs to see.
+
+        Reproduces the mdinject 2026-09-19 crackerjack noise (3 warnings:
+        orphan ty: ignore + 2x asyncio.iscoroutinefunction deprecations).
+        """
+        output = (
+            "mdinject/services/license_service.py:387\n"
+            "  warning[unused-ignore-comment]: Unused `ty: ignore` directive\n"
+            "mdinject/services/orchestrator.py:209\n"
+            "  warning[deprecated]: `asyncio.iscoroutinefunction` is deprecated\n"
+            "mdinject/services/orchestrator.py:251\n"
+            "  warning[deprecated]: `asyncio.iscoroutinefunction` is deprecated\n"
+        )
+        assert executor._ty_actual_count(output) == 3, (
+            f"must count all 3 warning lines (one per actual diagnostic); "
+            f"got {executor._ty_actual_count(output)}"
+        )
+
+    def test_prefers_ratchet_summary_over_diagnostic_lines(
+        self, executor: HookExecutor
+    ) -> None:
+        """When BOTH the ratchet summary AND bare diagnostic lines are
+        present (mixed output, e.g. wrapper re-running ty after a
+        ratchet-mode invocation), the ratchet summary wins. Diagnostic
+        lines would double-count otherwise — they belong to the
+        ratchet count, not the panel.
+        """
+        output = (
+            "ty ratchet [split] prod: FAIL (7/50)\n"
+            "ty ratchet [split] test: FAIL (3/30)\n"
+            # 5 diagnostic lines that would over-count if double-tallied.
+            "mdinject/a.py:1\n"
+            "  error[E001] x\n"
+            "mdinject/b.py:2\n"
+            "  error[E002] y\n"
+            "mdinject/c.py:3\n"
+        )
+        assert executor._ty_actual_count(output) == 7, (
+            f"PROD-only from ratchet summary wins (7); diagnostic lines "
+            f"are part of that count and must NOT be re-added. Got "
+            f"{executor._ty_actual_count(output)}"
         )
 
 
