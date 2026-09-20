@@ -12,6 +12,24 @@ logger = logging.getLogger(__name__)
 
 T = TypeVar("T", bound=BaseModel)
 
+# Sub-table keys under ``[tool.crackerjack.*]`` that crackerjack ACTUALLY
+# reads. A user writing any other sub-table block is almost certainly
+# configuring a hook via the wrong mechanism (the 2026-09-19 mdinject
+# followup suggested ``[tool.crackerjack.betterleaks]`` and
+# ``[tool.crackerjack.lychee]`` — both fictional; betterleaks reads
+# ``.betterleaks.toml`` and lychee reads ``.lycheeignore``). Keep this
+# list short and explicit so the warning message is actionable.
+_KNOWN_PYPROJECT_SUBTABLES: frozenset[str] = frozenset(
+    {
+        # Read by ``crackerjack/adapters/web/jinja_formatter.py:144`` for
+        # per-project Jinja delimiter config (6 keys).
+        "jinja",
+        # Read by ``crackerjack/adapters/web/__init__.py:35`` as an
+        # opt-in flag for the Web adapter.
+        "web",
+    }
+)
+
 
 def _load_single_config_file(config_file: Path) -> dict[str, t.Any]:
     if not config_file.exists():
@@ -57,6 +75,39 @@ def _extract_adapter_timeouts(crackerjack_config: dict[str, t.Any]) -> None:
         crackerjack_config["adapter_timeouts"] = adapter_timeouts_data
 
 
+def _validate_pyproject_subtables(crackerjack_config: dict[str, t.Any]) -> None:
+    """Warn on ``[tool.crackerjack.X]`` sub-tables crackerjack does not read.
+
+    Most hooks either auto-discover a config file (``.betterleaks.toml``,
+    ``.gitleaks.toml``, ``.lycheeignore``) or use built-in defaults. A
+    user writing ``[tool.crackerjack.betterleaks]`` (or ``lychee``,
+    ``creosote``, ``refurb``, ``check-added-large-files``, ...) in
+    ``pyproject.toml`` will silently get NO effect, then wonder why
+    the hook still fires. Surface that mistake at WARNING level so it
+    appears in normal ``crackerjack run`` output (not buried in DEBUG).
+
+    Top-level keys (strings, ints, lists, etc.) that aren't in the
+    ``CrackerjackSettings`` model are caught by ``_log_filtered_fields``
+    at DEBUG level; this function only handles the nested sub-table
+    case where that filter doesn't apply.
+    """
+    for key, value in crackerjack_config.items():
+        if not isinstance(value, dict):
+            continue  # top-level scalar/list; handled by _log_filtered_fields
+        if key in _KNOWN_PYPROJECT_SUBTABLES:
+            continue
+        logger.warning(
+            "[tool.crackerjack.%s] block in pyproject.toml is not read "
+            "by crackerjack. If you meant to configure the %r hook, "
+            "check its auto-discovery mechanism (e.g. .betterleaks.toml, "
+            ".lycheeignore, .gitleaks.toml) rather than pyproject.toml. "
+            "Known [tool.crackerjack.X] sub-tables: %s.",
+            key,
+            key,
+            sorted(_KNOWN_PYPROJECT_SUBTABLES),
+        )
+
+
 def _load_pyproject_toml(settings_dir: Path) -> dict[str, t.Any]:
     pyproject_path = settings_dir.parent / "pyproject.toml"
 
@@ -75,6 +126,7 @@ def _load_pyproject_toml(settings_dir: Path) -> dict[str, t.Any]:
         if crackerjack_config:
             logger.debug("Loaded configuration from pyproject.toml")
             _extract_adapter_timeouts(crackerjack_config)
+            _validate_pyproject_subtables(crackerjack_config)
 
         return crackerjack_config
 
@@ -90,6 +142,7 @@ def _load_pyproject_toml(settings_dir: Path) -> dict[str, t.Any]:
             if crackerjack_config:
                 logger.debug("Loaded configuration from pyproject.toml (via tomli)")
                 _extract_adapter_timeouts(crackerjack_config)
+                _validate_pyproject_subtables(crackerjack_config)
 
             return crackerjack_config
 
