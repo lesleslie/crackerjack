@@ -81,6 +81,8 @@ Templates are automatically selected during `/crackerjack:init` based on project
 /crackerjack:init
 ```
 
+**Layout requirement:** All three templates assume **flat layout** (Bodai convention). The `<PACKAGE_NAME>` placeholder resolves to a top-level directory matching the package name — `<PACKAGE_NAME>/` at the repo root, not `src/<PACKAGE_NAME>/`. `src/<PACKAGE_NAME>/` is **not** a supported layout. See `../commands/crackerjack-init.md` for the migration recipe if you accidentally landed in src-layout. Every active repo in `BODAI_REPO_REGISTRY.md` is flat; crackerjack's path-resolving tooling assumes this convention.
+
 The AI will:
 
 1. Analyze your project structure

@@ -39,6 +39,35 @@ This slash command initializes a new Python project with crackerjack's best prac
    - `.gitignore` - Smart merges common Python ignore patterns
 1. **Preserves Project Identity**: Never overwrites existing project metadata, dependencies, or custom configurations
 
+## Layout Requirement
+
+**Bodai convention: flat layout.** The Python package directory must sit at the repo root with the package's underscored name (e.g., `cmux_mcp/`, `mahavishnu/`, `crackerjack/`), NOT under `src/` (e.g., `src/cmux_mcp/`).
+
+The crackerjack templates (`pyproject-minimal.toml`, `pyproject-library.toml`, `pyproject-full.toml`) use `<PACKAGE_NAME>` as a placeholder for the source directory — that placeholder resolves to a top-level directory matching the package name, never inside a `src/` parent. `src/<PACKAGE_NAME>/` is not a supported layout.
+
+If you accidentally ran `hatch new --src` (the upstream hatch default) or otherwise landed in src-layout, fix it BEFORE invoking `/crackerjack:init`:
+
+1. Move the package directory to the repo root:
+
+   ```bash
+   git mv src/<package_name> <package_name>
+   rmdir src
+   ```
+
+2. Update `pyproject.toml`:
+
+   ```diff
+    [tool.hatch.build.targets.wheel]
+   -packages = ["src/<package_name>"]
+   +packages = ["<package_name>"]
+   ```
+
+3. Update any path-aware config (`[tool.coverage.run].omit`, `[tool.hatch.build.targets.sdist].exclude`, `.gitignore`, `.crackerjack.yaml`, CI workflows that hardcode `src/`, scripts that walk the source tree, tests with `sys.path.insert` tricks).
+
+4. `uv sync` to refresh the lockfile.
+
+The 35 active Bodai-managed repos in `BODAI_REPO_REGISTRY.md` are all flat-layout. Crackerjack's path-resolving tooling (`_build_targets()`, `tc-refs`, hatch integration) assumes this convention. Migrations are reversible but disruptive (every path-aware config and script must move in lockstep); do it once, do it right, when you first scaffold the project.
+
 ## New: Skill System Integration
 
 When you run `/crackerjack:init`, your project will be configured to access Crackerjack's AI agent skill system:
