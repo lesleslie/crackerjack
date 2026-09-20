@@ -178,6 +178,16 @@ def load_settings[T: BaseModel](
     pyproject_data = _load_pyproject_toml(settings_dir)
     merged_data.update(pyproject_data)
 
+    # Ecosystem-wide publish_url synthesis (BODAI_ECOSYSTEM_CONFIG).
+    # Runs after YAML merge so settings/local.yaml can override; runs
+    # before the field filter so the synthesized key is treated like
+    # any other merged value. See crackerjack/config/ecosystem_synthesis.py
+    # for the priority order this slot into (between CLI/env var layers
+    # and the settings YAML layer).
+    from .ecosystem_synthesis import apply_ecosystem_publish_synthesis
+
+    apply_ecosystem_publish_synthesis(merged_data, settings_dir.parent)
+
     relevant_data = {
         k: v for k, v in merged_data.items() if k in settings_class.model_fields
     }

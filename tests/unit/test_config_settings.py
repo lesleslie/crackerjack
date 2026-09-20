@@ -219,6 +219,170 @@ class TestPublishSettings:
         assert loaded.publishing.no_git_tags is False
         assert loaded.publishing.skip_version_check is False
 
+    def test_ecosystem_synthesis_populates_publish_url(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ):
+        """BODAI_ECOSYSTEM_CONFIG path-match populates publish_url.
+
+        When the env var points at a valid ecosystem.yaml AND the current
+        cwd matches a registered repo's path AND that repo has a
+        ``publish.url`` set, ``load_settings`` must surface that URL on
+        ``CrackerjackSettings.publishing.publish_url``.
+        """
+        from crackerjack.config import load_settings
+
+        # Pretend tmp_path IS the project root for this repo.
+        project_root = tmp_path
+        settings_dir = project_root / "settings"
+        settings_dir.mkdir()
+
+        # The ecosystem registry lives elsewhere; the env var points at it.
+        ecosystem_path = tmp_path / "ecosystem.yaml"
+        ecosystem_path.write_text(
+            "repos:\n"
+            f"  - name: test-repo\n"
+            f"    path: {project_root}\n"
+            "    publish:\n"
+            "      url: 'https://gitlab.example/api/v4/projects/42/packages/pypi/upload'\n"
+            "      token_env: CI_JOB_TOKEN\n"
+        )
+        monkeypatch.setenv("BODAI_ECOSYSTEM_CONFIG", str(ecosystem_path))
+
+        loaded = load_settings(CrackerjackSettings, settings_dir=settings_dir)
+
+        assert loaded.publishing.publish_url == (
+            "https://gitlab.example/api/v4/projects/42/packages/pypi/upload"
+        )
+
+    def test_ecosystem_synthesis_no_match_for_unregistered_cwd(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ):
+        """Path mismatch between cwd and ecosystem entries yields None.
+
+        Operators who mis-configure ecosystem.yaml (typo in path) must
+        not silently route to a different repo. The synthesis must
+        yield None when no registered repo matches the cwd.
+        """
+        from crackerjack.config import load_settings
+
+        project_root = tmp_path
+        settings_dir = project_root / "settings"
+        settings_dir.mkdir()
+
+        ecosystem_path = tmp_path / "ecosystem.yaml"
+        ecosystem_path.write_text(
+            "repos:\n"
+            f"  - name: elsewhere\n"
+            f"    path: /Users/les/Projects/some-other-repo\n"
+            "    publish:\n"
+            "      url: 'https://gitlab.example/api/v4/projects/99/packages/pypi/upload'\n"
+        )
+        monkeypatch.setenv("BODAI_ECOSYSTEM_CONFIG", str(ecosystem_path))
+
+        loaded = load_settings(CrackerjackSettings, settings_dir=settings_dir)
+
+        assert loaded.publishing.publish_url is None
+
+    def test_ecosystem_synthesis_respects_yaml_override(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ):
+        """Settings YAML value wins over ecosystem lookup.
+
+        Priority order: CLI flag > env var > ecosystem lookup > settings
+        YAML > default. The synthesis must skip when settings/local.yaml
+        has already populated ``publishing.publish_url`` — operators
+        expect explicit per-repo config to beat ecosystem-wide defaults.
+        """
+        from crackerjack.config import load_settings
+
+        project_root = tmp_path
+        settings_dir = project_root / "settings"
+        settings_dir.mkdir()
+        (settings_dir / "crackerjack.yaml").write_text(
+            "publishing:\n"
+            "  publish_url: 'https://yaml-override.example/pypi'\n"
+        )
+
+        ecosystem_path = tmp_path / "ecosystem.yaml"
+        ecosystem_path.write_text(
+            "repos:\n"
+            f"  - name: test-repo\n"
+            f"    path: {project_root}\n"
+            "    publish:\n"
+            "      url: 'https://ecosystem.example/pypi'\n"
+        )
+        monkeypatch.setenv("BODAI_ECOSYSTEM_CONFIG", str(ecosystem_path))
+
+        loaded = load_settings(CrackerjackSettings, settings_dir=settings_dir)
+
+        # Settings YAML beats ecosystem.
+        assert loaded.publishing.publish_url == "https://yaml-override.example/pypi"
+
+    def test_ecosystem_synthesis_skips_when_env_var_unset(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ):
+        """Without BODAI_ECOSYSTEM_CONFIG, no synthesis runs.
+
+        Operators who don't run Mahavishnu (or have it but forgot the env
+        var) must see crackerjack behave exactly as before — no lookup,
+        no surprise values, PyPI default.
+        """
+        from crackerjack.config import load_settings
+
+        monkeypatch.delenv("BODAI_ECOSYSTEM_CONFIG", raising=False)
+
+        settings_dir = tmp_path / "settings"
+        settings_dir.mkdir()
+        # Note: no ecosystem.yaml file exists at all.
+
+        loaded = load_settings(CrackerjackSettings, settings_dir=settings_dir)
+
+        assert loaded.publishing.publish_url is None
+
+    def test_ecosystem_synthesis_skips_repo_with_null_url(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ):
+        """A registered repo with ``publish.url: null`` must NOT be
+        picked up — the synthesis is for ACTIVE private-index configs.
+        """
+        from crackerjack.config import load_settings
+
+        project_root = tmp_path
+        settings_dir = project_root / "settings"
+        settings_dir.mkdir()
+
+        ecosystem_path = tmp_path / "ecosystem.yaml"
+        ecosystem_path.write_text(
+            "repos:\n"
+            f"  - name: test-repo\n"
+            f"    path: {project_root}\n"
+            "    publish:\n"
+            "      url: null\n"
+            "      token_env: null\n"
+        )
+        monkeypatch.setenv("BODAI_ECOSYSTEM_CONFIG", str(ecosystem_path))
+
+        loaded = load_settings(CrackerjackSettings, settings_dir=settings_dir)
+
+        assert loaded.publishing.publish_url is None
+
+    def test_ecosystem_synthesis_no_op_when_ecosystem_file_missing(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ):
+        """A pointing env var with a non-existent file must not crash."""
+        from crackerjack.config import load_settings
+
+        settings_dir = tmp_path / "settings"
+        settings_dir.mkdir()
+
+        monkeypatch.setenv(
+            "BODAI_ECOSYSTEM_CONFIG", str(tmp_path / "nonexistent.yaml")
+        )
+
+        loaded = load_settings(CrackerjackSettings, settings_dir=settings_dir)
+
+        assert loaded.publishing.publish_url is None
+
 
 class TestAISettings:
     """Tests for AISettings."""

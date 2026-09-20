@@ -610,14 +610,50 @@ Resolution order (highest to lowest priority):
 
 1. `--publish-url` CLI flag
 2. `CRACKERJACK_PUBLISH_URL` environment variable
-3. `publish_url` key in `settings/crackerjack.yaml` (under `publishing:`)
+3. Ecosystem-wide registry lookup via `BODAI_ECOSYSTEM_CONFIG` (see
+   below) — when Mahavishnu dispatches `crackerjack -p minor` to a
+   repo, the worker's URL comes from the canonical
+   `settings/ecosystem.yaml` entry for that repo, keyed off the cwd.
+4. `publish_url` key in `settings/crackerjack.yaml` (under `publishing:`)
    or `settings/local.yaml`
-4. Unset — falls back to PyPI
+5. Unset — falls back to PyPI
 
 When `publish_url` is set, `--trusted-publishing` is disabled (the two
 flags are mutually exclusive in `uv publish`). Token auth via
 `UV_PUBLISH_TOKEN` is used instead — for GitLab CI, this is the
 auto-injected `$CI_JOB_TOKEN`.
+
+#### `BODAI_ECOSYSTEM_CONFIG` (cross-repo synthesis)
+
+When Mahavishnu dispatches `crackerjack -p minor` across many Bodai repos,
+each repo would otherwise have to repeat its private-index URL in its own
+`settings/local.yaml`. The `BODAI_ECOSYSTEM_CONFIG` env var points at the
+canonical Mahavishnu registry (`settings/ecosystem.yaml`), letting the
+per-repo `publish:` block on each entry flow to that repo's crackerjack
+invocation without per-repo config duplication.
+
+```bash
+export BODAI_ECOSYSTEM_CONFIG=/Users/les/Projects/mahavishnu/settings/ecosystem.yaml
+cd /Users/les/Projects/mdinject && crackerjack -p minor
+# → publishes to mdinject's `publish.url` from ecosystem.yaml
+```
+
+The relevant ecosystem.yaml shape:
+
+```yaml
+repos:
+  - name: mdinject
+    path: /Users/les/Projects/mdinject
+    publish:
+      url: https://gitlab.com/api/v4/projects/<id>/packages/pypi/upload
+      token_env: CI_JOB_TOKEN   # optional; documentation only
+```
+
+Path matching is exact (`Path.resolve()` of the registered repo's `path`
+against `Path.cwd()`) so operator typos in ecosystem.yaml paths won't
+silently route to a different repo. Operators without Mahavishnu can
+ignore this entirely — the env var is opt-in and the synthesis layer is
+no-op when unset.
 
 ## Monitoring Commands
 
