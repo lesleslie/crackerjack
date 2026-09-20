@@ -40,7 +40,12 @@ bump_version: null
 all_workflow: null
 no_git_tags: false
 skip_version_check: false
-publish_url: null
+
+# publish_url routes to PublishSettings via the nested publishing: key.
+# The flat form (publish_url: ...) is silently ignored by the loader — see
+# docs/CLI_REFERENCE.md "Private package indexes" for resolution order.
+publishing:
+  publish_url: null
 
 # Git
 commit: false
