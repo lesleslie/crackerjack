@@ -71,6 +71,7 @@ class TestWorkflowOptions:
 
         assert config.publish is None
         assert config.bump is None
+        assert config.publish_url is None
 
     def test_git_config_defaults(self) -> None:
         config = GitConfig()

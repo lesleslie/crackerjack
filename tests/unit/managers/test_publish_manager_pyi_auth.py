@@ -253,3 +253,100 @@ class TestRealKeyringHelperUnmasked:
         assert sentinel_body in env["UV_PUBLISH_TOKEN"]
         assert env["UV_PUBLISH_TOKEN"] == sentinel_token
         assert mock_run.call_args.args[0] == ["uv", "publish"]
+
+
+class TestExecutePublishWithPublishUrl:
+    """Covers the third branch in PublishManagerImpl._execute_publish
+    when publish_url is set: uv publish --publish-url <URL> with token auth
+    (skipping OIDC trusted publishing)."""
+
+    def test_injects_publish_url_and_uses_token_auth(
+        self, tmp_path: Path,
+    ) -> None:
+        url = "https://gitlab.example/api/v4/projects/1/packages/pypi/upload"
+        (tmp_path / "pyproject.toml").write_text(
+            '[project]\nname = "test-pkg"\nversion = "0.1.0"\n'
+        )
+        manager = PublishManagerImpl(pkg_path=tmp_path, publish_url=url)
+        token = "pypi-AgEIcHlwaS5vcmcCAAAAAAAAAAAA"
+        with patch.object(manager, "build_package", return_value=True), \
+             patch.object(manager, "_run_command") as mock_run, \
+             patch(
+                 "crackerjack.services.pypi_auth._providers._keyring_get_raw",
+                 return_value=token,
+             ):
+            mock_run.return_value = subprocess.CompletedProcess(
+                args=[], returncode=0, stdout="Successfully uploaded", stderr="",
+            )
+            result = manager._execute_publish()
+        assert result is True
+        cmd = mock_run.call_args.args[0]
+        assert cmd == ["uv", "publish", "--publish-url", url]
+        assert mock_run.call_args.kwargs["additional_env"] == {
+            "UV_PUBLISH_TOKEN": token,
+        }
+
+    def test_publish_url_suppresses_trusted_publishing(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """When publish_url is set and only OIDC trusted publishing is
+        available (no keyring token), _execute_publish must refuse with a
+        clear error rather than crashing on the trusted-publishing sentinel.
+
+        uv rejects --publish-url + --trusted-publishing; the manager must
+        not silently fall through into the OIDC path. It returns False and
+        prints a message explaining the user must configure a token.
+        """
+        (tmp_path / "pyproject.toml").write_text(
+            '[project]\nname = "test-pkg"\nversion = "0.1.0"\n'
+        )
+        url = "https://gitlab.example/api/v4/projects/1/packages/pypi/upload"
+        manager = PublishManagerImpl(pkg_path=tmp_path, publish_url=url)
+        monkeypatch.setenv("GITHUB_ACTIONS", "true")
+        monkeypatch.setenv("ACTIONS_ID_TOKEN_REQUEST_TOKEN", "any-oidc-token")
+        # No UV_PUBLISH_TOKEN, no keyring entry -- only OIDC is available.
+        monkeypatch.delenv("UV_PUBLISH_TOKEN", raising=False)
+        with patch.object(manager, "build_package", return_value=True), \
+             patch.object(manager, "_run_command") as mock_run, \
+             patch(
+                 "crackerjack.services.pypi_auth._providers._keyring_get_raw",
+                 return_value=None,
+             ):
+            result = manager._execute_publish()
+        assert result is False
+        # Critical: _run_command MUST NOT be called when only OIDC is
+        # available -- that would feed uv --publish-url + --trusted-publishing
+        # which uv rejects.
+        mock_run.assert_not_called()
+
+    def test_dry_run_includes_url(self, tmp_path: Path) -> None:
+        """When publish_url is set, dry-run prints the URL."""
+        (tmp_path / "pyproject.toml").write_text(
+            '[project]\nname = "test-pkg"\nversion = "0.1.0"\n'
+        )
+        url = "https://gitlab.example/api/v4/projects/1/packages/pypi/upload"
+        manager = PublishManagerImpl(pkg_path=tmp_path, publish_url=url)
+        # Capture console output via the manager's console.
+        from io import StringIO
+        from rich.console import Console as RichConsole
+
+        buffer = StringIO()
+        manager.console = RichConsole(file=buffer, force_terminal=False)
+        result = manager._handle_dry_run_publish()
+        assert result is True
+        output = buffer.getvalue()
+        assert url in output
+        assert "to PyPI" not in output  # The default PyPI message must NOT appear.
+
+    def test_dry_run_default_uses_pypi_message(self, manager: PublishManagerImpl) -> None:
+        """When publish_url is NOT set, dry-run prints the original PyPI message."""
+        from io import StringIO
+        from rich.console import Console as RichConsole
+
+        buffer = StringIO()
+        manager.console = RichConsole(file=buffer, force_terminal=False)
+        result = manager._handle_dry_run_publish()
+        assert result is True
+        output = buffer.getvalue()
+        assert "to PyPI" in output
+        assert "gitlab" not in output.lower()
