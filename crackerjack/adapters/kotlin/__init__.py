@@ -23,7 +23,9 @@ class KotlinAdapter(LanguageAdapterBase):
     name = "kotlin"
 
     def detect(self, project_root: Path) -> bool:
-        return (project_root / "build.gradle.kts").is_file() or (project_root / "build.gradle").is_file()
+        return (project_root / "build.gradle.kts").is_file() or (
+            project_root / "build.gradle"
+        ).is_file()
 
     def capabilities(self, project_root: Path) -> Capabilities:
         # Per Phase 2 final-review CF-2 fix: do not construct KotlinLifecycle here.

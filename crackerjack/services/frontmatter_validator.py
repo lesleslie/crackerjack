@@ -130,7 +130,7 @@ class FrontmatterValidator:
         self,
         strict: bool = False,
         allow_nonstandard: bool = True,
-        validate_links: bool = False,
+        validate_links: bool = True,
         store: str | None = None,
         skip_link_note: bool = True,
     ) -> FrontmatterValidationResult:

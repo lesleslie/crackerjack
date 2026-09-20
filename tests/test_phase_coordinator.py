@@ -650,4 +650,3 @@ class TestExecuteHooksOnceFailFirst:
         mock_process.assert_not_called(), (
             "second hook should not be reported in bail mode"
         )
-

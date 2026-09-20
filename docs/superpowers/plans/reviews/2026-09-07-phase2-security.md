@@ -18,11 +18,11 @@
 **Recommendation.**
 
 1. Rename `_require_auth` to `_require_auth_config()` and add a docstring that explicitly states: "config check only; does not validate JWTs."
-2. Implement actual JWT validation: `jwt.decode(token, secret, algorithms=[...], audience=..., options={"require": ["exp"]})`. Reject tokens that fail to decode or are expired.
-3. Bind the validated `sub` / `aud` claim to the resulting commit/tag message.
-4. Add a test that proves a forged/invalid JWT raises `PermissionError`.
+1. Implement actual JWT validation: `jwt.decode(token, secret, algorithms=[...], audience=..., options={"require": ["exp"]})`. Reject tokens that fail to decode or are expired.
+1. Bind the validated `sub` / `aud` claim to the resulting commit/tag message.
+1. Add a test that proves a forged/invalid JWT raises `PermissionError`.
 
----
+______________________________________________________________________
 
 ### F-2 [HIGH] `project_root` parameter is unvalidated — path traversal surface
 
@@ -33,10 +33,10 @@
 **Recommendation.**
 
 1. Immediately call `root = Path(project_root).resolve(strict=True).absolute()` and reject any path outside a configured allowlist (`MAHAVISHNU_PROJECT_ROOTS` env var or `[tool.crackerjack.allowed_roots]`).
-2. Reject paths containing NUL bytes or control characters.
-3. Add a regression test asserting that `project_root="../../etc"` is rejected before any subprocess is invoked.
+1. Reject paths containing NUL bytes or control characters.
+1. Add a regression test asserting that `project_root="../../etc"` is rejected before any subprocess is invoked.
 
----
+______________________________________________________________________
 
 ### F-3 [MEDIUM] `_gh_release` does not check `result.returncode` — silently returns fake URL on failure
 
@@ -47,10 +47,10 @@
 **Recommendation.**
 
 1. Check `result.returncode != 0` and raise `RuntimeError` with `result.stderr` attached.
-2. Remove the synthetic fallback URL. Contract: "URL or exception," not "URL or fake URL."
-3. Test that a non-zero `gh` exit raises.
+1. Remove the synthetic fallback URL. Contract: "URL or exception," not "URL or fake URL."
+1. Test that a non-zero `gh` exit raises.
 
----
+______________________________________________________________________
 
 ### F-4 [MEDIUM] Method monkey-patching bypasses Lifecycle contract
 
@@ -72,7 +72,7 @@ lifecycle = SwiftLifecycle(
 
 Update `SwiftLifecycle.__init__` to accept these as `Callable` parameters. Eliminates `# type: ignore[method-assign]`.
 
----
+______________________________________________________________________
 
 ### F-5 [MEDIUM] `gh release create --generate-notes` publishes commit messages verbatim
 
@@ -83,46 +83,46 @@ Update `SwiftLifecycle.__init__` to accept these as `Callable` parameters. Elimi
 **Recommendation.**
 
 1. Add `--notes-file` with an explicit body that summarizes commits without embedding raw messages.
-2. Pre-release scan for token-shaped strings.
-3. Document release policy.
+1. Pre-release scan for token-shaped strings.
+1. Document release policy.
 
----
+______________________________________________________________________
 
 ### F-6 [LOW] `git reset --hard` in rollback can destroy uncommitted local work
 
 **Recommendation.** Pre-flight: refuse to start when `git status --porcelain` is non-empty, unless `dry_run=False` and `force=True`. Or use `git reset --mixed` followed by `git checkout -- .` so untracked files survive.
 
----
+______________________________________________________________________
 
 ### F-7 [LOW] Tag-name format is not validated
 
 **Recommendation.**
 
 1. Insert `--` before any user-influenced positional: `["git", "tag", "-a", "--", name, "-m", message]`.
-2. Add a `re.fullmatch(r"v\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?", tag_name)` pre-check in `GitTagVersionSource.read()`.
+1. Add a `re.fullmatch(r"v\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?", tag_name)` pre-check in `GitTagVersionSource.read()`.
 
----
+______________________________________________________________________
 
 ### F-8 [LOW] `_bump` does not validate semver format
 
 **Recommendation.** Add semver validation inside `GitTagVersionSource.read()` after `lstrip("v")`. Raise `VersionNotFoundError` with the original tag.
 
----
+______________________________________________________________________
 
 ### F-9 [LOW] Auth check fires too late in `_run_swift_lifecycle`
 
 **Recommendation.**
 
 1. Add a second `_require_auth()` call inside `_run_swift_lifecycle` at the top.
-2. Document the auth contract in the `Lifecycle` Protocol docstring.
+1. Document the auth contract in the `Lifecycle` Protocol docstring.
 
----
+______________________________________________________________________
 
 ### F-10 [LOW] `_run_swift_lifecycle` ignores subprocess-internal exceptions — leaks process state
 
 **Recommendation.** Refactor `SwiftLifecycle.run()` to wrap `_commit`, `_tag`, and `_push` in a single try block (matching the spec's rollback contract).
 
----
+______________________________________________________________________
 
 ### F-11 [INFO] No `eval` / `exec` / `compile` in the plan
 

@@ -66,8 +66,7 @@ if not result["cached"]:
     print("warming up the cache; retry in ~30s")
 elif result["patterns"]:
     for p in result["patterns"][:5]:
-        print(f"{p['fingerprint']}: {p['count']} occurrences "
-              f"(last: {p['last_seen']})")
+        print(f"{p['fingerprint']}: {p['count']} occurrences (last: {p['last_seen']})")
 else:
     print("no cached failure patterns")
 ```

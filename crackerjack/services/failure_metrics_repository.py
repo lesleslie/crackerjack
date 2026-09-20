@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING, Any
 from oneiric.core.logging import get_logger
 
 if TYPE_CHECKING:
-    from crackerjack.integration.dhara_mcp_client import DharaMCPClient
     from crackerjack.services.failure_recorder import FixAttemptRecord
 
 logger = get_logger(__name__)
@@ -34,7 +33,17 @@ def _sanitize_record(record: dict[str, Any]) -> dict[str, Any]:
 
 
 class FailureMetricsRepository:
-    def __init__(self, client: DharaMCPClient) -> None:
+    """Dhara-backed failure metrics store.
+
+    .. deprecated::
+        Dhara was decommissioned 2026-09-20; this class is now a silent
+        no-op wrapper kept so existing call sites (failure_recorder,
+        improvement_generator) continue to import. All methods return
+        safe defaults and log a debug message. The ``client`` argument
+        is ignored.
+    """
+
+    def __init__(self, client: Any = None) -> None:
         self._client = client
 
     async def record(self, rec: FixAttemptRecord) -> None:

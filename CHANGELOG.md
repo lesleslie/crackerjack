@@ -10,6 +10,34 @@ blocks_on: []
 topic: changelog
 ---
 
+## [0.83.0] - 2026-09-20
+
+### Added
+
+- Add publish_url field to PublishSettings and PublishConfig
+- cli: Add --publish-url flag and CRACKERJACK_PUBLISH_URL env var
+- config: Warn on unknown [tool.crackerjack.X] sub-tables
+- Document publish_url default in settings YAML
+- Honor publish_url in PublishManagerImpl
+- publish: Add BODAI_ECOSYSTEM_CONFIG resolution layer
+- Thread publish_url from CLI through to PublishConfig
+
+### Fixed
+
+- Refuse OIDC-only auth when --publish-url is set
+- settings: Nest publish_url under publishing: for loader pickup
+- settings: Remove dead flat Publishing keys, expand nested publishing: block
+- Surface non-ratchet ty output in Fast Hook Results panel
+
+### Documentation
+
+- cli: Document private package indexes (--publish-url)
+- dx: Add auto-discovery hint to `crackerjack run --help` + fix false-positive warning
+
+### Testing
+
+- Cover publish_url third branch + dry-run URL
+
 ## [0.82.0] - 2026-09-19
 
 ### Added

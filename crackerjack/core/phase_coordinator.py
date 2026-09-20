@@ -687,7 +687,7 @@ class PhaseCoordinator:
         validator = FrontmatterValidator(pkg_path=self.pkg_path)
         vresult = validator.validate(
             allow_nonstandard=True,
-            validate_links=False,
+            validate_links=True,
             skip_link_note=False,
         )
         if not vresult.success:

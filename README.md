@@ -1287,7 +1287,9 @@ source) into the Crackerjack capability registry. All four ship under the
 
 - **Python** activates on every project that already has a `pyproject.toml`
   — there is no opt-out.
+
 - **Swift / Kotlin** activate only when their build manifest is present.
+
 - **Web** activates when `package.json` is at the project root, OR when the
   project explicitly opts in via `pyproject.toml`:
 

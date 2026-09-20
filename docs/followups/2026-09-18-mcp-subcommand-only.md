@@ -7,7 +7,7 @@ date: 2026-09-18
 last_reviewed: 2026-09-18
 superseded_by: null
 blocks_on:
- - docs/superpowers/plans/2026-09-05-mcp-common-phase1.md
+  - "ext:mcp-common.2026-09-05-mcp-common-phase1"
 ---
 
 # Plan — `mcp` subcommand is the only lifecycle surface

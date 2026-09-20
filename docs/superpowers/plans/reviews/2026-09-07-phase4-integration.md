@@ -10,8 +10,7 @@
 > and `test_does_not_strip_crlf_terminators`) and **2 arithmetic / rename
 > nits** in Task 6 (`_six_tools` should be `_seven_tools`, test count
 > is 13 not 17). No spec deviations are unrecorded. No cross-adapter
-> claims are outright falsified, but one claim ("Swift/Kotlin's `name =
-> \"swift\"` style") is half-true (Kotlin uses `name: str = "kotlin"`).
+> claims are outright falsified, but one claim ("Swift/Kotlin's `name = \"swift\"` style") is half-true (Kotlin uses `name: str = "kotlin"`).
 
 ## Method
 
@@ -46,7 +45,7 @@
 - `grep -A 4 "crackerjack.language_adapters" pyproject.toml` → `python`, `swift`, `kotlin` (✓ matches plan's "3 entries" Step 1 expectation)
 - `grep "jinja2" pyproject.toml` → empty (✓ jinja2 is transitive only, matches plan's claim)
 - `grep -n "jinja2" uv.lock` → 3 hits at lines 1805/2426/4695 (✓ dep installed transitively)
-- `grep -n "^def test_\|^async def test_" tests/mcp/tools/test_language_tools.py` → 13 tests (5 sync + 1 sync register + 6 async Kotlin — 1 async Kotlin `wait, let me recount)
+- `grep -n "^def test_\|^async def test_" tests/mcp/tools/test_language_tools.py` → 13 tests (5 sync + 1 sync register + 6 async Kotlin — 1 async Kotlin \`wait, let me recount)
   - Line 24: `test_register_language_tools_registers_three_tools` (sync, 1)
   - Line 35: `test_swift_bump_version_requires_auth` (sync, 2)
   - Line 44: `test_swift_bump_version_runs_with_auth` (sync, 3)
@@ -117,7 +116,7 @@ def test_lex_failure_returns_source_unchanged(self) -> None:
 
 Empirically verified: `Environment.lex('{% if x %}A{% endif %}')` with `[%`/`%]` block delimiters raises `TemplateSyntaxError`. The patched test will pass.
 
----
+______________________________________________________________________
 
 ### F-2 [HIGH] Test `test_does_not_strip_crlf_terminators` asserts the wrong expected value
 
@@ -158,7 +157,7 @@ def test_normalizes_crlf_to_lf(self) -> None:
 
 Or, if the team actually wants to preserve CRLF (which Spec Revision Notes #8 leaves ambiguous), add a `keep_crlf=True` flag to `_apply_tier1` and propagate it through `format_template`. The latter is out of scope per the spec notes, so the former is the correct fix.
 
----
+______________________________________________________________________
 
 ### F-3 [HIGH] Cross-adapter claim about `name` style is half-true
 
@@ -181,7 +180,7 @@ The "Swift/Kotlin" attribution only holds for Swift. Kotlin re-annotates as `nam
 
 **How to fix:** Either (a) change Self-Review wording to "Mirrors Swift's `name = "swift"` style (bare assignment; Kotlin uses `name: str = "kotlin"` and would also be valid)" or (b) accept Kotlin's annotated style (`name: str = "web"`). Both work — pick one and update the citation.
 
----
+______________________________________________________________________
 
 ### F-4 [MEDIUM] Test count arithmetic is off by 4
 
@@ -197,7 +196,7 @@ The plan over-counts by 4 tests. This is a cosmetic issue but suggests the verif
 
 **How to fix:** Update line 1265 to "Expected: All pass (13 prior + 4 new web = 17 in test_language_tools.py, plus the new test_registry.py entry)." Same fix needed for Task 7 Step 4 ("~55 passed (8 detection + 12 hooks + 13 formatter + 8 adapter + 21 mcp + 1 registry = 63..."). The "21 mcp" should be "17 mcp"; the total "63" should be "59".
 
----
+______________________________________________________________________
 
 ### F-5 [MEDIUM] Tool count rename "three_tools" → "six_tools" is wrong (should be "seven_tools")
 
@@ -211,7 +210,7 @@ Counting: 3 Swift + 2 Kotlin (Phase 3) + 2 Web (Phase 4) = **7 tools**, not 6. T
 
 **How to fix:** Rename `_six_tools` to `_seven_tools` and assert all 7 tool names (existing 5 + `check_web_lint` + `format_jinja_templates`).
 
----
+______________________________________________________________________
 
 ### F-6 [MEDIUM] `has_version` is a property, not a field — plan language is slightly misleading
 
@@ -238,7 +237,7 @@ The test correctly accesses `has_version` as a property and will pass for `Capab
 
 **How to fix:** Add a Self-Review row: "`has_version=False` derived from `version_source=None` (per `Capabilities.has_version` property)" — or just drop the `assert caps.has_version is False` line since it's tautological given `version_source=None`.
 
----
+______________________________________________________________________
 
 ### F-7 [MEDIUM] Plan claim "tests are sync `def` matching the file's existing 13 tests" is wrong
 
@@ -247,6 +246,7 @@ The test correctly accesses `has_version` as a property and will pass for `Capab
 > "tests are sync `def` matching the file's existing 13 tests; use `mock.patch.dict(os.environ, {...}, clear=True)` not `pytest.MonkeyPatch()`."
 
 Of the 13 existing tests:
+
 - 7 are `def test_*` (sync) — all Swift-era
 - 6 are `async def test_*` (async) — all Phase 3 Kotlin
 
@@ -256,7 +256,7 @@ The plan's 4 new web tests use `def test_*` + `asyncio.run(...)` (sync wrapper) 
 
 **How to fix:** Either (a) make the new web tests `async def` to match the Kotlin precedent, or (b) explicitly document the choice in the plan ("sync def + asyncio.run chosen for Web because `format_jinja_templates` is more analogous to `swift_bump_version` than `kotlin_bump_version`"). The current plan code is fine; only the claim is wrong.
 
----
+______________________________________________________________________
 
 ### F-8 [LOW] Swift/Kotlin `Hook` doesn't pass `fallback=None` or `cli_required=True` explicitly
 
@@ -278,7 +278,7 @@ Passes `fallback=None` explicitly. Behaviorally identical to Swift/Kotlin (defau
 
 **How to fix:** Either pass `fallback=None` only in the Web hooks (which the plan does) and update the Self-Review citation to "defaults from `Hook` dataclass — `fallback: Callable | None = None`, `cli_required: bool = True`" or drop `fallback=None` from Web hooks to match Swift/Kotlin's "don't pass defaults" style. The latter is cleaner.
 
----
+______________________________________________________________________
 
 ### F-9 [LOW] Swift detection is inline as `(project_root / "Package.swift").is_file()` — plan claim is slightly off
 
@@ -290,7 +290,7 @@ Verified: Swift `__init__.py:24` is exactly `(project_root / "Package.swift").is
 
 This finding is INFO — no defect, just a cross-check that confirmed the cross-adapter claim.
 
----
+______________________________________________________________________
 
 ### F-10 [INFO] `_validate_project_root` and `_require_auth_config` exist as documented
 
@@ -306,7 +306,7 @@ This finding is INFO — no defect, just a cross-check that confirmed the cross-
 
 Plan Task 6 reuses both. ✓ Verified. No finding — just confirmation.
 
----
+______________________________________________________________________
 
 ### F-11 [INFO] `Environment.lex()` tolerates `{% trans %}` without loading i18n extension
 
@@ -316,7 +316,7 @@ Plan line 1329: "lex() tolerates unknown tags (extension tags like `{% trans %}`
 
 ✓ Verified. Spec Jinja F7 claim and the plan's `test_unknown_tag_is_tolerated` assumption both hold.
 
----
+______________________________________________________________________
 
 ### F-12 [INFO] jinja2 3.1.6 installed; not in `[project.dependencies]`
 
@@ -328,13 +328,13 @@ Plan line 1329: "lex() tolerates unknown tags (extension tags like `{% trans %}`
 
 Plan Task 1 adds `"jinja2>=3.1.6"` to `[project.dependencies]` per Spec Jinja F11. ✓ Will fix the "currently only present transitively" state.
 
----
+______________________________________________________________________
 
 ### F-13 [INFO] `discover_adapters()` indexes by `obj.name`, supports `web` key
 
 **Evidence:** `crackerjack/adapters/registry.py:123` — `adapters[obj.name] = obj`. Plan's `assert "web" in adapters` and `assert isinstance(adapters["web"], WebAdapter)` (lines 1142-1143) work as written. ✓
 
----
+______________________________________________________________________
 
 ### F-14 [INFO] Hook dataclass equality works for `caps.hooks == web_hooks(...)` test
 
@@ -344,7 +344,7 @@ Plan test (line 971): `assert caps.hooks == web_hooks(tmp_path)`. Both calls hap
 
 Caveat: If `tmp_path` is mutated between the two calls (e.g., a test creates `node_modules/.bin/stylelint` between calls), the resolved argv would differ. The plan's test does NOT mutate `tmp_path` between calls, so equality holds.
 
----
+______________________________________________________________________
 
 ### F-15 [INFO] Swift hooks construct an environment probe before emitting Hooks
 
@@ -358,7 +358,7 @@ Swift parses the Package.swift upfront (validates it can be read) but discards t
 
 Not a defect, just an asymmetry between Swift and Web worth noting in case a future reviewer wonders why Web skips the upfront probe.
 
----
+______________________________________________________________________
 
 ### F-16 [INFO] Plan references spec lines correctly
 
@@ -381,24 +381,28 @@ Not a defect, just an asymmetry between Swift and Web worth noting in case a fut
 
 **Gap (not a finding, just observation):** The spec line 713 says "Test on `fastblocks`, `splashstand`" as a Phase 4 acceptance criterion. The plan has no task that exercises these real-world fixtures (the closest is Task 7's `web-vanilla` fixture, which is a synthetic project). If the team intends to validate against fastblocks/splashstand, add a Step 8 to Task 7. If not, add an explicit deferral entry to Spec Revision Notes.
 
----
+______________________________________________________________________
 
 ### F-17 [INFO] Self-Review table accuracy
 
 **Evidence:** Walked the Self-Review table (lines 1483-1522) row by row. Of 36 rows:
 
 - 32 rows claim ✓; verified as accurate (matches Tasks 1-7 + Spec Revision Notes).
+
 - 2 rows have minor wording issues:
+
   - Row "`name = "web"` (ClassVar inherited, no annotation) ✓ (closes Web MEDIUM-5)" → see F-3 (Kotlin precedent is annotated, not bare).
   - Row "`cli_required=True, fallback=None` for hooks ✓ (closes Web MEDIUM-5)" → see F-8 (Swift/Kotlin use defaults, don't pass explicitly).
 
 - 2 rows are about deferred items (Spec Revision Notes), correctly marked ✓.
+
 - 0 rows claim items that aren't actually in the plan.
+
 - 0 rows miss items that should be in the plan (modulo F-16's fastblocks/splashstand observation).
 
 Self-Review accuracy is **very high** — Rev 2 cleanup was thorough.
 
----
+______________________________________________________________________
 
 ## Coverage statement
 
@@ -436,7 +440,7 @@ This is the **inverse** of MCP MEDIUM 3 ("imports at module top, not inline"). T
 
 Severity: LOW. Not a BLOCKER. The code works; it's a style consistency issue.
 
----
+______________________________________________________________________
 
 **Focus 2 (Spec fidelity):**
 
@@ -446,14 +450,14 @@ Walked all spec items claimed by the plan. Findings:
 - 1 spec gap noted: spec line 713 "Test on fastblocks, splashstand" has no corresponding plan task. (F-16)
 - 0 spec deviations unrecorded. Spec Revision Notes covers all 8 deliberate deviations (Tier 2, Python fallbacks, eslint_tsc split, detection.py absence, PyCharm parity, CLI subcommand, jinja-test-fixtures, CRLF preservation).
 
----
+______________________________________________________________________
 
 **Focus 3 (Cross-adapter consistency):**
 
 - Swift/Kotlin precedent claims walked. 5 verified ✓, 2 have minor wording issues (F-3, F-8). 0 outright falsifications.
 - See Cross-adapter consistency table below.
 
----
+______________________________________________________________________
 
 ## Spec fidelity table
 
@@ -496,7 +500,7 @@ Walked all spec items claimed by the plan. Findings:
 | No shell, argv list only | Task 3 | ✓ |
 | Spec line 713: Phase 4 acceptance target = fastblocks | Plan has synthetic `web-vanilla` fixture only; no fastblocks/splashstand task | ⚠ Spec gap (not in plan) |
 
----
+______________________________________________________________________
 
 ## Cross-adapter consistency table
 
@@ -512,7 +516,7 @@ Walked all spec items claimed by the plan. Findings:
 | Inline imports inside tool functions (kotlin pattern at language_tools.py:286, 331) | n/a | True (inline `from crackerjack.adapters.kotlin import KotlinAdapter` inside `kotlin_bump_version` / `kotlin_list_hooks`) | ⚠ Plan continues the pattern (inline `from crackerjack.adapters.web import web_enabled` inside 2 tool functions) |
 | Inline detection in `__init__.py` | True (line 24) | True (line 26) | ✓ Plan matches |
 
----
+______________________________________________________________________
 
 ## Plan quality verdict
 
@@ -530,11 +534,11 @@ The 3 test defects (F-1, F-2, F-3) are blockers in the sense that running Task 4
 **Recommended pre-execution amendments:**
 
 1. Fix `test_lex_failure_returns_source_unchanged` (F-1) — replace `bad = _env(...)` + `bad[1]` with direct `delimiters=` arg.
-2. Fix `test_does_not_strip_crlf_terminators` (F-2) — change expected value from `"hello\r\n"` to `"hello\n"` (and rename test).
-3. Reword `name = "web"` citation (F-3) — "Mirrors Swift's bare-assignment style; Kotlin uses annotated style and would also be valid."
-4. Fix test count arithmetic (F-4) — "13 prior + 4 new = 17, plus 1 registry = 18".
-5. Rename `test_register_language_tools_registers_three_tools` → `_seven_tools` and assert all 7 tool names (F-5).
-6. Add fastblocks/splashstand to Spec Revision Notes #9 as deferred (F-16).
+1. Fix `test_does_not_strip_crlf_terminators` (F-2) — change expected value from `"hello\r\n"` to `"hello\n"` (and rename test).
+1. Reword `name = "web"` citation (F-3) — "Mirrors Swift's bare-assignment style; Kotlin uses annotated style and would also be valid."
+1. Fix test count arithmetic (F-4) — "13 prior + 4 new = 17, plus 1 registry = 18".
+1. Rename `test_register_language_tools_registers_three_tools` → `_seven_tools` and assert all 7 tool names (F-5).
+1. Add fastblocks/splashstand to Spec Revision Notes #9 as deferred (F-16).
 
 After these 6 amendments, the plan is ready for `subagent-driven-development` or `executing-plans` execution.
 

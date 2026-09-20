@@ -276,7 +276,10 @@ def register_skill_registry(app: FastMCP) -> None:
         try:
             unsigned = _build_unsigned_metadata(name)
         except KeyError:
-            return {"success": False, "error": f"skill {name!r} not found on this server"}
+            return {
+                "success": False,
+                "error": f"skill {name!r} not found on this server",
+            }
         except FileNotFoundError as exc:
             return {"success": False, "error": str(exc)}
         except ValidationError as exc:

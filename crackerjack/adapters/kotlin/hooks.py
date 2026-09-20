@@ -30,8 +30,17 @@ class GradleTaskProbe:
     def has_task(self, task_name: str) -> bool:
         try:
             result = subprocess.run(
-                ["./gradlew", "tasks", "--all", "-q", "--no-daemon", "--no-configuration-cache"],
-                cwd=self._project_root, capture_output=True, text=True,
+                [
+                    "./gradlew",
+                    "tasks",
+                    "--all",
+                    "-q",
+                    "--no-daemon",
+                    "--no-configuration-cache",
+                ],
+                cwd=self._project_root,
+                capture_output=True,
+                text=True,
             )
         except FileNotFoundError:
             # gradlew not present in this environment (e.g. tests, minimal
@@ -53,7 +62,9 @@ class GradleTaskProbe:
                 result.stderr.strip(),
             )
             return False
-        return bool(re.search(rf"^{re.escape(task_name)}\s+", result.stdout, re.MULTILINE))
+        return bool(
+            re.search(rf"^{re.escape(task_name)}\s+", result.stdout, re.MULTILINE)
+        )
 
 
 _HOOK_TASK_MAP: dict[str, str] = {

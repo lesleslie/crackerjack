@@ -55,13 +55,14 @@ This collapses 6 monkey-patches + 6 stub method declarations into one constructo
 
 **Severity:** High. The plan author already flagged this as "Phase 3 may replace" — addressing it now avoids a Phase 3 refactor.
 
----
+______________________________________________________________________
 
 ### F2. `swift_run_hooks` returns metadata but its name says it runs hooks
 
 **Task 7, Step 7.4.** Tool docstring: "Run the configured Swift hooks against project_root." Tool body returns `{hook_name: {"cli_command": [...], "autofix": bool, "timeout_seconds": int}}` — i.e., metadata about hooks, not execution results.
 
 Two interpretations, both worse than the current shape:
+
 - If the tool is meant to **execute** hooks: the implementation is incomplete. It does no `subprocess.run`. It never invokes `swift test`/`swift build`/etc. The MCP tool is half-wired.
 - If the tool is meant to **list** hooks: the name lies. `swift_run_hooks` should be `swift_list_hooks` (or `swift_get_hooks`), and the docstring should say "Return the configured Swift hooks and their metadata."
 
@@ -71,13 +72,14 @@ Two interpretations, both worse than the current shape:
 
 **Severity:** High. Naming and behavior must align before MCP tools ship to consumers.
 
----
+______________________________________________________________________
 
 ### F3. `_bump` reinvents semver parsing — `packaging.version` doesn't quite cover pre-1.0 semantics, but the current code is fine
 
 **Task 5, Step 5.3.** `_bump("0.1.0", "major")` returns `"0.2.0"` — pre-1.0 crackerjack convention: "major" bumps the minor component. This is non-standard semver.
 
 The user's brief explicitly suggests `packaging.version` could simplify this. It can't cleanly, because:
+
 - `packaging.version.Version("0.1.0").major` is `0`, not the bumped value.
 - `packaging` doesn't expose a "bump" operation; you'd still write the increment logic.
 
@@ -87,11 +89,12 @@ The brief's hint may have been a red herring. If the spec author intended standa
 
 **Severity:** None. Disposition: leave alone, note in commit message that the brief-vs-reality check confirmed the custom logic is necessary.
 
----
+______________________________________________________________________
 
 ### F4. `PlatformInfo.platforms` tuple is exposed but unused downstream
 
 **Task 2, Step 2.3.** `PlatformInfo` is a frozen dataclass with two fields:
+
 - `platforms: tuple[str, ...]` — every detected platform, normalized lowercase
 - `requires_ios_destination: bool` — derived from `"ios" in platforms`
 
@@ -100,14 +103,15 @@ Production consumer (Task 4 `_ios_destination_args`) reads only `requires_ios_de
 The tests assert `info.platforms == ("macos",)` etc., so the tuple is part of the test contract. But it's API surface area that pays no production dividend.
 
 **Simplification options:**
+
 1. Drop `platforms` from the dataclass; return `tuple[bool, tuple[str, ...]]` is uglier, so prefer just `requires_ios_destination: bool`.
-2. Keep the tuple, drop the tests that assert on it (only assert `requires_ios_destination`).
+1. Keep the tuple, drop the tests that assert on it (only assert `requires_ios_destination`).
 
 Option 2 preserves debuggability (operators can inspect `info.platforms` if the dataclass is logged) without bloating the test surface. But the dataclass has only two fields and the tuple is one line — the savings are marginal.
 
 **Severity:** Low. Not worth changing unless other findings force a touch.
 
----
+______________________________________________________________________
 
 ### F5. `_init_git_repo` test helper duplicated across three test files
 
@@ -121,7 +125,7 @@ Option 2 preserves debuggability (operators can inspect `info.platforms` if the 
 
 **Severity:** Medium-low. Three near-duplicates is a maintenance burden. The first Phase 3 adapter (Kotlin) would repeat the pattern again.
 
----
+______________________________________________________________________
 
 ### F6. `import subprocess` is local inside `_run_swift_lifecycle`
 
@@ -129,23 +133,25 @@ Option 2 preserves debuggability (operators can inspect `info.platforms` if the 
 
 **Severity:** Trivial. Cosmetic.
 
----
+______________________________________________________________________
 
 ### F7. Hook `timeout_seconds` literals duplicated and could be class-level constants
 
 **Task 4, Step 4.4.** Hooks declare:
+
 - `timeout_seconds=1800` (test, build)
 - `timeout_seconds=300` (format, package.update)
 
 The magic numbers 1800 (30min) and 300 (5min) appear twice each. Two options:
+
 1. Hoist to module constants: `_SWIFT_LONG_TIMEOUT = 1800`, `_SWIFT_SHORT_TIMEOUT = 300`.
-2. Use `Hook` defaults if available.
+1. Use `Hook` defaults if available.
 
 Phase 1 may already define these as `Hook` defaults; if so, drop the literal entirely.
 
 **Severity:** Low. Cosmetic.
 
----
+______________________________________________________________________
 
 ### F8. `swift_bump_version` `release: bool = False` is plausibly YAGNI for v1
 
@@ -159,7 +165,7 @@ The plan's test `test_swift_lifecycle_run_minor_bumps_tags_pushes` uses `release
 
 **Severity:** Medium. Either commit to "release=True is the default flow" or drop the parameter.
 
----
+______________________________________________________________________
 
 ### F9. `detect_languages` returns `{name: bool}` but the name implies detection of which languages
 
@@ -167,7 +173,7 @@ The plan's test `test_swift_lifecycle_run_minor_bumps_tags_pushes` uses `release
 
 **Severity:** None. Cosmetic; not worth changing.
 
----
+______________________________________________________________________
 
 ### F10. CHANGELOG entry is useful, not duplicative of git history
 
@@ -177,7 +183,7 @@ The bullet could be tightened (the current draft is verbose — three sentences 
 
 **Severity:** None.
 
----
+______________________________________________________________________
 
 ### F11. The MCP tool descriptions are repetitive but only 3 tools — YAGNI to abstract
 
@@ -187,7 +193,7 @@ If/when Phase 3+ adds 2-3 more adapters × 2-3 tools each, a `register_lifecycle
 
 **Severity:** None for Phase 2. Note as a candidate for Phase 5 consolidation.
 
----
+______________________________________________________________________
 
 ### F12. `_run_swift_lifecycle` redundant local `import subprocess` after top-level import
 
@@ -195,23 +201,23 @@ If/when Phase 3+ adds 2-3 more adapters × 2-3 tools each, a `register_lifecycle
 
 **Severity:** Trivial. Subsumed by F1.
 
----
+______________________________________________________________________
 
 ## Coverage Statement
 
 I reviewed the full Phase 2 plan (~1918 lines / 8 tasks / 8 commits) against the six focus areas:
 
 1. **Over-engineering** — covered. The most significant instance is F1 (Pattern B seam reused for production wiring via monkey-patching). `_bump` is not over-engineered (F3); `PlatformInfo` is mildly over-engineered (F4).
-2. **YAGNI** — covered. `swift_run_hooks` `hook_names` param (F2), `release: bool = False` default (F8), and MCP tool registration helper (F11) are the candidates; only F2 and F8 warrant action.
-3. **Specific simplifications** — covered. Test helper extraction (F5), timeout constants (F7), local import (F6/F12).
-4. **Hidden complexity** — covered. The 6-method Pattern B seam is the central example (F1); the three repeated test helpers are a smaller instance (F5).
-5. **YAGNI vs. Spec Pressure** — covered. F8 surfaces an ambiguous spec phrase ("necessary but not sufficient") that the plan doesn't resolve.
-6. **Phase 1/2 duplication** — covered. F5 (test helpers), F1 (Pattern B seam inherited from Phase 1). A shared template would help future phases but isn't worth retrofitting into Phase 2.
+1. **YAGNI** — covered. `swift_run_hooks` `hook_names` param (F2), `release: bool = False` default (F8), and MCP tool registration helper (F11) are the candidates; only F2 and F8 warrant action.
+1. **Specific simplifications** — covered. Test helper extraction (F5), timeout constants (F7), local import (F6/F12).
+1. **Hidden complexity** — covered. The 6-method Pattern B seam is the central example (F1); the three repeated test helpers are a smaller instance (F5).
+1. **YAGNI vs. Spec Pressure** — covered. F8 surfaces an ambiguous spec phrase ("necessary but not sufficient") that the plan doesn't resolve.
+1. **Phase 1/2 duplication** — covered. F5 (test helpers), F1 (Pattern B seam inherited from Phase 1). A shared template would help future phases but isn't worth retrofitting into Phase 2.
 
 **Top 3 actions for the plan author:**
 
 1. **F1**: Replace the monkey-patch seam with constructor-injected `git_service`. Eliminates 6 type-ignores, one local helper, and one Phase 3 refactor.
-2. **F2**: Decide what `swift_run_hooks` actually does. Rename to `swift_list_hooks` and drop `hook_names`, OR actually execute hooks. The current half-tool will confuse MCP consumers.
-3. **F8**: Either default `release=True` (per the test's usage pattern) or drop the parameter entirely. Spec ambiguity should be resolved before shipping.
+1. **F2**: Decide what `swift_run_hooks` actually does. Rename to `swift_list_hooks` and drop `hook_names`, OR actually execute hooks. The current half-tool will confuse MCP consumers.
+1. **F8**: Either default `release=True` (per the test's usage pattern) or drop the parameter entirely. Spec ambiguity should be resolved before shipping.
 
 REVIEW_COMPLETE

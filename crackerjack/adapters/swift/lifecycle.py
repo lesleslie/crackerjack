@@ -110,7 +110,8 @@ class SwiftLifecycle(Lifecycle):
                 release_url = self._gh_release(tag_name)
             except Exception:
                 logger.exception(
-                    "gh_release failed; rolling back tag %s", tag_name,
+                    "gh_release failed; rolling back tag %s",
+                    tag_name,
                 )
                 self._delete_tag(tag_name)
                 self._reset(commit_sha)

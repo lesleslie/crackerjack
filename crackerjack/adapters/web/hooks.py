@@ -12,6 +12,7 @@ Per Phase 4 spec amendments:
   inverted `cli_name != "npx"` guard.
 - Modern `npx --no` spelling replaces the legacy `--no-install` alias.
 """
+
 from __future__ import annotations
 
 import json
@@ -68,14 +69,18 @@ def _build_hook(
             f"`npm install --save-dev {tool}`."
         )
     argv = (*cmd, *extra_args, str(project_root))
-    return Hook(name=name, cli_command=argv, fallback=None, timeout_seconds=timeout_seconds)
+    return Hook(
+        name=name, cli_command=argv, fallback=None, timeout_seconds=timeout_seconds
+    )
 
 
 def web_hooks(project_root: Path) -> tuple[Hook, ...]:
     """Build the four Web hooks for `project_root`."""
     return (
         _build_hook("web.stylelint", project_root, "stylelint", "**/*.css"),
-        _build_hook("web.eslint", project_root, "eslint", ".", "--ext", ".ts,.tsx,.js,.jsx"),
+        _build_hook(
+            "web.eslint", project_root, "eslint", ".", "--ext", ".ts,.tsx,.js,.jsx"
+        ),
         _build_hook("web.tsc", project_root, "tsc", "--noEmit", timeout_seconds=600),
         _build_hook("web.html_validate", project_root, "html-validate", "**/*.html"),
     )
@@ -94,7 +99,9 @@ def _parse_stylelint_json(stdout: str, project_root: Path) -> list[HookIssue]:
     for entry in payload:
         path = Path(entry.get("source", str(project_root)))
         for warning in entry.get("warnings", []):
-            issues.append((path, int(warning.get("line", 0)), str(warning.get("text", ""))))
+            issues.append(
+                (path, int(warning.get("line", 0)), str(warning.get("text", "")))
+            )
     return issues
 
 
@@ -126,7 +133,9 @@ def _parse_html_validate_json(stdout: str, project_root: Path) -> list[HookIssue
     return issues
 
 
-_TSC_LINE = re.compile(r"^(?P<path>[^()]+)\((?P<line>\d+),(?P<col>\d+)\):\s+(?P<severity>error|warning)\s+(?P<code>TS\d+):\s+(?P<msg>.+)$")
+_TSC_LINE = re.compile(
+    r"^(?P<path>[^()]+)\((?P<line>\d+),(?P<col>\d+)\):\s+(?P<severity>error|warning)\s+(?P<code>TS\d+):\s+(?P<msg>.+)$"
+)
 
 
 def _parse_tsc_output(stdout: str, project_root: Path) -> list[HookIssue]:
@@ -136,7 +145,9 @@ def _parse_tsc_output(stdout: str, project_root: Path) -> list[HookIssue]:
         m = _TSC_LINE.match(line.strip())
         if m:
             path = Path(m.group("path"))
-            issues.append((path, int(m.group("line")), f"{m.group('code')}: {m.group('msg')}"))
+            issues.append(
+                (path, int(m.group("line")), f"{m.group('code')}: {m.group('msg')}")
+            )
     return issues
 
 

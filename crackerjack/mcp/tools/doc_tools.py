@@ -18,7 +18,7 @@ def _register_frontmatter_validate_tool(mcp_app: t.Any) -> None:
         pkg_path: str = ".",
         strict: bool = False,
         allow_nonstandard: bool = True,
-        validate_links: bool = False,
+        validate_links: bool = True,
         store: str | None = None,
     ) -> str:
         from crackerjack.services.frontmatter_validator import (

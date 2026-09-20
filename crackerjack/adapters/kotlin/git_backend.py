@@ -9,6 +9,7 @@ are convenience wrappers that operate on the active project root
 (see :data:`_PROJECT_ROOT`). The factory :func:`make_git_backend` returns the
 same six callables bound to an explicit ``project_root`` for production use.
 """
+
 from __future__ import annotations
 
 import logging
@@ -174,8 +175,7 @@ def gh_release(tag_name: str, release_name: str | None = None) -> str | None:
 
     if result.returncode != 0:
         raise RuntimeError(
-            f"gh release create failed (exit {result.returncode}): "
-            f"{result.stderr}",
+            f"gh release create failed (exit {result.returncode}): {result.stderr}",
         )
     return result.stdout.strip()
 
@@ -292,8 +292,7 @@ def make_git_backend(
 
         if result.returncode != 0:
             raise RuntimeError(
-                f"gh release create failed (exit {result.returncode}): "
-                f"{result.stderr}",
+                f"gh release create failed (exit {result.returncode}): {result.stderr}",
             )
         return result.stdout.strip()
 

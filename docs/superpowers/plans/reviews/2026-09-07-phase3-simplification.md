@@ -6,7 +6,7 @@
 
 **Focus:** implementation-level over-engineering, YAGNI within the user's stated scope (Kotlin lifecycle + hooks + MCP tools). Scope choices themselves are not second-guessed.
 
----
+______________________________________________________________________
 
 ## Findings (most-severe first)
 
@@ -38,13 +38,13 @@ This is the same anti-pattern as Phase 2 F2 (`swift_run_hooks` returned metadata
 
 1. **Inline the probe into the hook tuple.** `Hook` dataclass currently doesn't have a `task_probe` field. Add one (`task_probe: Callable[[], bool] | None = None`). The hooks module produces hooks whose `task_probe` is bound to the Gradle task probe; the runner calls it. One change, no orphaned class.
 
-2. **Drop `GradleTaskProbe` from this plan entirely.** Defer probing to the runtime hook runner. The 3 `test_gradle_task_probe_*` tests become Phase 1 hook-runner tests. The hooks module stays as a thin list of argv tuples.
+1. **Drop `GradleTaskProbe` from this plan entirely.** Defer probing to the runtime hook runner. The 3 `test_gradle_task_probe_*` tests become Phase 1 hook-runner tests. The hooks module stays as a thin list of argv tuples.
 
-3. **Keep the class but actually call it.** Either remove the `if absent, the hook still emits` fallback (skip-with-warning happens at the probe site, not at the runner), OR drop the comment. The current state — class exists, never invoked, comment admits it — is the worst of all worlds.
+1. **Keep the class but actually call it.** Either remove the `if absent, the hook still emits` fallback (skip-with-warning happens at the probe site, not at the runner), OR drop the comment. The current state — class exists, never invoked, comment admits it — is the worst of all worlds.
 
 **Severity:** High. Either probe or don't. The plan ships a class with three tests but no caller — that is the textbook YAGNI violation. The class isn't even referenced in the MCP tool, the lifecycle, or the adapter; only by its own tests.
 
----
+______________________________________________________________________
 
 ### F2. `gradle_properties_version_source()` factory is exported but never imported — dead public API
 
@@ -73,7 +73,7 @@ The factory is dead code at the import boundary. Phase 2 review's F4 (`PlatformI
 
 **Severity:** Medium. Public-looking API with no caller creates confusion later.
 
----
+______________________________________________________________________
 
 ### F3. `make_git_backend` import in `KotlinAdapter.capabilities()` exists only to silence a lint warning
 
@@ -102,7 +102,7 @@ The `_ = make_git_backend` is a code smell — it admits the import is unused an
 
 **Severity:** Medium. Cargo-culted from a fix that doesn't apply; reads as defensive code with a post-hoc justification.
 
----
+______________________________________________________________________
 
 ### F4. `_bump` divergence policy documents Phase 2.5 work as Phase 3 work
 
@@ -113,13 +113,13 @@ The plan even hedges: "Phase 3 picks (b) implicitly (Kotlin uses real semver, Sw
 Two issues:
 
 1. The cross-adapter prose belongs in a Phase 2.5 ticket, not Phase 3's plan. Phase 3's job is to document Kotlin's `_bump` semantics in its own docstring (which it does, correctly). The cross-cutting ADR is a separate work item.
-2. The plan claims "Phase 3 also adds a cross-reference comment to `SwiftLifecycle._bump` (already documented as pre-1.0)" — but no such edit appears in Task 5's Step 3. This is a phantom step.
+1. The plan claims "Phase 3 also adds a cross-reference comment to `SwiftLifecycle._bump` (already documented as pre-1.0)" — but no such edit appears in Task 5's Step 3. This is a phantom step.
 
 **Simplification:** remove the "Cross-adapter `_bump` divergence" section from this plan. Move the CF-3 follow-up to a Phase 2.5 issue. Keep the in-code docstring on `KotlinLifecycle._bump` (which is the actual documentation deliverable).
 
 **Severity:** Medium-low. Plan bloat; creates phantom work; obscures the actual code change.
 
----
+______________________________________________________________________
 
 ### F5. `test_kotlin_lifecycle_rejects_invalid_level` tests Phase 1 code, not KotlinLifecycle
 
@@ -142,7 +142,7 @@ The test passes whether or not KotlinLifecycle exists. It would pass if you dele
 
 **Severity:** Medium. Fake-green test pattern; contributes to test count without adding coverage.
 
----
+______________________________________________________________________
 
 ### F6. `git_backend.py` is byte-for-byte duplicated from Swift — copy-paste with two header lines changed
 
@@ -155,12 +155,12 @@ The plan's note ("Refactor to share later if duplication proves costly") is the 
 **Simplification options (in order of preference):**
 
 1. **Now:** extract `git_backend.py` to `crackerjack/adapters/_git_backend.py` and have both Swift and Kotlin import the same functions. Add per-language wrappers only where genuinely needed (e.g., auth env var, remote default). Saves 130 lines of duplicate code AND makes Phase 2's fix in commit `b2199190` apply to Kotlin automatically.
-2. **Now:** at minimum, make the duplication explicit in code with `# MIRROR of swift/git_backend.py — keep in sync` at the top of the Kotlin file. The plan currently buries this in a parenthetical: "(For brevity, the full source is reproduced in the plan's appendix; the implementer should diff-verify against the Phase 2 file before copying.)" — this is a copy instruction, not an in-code annotation.
-3. **Later:** file a Phase 3.5 ticket to extract. This is the worst option because the Phase 3 plan is currently a participant in the duplication, not just an inheritor.
+1. **Now:** at minimum, make the duplication explicit in code with `# MIRROR of swift/git_backend.py — keep in sync` at the top of the Kotlin file. The plan currently buries this in a parenthetical: "(For brevity, the full source is reproduced in the plan's appendix; the implementer should diff-verify against the Phase 2 file before copying.)" — this is a copy instruction, not an in-code annotation.
+1. **Later:** file a Phase 3.5 ticket to extract. This is the worst option because the Phase 3 plan is currently a participant in the duplication, not just an inheritor.
 
 **Severity:** Medium. Today's duplication becomes tomorrow's drift. The "Phase 2 already does this; copy it" framing understates the maintenance cost.
 
----
+______________________________________________________________________
 
 ### F7. `_bump` extraction to `_semver.py` is documented as Phase 2.5 follow-up — but `test_bump_*` already documents the semantics
 
@@ -180,7 +180,7 @@ This is fine for v1 (the tests live next to the code that implements them). But 
 
 **Severity:** Low. Test debt is acceptable when consolidation is planned; missing the consolidation note is what makes it problematic.
 
----
+______________________________________________________________________
 
 ### F8. Hybrid fallback interpretation: Phase 3 hooks all have `cli_required=True`, no `fallback` callbacks — YAGNI-correct, but unverified
 
@@ -198,7 +198,7 @@ The plan should explicitly call this out: "Phase 3 hooks are non-hybrid (no Pyth
 
 **Severity:** Low. Spec interpretation is reasonable; missing the explicit call-out risks Phase 4 reviewer asking the same question.
 
----
+______________________________________________________________________
 
 ### F9. `Hook` for `kotlin.ktlint` ignores `autofix=True` opportunity
 
@@ -210,7 +210,7 @@ If `crackerjack run --autofix` is a future capability, Kotlin autofix won't fire
 
 **Severity:** None. Note for Phase 4.
 
----
+______________________________________________________________________
 
 ### F10. `make_git_backend` returns a `tuple[Callable, ...]` of 6 unnamed functions — positional destructuring is fragile
 
@@ -228,7 +228,7 @@ This is a Phase 2 issue; Phase 3 inherits. Don't fix in Phase 3 (out of scope). 
 
 **Severity:** Low (Phase 3). Medium (cross-cutting if/when Rust/Go adapters land — same destructuring dance × 4 adapters).
 
----
+______________________________________________________________________
 
 ### F11. `GradlePropertiesVersionSource.write()` verification read-back path is untested
 
@@ -260,7 +260,7 @@ Or remove the verification code entirely (it's defensive code not justified by t
 
 **Severity:** Medium. Spec requires it; test doesn't cover it. Future bug surface.
 
----
+______________________________________________________________________
 
 ### F12. `_make_lifecycle` helper in `test_lifecycle.py` is fine, but `mock.Mock(return_value="abc123def456" + "0" * 32)` is opaque
 
@@ -273,13 +273,13 @@ commit = mock.Mock(return_value="abc123def456" + "0" * 32)
 Generates `"abc123def4560000000000000000000000000000"` — a 40-char string. Two issues:
 
 1. The constant `"0" * 32` is a magic number (SHA-1 length minus prefix).
-2. The test asserts `len(sha) == 40` in the git_backend test (`test_commit_runs_git_commit_with_message`), but the lifecycle test never asserts the SHA length — the magic-string isn't load-bearing there.
+1. The test asserts `len(sha) == 40` in the git_backend test (`test_commit_runs_git_commit_with_message`), but the lifecycle test never asserts the SHA length — the magic-string isn't load-bearing there.
 
 **Simplification:** hoist a `_FAKE_SHA = "a" * 40` constant to `_gradle_helpers.py`. Other tests can import it. Currently only the lifecycle test uses it; if a future test needs a SHA, the constant exists.
 
 **Severity:** Trivial. Cosmetic.
 
----
+______________________________________________________________________
 
 ### F13. CHANGELOG entry is comprehensive but verbose — same as Phase 2 F10
 
@@ -289,7 +289,7 @@ Same verdict here. Leave it.
 
 **Severity:** None.
 
----
+______________________________________________________________________
 
 ### F14. Spec coverage check — minor: spec's "Per-adapter Kotlin" doesn't enumerate `_bump` semantics; plan picks real-semver arbitrarily
 
@@ -301,27 +301,27 @@ This is correct scope discipline (the spec doesn't constrain adapter-level bump 
 
 **Severity:** Low. Documentation gap, not a code defect.
 
----
+______________________________________________________________________
 
 ## Coverage Statement
 
 I reviewed the full Phase 3 plan (~1200 lines / 8 tasks / 8 commits) against the focus areas:
 
 1. **Over-engineering** — covered. F1 (orphan `GradleTaskProbe`), F2 (dead factory), F3 (lint-silencing import), F5 (fake-green test) are the central instances. F4 (cross-adapter prose) is plan bloat, not code bloat.
-2. **YAGNI** — covered. F6 (`git_backend.py` duplication) is the rule-of-three threshold; F8 (hybrid test pair) is correctly skipped but under-documented; F9 (`autofix`) is correctly deferred.
-3. **Pattern adherence** — Phase 2 patterns held. Constructor injection ✓, per-adapter `git_backend.py` (duplicated, not yet shared) ✓, Module:ClassName entry-point ✓, 4-step MCP registration ✓ (Task 7 calls out that `profiles.py` is unchanged because the group already exists — correct), per-invocation auth check ✓ (mutation tool calls `_require_auth_config()` at top of body, not at startup).
-4. **Specific simplifications** — covered. F3 (drop the `make_git_backend` import), F5 (drop the fake-green test), F11 (add the missing negative test for write verification).
-5. **Hidden complexity** — covered. F1 (the probe never called) is the central hidden complexity; F10 (positional destructuring) is inherited fragility.
-6. **Phase 2 carry-over** — covered. CF-1 (dead defensive code) maps to F3 (lint-silenced import). CF-2 (dead lifecycle construction in `capabilities()`) is correctly handled — `KotlinAdapter.capabilities()` does NOT construct `KotlinLifecycle`. CF-3 (`_bump` divergence) is correctly documented but the plan balloons it into a 12-line cross-adapter essay (F4).
-7. **YAGNI vs. Spec Pressure** — covered. F8 surfaces the hybrid-test spec ambiguity that the plan doesn't explicitly resolve.
+1. **YAGNI** — covered. F6 (`git_backend.py` duplication) is the rule-of-three threshold; F8 (hybrid test pair) is correctly skipped but under-documented; F9 (`autofix`) is correctly deferred.
+1. **Pattern adherence** — Phase 2 patterns held. Constructor injection ✓, per-adapter `git_backend.py` (duplicated, not yet shared) ✓, Module:ClassName entry-point ✓, 4-step MCP registration ✓ (Task 7 calls out that `profiles.py` is unchanged because the group already exists — correct), per-invocation auth check ✓ (mutation tool calls `_require_auth_config()` at top of body, not at startup).
+1. **Specific simplifications** — covered. F3 (drop the `make_git_backend` import), F5 (drop the fake-green test), F11 (add the missing negative test for write verification).
+1. **Hidden complexity** — covered. F1 (the probe never called) is the central hidden complexity; F10 (positional destructuring) is inherited fragility.
+1. **Phase 2 carry-over** — covered. CF-1 (dead defensive code) maps to F3 (lint-silenced import). CF-2 (dead lifecycle construction in `capabilities()`) is correctly handled — `KotlinAdapter.capabilities()` does NOT construct `KotlinLifecycle`. CF-3 (`_bump` divergence) is correctly documented but the plan balloons it into a 12-line cross-adapter essay (F4).
+1. **YAGNI vs. Spec Pressure** — covered. F8 surfaces the hybrid-test spec ambiguity that the plan doesn't explicitly resolve.
 
 **Top 3 actions for the plan author:**
 
 1. **F1 + F3**: Either wire `GradleTaskProbe` into the runtime hook invocation path (Phase 1 hook runner, or Phase 3's MCP tool wrapper) or drop the class entirely. Drop the `_ = make_git_backend` import in `KotlinAdapter.capabilities()`. Both are dead code masquerading as defensive code.
-2. **F5 + F11**: Delete `test_kotlin_lifecycle_rejects_invalid_level` (it's a Phase 1 test). Add a negative test for `GradlePropertiesVersionSource.write()` verification mismatch (it's spec-required, untested).
-3. **F4 + F6**: Trim the cross-adapter `_bump` divergence essay (file as Phase 2.5 ticket); make the `git_backend.py` duplication explicit in code with a `MIRROR of swift/git_backend.py` comment OR (preferred) extract to a shared `_git_backend.py` module now while there are only 2 consumers.
+1. **F5 + F11**: Delete `test_kotlin_lifecycle_rejects_invalid_level` (it's a Phase 1 test). Add a negative test for `GradlePropertiesVersionSource.write()` verification mismatch (it's spec-required, untested).
+1. **F4 + F6**: Trim the cross-adapter `_bump` divergence essay (file as Phase 2.5 ticket); make the `git_backend.py` duplication explicit in code with a `MIRROR of swift/git_backend.py` comment OR (preferred) extract to a shared `_git_backend.py` module now while there are only 2 consumers.
 
----
+______________________________________________________________________
 
 ## Spec Coverage Summary
 
@@ -344,7 +344,7 @@ Phase 3 implements the spec's Kotlin/Gradle section faithfully:
 | Testing F3: hybrid two-path test pair | Not applicable (no fallback) but unstated | ⚠ |
 | Testing F5: shared `FakeHookRunner` | Not used in Phase 3 tests (Phase 1 hook-runner concern) | ✓ (out of scope) |
 
----
+______________________________________________________________________
 
 ## Plan Quality Verdict
 

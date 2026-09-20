@@ -12,7 +12,7 @@ The plan carries forward most Phase 2 security controls via the "mirror Swift" p
 
 3 HIGH findings, 6 MEDIUM findings, 4 LOW findings, 4 INFO confirmations. No BLOCKER.
 
----
+______________________________________________________________________
 
 ## Findings (most-severe first)
 
@@ -25,12 +25,13 @@ The plan carries forward most Phase 2 security controls via the "mirror Swift" p
 **Why it matters.** Any process that runs with `MAHAVISHNU_AUTH_ENABLED=true MAHAVISHNU_JWT_SECRET=x` set bypasses the guard. `kotlin_bump_version` mutates a real Kotlin repo (commit + tag + push + gh release), so the attack surface is identical to Phase 2's `swift_bump_version`. A local attacker who can `export` these two env vars before invoking the MCP server gets full release authority. The rename from `_require_auth` to `_require_auth_config` makes the false confidence clearer, but does not address the gap.
 
 **How to fix.**
-1. Add a JWT validation path: `jwt.decode(token, secret, algorithms=["HS256"], audience=..., options={"require": ["exp"]})`. Token must come from a request header or argument; reject missing/invalid/expired tokens with `PermissionError`.
-2. Add a test that proves a token signed with a different secret raises `PermissionError`.
-3. Bind the validated `sub` claim into the commit/tag message.
-4. Until JWT validation lands, the `_require_auth_config` rename is honest but does not satisfy the spec's "auth posture" intent.
 
----
+1. Add a JWT validation path: `jwt.decode(token, secret, algorithms=["HS256"], audience=..., options={"require": ["exp"]})`. Token must come from a request header or argument; reject missing/invalid/expired tokens with `PermissionError`.
+1. Add a test that proves a token signed with a different secret raises `PermissionError`.
+1. Bind the validated `sub` claim into the commit/tag message.
+1. Until JWT validation lands, the `_require_auth_config` rename is honest but does not satisfy the spec's "auth posture" intent.
+
+______________________________________________________________________
 
 ### F-2 [HIGH] Inherited Phase 2 final-review IMPORTANT-1 bug: `MAHAVISHNU_PROJECT_ROOTS` unset bypasses allowlist
 
@@ -41,11 +42,12 @@ The plan carries forward most Phase 2 security controls via the "mirror Swift" p
 **Why it matters.** A request like `kotlin_bump_version(level="minor", project_root="/tmp/attacker/with/gradlew")` succeeds when `MAHAVISHNU_PROJECT_ROOTS` is not configured (the common case in dev). `cwd=/tmp/attacker/with/gradlew` then executes the attacker-controlled `./gradlew properties` and later `git add .` over arbitrary files. Combined with the unvalidated tag name (F-4), this is a release-t-pug through the MCP server.
 
 **How to fix.**
-1. Re-read Phase 2's `_validate_project_root` and flip the `MAHAVISHNU_PROJECT_ROOTS` empty-state to deny (`if not allowlist: raise PermissionError`).
-3. Add a regression test: `_validate_project_root("/tmp/foo")` raises when env var unset.
-4. Phase 3 plan line 46 should explicitly call out the fix, not just say "inherits."
 
----
+1. Re-read Phase 2's `_validate_project_root` and flip the `MAHAVISHNU_PROJECT_ROOTS` empty-state to deny (`if not allowlist: raise PermissionError`).
+1. Add a regression test: `_validate_project_root("/tmp/foo")` raises when env var unset.
+1. Phase 3 plan line 46 should explicitly call out the fix, not just say "inherits."
+
+______________________________________________________________________
 
 ### F-3 [HIGH] Dry-run semantics conflict: plan text mutates, test name says it doesn't
 
@@ -59,11 +61,12 @@ The plan carries forward most Phase 2 security controls via the "mirror Swift" p
 **Why it matters.** A test named "does_not_mutate" that passes after the file IS mutated is a false-positive test. Worse, dry_run is the standard "show me what would happen" gate for release engineers — silently mutating the file under dry_run corrupts the very thing the user wanted to inspect. This is the Kotlin-specific analog of Phase 2's CF-4 regression (silent failure mode).
 
 **How to fix.**
-1. Choose the intended semantics. Recommend: `if options.dry_run: skip write, return result with skipped_steps`.
-2. Update the instruction in Task 5 Step 3 line 826 to: *"after computing new_version, if `options.dry_run`: return `LifecycleResult(new_version=..., skipped_steps=("dry_run",))`. Otherwise, call `self._version_source.write(new_version)`."*
-3. Strengthen the test (line 760-766) with `assert (tmp_path / "gradle.properties").read_text() == "version=1.2.3\n"` so a regression where write happens pre-check fails the test.
 
----
+1. Choose the intended semantics. Recommend: `if options.dry_run: skip write, return result with skipped_steps`.
+1. Update the instruction in Task 5 Step 3 line 826 to: *"after computing new_version, if `options.dry_run`: return `LifecycleResult(new_version=..., skipped_steps=("dry_run",))`. Otherwise, call `self._version_source.write(new_version)`."*
+1. Strengthen the test (line 760-766) with `assert (tmp_path / "gradle.properties").read_text() == "version=1.2.3\n"` so a regression where write happens pre-check fails the test.
+
+______________________________________________________________________
 
 ### F-4 [MEDIUM] Tag-name semver regex stated as constraint, never operationalized in the plan
 
@@ -74,11 +77,12 @@ The plan carries forward most Phase 2 security controls via the "mirror Swift" p
 **Why it matters.** Tag names flow into `git tag -a -- v1.2.3 -m ...`. Even with `--`, a malicious tag like `v1.2.3 --upload-pack=...` (crafted to defeat the separator) is rejected by modern git only when the regex check runs. Without it, an attacker who controls `level`/`new_version` (e.g., via a corrupted `gradle.properties`) could craft a tag that breaks git's parsing or, worse, causes `git push` to invoke an unintended remote helper. Lower risk than shell injection (argv list blocks that), but still an attack surface.
 
 **How to fix.**
-1. Either include the Phase 2 `_tag` source in Task 4 Step 3 explicitly, OR add an explicit Step 3.5 in Task 4 that asserts the regex (`re.fullmatch(r"v\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?", tag_name)`) lives inside the `tag()` callable.
-2. Add a test asserting `_tag("v1;rm -rf /", "msg")` raises `ValueError`.
-3. Add the same assertion to the `KotlinLifecycle` level (defense in depth: tag built from `f"v{new_version}"` should also be validated after composition).
 
----
+1. Either include the Phase 2 `_tag` source in Task 4 Step 3 explicitly, OR add an explicit Step 3.5 in Task 4 that asserts the regex (`re.fullmatch(r"v\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?", tag_name)`) lives inside the `tag()` callable.
+1. Add a test asserting `_tag("v1;rm -rf /", "msg")` raises `ValueError`.
+1. Add the same assertion to the `KotlinLifecycle` level (defense in depth: tag built from `f"v{new_version}"` should also be validated after composition).
+
+______________________________________________________________________
 
 ### F-5 [MEDIUM] `kotlin_bump_version` skips `adapter.detect()` check; `kotlin_list_hooks` enforces it (inconsistent validation)
 
@@ -89,10 +93,11 @@ The plan carries forward most Phase 2 security controls via the "mirror Swift" p
 **Why it matters.** A user invoking `kotlin_bump_version` on a Python project gets a confusing `VersionNotFoundError` or `FileNotFoundError` from `./gradle` instead of the cleaner "no Kotlin project at <root>" message that `kotlin_list_hooks` returns. Worse: if a Python project happens to contain a `gradle.properties` file (e.g., a docs project that borrowed the convention), the tool will silently try to bump it. This is a Phase 2 CF-4-style regression in the making — silent adoption by non-target projects.
 
 **How to fix.**
-1. In Task 7 Step 3, add `if not KotlinAdapter().detect(root): raise ValueError(...)` immediately after `_validate_project_root` in `kotlin_bump_version`, mirroring `kotlin_list_hooks`.
-2. Add a test asserting `kotlin_bump_version(level="minor", project_root="/tmp/python-project")` raises `ValueError` with "No build.gradle" message.
 
----
+1. In Task 7 Step 3, add `if not KotlinAdapter().detect(root): raise ValueError(...)` immediately after `_validate_project_root` in `kotlin_bump_version`, mirroring `kotlin_list_hooks`.
+1. Add a test asserting `kotlin_bump_version(level="minor", project_root="/tmp/python-project")` raises `ValueError` with "No build.gradle" message.
+
+______________________________________________________________________
 
 ### F-6 [MEDIUM] `GradleTaskProbe.has_task` ignores returncode; the probe class is dead code
 
@@ -101,16 +106,17 @@ The plan carries forward most Phase 2 security controls via the "mirror Swift" p
 **What's wrong.**
 
 1. `has_task` does `result = subprocess.run(...)` and immediately regex-searches `result.stdout` without checking `result.returncode`. If `./gradlew` is missing (FileNotFoundError → `subprocess.SubprocessError` propagates) or the build script has a syntax error (returncode != 0, stdout may be empty or partial), the regex doesn't match, `has_task` returns False, and any consumer interprets "task absent" when the truth is "couldn't determine."
-2. `_build_hooks` constructs `probe = GradleTaskProbe(project_root)` but never calls `probe.has_task(...)`. The comment (line 473-476) acknowledges this: *"the hook still emits; CLI invocation will skip-with-warning at execution time."* But "CLI invocation" here means the downstream hook runner, which Phase 3 does not modify. So `GradleTaskProbe` is dead code in this plan.
+1. `_build_hooks` constructs `probe = GradleTaskProbe(project_root)` but never calls `probe.has_task(...)`. The comment (line 473-476) acknowledges this: *"the hook still emits; CLI invocation will skip-with-warning at execution time."* But "CLI invocation" here means the downstream hook runner, which Phase 3 does not modify. So `GradleTaskProbe` is dead code in this plan.
 
 **Why it matters.** Spec Kotlin F2 says "skip-with-warning if task absent" — this requires a probe call SOMEWHERE. The plan has the class but never wires it. Tests pass because tests don't check the wiring (tests only check that the probe's `has_task` method works in isolation). Result: `kotlin.ktlint` runs against a Kotlin project without `ktlintCheck` defined → cryptic Gradle failure instead of skip-with-warning.
 
 **How to fix.**
-1. In `has_task`, add `if result.returncode != 0: raise GradleProbeError(result.stderr)` so consumers can distinguish "task absent" from "couldn't probe."
-2. In `_build_hooks`, actually call `probe.has_task(task_name)` and either skip the hook or include a `skip_reason` field on `Hook` (would need API change — Phase 2 final review found Phase 2 ignored similar issues).
-3. Minimum viable: drop `GradleTaskProbe` from Phase 3 (move to Phase 3.5 follow-up) and document the hook runner does the probing at execution time.
 
----
+1. In `has_task`, add `if result.returncode != 0: raise GradleProbeError(result.stderr)` so consumers can distinguish "task absent" from "couldn't probe."
+1. In `_build_hooks`, actually call `probe.has_task(task_name)` and either skip the hook or include a `skip_reason` field on `Hook` (would need API change — Phase 2 final review found Phase 2 ignored similar issues).
+1. Minimum viable: drop `GradleTaskProbe` from Phase 3 (move to Phase 3.5 follow-up) and document the hook runner does the probing at execution time.
+
+______________________________________________________________________
 
 ### F-7 [MEDIUM] `shutil.which` mock in `test_kotlin_hooks_returns_three_hooks` is a no-op (implementation never calls `shutil.which`)
 
@@ -121,11 +127,12 @@ The plan carries forward most Phase 2 security controls via the "mirror Swift" p
 **Why it matters.** When `./gradlew` is not present at `project_root / "gradlew"`, the user gets `FileNotFoundError: [Errno 2] No such file or directory: './gradlew'` from the first hook invocation. No pre-flight check, no actionable error message. The spec's "hybrid fallback" rule (Writing F2) requires a clear failure when CLI is missing AND no fallback is registered — without the pre-flight, the rule is silently bypassed.
 
 **How to fix.**
-1. Add `if not (project_root / "gradlew").exists(): raise RuntimeError("gradlew not found; run `gradle wrapper` to generate")` in `_build_hooks` or in a new `_ensure_gradlew(project_root)` helper.
-2. Add an explicit test asserting the error is raised when gradlew is absent.
-4. Update the existing tests to either match this behavior or drop the `shutil.which` mock that doesn't do anything.
 
----
+1. Add `if not (project_root / "gradlew").exists(): raise RuntimeError("gradlew not found; run `gradle wrapper` to generate")` in `_build_hooks` or in a new `_ensure_gradlew(project_root)` helper.
+1. Add an explicit test asserting the error is raised when gradlew is absent.
+1. Update the existing tests to either match this behavior or drop the `shutil.which` mock that doesn't do anything.
+
+______________________________________________________________________
 
 ### F-8 [MEDIUM] `./gradlew` is a relative path trusted from `cwd` — attacker-controlled `project_root` ⇒ attacker-controlled binary
 
@@ -136,12 +143,13 @@ The plan carries forward most Phase 2 security controls via the "mirror Swift" p
 **Why it matters.** Subprocess injection via relative path + cwd is a standard attack when the cwd is not integrity-checked. Phase 2 had the same shape (`swift` is a `swift` binary on PATH, which has its own integrity via system package manager), but `./gradlew` is a per-project script that can be replaced by anyone with write access to the directory. The risk profile is materially worse than Phase 2.
 
 **How to fix.**
-1. Resolve the binary absolutely: `gradlew = (project_root / "gradlew").resolve(strict=True)`.
-2. Verify the resolved path starts with `project_root.resolve(strict=True)` (reject symlink escapes).
-3. Verify executable bit is set.
-4. OR: require `gradlew` on PATH via `shutil.which("gradle")` (system-installed Gradle) and document the wrapper requirement.
 
----
+1. Resolve the binary absolutely: `gradlew = (project_root / "gradlew").resolve(strict=True)`.
+1. Verify the resolved path starts with `project_root.resolve(strict=True)` (reject symlink escapes).
+1. Verify executable bit is set.
+1. OR: require `gradlew` on PATH via `shutil.which("gradle")` (system-installed Gradle) and document the wrapper requirement.
+
+______________________________________________________________________
 
 ### F-9 [MEDIUM] No `.gitignore` exclusion enforcement before `git add .` — Kotlin secrets can leak
 
@@ -158,11 +166,12 @@ The `commit(message)` function (per Phase 2 pattern, lines from the Swift file p
 **Why it matters.** Phase 2 has the same shape but lower exposure. Phase 3 inherits this behavior. Even with a `.gitignore`, `git add .` does not delete already-tracked files — once a developer accidentally tracked a credential, every subsequent bump commits it again.
 
 **How to fix.**
-1. In `commit()`, use `git add -A -- <paths>` with an explicit allowlist (project source) rather than `git add .`.
-2. OR: pre-flight check that `.gitignore` exists and contains at least `.gradle/`, `build/`, `local.properties`; refuse to commit if missing.
-3. Document the convention in `KotlinAdapter.capabilities()` docstring.
 
----
+1. In `commit()`, use `git add -A -- <paths>` with an explicit allowlist (project source) rather than `git add .`.
+1. OR: pre-flight check that `.gitignore` exists and contains at least `.gradle/`, `build/`, `local.properties`; refuse to commit if missing.
+1. Document the convention in `KotlinAdapter.capabilities()` docstring.
+
+______________________________________________________________________
 
 ### F-10 [LOW] `_validate_project_root` NUL-byte / `..` rejection not verified
 
@@ -174,7 +183,7 @@ The `commit(message)` function (per Phase 2 pattern, lines from the Swift file p
 
 **How to fix.** Add a one-line assertion in Task 7's `kotlin_bump_version`: `if "\x00" in project_root: raise ValueError("NUL byte in path")`. Mirror in `kotlin_list_hooks`. Test both.
 
----
+______________________________________________________________________
 
 ### F-11 [LOW] No pre-Phase-3 gate for Gradle CLI availability (Phase 2 had one for mcp-common)
 
@@ -186,7 +195,7 @@ The `commit(message)` function (per Phase 2 pattern, lines from the Swift file p
 
 **How to fix.** Add to Task 8 verification: `command -v gradle && test -x tests/fixtures/gradle-vanilla/gradlew` (after creating the wrapper). Or document the gate in Task 1 Step 1's "Expected" output.
 
----
+______________________________________________________________________
 
 ### F-12 [LOW] Lifecycle body and git_backend body are referenced but not shown — implementer has to "mirror" without verification
 
@@ -198,31 +207,31 @@ The `commit(message)` function (per Phase 2 pattern, lines from the Swift file p
 
 **How to fix.** Either (a) inline the source of `git_backend.py` and the lifecycle body in Task 4 / Task 5 Step 3 explicitly, OR (b) add a Phase 0 step that diffs Phase 2 sources vs. Phase 3 sources after implementation, with a CI guard.
 
----
+______________________________________________________________________
 
 ### F-13 [INFO] `shell=True` is absent everywhere
 
 Verified across all 7 subprocess invocations in the plan (`_read_via_gradle`, `GradleTaskProbe.has_task`, and the 6 mirror-from-Swift git/gh methods). All use argv lists with `cwd=`. ✓
 
----
+______________________________________________________________________
 
 ### F-14 [INFO] `--notes-file` enforced; `--generate-notes` excluded
 
 Task 4 Step 1 test line 620-631 asserts both invariants. The mirror-from-Swift carries Phase 2's fix. ✓
 
----
+______________________________________________________________________
 
 ### F-15 [INFO] `MAHAVISHNU_GIT_REMOTE` env var with `origin` default
 
 Task 4 Step 1 tests line 567-590 cover both "configured" and "default" cases. ✓
 
----
+______________________________________________________________________
 
 ### F-16 [INFO] `git tag -a -m M -- N` ordering inherited from Phase 2 commit `b2199190`
 
 Plan line 52 explicitly cites the fix. The mirror-from-Swift guarantees the ordering. ✓
 
----
+______________________________________________________________________
 
 ## Coverage Statement
 
@@ -243,7 +252,7 @@ This review covered:
 - Pyproject entry-point declaration (Task 1) — minimal surface, covered by Phase 2 review F-2 analog.
 - Build-script-level Kotlin security (Gradle init scripts, plugin trust) — out of plan scope.
 
----
+______________________________________________________________________
 
 ## Spec Coverage Summary
 
@@ -260,13 +269,13 @@ This review covered:
 | **Writing F2** — hybrid fallback, single interpretation | Spec written; CLI-availability pre-flight missing | Partial — F-7, F-11 |
 | **Lifecycle rollback (spec MCP F2)** | Mentioned in Task 5 sub-step 5.1; body not shown | Partial — F-12 |
 
----
+______________________________________________________________________
 
 ## Plan Quality Verdict
 
 **Verdict: Implementable after addressing the 3 HIGH findings.**
 
-The Phase 3 plan is structurally sound: it correctly mirrors Phase 2 for most security controls, all subprocess calls use argv lists, the auth path is at least present, the path validator is referenced, and the lifecycle/write/rollback order is described. The 3 HIGH findings are addressable in <30 lines of net change:
+The Phase 3 plan is structurally sound: it correctly mirrors Phase 2 for most security controls, all subprocess calls use argv lists, the auth path is at least present, the path validator is referenced, and the lifecycle/write/rollback order is described. The 3 HIGH findings are addressable in \<30 lines of net change:
 
 - F-1 needs a JWT decode call inside `_require_auth_config` (or a rename back to `_require_auth` once it actually validates).
 - F-2 needs the `_validate_project_root` empty-state flipped to deny, with one new test.

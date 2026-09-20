@@ -150,7 +150,9 @@ class SessionBuddyMCPClient:
 
         self._client = client
         self._is_connected = True
-        logger.info(f"✅ Connected to session-buddy MCP server at {self.config.server_url}")
+        logger.info(
+            f"✅ Connected to session-buddy MCP server at {self.config.server_url}"
+        )
         return True
 
     async def _safe_close(self) -> None:
@@ -188,7 +190,9 @@ class SessionBuddyMCPClient:
             return None
         try:
             result = await self._client.call_tool(
-                tool_name, arguments=arguments, timeout=float(self.config.timeout_seconds)
+                tool_name,
+                arguments=arguments,
+                timeout=float(self.config.timeout_seconds),
             )
         except Exception as exc:
             logger.warning(
@@ -208,9 +212,7 @@ class SessionBuddyMCPClient:
     ) -> Callable[..., t.Any] | None:
 
         if not await self.connect():
-            logger.warning(
-                "SessionBuddyMCPClient.track_invocation: connect() failed"
-            )
+            logger.warning("SessionBuddyMCPClient.track_invocation: connect() failed")
         else:
             await self._call_tool(
                 "track_invocation",
@@ -299,9 +301,7 @@ class SessionBuddyMCPClient:
             if isinstance(result, dict):
                 recommendations = result.get("recommendations", [])
                 if isinstance(recommendations, list):
-                    logger.debug(
-                        f"Got {len(recommendations)} recommendations via MCP"
-                    )
+                    logger.debug(f"Got {len(recommendations)} recommendations via MCP")
                     return [r for r in recommendations if isinstance(r, dict)]
                 logger.debug("MCP recommendations returned non-list 'recommendations'")
 
@@ -315,18 +315,14 @@ class SessionBuddyMCPClient:
 
         return []
 
-    async def record_git_metrics(self, metrics: "SessionMetrics") -> None:
+    async def record_git_metrics(self, metrics: SessionMetrics) -> None:
         if not await self.connect():
-            logger.warning(
-                "SessionBuddyMCPClient.record_git_metrics: connect() failed"
-            )
+            logger.warning("SessionBuddyMCPClient.record_git_metrics: connect() failed")
             if self._fallback_tracker:
                 try:
                     await self._fallback_tracker.record_git_metrics(metrics)
                 except Exception as exc:
-                    logger.warning(
-                        f"Fallback git metrics recording failed: {exc}"
-                    )
+                    logger.warning(f"Fallback git metrics recording failed: {exc}")
             return
 
         await self._call_tool(
@@ -337,16 +333,12 @@ class SessionBuddyMCPClient:
                     "commit_velocity": metrics.git_commit_velocity,
                     "branch_count": metrics.git_branch_count,
                     "merge_success_rate": metrics.git_merge_success_rate,
-                    "conventional_compliance": (
-                        metrics.conventional_commit_compliance
-                    ),
+                    "conventional_compliance": (metrics.conventional_commit_compliance),
                     "workflow_efficiency": metrics.git_workflow_efficiency_score,
                 },
             },
         )
-        logger.debug(
-            f"Git metrics recorded via MCP for session {self.session_id}"
-        )
+        logger.debug(f"Git metrics recorded via MCP for session {self.session_id}")
 
     async def get_workflow_recommendations(
         self,
@@ -370,7 +362,9 @@ class SessionBuddyMCPClient:
                     f"Got {len(recommendations)} workflow recommendations via MCP"
                 )
                 return [r for r in recommendations if isinstance(r, dict)]
-            logger.debug("MCP workflow recommendations returned non-list 'recommendations'")
+            logger.debug(
+                "MCP workflow recommendations returned non-list 'recommendations'"
+            )
         return []
 
     def is_connected(self) -> bool:

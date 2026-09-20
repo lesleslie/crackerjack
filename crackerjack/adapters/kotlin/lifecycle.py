@@ -27,6 +27,7 @@ Phase 2 multi-agent review). Tests pass fakes directly to ``__init__``;
 production wires real subprocess implementations via
 :func:`crackerjack.adapters.kotlin.git_backend.make_git_backend`.
 """
+
 from __future__ import annotations
 
 import logging
@@ -191,7 +192,8 @@ class KotlinLifecycle(Lifecycle):
                 release_url = self._gh_release(tag_name, None)
             except Exception:
                 logger.exception(
-                    "gh_release failed; rolling back tag %s", tag_name,
+                    "gh_release failed; rolling back tag %s",
+                    tag_name,
                 )
                 _restore_gradle_properties(self._project_root, original_content)
                 self._delete_tag(tag_name)

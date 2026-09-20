@@ -15,6 +15,7 @@ returned unchanged.
 Per-project delimiter config (`[tool.crackerjack.jinja]` in pyproject.toml) is
 loaded by `_load_jinja_config` — see spec Jinja F2 / Data Flow step 3.
 """
+
 from __future__ import annotations
 
 import logging
@@ -69,9 +70,7 @@ def _apply_tier1(source: str) -> str:
     lines = source.splitlines()
     lines = [line.rstrip() for line in lines]
     out = "\n".join(lines)
-    if source.endswith("\n"):
-        out += "\n"
-    elif out:
+    if source.endswith("\n") or out:
         out += "\n"
     return out
 
@@ -139,7 +138,7 @@ def _load_delimiters_from_pyproject(project_root: Path) -> Mapping[str, str] | N
     try:
         with pyproject.open("rb") as f:
             data = tomllib.load(f)
-    except (OSError, tomllib.TOMLDecodeError):
+    except OSError, tomllib.TOMLDecodeError:
         return None
     section = data.get("tool", {}).get("crackerjack", {}).get("jinja", {})
     if not isinstance(section, dict):

@@ -84,9 +84,7 @@ def public_key_from_bytes(raw: bytes) -> Ed25519PublicKey:
         ValueError: when ``raw`` is not exactly 32 bytes.
     """
     if len(raw) != 32:
-        raise ValueError(
-            f"ed25519 public key must be exactly 32 bytes; got {len(raw)}"
-        )
+        raise ValueError(f"ed25519 public key must be exactly 32 bytes; got {len(raw)}")
     return ed25519.Ed25519PublicKey.from_public_bytes(raw)
 
 

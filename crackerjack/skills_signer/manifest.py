@@ -213,9 +213,7 @@ def manifest_entry_from_dict(data: dict[str, Any]) -> PubkeyManifestEntry:
     required = ("key_id", "algorithm", "public_key_b64", "created_at")
     missing = [k for k in required if k not in data]
     if missing:
-        raise MalformedManifestError(
-            f"manifest entry missing fields: {missing}"
-        )
+        raise MalformedManifestError(f"manifest entry missing fields: {missing}")
 
     algorithm = data["algorithm"]
     if algorithm != SUPPORTED_ALGORITHM:

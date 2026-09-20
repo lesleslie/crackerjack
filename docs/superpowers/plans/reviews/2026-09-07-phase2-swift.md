@@ -29,10 +29,11 @@ Usage: swift build <options>
 **Category:** CLI reality check (Phase 1 lesson re-applied).
 
 **Recommendation:**
+
 - Either:
   1. **Switch to `xcodebuild test`** for iOS destination handling: `xcodebuild test -scheme <SchemeName> -destination 'generic/platform=iOS Simulator'`. Requires extracting the scheme name from `Package.swift` (default = package name) and requires Xcode installed. Loses pure-SwiftPM portability.
-  2. **Drop the `-destination` flag entirely** for `swift test`. For iOS-only packages, recommend users run `xcrun simctl` or `xcodebuild test` themselves. Add a SwiftPM hook `swift.test.xcodebuild` that uses xcodebuild when iOS is detected.
-  3. **Use `--sdk iphonesimulator`** instead of `-destination`: `swift test --sdk iphonesimulator` is a SwiftPM-accepted flag (verified) and selects the iOS Simulator SDK. Caveat: tests still need a host target and an explicit destination; many iOS packages require `xcodebuild test` to actually run tests.
+  1. **Drop the `-destination` flag entirely** for `swift test`. For iOS-only packages, recommend users run `xcrun simctl` or `xcodebuild test` themselves. Add a SwiftPM hook `swift.test.xcodebuild` that uses xcodebuild when iOS is detected.
+  1. **Use `--sdk iphonesimulator`** instead of `-destination`: `swift test --sdk iphonesimulator` is a SwiftPM-accepted flag (verified) and selects the iOS Simulator SDK. Caveat: tests still need a host target and an explicit destination; many iOS packages require `xcodebuild test` to actually run tests.
 
 The Phase 1 brief-vs-reality rule applies here. Verify against `swift test --help` (the plan even tells implementers to do this in Step 4.3 at line 747 — but Step 4.3 runs *after* writing the implementation, which is too late).
 
@@ -59,6 +60,7 @@ Spec line 558 says the rollback is `git reset --hard HEAD~1` (parent of HEAD) �
 **Category:** Correctness bug in rollback contract (spec MCP F2).
 
 **Recommendation:** Change `_reset` semantics to reset to the pre-bump state. Either:
+
 - Capture the pre-bump HEAD SHA in `run()` before `_commit` and pass it to `_reset`. `_reset(pre_bump_sha)` resets to before the bump.
 - Or implement `_reset` as `git reset --hard HEAD~1` (parent). The "Pattern B split methods" chosen by the plan accommodates this.
 
@@ -148,8 +150,9 @@ def _gh_release(tag_name: str) -> str:
 ```
 
 Two defects:
+
 1. **No `check=True`**: If `gh release create` fails (auth missing, repo not found, network), `subprocess.run` returns non-zero, but the function returns the fabricated fallback URL. Caller thinks release succeeded.
-2. **Fallback URL is fabricated**: `https://github.com/local/{project_root.name}/...` does not exist. The user is told a release exists at a URL that 404s.
+1. **Fallback URL is fabricated**: `https://github.com/local/{project_root.name}/...` does not exist. The user is told a release exists at a URL that 404s.
 
 `gh release create --generate-notes` is verified to exist (`gh release create --help` shows the flag). The output goes to stdout in JSON mode only; default mode prints the URL to stdout. But if stderr contains an error, stdout may be empty.
 
@@ -232,6 +235,7 @@ Or convert `_run_swift_lifecycle` to `async def` and use `asyncio.create_subproc
 | `platforms: nil` | No match (default macOS) |
 
 Defects:
+
 - **Malformed-but-parseable Swift**: `platforms: [.iOS, .v16]` is parseable by SwiftPM but the regex finds nothing → silently treated as macOS-only.
 - **`.vN` constants**: The regex `\.([A-Za-z]+)\s*\(` would match `.v16` IF followed by `(`. `.v16)` (closing paren only) doesn't match, so `.v16` is correctly skipped.
 - **Lowercase normalization**: `.iOS` → `ios` (lowercase). Correct for the comparison `"ios" in platforms`.
@@ -244,11 +248,11 @@ Defects:
 
 **Recommendation:** Document the parser's assumptions (only SwiftPM-conformant `platforms:` directive is supported; malformed directives fall back to macOS-only). Add a "WARNING: malformed `platforms:` directive in Package.swift" log message when the block matches but `_PLATFORM_PATTERN` finds nothing, so implementers notice the fallback.
 
-### 9. **MEDIUM** — `git describe` with multiple v* tags on a commit is order-dependent
+### 9. **MEDIUM** — `git describe` with multiple v\* tags on a commit is order-dependent
 
 **Line(s):** 526–543 (Task 3)
 
-**Summary:** `git describe --tags --abbrev=0 --match "v*"` selects the most recent reachable tag. With multiple v* tags on the same commit (e.g., `v1.0.0` and `v1.0.0-rc1` both on commit C), `git describe` picks based on tag-creation order, not commit time (because both tags point to the same commit). Verified:
+**Summary:** `git describe --tags --abbrev=0 --match "v*"` selects the most recent reachable tag. With multiple v\* tags on the same commit (e.g., `v1.0.0` and `v1.0.0-rc1` both on commit C), `git describe` picks based on tag-creation order, not commit time (because both tags point to the same commit). Verified:
 
 ```
 $ git tag v1.0.0       # lightweight
@@ -290,6 +294,7 @@ The plan is more permissive than the spec without justification. If the spec is 
 **Line(s):** 593, 828–832
 
 **Summary:** Plan only provides `swift.package.update` hook (per spec Swift F3). SwiftPM distinguishes:
+
 - `swift package update`: refreshes `Package.resolved` to the latest commits within existing constraints (does NOT change version constraints in `Package.swift`).
 - `swift package upgrade`: similar, but uses more relaxed constraints (does change version constraints).
 
@@ -304,6 +309,7 @@ Spec chose `update`. Plan matches spec. No defect, but the plan should document 
 **Line(s):** 1048–1069
 
 **Summary:** Plan's `_bump`:
+
 - `level == "major"` on `0.1.0` → `0.2.0` (increments minor, not major).
 - `level == "minor"` on `0.1.0` → `0.2.0` (same as major).
 - `level == "patch"` on `0.1.0` → `0.1.1`.
@@ -344,22 +350,23 @@ This conflates major and minor for pre-1.0 versions. Standard semver (per semver
 
 **Recommendation:** Verify FastMCP's behavior with `PermissionError` via a quick test. If FastMCP doesn't map it to a meaningful error code, consider raising `McpError` (from `fastmcp`) or a custom exception that FastMCP recognizes. Add an integration test that asserts the error response structure.
 
----
+______________________________________________________________________
 
 ## Coverage Statement
 
 This review covered:
 
 1. **Task 1** (Foundation / entry-point registration): verified Python entry-point format (`module:ClassName`) is canonical; no Swift-specific concerns.
-2. **Task 2** (`parse_platforms`): verified the regex against 10 real Package.swift patterns; identified edge cases for visionOS / macCatalyst / malformed directives.
-3. **Task 3** (`GitTagVersionSource`): verified `git describe --tags --abbrev=0 --match "v*"` against pre-release tags (`v1.0.0-rc1` preserved with suffix), multi-tag repos (creation-order dependent), annotated vs lightweight (annotated preferred), detached HEAD vs branch checkout. Confirmed the plan's `tag[1:]` correctly strips only the leading `v`.
-4. **Task 4** (`swift_hooks`): **CRITICAL FINDING** — verified `swift test --help` and `swift build --help` on Swift 6.3.1 do NOT document `-destination`. Empirically confirmed `swift test -destination 'generic/platform=iOS Simulator'` fails with `error: Unknown option`. The plan's hooks will fail at runtime against real iOS packages.
-5. **Task 5** (`SwiftLifecycle`): identified rollback semantics bug (Finding #2 — `_reset(commit_sha)` resets TO the bump commit, not AWAY from it). Verified `services/git.py` has `commit()`, `push()`, `push_with_tags()`, `reset_hard()` but lacks `tag()` / `delete_tag()` methods.
-6. **Task 6** (`SwiftAdapter`): wiring is straightforward; no Swift-specific concerns beyond Findings #1 and #4.
-7. **Task 7** (MCP `language_tools`): identified monkeypatch seam (Finding #3), fabricated URL fallback (Finding #5), blocking event loop (Finding #6), auth env-var case sensitivity divergence (Finding #10), `PermissionError` envelope concerns (Finding #15).
-8. **Task 8** (Verification): `swift test --help` reality check is critical (covered in Finding #1). Real-swiftui-ipc-client smoke test is gated correctly.
+1. **Task 2** (`parse_platforms`): verified the regex against 10 real Package.swift patterns; identified edge cases for visionOS / macCatalyst / malformed directives.
+1. **Task 3** (`GitTagVersionSource`): verified `git describe --tags --abbrev=0 --match "v*"` against pre-release tags (`v1.0.0-rc1` preserved with suffix), multi-tag repos (creation-order dependent), annotated vs lightweight (annotated preferred), detached HEAD vs branch checkout. Confirmed the plan's `tag[1:]` correctly strips only the leading `v`.
+1. **Task 4** (`swift_hooks`): **CRITICAL FINDING** — verified `swift test --help` and `swift build --help` on Swift 6.3.1 do NOT document `-destination`. Empirically confirmed `swift test -destination 'generic/platform=iOS Simulator'` fails with `error: Unknown option`. The plan's hooks will fail at runtime against real iOS packages.
+1. **Task 5** (`SwiftLifecycle`): identified rollback semantics bug (Finding #2 — `_reset(commit_sha)` resets TO the bump commit, not AWAY from it). Verified `services/git.py` has `commit()`, `push()`, `push_with_tags()`, `reset_hard()` but lacks `tag()` / `delete_tag()` methods.
+1. **Task 6** (`SwiftAdapter`): wiring is straightforward; no Swift-specific concerns beyond Findings #1 and #4.
+1. **Task 7** (MCP `language_tools`): identified monkeypatch seam (Finding #3), fabricated URL fallback (Finding #5), blocking event loop (Finding #6), auth env-var case sensitivity divergence (Finding #10), `PermissionError` envelope concerns (Finding #15).
+1. **Task 8** (Verification): `swift test --help` reality check is critical (covered in Finding #1). Real-swiftui-ipc-client smoke test is gated correctly.
 
 **Not covered:**
+
 - Python-side concerns (entry-point loading, MCP 4-step pipeline registration correctness) — left to other lenses.
 - Auth/JWT verification of `MAHAVISHNU_JWT_SECRET` semantics — left to MCP lens.
 - Test isolation between Swift and Python suites — left to testing lens.

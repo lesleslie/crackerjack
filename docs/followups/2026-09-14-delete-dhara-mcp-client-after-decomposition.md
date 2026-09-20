@@ -6,7 +6,7 @@ date: 2026-09-14
 last_reviewed: 2026-09-14
 superseded_by: null
 blocks_on:
-  - "mahavishnu/docs/superpowers/specs/2026-09-14-dhara-mcp-decomposition-design.md#phase-8"
+  - "ext:mahavishnu.2026-09-14-dhara-mcp-decomposition-design"
 related:
   - "mahavishnu/docs/plans/2026-09-14-bodai-serverless-readiness-and-component-substitution.md"
 ---

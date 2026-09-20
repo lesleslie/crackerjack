@@ -3,7 +3,7 @@
 > **Reviewer lens:** Simplification — "could this be simpler?" without domain bias.
 > **Scope constraint:** User's scope decisions are pinned (hybrid CLI/Python, lifecycle + Swift hooks, lint + Jinja auto-format, Kotlin/Gradle in scope, CLI + MCP mirror). Focus is the *implementation approach within those constraints*, not the constraints themselves.
 
----
+______________________________________________________________________
 
 ## Findings (most-severe first)
 
@@ -15,7 +15,7 @@ The spec promises 7 new MCP tools (`run_swift_hooks`, `bump_swift_version`, `run
 
 **Trade-off accepted:** generic tools shift parameter-validation cost to the tool layer. That's a one-time cost vs. permanent 7-tool maintenance.
 
----
+______________________________________________________________________
 
 ### F2 [HIGH] — Entry-point registry for v0.81 pays extensibility tax for zero beneficiaries
 
@@ -25,11 +25,12 @@ The spec defines `LanguageAdapter` as a `Protocol`, requires `adapters/base.py`,
 
 **Trade-off accepted:** v0.82 will need to migrate the registry shape, but that's a 1-day refactor vs. maintaining the Protocol/registry plumbing for 2-3 releases with no users.
 
----
+______________________________________________________________________
 
 ### F3 [HIGH] — "Hybrid — external CLI primary, Python fallback" framing is misleading
 
 The spec's headline says "hybrid" but the actual matrix is:
+
 - **Swift**: external CLI only, no Python fallback exists or is planned
 - **Kotlin**: external CLI only, no Python fallback
 - **Web (stylelint/eslint/tsc/html-validate)**: external CLI only
@@ -40,7 +41,7 @@ This is "external CLI by default, in-process only when no CLI exists" — not "h
 
 **Simpler:** drop the "hybrid" framing. State per-hook whether it has an external CLI or is in-process. The `Hook.fallback` field on every hook is misleading; reserve it for hooks that actually have one.
 
----
+______________________________________________________________________
 
 ### F4 [MEDIUM] — `Hook` dataclass over-models the common case
 
@@ -48,7 +49,7 @@ This is "external CLI by default, in-process only when no CLI exists" — not "h
 
 **Simpler:** drop `fallback` from `Hook`. Make it a separate class for the few cases that need it (`PythonFallbackHook(Hook, fallback=...)`). Default `timeout_seconds=300` (5 min). The dataclass becomes `Hook(name, cli_command, *, autofix=False, timeout_seconds=300)`.
 
----
+______________________________________________________________________
 
 ### F5 [MEDIUM] — Jinja canonical policy of 7 rules is excessive for v1
 
@@ -58,7 +59,7 @@ Rules 2, 3, and 6 interact (where do you put a blank line if you preserve existi
 
 **Simpler:** 4 rules for v1 — single-space inside delimiters, trailing newline, no trailing whitespace, blank line between top-level `{% block %}` tags. Defer rules 3, 6, 7 until a contributor files a request. Each rule has tests; halving rule count halves test matrix.
 
----
+______________________________________________________________________
 
 ### F6 [MEDIUM] — Cross-package Jinja parity test corpus is YAGNI for v1
 
@@ -66,7 +67,7 @@ The spec says parity is verified "manually + via a documentation note" on the Ko
 
 **Simpler:** delete "Cross-package parity tests (Jinja)" section from v0.81 spec. The crackerjack-side formatter still needs its own round-trip tests (`format(parse(format(x))) == format(x)`), which is a 1-package concern. Re-introduce parity corpus when IntelliJ CLI test framework becomes real.
 
----
+______________________________________________________________________
 
 ### F7 [MEDIUM] — Phase 5 "Polish" doesn't earn its phase
 
@@ -74,7 +75,7 @@ Phase 5 is three items: registry column update, README update, parity test corpu
 
 **Simpler:** drop Phase 5 as a separate phase. Fold documentation/registry updates into each prior phase as "Integration Contract" deliverables (matches the wire-up-contract discipline).
 
----
+______________________________________________________________________
 
 ### F8 [LOW] — Web detection lists 10 file extensions + 4 directory globs without opt-in
 
@@ -82,7 +83,7 @@ Detection logic: `.css, .scss, .html, .ts, .tsx, .js, .jsx, .jinja, .html.j2, .t
 
 **Simpler:** require opt-in for Web adapter via `[tool.crackerjack.languages.web] = true` in `pyproject.toml`. Detection only kicks in when the user opts in. This avoids false-positive gate failures on legacy Python projects.
 
----
+______________________________________________________________________
 
 ### F9 [LOW] — Hidden complexity: which adapter's lifecycle wins when both Python and Web are detected?
 
@@ -90,7 +91,7 @@ The spec says "Lifecycle runs only for Python (Web has no lifecycle)" for a fast
 
 **Simpler:** add a one-line rule to the spec: "When multiple lifecycle-capable adapters are detected, run the first one in `ADAPTERS` declaration order and skip the rest, surfacing a warning."
 
----
+______________________________________________________________________
 
 ### F10 [LOW] — `VersionSource.write()` read-back verification is expensive and not specified
 
@@ -98,11 +99,12 @@ The spec says "SwiftPM doesn't have a structured parser ... so we use regex with
 
 **Simpler:** mandate round-trip verification on every `VersionSource.write()` and add a `VersionSourceContract` test that runs once per adapter. The cost is one test file; the gain is uniform data-integrity guarantees.
 
----
+______________________________________________________________________
 
 ## Coverage Statement
 
 I reviewed:
+
 - The full spec (lines 1–381)
 - The user's pinned scope decisions (excluded from second-guessing)
 - The implementation approach within those constraints

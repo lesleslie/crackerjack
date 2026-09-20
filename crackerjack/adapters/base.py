@@ -6,7 +6,6 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, ClassVar, Literal, Protocol, runtime_checkable
 
-
 # ---------------------------------------------------------------------------
 # Errors
 # ---------------------------------------------------------------------------
@@ -133,12 +132,10 @@ class LanguageAdapterBase(abc.ABC):
     name: ClassVar[str]  # Subclass must set
 
     @abc.abstractmethod
-    def detect(self, project_root: Path) -> bool:
-        ...
+    def detect(self, project_root: Path) -> bool: ...
 
     @abc.abstractmethod
-    def capabilities(self, project_root: Path) -> Capabilities:
-        ...
+    def capabilities(self, project_root: Path) -> Capabilities: ...
 
 
 # ---------------------------------------------------------------------------
@@ -183,5 +180,4 @@ class Lifecycle(Protocol):
     ``dry_run=True`` to test.
     """
 
-    def run(self, options: LifecycleOptions) -> LifecycleResult:
-        ...
+    def run(self, options: LifecycleOptions) -> LifecycleResult: ...

@@ -4,7 +4,7 @@
 **Date:** 2026-09-09
 **Subject:** `/Users/les/Projects/crackerjack/docs/superpowers/plans/2026-09-07-crackerjack-multi-language-phase3.md` (8 tasks, 1221 lines, ~7 commits)
 
----
+______________________________________________________________________
 
 ## Findings (most-severe first)
 
@@ -27,6 +27,7 @@ return f"{major}.{minor}.{patch}"
 crashes with `ValueError: too many values to unpack` on `1.0.0-SNAPSHOT` (4 parts) and **silently drops** the qualifier on every bump (`1.0.0-SNAPSHOT` → `1.0.1`). The latter is worse than the former because it ships unintentional state changes to consumers and corrupts Maven coordinates.
 
 **Failure scenario:**
+
 - Project with `version=1.0.0-SNAPSHOT` in `gradle.properties`.
 - Operator runs `kotlin_bump_version(level="minor")`.
 - `_bump("1.0.0-SNAPSHOT", "minor")` → `split(".")` returns `["1", "0", "0-SNAPSHOT"]` → `int("0-SNAPSHOT")` raises `ValueError` → lifecycle aborts mid-flow (after `gradle.properties` write may already be persisted, before `_commit`). Test for `0.1.0` passes; production on a real Kotlin project blows up.
@@ -73,7 +74,7 @@ def _bump(version: str, level: str) -> str:
 
 Add a test fixture: `tests/fixtures/gradle-vanilla/gradle.properties` with `version=1.0.0-SNAPSHOT` for the lifecycle smoke.
 
----
+______________________________________________________________________
 
 ### 2. **HIGH** — `_bump` crashes on 2-part (`1.0`) and 1-part (`1`) versions
 
@@ -96,7 +97,7 @@ major, minor, patch = (int(p) for p in parts[:3])
 
 Or use the regex-based parse from Finding #1, which accepts `1` and `1.0` as `major.minor.0`.
 
----
+______________________________________________________________________
 
 ### 3. **HIGH** — `version_source` regex misses Kotlin-DSL idiomatic forms (libs.versions.toml, `val version`, computed values)
 
@@ -152,7 +153,7 @@ This adds 15 LOC and avoids the silent-shadow failure mode. Note: TOML has a rea
 
 The write path needs the same coverage: if version comes from `libs.versions.toml`, `GradlePropertiesVersionSource.write()` should write to `libs.versions.toml`, not `gradle.properties`. Otherwise the bump silently no-ops.
 
----
+______________________________________________________________________
 
 ### 4. **HIGH** — Fixture is missing `gradle.properties`; lifecycle smoke tests cannot run end-to-end
 
@@ -183,11 +184,11 @@ The Phase 2 Swift equivalent had a similar concern (`Package.swift` only, no man
 
    Then either remove `version = "0.1.0"` from `build.gradle.kts` (recommended — exercises Tier 1 file-probe) or keep both and document that Tier 1 wins.
 
-2. **Document in the plan that `gradle.properties` is required for Kotlin bump.** Add a check: if `gradle.properties` is missing AND `build.gradle.kts` has no literal `version`, fail with a clear message pointing the user to add `version=X.Y.Z` to `gradle.properties`. The current `FileNotFoundError` message is correct but un-actionable ("file not found" doesn't tell the operator what to do).
+1. **Document in the plan that `gradle.properties` is required for Kotlin bump.** Add a check: if `gradle.properties` is missing AND `build.gradle.kts` has no literal `version`, fail with a clear message pointing the user to add `version=X.Y.Z` to `gradle.properties`. The current `FileNotFoundError` message is correct but un-actionable ("file not found" doesn't tell the operator what to do).
 
 Recommend (1) for fixture + (2) for production behavior.
 
----
+______________________________________________________________________
 
 ### 5. **HIGH** — `GradleTaskProbe.has_task` silently swallows gradlew failures as "task absent"
 
@@ -234,7 +235,7 @@ def has_task(self, task_name: str) -> ProbeResult:
 
 The hook runner (in `crackerjack/core/`) needs to surface `unavailable` as a `HookWarning` rather than a skip. Phase 2 Swift had a similar gap; Phase 3 should not regress.
 
----
+______________________________________________________________________
 
 ### 6. **MEDIUM** — `_PROBE_KEYS = ("pluginVersion", "projectVersion", "version")` picks up Android Gradle Plugin version on Android projects
 
@@ -252,11 +253,11 @@ This is technically a spec defect (spec line 306 has the same order), but the pl
 
 1. **Reorder probes** to `version`, `projectVersion`, `pluginVersion` (most-specific first). `version=` is the dominant convention; the other two are escape hatches for non-standard project templates.
 
-2. **Document the Android risk explicitly** in `GradlePropertiesVersionSource.read()` docstring and let users opt out via `[tool.crackerjack.kotlin] plugin_version_is_project_version = false` (default).
+1. **Document the Android risk explicitly** in `GradlePropertiesVersionSource.read()` docstring and let users opt out via `[tool.crackerjack.kotlin] plugin_version_is_project_version = false` (default).
 
 The Phase 2 Swift lens caught 16 findings; a spec defect that the plan implements blindly is exactly what that reviewer process is for.
 
----
+______________________________________________________________________
 
 ### 7. **MEDIUM** — Multi-module / Kotlin Multiplatform projects are not handled
 
@@ -276,7 +277,7 @@ The Phase 2 Swift lens caught 16 findings; a spec defect that the plan implement
 
 **Recommendation:** Defer to Phase 3.5 (similar to spec's Phase 2.5 follow-up). Add a `TODO: Kotlin Multiplatform` comment in `version_source.py` and file an issue. Document the limitation in the CHANGELOG entry ("multi-module projects with computed versions are not supported in v0.83; tracked for Phase 3.5").
 
----
+______________________________________________________________________
 
 ### 8. **MEDIUM** — Subprocess invocation does not check `result.returncode != 0` in `has_task` (real failure masked)
 
@@ -290,7 +291,7 @@ The plan's `_read_via_gradle()` (lines 281–291) correctly checks `result.retur
 
 **Recommendation:** Mirror the explicit returncode check from `_read_via_gradle()` in `has_task()`. Either raise on failure or return a distinct `ProbeResult.unavailable` (Finding #5).
 
----
+______________________________________________________________________
 
 ### 9. **MEDIUM** — Test for `gradle properties` probe assumes `^version:\s*(\S+)` matches; Gradle emits `version: 0.1.0` with the same pattern but multiline emission varies
 
@@ -310,7 +311,7 @@ Empirically fine for vanilla Kotlin/JVM. Risky for KMP/Android.
 
 Test should also assert: `gradle.properties` exists with `version=0.1.0`, Tier 1 wins → subprocess not called. The current test `test_read_raises_version_not_found_when_nothing_matches` (line 223–226) only covers the "neither file" case. Add: `test_read_prefers_gradle_properties_over_gradlew_subprocess` to lock in the file-probe priority.
 
----
+______________________________________________________________________
 
 ### 10. **MEDIUM** — `version_source.write()` regex doesn't handle inline comments or trailing-comma lists
 
@@ -327,6 +328,7 @@ incomingVersions=1.0.0,1.1.0
 ```
 
 The write regex `^(\s*)({key}\s*=\s*)(\S+?)([,\s]*)$` does not match:
+
 - `version=1.0.0  # comment` (regex doesn't allow `#`)
 - `version = "1.0.0"` (quoted form, unusual but legal)
 - Lines where the value is followed by `\r\n` (CRLF files — Windows checkouts)
@@ -345,7 +347,7 @@ content = re.sub(r"#[^\n]*", "", content)  # Strip comments
 
 Acceptable as v0.83; file as Phase 3.5 cleanup.
 
----
+______________________________________________________________________
 
 ### 11. **MEDIUM** — Plan lacks a test that the version written to gradle.properties is the version Gradle actually resolves to
 
@@ -378,7 +380,7 @@ def test_write_round_trips_via_gradle(tmp_path: Path) -> None:
 
 Real fixture (with `gradlew`) integration testing belongs in Task 8.1, not here.
 
----
+______________________________________________________________________
 
 ### 12. **LOW** — `_bump` does not handle version `0.x.y` correctly in real-semver mode
 
@@ -392,7 +394,7 @@ This is a documentation gap, not a behavior gap. The cross-adapter divergence no
 
 **Recommendation:** Document in the docstring whether "real semver" means "literal field arithmetic" or "SemVer 2.0 semantics." Recommend literal arithmetic (current behavior) with a comment that pre-1.0 Kotlin projects should manually bump to 1.0.0 first.
 
----
+______________________________________________________________________
 
 ### 13. **LOW** — Probe pattern `^version:\s*(\S+)` captures trailing comments or carriage returns incorrectly on some Gradle versions
 
@@ -410,7 +412,7 @@ But on Gradle 7.x: `version: 0.1.0` (no comment). Verified safe.
 
 Not a real issue; flagging for completeness. **No action needed.**
 
----
+______________________________________________________________________
 
 ### 14. **LOW** — CHANGELOG entry copy-paste artifact
 
@@ -422,7 +424,7 @@ Not a real issue; flagging for completeness. **No action needed.**
 
 **Recommendation:** Replace with "Kotlin/Gradle language adapter (Phase 3): reads version from gradle.properties …"
 
----
+______________________________________________________________________
 
 ### 15. **LOW** — Plan does not document `--no-daemon --no-configuration-cache` rationale or link to upstream Gradle docs
 
@@ -440,7 +442,7 @@ Not a real issue; flagging for completeness. **No action needed.**
 # races with plugin resolution. See docs/superpowers/specs/2026-09-07-...
 ```
 
----
+______________________________________________________________________
 
 ### 16. **LOW** — Hardcoded `./gradlew` (not cross-platform; not `gradlew.bat` aware)
 
@@ -452,7 +454,7 @@ Not a real issue; flagging for completeness. **No action needed.**
 
 **Recommendation:** Either document "macOS/Linux only" in the Kotlin adapter docstring, or use `shutil.which("gradlew")` and fall back to `gradlew.bat`. Recommend (1) — explicit scope.
 
----
+______________________________________________________________________
 
 ## Spec coverage summary
 
@@ -475,6 +477,7 @@ The plan correctly implements all Kotlin-specific spec requirements:
 | `asyncio.to_thread` for sync subprocess in async handlers | Task 7 Step 3, line 1051 | ✓ |
 
 **Spec gaps identified:**
+
 - **Kotlin Multiplatform** (multi-module, version catalog): not addressed in spec or plan. Defer to Phase 3.5.
 - **Android `pluginVersion` collision**: spec defines probe order that picks up AGP version on Android. Defer to spec amendment.
 
@@ -489,19 +492,21 @@ The plan is structurally sound and mirrors the spec faithfully. CLI flag correct
 The **one BLOCKER** (Finding #1: `-SNAPSHOT`/qualifier handling) is a real production-breaking defect on Kotlin/JVM projects — JetBrains plugins, AndroidX, kotlinx libraries all use `-SNAPSHOT` between releases. The bump path will crash on first encounter. This must be fixed before merge.
 
 The **HIGH findings** (Findings #2, #3, #4, #5) are also real production defects:
+
 - 2-part version crash
 - libs.versions.toml silent shadow
 - Missing fixture gradle.properties
 - Silent gradlew failures
 
-Each has a clear fix path of <30 LOC.
+Each has a clear fix path of \<30 LOC.
 
 The **MEDIUM findings** (#6–#11) are polish items that should land before Phase 3 ships but won't crash production on day one (with the exception of #6 which is a spec defect requiring amendment).
 
 **Recommendation:**
+
 1. **Fix Findings #1, #4, #5 in the plan before execution.** These are 30 LOC each and prevent silent production failures.
-2. **Fix Finding #3 (libs.versions.toml) in the plan.** Modern Kotlin projects default to version catalogs; this is a 15-LOC addition.
-3. **File Findings #6 (probe order), #7 (KMP) as spec defects requiring amendment.** Phase 2 Swift reviewer caught similar issues; Phase 3 should not regress.
-4. **Findings #8–#16 are LOW; can ship as Phase 3.5 follow-ups.**
+1. **Fix Finding #3 (libs.versions.toml) in the plan.** Modern Kotlin projects default to version catalogs; this is a 15-LOC addition.
+1. **File Findings #6 (probe order), #7 (KMP) as spec defects requiring amendment.** Phase 2 Swift reviewer caught similar issues; Phase 3 should not regress.
+1. **Findings #8–#16 are LOW; can ship as Phase 3.5 follow-ups.**
 
 Plan is otherwise approve-with-notes. The Kotlin/Gradle CLI reality check (BLOCKER B1 equivalent from Phase 2) passes — no false flag names, no invalid Gradle CLI flags, no invented task names.

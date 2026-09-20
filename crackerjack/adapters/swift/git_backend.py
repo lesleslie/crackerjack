@@ -4,6 +4,7 @@ These are constructor-injected into :class:`SwiftLifecycle`. Tests pass fakes
 via the same constructor signature (per HIGH H7 + Security F4 of the Phase 2
 multi-agent review).
 """
+
 from __future__ import annotations
 
 import logging
@@ -139,8 +140,7 @@ def make_git_backend(
 
         if result.returncode != 0:
             raise RuntimeError(
-                f"gh release create failed (exit {result.returncode}): "
-                f"{result.stderr}",
+                f"gh release create failed (exit {result.returncode}): {result.stderr}",
             )
         return result.stdout.strip()
 

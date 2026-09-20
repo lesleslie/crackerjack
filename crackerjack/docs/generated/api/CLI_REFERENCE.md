@@ -89,7 +89,7 @@ This document describes all command-line options and usage patterns.
 - `--coverage_goal` (float | None):
 - `--no_coverage_ratchet` (bool):
 - `--skip_config_merge` (bool):
-- `--enable_hooks` (list\[str\] | None):
+- `--enable_hooks` (list[str] | None):
 - `--disable_global_locks` (bool):
 - `--global_lock_timeout` (int):
 - `--global_lock_cleanup` (bool):

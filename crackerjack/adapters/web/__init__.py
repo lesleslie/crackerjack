@@ -6,6 +6,7 @@ false-positive activation on Django / Sphinx / MkDocs Python projects.
 
 Phase 4 ships CLI-only hooks (no Python fallbacks) — Swift/Kotlin precedent.
 """
+
 from __future__ import annotations
 
 import tomllib
@@ -28,7 +29,7 @@ def _opt_in_enabled(project_root: Path) -> bool:
     try:
         with pyproject.open("rb") as f:
             data = tomllib.load(f)
-    except (OSError, tomllib.TOMLDecodeError):
+    except OSError, tomllib.TOMLDecodeError:
         return False
     tool = data.get("tool", {})
     crackerjack = tool.get("crackerjack", {})

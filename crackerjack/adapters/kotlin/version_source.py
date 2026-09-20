@@ -5,6 +5,7 @@ Probes ``gradle.properties`` for a version key, falls back to scanning
 ``./gradlew properties`` as the authoritative source when neither file
 matches.
 """
+
 from __future__ import annotations
 
 import logging
@@ -35,7 +36,9 @@ class GradlePropertiesVersionSource:
         if properties_path.exists():
             content = properties_path.read_text()
             for key in self._PROBE_KEYS:
-                m = re.search(rf"\b{re.escape(key)}\s*=\s*(\S+?)[,\s]*$", content, re.MULTILINE)
+                m = re.search(
+                    rf"\b{re.escape(key)}\s*=\s*(\S+?)[,\s]*$", content, re.MULTILINE
+                )
                 if m:
                     return m.group(1)
         for gradle_file in ("build.gradle.kts", "build.gradle"):
@@ -50,8 +53,16 @@ class GradlePropertiesVersionSource:
     def _read_via_gradle(self) -> str:
         try:
             result = subprocess.run(
-                ["./gradlew", "properties", "-q", "--no-daemon", "--no-configuration-cache"],
-                cwd=self._project_root, capture_output=True, text=True,
+                [
+                    "./gradlew",
+                    "properties",
+                    "-q",
+                    "--no-daemon",
+                    "--no-configuration-cache",
+                ],
+                cwd=self._project_root,
+                capture_output=True,
+                text=True,
             )
         except FileNotFoundError as exc:
             raise VersionNotFoundError(
@@ -61,7 +72,9 @@ class GradlePropertiesVersionSource:
             raise VersionNotFoundError(f"`gradlew properties` failed: {result.stderr}")
         m = re.search(r"^version:\s*(\S+)", result.stdout, re.MULTILINE)
         if not m:
-            raise VersionNotFoundError("`gradlew properties` did not emit a `version:` line")
+            raise VersionNotFoundError(
+                "`gradlew properties` did not emit a `version:` line"
+            )
         return m.group(1)
 
     def write(self, new_version: str) -> None:
@@ -75,7 +88,10 @@ class GradlePropertiesVersionSource:
         for key in self._PROBE_KEYS:
             pattern = rf"^(\s*)({re.escape(key)}\s*=\s*)(\S+?)([,\s]*)$"
             new_content, count = re.subn(
-                pattern, rf"\1\g<2>{new_version}\4", content, flags=re.MULTILINE,
+                pattern,
+                rf"\1\g<2>{new_version}\4",
+                content,
+                flags=re.MULTILINE,
             )
             if count:
                 content = new_content
@@ -88,6 +104,7 @@ class GradlePropertiesVersionSource:
         verified = self.read()
         if verified != new_version:
             from crackerjack.adapters.base import VersionWriteError
+
             raise VersionWriteError(
                 f"Write verification failed: wrote {new_version!r}, read back {verified!r}"
             )

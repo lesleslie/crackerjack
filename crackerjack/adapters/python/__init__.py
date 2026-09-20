@@ -7,7 +7,7 @@ from crackerjack.adapters.python.hooks import python_hooks
 from crackerjack.adapters.python.lifecycle import PythonLifecycle
 from crackerjack.adapters.python.version_source import PyprojectVersionSource
 
-__all__ = ["PythonAdapter", "PyprojectVersionSource", "PythonLifecycle", "python_hooks"]
+__all__ = ["PyprojectVersionSource", "PythonAdapter", "PythonLifecycle", "python_hooks"]
 
 
 class PythonAdapter(LanguageAdapterBase):

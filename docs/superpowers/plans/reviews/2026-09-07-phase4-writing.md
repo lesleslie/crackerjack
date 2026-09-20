@@ -4,7 +4,7 @@
 **Spec:** `/Users/les/Projects/crackerjack/docs/superpowers/specs/2026-09-07-crackerjack-multi-language-design.md` (Rev 2).
 **Lens:** Writing quality for a new contributor, documentation completeness, docstring/comment accuracy, CHANGELOG quality, plan clarity.
 
----
+______________________________________________________________________
 
 ## Findings (most-severe first)
 
@@ -39,21 +39,24 @@ def _normalize_one_space_inside_delimiters(source: str, delims: Mapping[str, str
 **Why this is a writing defect (not just a code bug):**
 
 1. **The docstring and inline comment both claim behavior the code does not deliver.** The docstring says "ensure exactly one space inside each delimiter pair"; the comment says "Preserves the body." Neither is true. For `{%if x%}`:
+
    - The regex `(\S)(.*?)(\S)` captures `i` (group 1), `f ` (group 2, lazy match), `x` (group 3).
    - The replacement uses `m.group(2)` only — group 1 (`i`) and group 3 (`x`) are dropped.
    - Result: `{% f  %}` (two spaces between `f` and `%}`, with `i` and `x` removed).
 
-2. **The corresponding test (`test_tier2_when_normalize_true`, lines 775-779) would FAIL** when run against the implementation:
+1. **The corresponding test (`test_tier2_when_normalize_true`, lines 775-779) would FAIL** when run against the implementation:
+
    ```python
    src = "{%if x%}A{%endif%}"
    result = format_template(src, delimiters=DEFAULT_DELIMITERS, normalize=True)
    assert "{% if x %}" in result  # NEVER matches; result is "{% f  %}"
    ```
+
    The plan ships a test that contradicts the implementation. TDD caught this if the test was run first (which is what the plan's TDD structure intends). The plan's "Expected: 9 passed" at Step 6 would not match reality.
 
-3. **The "idempotent: don't keep adding spaces" comment is also inaccurate.** The regex matches when the inner content starts/ends with non-whitespace, but the replacement puts a space there, so the next iteration would NOT match (because the new inner starts/ends with whitespace). So the comment's claim about "idempotent" is technically correct, but it's the wrong justification — the function drops characters entirely, so even with idempotence the function corrupts the template.
+1. **The "idempotent: don't keep adding spaces" comment is also inaccurate.** The regex matches when the inner content starts/ends with non-whitespace, but the replacement puts a space there, so the next iteration would NOT match (because the new inner starts/ends with whitespace). So the comment's claim about "idempotent" is technically correct, but it's the wrong justification — the function drops characters entirely, so even with idempotence the function corrupts the template.
 
-4. **Recommended fix** (preserve full inner):
+1. **Recommended fix** (preserve full inner):
 
    ```python
    def _normalize_one_space_inside_delimiters(source: str, delims: Mapping[str, str]) -> str:
@@ -81,9 +84,9 @@ def _normalize_one_space_inside_delimiters(source: str, delims: Mapping[str, str
 
    This requires at least 2 non-whitespace chars in the inner; the test inputs `{%if x%}` and `{%endif%}` satisfy this. For single-char inner (e.g., `{%i%}`), the regex would not match — Tier 2 would skip, which is a documented limitation worth noting.
 
-5. **Why this matters:** This is a Day 1 bug. A new contributor running the TDD steps as written hits a failing test on Step 6 and has to debug the formatter. The plan's "Expected: 9 passed" gives them confidence the test will pass, which is a documentation lie.
+1. **Why this matters:** This is a Day 1 bug. A new contributor running the TDD steps as written hits a failing test on Step 6 and has to debug the formatter. The plan's "Expected: 9 passed" gives them confidence the test will pass, which is a documentation lie.
 
----
+______________________________________________________________________
 
 ### HIGH-2 — `_eslt_hook` encodes `;` in argv list; `subprocess.run(cmd)` without `shell=True` will fail. The comment claims "the runner treats as sequential" but no such runner exists.
 
@@ -130,22 +133,25 @@ def run_hook_with_fallback(
 
 1. **`subprocess.run` with `shell=False` (default) treats `;` as a literal argv element**, not a command separator. The `cmd = ("eslint", ".", ";", "tsc", "--noEmit")` tuple, when passed to `subprocess.run`, becomes argv `["eslint", ".", ";", "tsc", "--noEmit"]`. This will fail with `eslint: ERROR: ;` (eslint interprets `;` as a filename argument).
 
-2. **Global Constraints (lines 26-32) forbid shell:** "argv list, no shell for all subprocess invocations." Adding `shell=True` to satisfy the `;` separator would violate this constraint.
+1. **Global Constraints (lines 26-32) forbid shell:** "argv list, no shell for all subprocess invocations." Adding `shell=True` to satisfy the `;` separator would violate this constraint.
 
-3. **The comment "the runner treats as sequential" describes a non-existent runner.** The plan's `run_hook_with_fallback` (lines 601-635) does NOT split `;`-separated commands. It does NOT iterate. It does NOT sequence anything. The comment is a docstring lie — it explains what the author WISHED the code did, not what it does.
+1. **The comment "the runner treats as sequential" describes a non-existent runner.** The plan's `run_hook_with_fallback` (lines 601-635) does NOT split `;`-separated commands. It does NOT iterate. It does NOT sequence anything. The comment is a docstring lie — it explains what the author WISHED the code did, not what it does.
 
-4. **The Phase 3 writing review (HIGH-2) flagged the same defect class** for `_build_hooks` in Kotlin — "dead code AND a misleading comment." Phase 4 inherits the defect class.
+1. **The Phase 3 writing review (HIGH-2) flagged the same defect class** for `_build_hooks` in Kotlin — "dead code AND a misleading comment." Phase 4 inherits the defect class.
 
 **Recommended fix:** Pick one of three approaches:
 
 1. **Two separate hooks** (simplest, no comment needed):
+
    ```python
    hooks.append(Hook(name="web.eslint", cli_command=eslint_cmd, fallback=js_ts_fallback, timeout_seconds=300))
    hooks.append(Hook(name="web.tsc", cli_command=tsc_cmd, fallback=None, timeout_seconds=300))
    ```
+
    Renames `web.eslint_tsc` to two hooks. Update the architecture claim, CHANGELOG, MCP tool test.
 
-2. **Define `Hook` to support multiple commands** (changes Hook contract):
+1. **Define `Hook` to support multiple commands** (changes Hook contract):
+
    ```python
    @dataclass
    class Hook:
@@ -154,14 +160,15 @@ def run_hook_with_fallback(
        fallback: Callable | None = None
        timeout_seconds: int = 300
    ```
+
    Then `run_hook_with_fallback` iterates. This is a bigger change and requires updating Phase 2/3 Swift/Kotlin adapters.
 
-3. **Use a shell wrapper script** (the plan's current design, but be explicit):
+1. **Use a shell wrapper script** (the plan's current design, but be explicit):
    Document that the Web adapter uses shell — and amend Global Constraints to allow it. Bad: violates the project-wide rule.
 
 **The current plan's approach (3) is incompatible with (1) and (2).** The comment "the runner treats as sequential" must be replaced with one of the above fixes. Otherwise the implementation will fail at runtime.
 
----
+______________________________________________________________________
 
 ### HIGH-3 — Spec Revision Notes section is empty despite a real spec deviation (Phase 4 deliverable scope reduction)
 
@@ -187,11 +194,11 @@ def run_hook_with_fallback(
 
 1. **The plan makes a SPEC DEVIATION** — the spec says the deliverable is a Bodai sibling package; the plan ships 3 jinja fixture files inside `tests/fixtures/web-vanilla/tests/fixtures/jinja-templates/`. The "separate plan" claim is informal; there's no Spec Revision Note recording the reduction.
 
-2. **The Phase 3 writing review (HIGH-1) flagged this exact defect class** — "Spec Revision Notes claims 'None for Phase 3' but the plan adds a tool that diverges from the spec." Phase 4 has the SAME defect: empty Spec Revision Notes + a real deviation.
+1. **The Phase 3 writing review (HIGH-1) flagged this exact defect class** — "Spec Revision Notes claims 'None for Phase 3' but the plan adds a tool that diverges from the spec." Phase 4 has the SAME defect: empty Spec Revision Notes + a real deviation.
 
-3. **Future spec revisions will not know why the change happened.** A reader sees "deliverable per spec line 420" in the spec and "separate plan" in the plan; nothing in either file says why. The "separate plan" status (deferred? never? combined into another phase?) is lost.
+1. **Future spec revisions will not know why the change happened.** A reader sees "deliverable per spec line 420" in the spec and "separate plan" in the plan; nothing in either file says why. The "separate plan" status (deferred? never? combined into another phase?) is lost.
 
-4. **The Phase 2 final-review pattern set precedent** for recording deviations. Phase 3 also failed to follow this pattern. Phase 4 inherits the regression.
+1. **The Phase 2 final-review pattern set precedent** for recording deviations. Phase 3 also failed to follow this pattern. Phase 4 inherits the regression.
 
 **Recommended fix:**
 
@@ -212,7 +219,7 @@ Or, if the plan author intends to add the sibling package in a follow-up phase, 
 
 Either way, Spec Revision Notes must NOT be empty.
 
----
+______________________________________________________________________
 
 ### HIGH-4 — Plan has no self-review section; Phase 2 ≥ Phase 3 ≥ Phase 4 regression
 
@@ -224,7 +231,8 @@ The Phase 3 writing review (HIGH-4) flagged this exact defect. Phase 4 inherits 
 
 1. **Without self-review, the implementer has no checklist** to verify spec coverage. The Spec Revision Notes defect (HIGH-3) would have been caught if the author enumerated spec items row-by-row.
 
-2. **Without self-review, future reviewers cannot quickly verify** that every spec invariant from the Rev 2 Jinja rewrite was implemented. Specifically:
+1. **Without self-review, future reviewers cannot quickly verify** that every spec invariant from the Rev 2 Jinja rewrite was implemented. Specifically:
+
    - Jinja F1: lex() vs parse() ✓ (plan uses lex)
    - Jinja F2: all 6 delimiter kwargs ✓ (plan passes all 6)
    - Jinja F3: two-tier canonical policy ⚠ (Tier 2 implementation broken — see HIGH-1)
@@ -236,7 +244,7 @@ The Phase 3 writing review (HIGH-4) flagged this exact defect. Phase 4 inherits 
    - MCP F5: per-invocation auth check ✓ (Task 6, Phase 3 carry-over)
    - Testing F9: round-trip invariant ✓ (Task 4 Step 2)
 
-3. **Without self-review, two high-severity bugs (HIGH-1, HIGH-2) ship** — both are the kind of bug a row-by-row self-review would have caught.
+1. **Without self-review, two high-severity bugs (HIGH-1, HIGH-2) ship** — both are the kind of bug a row-by-row self-review would have caught.
 
 **Recommended fix:**
 
@@ -263,7 +271,7 @@ Add a Self-Review section before Spec Revision Notes:
 | Spec Revision Notes | Empty | ✗ WRONG — see writing review HIGH-3 |
 ```
 
----
+______________________________________________________________________
 
 ### HIGH-5 — Plan has no spec coverage table (Phase 3 regression persists)
 
@@ -271,7 +279,7 @@ Add a Self-Review section before Spec Revision Notes:
 
 The Phase 3 writing review (HIGH-5) flagged this. Phase 4 has zero rows. See HIGH-4 above for the combined fix.
 
----
+______________________________________________________________________
 
 ### MEDIUM-1 — `_eslt_hook` function name is inconsistent with the hook name and uses a non-obvious abbreviation; weakens cross-file naming
 
@@ -309,6 +317,7 @@ def _html_hook(project_root: Path) -> Hook:
 Wait — even these are inconsistent. `_css_hook` produces `web.stylelint` (not `web.css_something`), and `_html_hook` produces `web.html_validate` (not `web.html_something`). The prefix differs per hook.
 
 The cleanest naming would be either:
+
 - Function name matches the tool: `_stylelint_hook`, `_eslint_tsc_hook`, `_html_validate_hook`
 - Or function name matches the hook name (minus `web.`): `_stylelint_hook`, `_eslint_tsc_hook`, `_html_validate_hook`
 
@@ -330,7 +339,7 @@ def _html_validate_hook(project_root: Path) -> Hook:
 
 The function names then match the hook names (sans prefix) and read clearly in stack traces.
 
----
+______________________________________________________________________
 
 ### MEDIUM-2 — Three hook factory functions (`_css_hook`, `_eslt_hook`, `_html_hook`) lack docstrings; only the module docstring explains them
 
@@ -363,14 +372,15 @@ def _html_hook(project_root: Path) -> Hook:
 
 1. `_css_hook` and `_html_hook` have NO docstrings. `_eslt_hook` has a one-liner that mentions "Combines eslint + tsc" but doesn't explain the pinning logic.
 
-2. A new contributor reading `web_hooks(tmp_path)` and stepping into `_css_hook` has no inline explanation. The module docstring (lines 522-530) describes the pattern but doesn't enumerate the per-hook semantics.
+1. A new contributor reading `web_hooks(tmp_path)` and stepping into `_css_hook` has no inline explanation. The module docstring (lines 522-530) describes the pattern but doesn't enumerate the per-hook semantics.
 
-3. The pinning logic (`if pinned is None ... else`) is non-obvious. A reader doesn't know:
+1. The pinning logic (`if pinned is None ... else`) is non-obvious. A reader doesn't know:
+
    - What `pinned` means (it's the version from `package.json` devDependencies)
    - Why use `npx` when not pinned but the bare command when pinned
    - What the timeout_seconds means
 
-4. **Phase 3 writing review HIGH-3 (Module docstrings absent)** flagged a related issue — module docstrings for `version_source.py`, `hooks.py`, `__init__.py`. Phase 4 fixes the module docstring requirement but still misses the function-level docstrings.
+1. **Phase 3 writing review HIGH-3 (Module docstrings absent)** flagged a related issue — module docstrings for `version_source.py`, `hooks.py`, `__init__.py`. Phase 4 fixes the module docstring requirement but still misses the function-level docstrings.
 
 **Recommended fix:**
 
@@ -407,7 +417,7 @@ def _html_hook(project_root: Path) -> Hook:
     ...
 ```
 
----
+______________________________________________________________________
 
 ### MEDIUM-3 — Task 6 tests use `monkeypatch` (sync) inside `async def`, with explicit `monkeypatch.undo()`; same defect Phase 3 writing review LOW-8 flagged
 
@@ -436,9 +446,9 @@ The Phase 3 writing review (LOW-8) flagged this exact pattern. Phase 4 inherits 
 
 1. **The tests are declared `async def` but use `asyncio.run()` inside the body.** If `_register()` is async, `await` should be used. If `_register()` is sync, the test should be `def`, not `async def`.
 
-2. **`monkeypatch.undo()` in a `try/finally`** is the pattern from old-style `unittest.mock.patch` usage. Pytest's `monkeypatch` fixture is designed to be used as a function argument (pytest cleans it up automatically). The plan creates a fresh `pytest.MonkeyPatch()` and manually undoes it — bypasses the fixture's lifecycle.
+1. **`monkeypatch.undo()` in a `try/finally`** is the pattern from old-style `unittest.mock.patch` usage. Pytest's `monkeypatch` fixture is designed to be used as a function argument (pytest cleans it up automatically). The plan creates a fresh `pytest.MonkeyPatch()` and manually undoes it — bypasses the fixture's lifecycle.
 
-3. **The pattern is verbose and error-prone.** A reader has to verify the `try/finally` is there; if a future edit adds code after the `try` block, the `finally` may not catch all paths.
+1. **The pattern is verbose and error-prone.** A reader has to verify the `try/finally` is there; if a future edit adds code after the `try` block, the `finally` may not catch all paths.
 
 **Recommended fix (mirror Phase 2's pattern):**
 
@@ -472,7 +482,7 @@ async def test_check_web_lint_returns_three_hook_names(
 
 The fix choice depends on `_register()`'s actual signature — the plan should commit to one.
 
----
+______________________________________________________________________
 
 ### MEDIUM-4 — `format_jinja_templates` reads file outside the thread executor, violating "All I/O async" Global Constraint
 
@@ -503,9 +513,9 @@ return {"files": files, "errors": errors}
 
 1. **`path.read_text()` is synchronous I/O.** Per Global Constraints line 29: "All I/O async. Subprocess via `asyncio.to_thread` or `loop.run_in_executor`. Sync only at CLI entry points." `path.read_text()` blocks the event loop.
 
-2. **`path.write_text(formatted)` is also synchronous I/O.** It runs after `await asyncio.to_thread(format_template, ...)` but is still on the main thread.
+1. **`path.write_text(formatted)` is also synchronous I/O.** It runs after `await asyncio.to_thread(format_template, ...)` but is still on the main thread.
 
-3. **`asyncio.to_thread` only wraps `format_template`** (CPU-bound, not I/O), so wrapping it provides no benefit. The actual I/O (`read_text`/`write_text`) runs on the main thread.
+1. **`asyncio.to_thread` only wraps `format_template`** (CPU-bound, not I/O), so wrapping it provides no benefit. The actual I/O (`read_text`/`write_text`) runs on the main thread.
 
 **Recommended fix:**
 
@@ -525,7 +535,7 @@ for path in proj.rglob("*"):
 
 Or use `aiofiles` (if already a dep) for true async I/O.
 
----
+______________________________________________________________________
 
 ### MEDIUM-5 — `test_format_jinja_templates_runs_with_auth` does not verify the file was actually mutated
 
@@ -556,14 +566,16 @@ async def test_format_jinja_templates_runs_with_auth(tmp_path: Path) -> None:
 **Why this is a writing defect:**
 
 The test asserts that `result["files"]` contains `"test.html"` — but doesn't assert that the file **on disk** was actually formatted. The tool could:
+
 - Return a list of filenames without actually writing.
 - Write the original (unformatted) contents and still pass.
 - Crash silently during `write_text` and the exception handler could add it to `errors` instead (test would still pass if `errors` is not asserted).
 
 For a mutation tool, the test should verify:
+
 1. The file on disk has the formatted content.
-2. No entries in `errors` for successful files.
-3. The list of `files` matches the actual file list.
+1. No entries in `errors` for successful files.
+1. The list of `files` matches the actual file list.
 
 **Recommended fix:**
 
@@ -591,7 +603,7 @@ async def test_format_jinja_templates_runs_with_auth(
     assert test_file.read_text().endswith("\n")  # Tier 1 trailing newline applied
 ```
 
----
+______________________________________________________________________
 
 ### MEDIUM-6 — Plan claims `typer 0.26+` in Tech Stack but no Typer code is shown; the claim is misleading
 
@@ -605,21 +617,22 @@ async def test_format_jinja_templates_runs_with_auth(
 
 1. **No Typer code is shown** in any of the 7 tasks. The plan's deliverables are MCP tools (`check_web_lint`, `format_jinja_templates`) — not CLI commands.
 
-2. **The plan body never imports or uses Typer.** No `@app.command()` decorators, no `typer.Option(...)`, no CLI invocation patterns.
+1. **The plan body never imports or uses Typer.** No `@app.command()` decorators, no `typer.Option(...)`, no CLI invocation patterns.
 
-3. **A reviewer reading the Tech Stack might expect Typer-related tasks** and waste time looking for them.
+1. **A reviewer reading the Tech Stack might expect Typer-related tasks** and waste time looking for them.
 
-4. **Mentioning Typer twice** ("typer 0.26+, hatchling, jinja2 ≥3.1.6, subprocess (npx wrappers), typer 0.26+ for CLI surface") makes the duplication even more conspicuous.
+1. **Mentioning Typer twice** ("typer 0.26+, hatchling, jinja2 ≥3.1.6, subprocess (npx wrappers), typer 0.26+ for CLI surface") makes the duplication even more conspicuous.
 
 **Recommended fix:**
 
 Either:
+
 - Remove "typer 0.26+" from Tech Stack (since the plan doesn't add Typer code).
 - Or add a Task that adds a Typer CLI command for the Web adapter (e.g., `crackerjack web lint <path>`), with tests.
 
 The current state has the claim but no implementation backing it.
 
----
+______________________________________________________________________
 
 ### MEDIUM-7 — Inline comment in `run_hook_with_fallback` describes a Phase 4.5 follow-up that is not in the plan's Out of Scope section
 
@@ -646,13 +659,14 @@ if result.returncode != 0:
 
 1. **The comment references "Phase 4.5" twice** — both in the line "run subprocess (simplified; full runner is a Phase 4.5 concern)" and "CLI parsing is a Phase 4.5 concern". Phase 4.5 is not mentioned anywhere else in the plan.
 
-2. **The Out of Scope section (line 15) only lists the shared `jinja-test-fixtures/` package.** A reader has no way to find what Phase 4.5 is, when it's planned, or what's in scope for it.
+1. **The Out of Scope section (line 15) only lists the shared `jinja-test-fixtures/` package.** A reader has no way to find what Phase 4.5 is, when it's planned, or what's in scope for it.
 
-3. **A new contributor sees `subprocess.run` succeed and wonders "is this it? where's the CLI output parsing?"** The comment says it's deferred but doesn't say to what.
+1. **A new contributor sees `subprocess.run` succeed and wonders "is this it? where's the CLI output parsing?"** The comment says it's deferred but doesn't say to what.
 
 **Recommended fix:**
 
 Either:
+
 - Add "Phase 4.5" to the Out of Scope section:
   > **Out of scope:** Web hook CLI output parsing (Phase 4.5 follow-up). Phase 4 surfaces issues only via the Python fallback.
 - Or remove the Phase 4.5 references and replace with a TODO:
@@ -664,7 +678,7 @@ Either:
 
 The current comment hides a known gap behind "Phase 4.5" with no plan reference.
 
----
+______________________________________________________________________
 
 ### LOW-1 — Phase 2/3 short-hand references not inlined; Phase 3 writing review MEDIUM-2 again
 
@@ -683,6 +697,7 @@ The current comment hides a known gap behind "Phase 4.5" with no plan reference.
 Phase 3 writing review MEDIUM-2 flagged this exact pattern. Phase 4 inherits:
 
 A new contributor without Phase 2/3 plans in hand has to reverse-engineer:
+
 - What was CF-2? (Phase 2 final-review CF-2 was "don't construct lifecycle in `capabilities()`; build lazily")
 - Why does `_validate_project_root` matter? (because the prior version was permissive, not fail-closed)
 - What was the "Phase 3 final-review fix"? (fixture-reference test pattern)
@@ -697,7 +712,7 @@ Inline 2-3 lines per reference. For example, line 36:
 
 This adds ~30 lines but eliminates "what was that?" questions for a new contributor.
 
----
+______________________________________________________________________
 
 ### LOW-2 — Plan does not mention that the Phase 4 web fixture path `tests/fixtures/web-vanilla/tests/fixtures/jinja-templates/` is unusual nesting
 
@@ -719,17 +734,18 @@ tests/fixtures/web-vanilla/                               # Real Web fixture (pa
 
 1. **The Jinja fixture path is `tests/fixtures/web-vanilla/tests/fixtures/jinja-templates/`** — nesting `tests/fixtures/` inside `tests/fixtures/`. The path reads as `tests/fixtures/web-vanilla/tests/fixtures/jinja-templates/`.
 
-2. **A new contributor is likely to rename this** to `tests/fixtures/web-vanilla/jinja-templates/` (no nested `tests/fixtures/`), breaking the spec line 420 reference (which says "shared `jinja-test-fixtures/` Bodai sibling package"). If the future migration moves the files to the sibling package, having `tests/fixtures/jinja-templates/` inside the web fixture is correct; if it stays, the path is awkward.
+1. **A new contributor is likely to rename this** to `tests/fixtures/web-vanilla/jinja-templates/` (no nested `tests/fixtures/`), breaking the spec line 420 reference (which says "shared `jinja-test-fixtures/` Bodai sibling package"). If the future migration moves the files to the sibling package, having `tests/fixtures/jinja-templates/` inside the web fixture is correct; if it stays, the path is awkward.
 
-3. **No rationale is given** for the nested path. The plan shows the file structure as a tree but doesn't explain why the nesting exists.
+1. **No rationale is given** for the nested path. The plan shows the file structure as a tree but doesn't explain why the nesting exists.
 
 **Recommended fix:**
 
 Either:
+
 - Inline a rationale: "Nested `tests/fixtures/jinja-templates/` inside `tests/fixtures/web-vanilla/` mirrors the eventual `jinja-test-fixtures/` Bodai sibling package location (spec line 420). When the sibling package ships, the files move there and the web fixture's nested path is deleted."
 - Or simplify the path now: rename to `tests/fixtures/web-vanilla/jinja-templates/`. Update the test code (`FIXTURE_ROOT / "jinja-templates"`) accordingly.
 
----
+______________________________________________________________________
 
 ### LOW-3 — CHANGELOG entry mentions 4 adapter languages but doesn't enumerate the entry-point group update clearly
 
@@ -743,9 +759,9 @@ Either:
 
 1. **The spelling is correct** (`crackerjack.language_adapters`) — Phase 3 writing review found this also correct. Good.
 
-2. **But the entry says "now registers"** as if the Web entry is the only addition. A reader unfamiliar with Phase 2/3 might wonder when Python/Swift/Kotlin were added. The CHANGELOG should anchor on Phase 4 alone, not retell the entry-point history.
+1. **But the entry says "now registers"** as if the Web entry is the only addition. A reader unfamiliar with Phase 2/3 might wonder when Python/Swift/Kotlin were added. The CHANGELOG should anchor on Phase 4 alone, not retell the entry-point history.
 
-3. **The "Python, Swift, Kotlin, and Web" list is alphabetical** — good. But it could be more explicit:
+1. **The "Python, Swift, Kotlin, and Web" list is alphabetical** — good. But it could be more explicit:
 
    > `crackerjack.language_adapters` entry-point group now includes the Web adapter (added in Phase 4); Python, Swift, and Kotlin were registered in earlier phases.
 
@@ -755,7 +771,7 @@ Trim the sentence to Phase 4 scope:
 
 > `crackerjack.language_adapters` entry-point group now includes the Web adapter (joining Python, Swift, and Kotlin from earlier phases).
 
----
+______________________________________________________________________
 
 ### LOW-4 — Plan header says "Status: Ready for execution" but Task 2's pre-flight check ("verify CLI commands") and Task 4's "verify jinja2 delimiter kwargs" are pre-conditions, not actions
 
@@ -765,9 +781,9 @@ Trim the sentence to Phase 4 scope:
 
 1. **Task 3 Step 1 is titled "Verify CLI commands"** but is followed by a 4-line bash block that may FAIL (if any of `npx stylelint --version`, etc., fail). The plan does not say what to do if the verify fails — note the failure and proceed? Skip Task 3 entirely?
 
-2. **Task 4 Step 1 is titled "Verify jinja2 delimiter kwargs"** but is followed by a Python -c command that may fail (if `jinja2` is not yet installed or the version is wrong). Same issue.
+1. **Task 4 Step 1 is titled "Verify jinja2 delimiter kwargs"** but is followed by a Python -c command that may fail (if `jinja2` is not yet installed or the version is wrong). Same issue.
 
-3. **A "Ready for execution" plan should not have un-handled pre-conditions.** The implementer hits the pre-flight, it fails, and has no instruction.
+1. **A "Ready for execution" plan should not have un-handled pre-conditions.** The implementer hits the pre-flight, it fails, and has no instruction.
 
 **Recommended fix:**
 
@@ -786,7 +802,7 @@ If any command fails:
 
 Or split the task: Task 3.0 = verify CLI; Task 3.1 = write tests; if verify fails, switch to "fallback-only" mode for all hooks.
 
----
+______________________________________________________________________
 
 ### LOW-5 — `WebHookError` raised in `run_hook_with_fallback` is never unit-tested
 
@@ -803,13 +819,14 @@ class WebHookError(RuntimeError):
 
 1. **The error class is defined** but the test file (`test_hooks.py`) does not contain a test that exercises the error path. The 8 tests cover happy paths (hooks returned, hooks invoked, fallbacks work) but never raise `WebHookError`.
 
-2. **`run_hook_with_fallback` raises `WebHookError` when `shutil.which(cli_name) is None and hook.fallback is None`.** But every hook in `_css_hook`, `_eslt_hook`, `_html_hook` has a fallback set. So the error path is unreachable in the current design.
+1. **`run_hook_with_fallback` raises `WebHookError` when `shutil.which(cli_name) is None and hook.fallback is None`.** But every hook in `_css_hook`, `_eslt_hook`, `_html_hook` has a fallback set. So the error path is unreachable in the current design.
 
-3. **If the error is dead code, the class shouldn't be in the implementation.** If the error is part of the contract for future hooks without fallback, it should be tested.
+1. **If the error is dead code, the class shouldn't be in the implementation.** If the error is part of the contract for future hooks without fallback, it should be tested.
 
 **Recommended fix:**
 
 Either:
+
 - Add a test that constructs a Hook without a fallback and verifies `WebHookError` is raised:
   ```python
   def test_run_hook_with_fallback_raises_when_cli_missing_and_no_fallback(tmp_path):
@@ -819,7 +836,7 @@ Either:
   ```
 - Or document that `WebHookError` is reserved for future hooks without fallbacks and remove the class from Phase 4 (move to a Phase 4.5 follow-up).
 
----
+______________________________________________________________________
 
 ### LOW-6 — Plan's CHANGELOG entry omits the `Tier 2 = opt-in` opt-in mechanism location
 
@@ -833,20 +850,21 @@ Either:
 
 1. **The spec (line 407) says Tier 2 is opt-in via `[tool.crackerjack.jinja] normalize = true` in `pyproject.toml`.** The plan's implementation (Task 4 Step 4) has `normalize: bool = False` as a function parameter — so the opt-in is via direct function call, not via `pyproject.toml`.
 
-2. **The CHANGELOG entry says `normalize=True`** (function parameter) but the spec says `[tool.crackerjack.jinja] normalize = true` (config file).
+1. **The CHANGELOG entry says `normalize=True`** (function parameter) but the spec says `[tool.crackerjack.jinja] normalize = true` (config file).
 
-3. **These are different mechanisms.** A user reading the CHANGELOG might wonder why the spec says one thing and the entry says another.
+1. **These are different mechanisms.** A user reading the CHANGELOG might wonder why the spec says one thing and the entry says another.
 
 **Recommended fix:**
 
 Either:
+
 - Update the implementation to read `pyproject.toml` and pick up `[tool.crackerjack.jinja] normalize` (matches spec).
 - Or document the deviation:
   > Tier 2 is opt-in via the `normalize=True` parameter to `format_template()`. The spec's `[tool.crackerjack.jinja] normalize = true` config-file mechanism is deferred (not implemented in Phase 4).
 
 The current state is a spec/plan mismatch that the CHANGELOG papered over.
 
----
+______________________________________________________________________
 
 ## Spec Coverage Summary
 
@@ -881,7 +899,7 @@ The current state is a spec/plan mismatch that the CHANGELOG papered over.
 
 **Plan defects (non-spec): 5 (HIGH-1, HIGH-2, HIGH-3, HIGH-4, HIGH-5, plus several MEDIUM and LOW).**
 
----
+______________________________________________________________________
 
 ## Plan Quality Verdict
 
@@ -890,58 +908,58 @@ The current state is a spec/plan mismatch that the CHANGELOG papered over.
 **What the plan does well (writing lens):**
 
 1. **TDD structure is consistent and complete.** Every task has explicit "write failing tests → run → implement → run → commit" steps. Tasks 2-7 show full test code (38+ tests visible).
-2. **Module docstrings are present on every new file** (`detection.py`, `hooks.py`, `python_fallbacks.py`, `jinja_formatter.py`, `__init__.py`). This is a marked improvement over Phase 3.
-3. **CHANGELOG entry uses correct spelling** (`crackerjack.language_adapters` — no `crackageck` typo).
-4. **Function-level docstrings on the major public surface** (`web_enabled`, `format_template`, `_env`, `_normalize_one_space_inside_delimiters`, `_strip_trailing_whitespace`, `web_hooks`, `run_hook_with_fallback`, `WebAdapter`, `WebHookError`, `css_fallback`, `js_ts_fallback`, `html_fallback`, `package_json_present`).
-5. **Naming is consistent** across tasks: `WebAdapter`, `web_hooks`, `web_enabled`, `package_json_present`, `format_template`, `DEFAULT_DELIMITERS`, `check_web_lint`, `format_jinja_templates`.
-6. **Phase 3 carry-over is referenced** (`_validate_project_root` fail-closed, fixture-reference test, per-invocation auth check, `capabilities()` lazy construction).
-7. **Spec invariants are pinned.** All 6 delimiter kwargs required, round-trip invariant, two-tier policy, Web detection guard — each repeated in the relevant task.
-8. **Pre-flight verification steps** for CLI tools (Task 3 Step 1) and jinja2 kwargs (Task 4 Step 1).
-9. **Commit messages are traceable** with consistent `feat(adapters.web):` / `feat(mcp):` / `docs(changelog):` prefixes.
-10. **Architecture paragraph names each deliverable** with line references to the spec.
-11. **Three new MCP tools covered by tests** (4 web tests, extending Phase 2's 13).
+1. **Module docstrings are present on every new file** (`detection.py`, `hooks.py`, `python_fallbacks.py`, `jinja_formatter.py`, `__init__.py`). This is a marked improvement over Phase 3.
+1. **CHANGELOG entry uses correct spelling** (`crackerjack.language_adapters` — no `crackageck` typo).
+1. **Function-level docstrings on the major public surface** (`web_enabled`, `format_template`, `_env`, `_normalize_one_space_inside_delimiters`, `_strip_trailing_whitespace`, `web_hooks`, `run_hook_with_fallback`, `WebAdapter`, `WebHookError`, `css_fallback`, `js_ts_fallback`, `html_fallback`, `package_json_present`).
+1. **Naming is consistent** across tasks: `WebAdapter`, `web_hooks`, `web_enabled`, `package_json_present`, `format_template`, `DEFAULT_DELIMITERS`, `check_web_lint`, `format_jinja_templates`.
+1. **Phase 3 carry-over is referenced** (`_validate_project_root` fail-closed, fixture-reference test, per-invocation auth check, `capabilities()` lazy construction).
+1. **Spec invariants are pinned.** All 6 delimiter kwargs required, round-trip invariant, two-tier policy, Web detection guard — each repeated in the relevant task.
+1. **Pre-flight verification steps** for CLI tools (Task 3 Step 1) and jinja2 kwargs (Task 4 Step 1).
+1. **Commit messages are traceable** with consistent `feat(adapters.web):` / `feat(mcp):` / `docs(changelog):` prefixes.
+1. **Architecture paragraph names each deliverable** with line references to the spec.
+1. **Three new MCP tools covered by tests** (4 web tests, extending Phase 2's 13).
 
 **What the plan does less well (writing lens):**
 
 1. **HIGH-1: `_normalize_one_space_inside_delimiters` regex drops first/last char** — the docstring comment says "Preserves the body" but the implementation does not preserve it. Test would fail.
-2. **HIGH-2: `_eslt_hook` encodes `;` in argv** — comment claims runner handles sequential execution, no such runner exists; `subprocess.run(cmd)` without shell=True will fail.
-3. **HIGH-3: Spec Revision Notes empty** — Phase 4 reduces scope from spec (shared `jinja-test-fixtures/` sibling package is deferred) but the deviation is not recorded.
-4. **HIGH-4/5: No self-review section, no spec coverage table** — Phase 3 inherited this regression from Phase 2; Phase 4 inherits again.
-5. **MEDIUM-1: `_eslt_hook` function name is non-obvious** (compare to `_stylelint_hook` / `_eslint_tsc_hook` / `_html_validate_hook`).
-6. **MEDIUM-2: Three hook factory functions lack docstrings.**
-7. **MEDIUM-3: Task 6 tests use sync `monkeypatch` inside `async def`** — Phase 3 writing review LOW-8 already flagged this; Phase 4 inherits.
-8. **MEDIUM-4: `format_jinja_templates` reads/writes files synchronously**, violating Global Constraints.
-9. **MEDIUM-5: `test_format_jinja_templates_runs_with_auth` doesn't verify file actually mutated.**
-10. **MEDIUM-6: `typer 0.26+` in Tech Stack but no Typer code** — misleading claim.
-11. **MEDIUM-7: "Phase 4.5" referenced in comments but not in Out of Scope** — orphan reference.
-12. **LOW-1: Phase 2/3 short-hand references not inlined** — Phase 3 MEDIUM-2 not addressed.
-13. **LOW-2: Nested `tests/fixtures/web-vanilla/tests/fixtures/jinja-templates/` is unusual** — no rationale given.
-14. **LOW-3: CHANGELOG entry mentions Python/Swift/Kotlin/Web but those were added in earlier phases** — out of scope for Phase 4 changelog.
-15. **LOW-4: Pre-flight checks lack failure paths.**
-16. **LOW-5: `WebHookError` defined but never tested.**
-17. **LOW-6: CHANGELOG says Tier 2 opt-in via `normalize=True`** (function param) but spec says `[tool.crackerjack.jinja] normalize = true` (config file) — discrepancy.
+1. **HIGH-2: `_eslt_hook` encodes `;` in argv** — comment claims runner handles sequential execution, no such runner exists; `subprocess.run(cmd)` without shell=True will fail.
+1. **HIGH-3: Spec Revision Notes empty** — Phase 4 reduces scope from spec (shared `jinja-test-fixtures/` sibling package is deferred) but the deviation is not recorded.
+1. **HIGH-4/5: No self-review section, no spec coverage table** — Phase 3 inherited this regression from Phase 2; Phase 4 inherits again.
+1. **MEDIUM-1: `_eslt_hook` function name is non-obvious** (compare to `_stylelint_hook` / `_eslint_tsc_hook` / `_html_validate_hook`).
+1. **MEDIUM-2: Three hook factory functions lack docstrings.**
+1. **MEDIUM-3: Task 6 tests use sync `monkeypatch` inside `async def`** — Phase 3 writing review LOW-8 already flagged this; Phase 4 inherits.
+1. **MEDIUM-4: `format_jinja_templates` reads/writes files synchronously**, violating Global Constraints.
+1. **MEDIUM-5: `test_format_jinja_templates_runs_with_auth` doesn't verify file actually mutated.**
+1. **MEDIUM-6: `typer 0.26+` in Tech Stack but no Typer code** — misleading claim.
+1. **MEDIUM-7: "Phase 4.5" referenced in comments but not in Out of Scope** — orphan reference.
+1. **LOW-1: Phase 2/3 short-hand references not inlined** — Phase 3 MEDIUM-2 not addressed.
+1. **LOW-2: Nested `tests/fixtures/web-vanilla/tests/fixtures/jinja-templates/` is unusual** — no rationale given.
+1. **LOW-3: CHANGELOG entry mentions Python/Swift/Kotlin/Web but those were added in earlier phases** — out of scope for Phase 4 changelog.
+1. **LOW-4: Pre-flight checks lack failure paths.**
+1. **LOW-5: `WebHookError` defined but never tested.**
+1. **LOW-6: CHANGELOG says Tier 2 opt-in via `normalize=True`** (function param) but spec says `[tool.crackerjack.jinja] normalize = true` (config file) — discrepancy.
 
 **Reviewer recommendations (priority order):**
 
 1. **(HIGH)** Fix the `_normalize_one_space_inside_delimiters` regex (HIGH-1). The pattern should preserve the full inner content, not drop first/last char.
-2. **(HIGH)** Replace the `;`-separated argv in `_eslt_hook` with two separate hooks OR explicit shell handling OR `Hook.cli_commands: tuple[tuple[str, ...], ...]` (HIGH-2).
-3. **(HIGH)** Fill in Spec Revision Notes with the `jinja-test-fixtures/` scope reduction (HIGH-3).
-4. **(HIGH)** Add a Self-Review section with spec coverage table (HIGH-4, HIGH-5).
-5. **(MEDIUM)** Rename `_eslt_hook` to `_eslint_tsc_hook` (MEDIUM-1).
-6. **(MEDIUM)** Add docstrings to `_css_hook`, `_eslt_hook`/`_eslint_tsc_hook`, `_html_hook` (MEDIUM-2).
-7. **(MEDIUM)** Resolve the `async def` + `monkeypatch.setenv` ambiguity in Task 6 tests (MEDIUM-3).
-8. **(MEDIUM)** Move `path.read_text()`/`path.write_text()` into `asyncio.to_thread` (MEDIUM-4).
-9. **(MEDIUM)** Strengthen `test_format_jinja_templates_runs_with_auth` to verify file mutation (MEDIUM-5).
-10. **(MEDIUM)** Remove `typer 0.26+` from Tech Stack or add a Typer CLI task (MEDIUM-6).
-11. **(MEDIUM)** Replace "Phase 4.5" comments with explicit TODOs and add to Out of Scope (MEDIUM-7).
-12. **(LOW)** Inline 2-3 lines per Phase 2/3 short-hand reference (LOW-1).
-13. **(LOW)** Document the nested `jinja-templates/` path or simplify (LOW-2).
-14. **(LOW)** Trim CHANGELOG entry-point sentence to Phase 4 scope (LOW-3).
-15. **(LOW)** Add failure paths to pre-flight steps (LOW-4).
-16. **(LOW)** Add a `WebHookError` test or remove the class (LOW-5).
-17. **(LOW)** Reconcile CHANGELOG's `normalize=True` mention with the spec's `[tool.crackerjack.jinja] normalize` (LOW-6).
+1. **(HIGH)** Replace the `;`-separated argv in `_eslt_hook` with two separate hooks OR explicit shell handling OR `Hook.cli_commands: tuple[tuple[str, ...], ...]` (HIGH-2).
+1. **(HIGH)** Fill in Spec Revision Notes with the `jinja-test-fixtures/` scope reduction (HIGH-3).
+1. **(HIGH)** Add a Self-Review section with spec coverage table (HIGH-4, HIGH-5).
+1. **(MEDIUM)** Rename `_eslt_hook` to `_eslint_tsc_hook` (MEDIUM-1).
+1. **(MEDIUM)** Add docstrings to `_css_hook`, `_eslt_hook`/`_eslint_tsc_hook`, `_html_hook` (MEDIUM-2).
+1. **(MEDIUM)** Resolve the `async def` + `monkeypatch.setenv` ambiguity in Task 6 tests (MEDIUM-3).
+1. **(MEDIUM)** Move `path.read_text()`/`path.write_text()` into `asyncio.to_thread` (MEDIUM-4).
+1. **(MEDIUM)** Strengthen `test_format_jinja_templates_runs_with_auth` to verify file mutation (MEDIUM-5).
+1. **(MEDIUM)** Remove `typer 0.26+` from Tech Stack or add a Typer CLI task (MEDIUM-6).
+1. **(MEDIUM)** Replace "Phase 4.5" comments with explicit TODOs and add to Out of Scope (MEDIUM-7).
+1. **(LOW)** Inline 2-3 lines per Phase 2/3 short-hand reference (LOW-1).
+1. **(LOW)** Document the nested `jinja-templates/` path or simplify (LOW-2).
+1. **(LOW)** Trim CHANGELOG entry-point sentence to Phase 4 scope (LOW-3).
+1. **(LOW)** Add failure paths to pre-flight steps (LOW-4).
+1. **(LOW)** Add a `WebHookError` test or remove the class (LOW-5).
+1. **(LOW)** Reconcile CHANGELOG's `normalize=True` mention with the spec's `[tool.crackerjack.jinja] normalize` (LOW-6).
 
----
+______________________________________________________________________
 
 ## Summary
 
@@ -952,15 +970,15 @@ The 5 HIGH-severity findings cluster around three categories: **broken implement
 The most actionable improvements are:
 
 1. **Fix the `_normalize_one_space_inside_delimiters` regex** (HIGH-1). One pattern fix; one test starts passing.
-2. **Fix the `_eslt_hook` argv separator** (HIGH-2). Pick one of three approaches; one test starts passing.
-3. **Fill in Spec Revision Notes** (HIGH-3). One paragraph; preserves the deviation rationale for future maintainers.
-4. **Add a Self-Review section** (HIGH-4, HIGH-5). 20-30 lines; catches the regressions a reviewer would catch.
+1. **Fix the `_eslt_hook` argv separator** (HIGH-2). Pick one of three approaches; one test starts passing.
+1. **Fill in Spec Revision Notes** (HIGH-3). One paragraph; preserves the deviation rationale for future maintainers.
+1. **Add a Self-Review section** (HIGH-4, HIGH-5). 20-30 lines; catches the regressions a reviewer would catch.
 
 The MEDIUM and LOW findings are polish and can be filed as a Phase 4 ledger entry for a future polish pass.
 
 **Recommended action before implementation begins:** Address HIGH-1, HIGH-2, HIGH-3, HIGH-4, and HIGH-5. The MEDIUM and LOW findings can be deferred.
 
----
+______________________________________________________________________
 
 ## Status
 

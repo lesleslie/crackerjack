@@ -76,9 +76,7 @@ def verify_signature(
     try:
         signature_bytes = base64.b64decode(signature_b64, validate=True)
     except (ValueError, TypeError) as exc:
-        raise ValueError(
-            f"signature_b64 is not valid base64: {exc}"
-        ) from exc
+        raise ValueError(f"signature_b64 is not valid base64: {exc}") from exc
 
     try:
         entry.public_key.verify(signature_bytes, canonical_payload)

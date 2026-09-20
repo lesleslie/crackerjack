@@ -179,7 +179,9 @@ def validate(
         None, "--store", help="Limit scan to a single store (e.g. docs/plans/)."
     ),
     validate_links: bool = typer.Option(
-        False, "--validate-links", help="Also check cross-references."
+        True,
+        "--validate-links",
+        help="Cross-reference resolution is on by default; pass --no-validate-links to skip.",
     ),
     json_output: bool = typer.Option(
         False, "--json", help="Emit JSON instead of human-readable."

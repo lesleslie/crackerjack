@@ -197,7 +197,5 @@ class PythonLifecycle(Lifecycle):
         manager = PublishManagerImpl(pkg_path=package_root)
         if not manager.publish_package():
             raise RuntimeError("PublishManagerImpl.publish_package failed")
-        project_url = (
-            f"https://pypi.org/project/{manager._get_package_name() or ''}/"
-        )
+        project_url = f"https://pypi.org/project/{manager._get_package_name() or ''}/"
         return project_url

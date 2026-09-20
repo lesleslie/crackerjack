@@ -21,8 +21,8 @@ Refs:
 
 from __future__ import annotations
 
-from mcp_common.canonical_schemas.skill import SkillCanonicalSchema
 from mcp_common.canonical_schemas._validators import NAME_OR_SERVER_RE
+from mcp_common.canonical_schemas.skill import SkillCanonicalSchema
 
 # Backward-compat alias. ``isinstance(x, SkillMetadata)`` resolves to
 # ``isinstance(x, SkillCanonicalSchema)`` because Python treats the
@@ -30,4 +30,4 @@ from mcp_common.canonical_schemas._validators import NAME_OR_SERVER_RE
 SkillMetadata = SkillCanonicalSchema
 
 
-__all__ = ["SkillMetadata", "NAME_OR_SERVER_RE"]
+__all__ = ["NAME_OR_SERVER_RE", "SkillMetadata"]

@@ -34,8 +34,8 @@ from __future__ import annotations
 
 import logging
 import os
-from pathlib import Path
 import typing as t
+from pathlib import Path
 
 import yaml
 
@@ -44,14 +44,12 @@ logger = logging.getLogger(__name__)
 ENV_VAR_NAME = "BODAI_ECOSYSTEM_CONFIG"
 
 
-def _read_ecosystem_publish_url(
-    ecosystem_path: Path, cwd: Path
-) -> str | None:
+def _read_ecosystem_publish_url(ecosystem_path: Path, cwd: Path) -> str | None:
     """Return the ``publish.url`` for the repo whose path matches ``cwd``.
 
     Returns ``None`` if:
 
-    - the file is unreadable / unparseable,
+    - the file is unreadable / unparsable,
     - the cwd doesn't match any registered repo,
     - the matched repo has no ``publish`` block, or
     - the matched repo's ``publish.url`` is ``None`` (operators set the

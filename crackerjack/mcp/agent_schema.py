@@ -28,9 +28,8 @@ Refs:
 
 from __future__ import annotations
 
-from mcp_common.canonical_schemas.agent import AgentCanonicalSchema
 from mcp_common.canonical_schemas._validators import NAME_OR_SERVER_RE
-
+from mcp_common.canonical_schemas.agent import AgentCanonicalSchema
 from pydantic import field_validator
 
 
@@ -70,9 +69,7 @@ class AgentMetadata(AgentCanonicalSchema):
             return value
         # YYYY-MM-DD — strict length + dash positions.
         if len(value) != 10 or value[4] != "-" or value[7] != "-":
-            raise ValueError(
-                f"last_reviewed {value!r} must be ISO date YYYY-MM-DD"
-            )
+            raise ValueError(f"last_reviewed {value!r} must be ISO date YYYY-MM-DD")
         return value
 
     @field_validator("description")
@@ -111,7 +108,9 @@ class AgentMetadata(AgentCanonicalSchema):
             )
         server_key, name, version = parts
         if not NAME_OR_SERVER_RE.fullmatch(server_key):
-            raise ValueError(f"id {value!r} has invalid server_key segment {server_key!r}")
+            raise ValueError(
+                f"id {value!r} has invalid server_key segment {server_key!r}"
+            )
         if not NAME_OR_SERVER_RE.fullmatch(name):
             raise ValueError(f"id {value!r} has invalid name segment {name!r}")
         if not version or "/" in version or ".." in version:
@@ -119,4 +118,4 @@ class AgentMetadata(AgentCanonicalSchema):
         return value
 
 
-__all__ = ["AgentMetadata", "AgentCanonicalSchema", "NAME_OR_SERVER_RE"]
+__all__ = ["NAME_OR_SERVER_RE", "AgentCanonicalSchema", "AgentMetadata"]

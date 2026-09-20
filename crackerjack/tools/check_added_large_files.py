@@ -9,7 +9,6 @@ from pathlib import Path
 
 from crackerjack.tools._git_utils import get_git_tracked_files
 
-
 # Sentinel value: ``Path.cwd().resolve()`` once at module load is OK because
 # the tool runs from the project root in practice. The lookup walks
 # parents so a sub-directory invocation still finds the project
@@ -92,7 +91,7 @@ def _load_exclude_patterns() -> list[str]:
         try:
             with candidate.open("rb") as f:
                 data = tomllib.load(f)
-        except (OSError, tomllib.TOMLDecodeError):
+        except OSError, tomllib.TOMLDecodeError:
             return []
         section = data.get("tool", {}).get("check_added_large_files", {})
         patterns = section.get("exclude_patterns", [])

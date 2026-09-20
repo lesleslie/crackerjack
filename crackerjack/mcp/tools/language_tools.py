@@ -4,9 +4,12 @@ import asyncio
 import logging
 import os
 from pathlib import Path
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 from fastmcp import FastMCP
+
+if TYPE_CHECKING:
+    from crackerjack.adapters.base import LifecycleResult
 
 from crackerjack.adapters.registry import discover_adapters
 from crackerjack.adapters.swift import SwiftAdapter
@@ -146,7 +149,7 @@ def _run_kotlin_lifecycle_sync(
     level: Literal["major", "minor", "patch"],
     dry_run: bool,
     release: bool,
-) -> "LifecycleResult":
+) -> LifecycleResult:
     """Run the Kotlin lifecycle synchronously.
 
     Wrapped by async MCP handlers via ``asyncio.to_thread``. Mirrors
@@ -173,7 +176,9 @@ def _run_kotlin_lifecycle_sync(
         reset=reset,
         gh_release=gh_release,
     )
-    return lifecycle.run(LifecycleOptions(level=level, dry_run=dry_run, release=release))
+    return lifecycle.run(
+        LifecycleOptions(level=level, dry_run=dry_run, release=release)
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -212,7 +217,10 @@ def register_language_tools(mcp_app: FastMCP) -> None:
         root = _validate_project_root(project_root)
         # Run the sync lifecycle in a thread so the MCP event loop isn't blocked.
         return await asyncio.to_thread(
-            _run_swift_lifecycle_sync, root, level, release,
+            _run_swift_lifecycle_sync,
+            root,
+            level,
+            release,
         )
 
     @mcp_app.tool()
@@ -300,7 +308,11 @@ def register_language_tools(mcp_app: FastMCP) -> None:
                 f"Run `gradle init --type kotlin-library` to scaffold.",
             )
         result = await asyncio.to_thread(
-            _run_kotlin_lifecycle_sync, root, level, dry_run, release,
+            _run_kotlin_lifecycle_sync,
+            root,
+            level,
+            dry_run,
+            release,
         )
         return {
             "new_version": result.new_version,
