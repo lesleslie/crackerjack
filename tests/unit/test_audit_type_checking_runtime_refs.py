@@ -24,6 +24,8 @@ import ast
 import textwrap
 from pathlib import Path
 
+import pytest
+
 from crackerjack.tools.audit_type_checking_runtime_refs import (
     Violation,
     _collect_type_checking_imports,
@@ -750,3 +752,81 @@ def test_cli_exits_zero_on_clean_tree(tmp_path):
     )
     assert result.returncode == 0
     assert "No violations found" in result.stdout
+
+
+# ----- no-args fallback (regression: 300 s timeout bug) -----------------------
+
+
+def test_cli_no_args_defaults_to_cwd(tmp_path, monkeypatch):
+    """No positional ``roots`` → scan only ``cwd``, NOT /Users/les/Projects.
+
+    Regression for: a missing target like ``./scripts`` (which `_build_targets`
+    silently filters out, leaving an empty positional list) used to trigger
+    the audit's hardcoded fallback to ``/Users/les/Projects``, scanning
+    every sibling Bodai repo and hitting the 300 s fast-hook timeout.
+
+    Now: empty positional list falls back to ``Path.cwd()`` instead — a single
+    bounded repo.
+    """
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    # Stage a self-contained clean file under a fresh tmp_path and chdir there
+    # so the audit's cwd-relative fallback scans only this dir.
+    (tmp_path / "clean.py").write_text("x = 1\n")
+    monkeypatch.chdir(tmp_path)
+
+    # Watchdog: if the audit scans past cwd we want to know — time-bound the
+    # subprocess so a runaway scan surfaces as TimeoutExpired, not a hang.
+    try:
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "crackerjack.tools.audit_type_checking_runtime_refs",
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=15,
+        )
+    except subprocess.TimeoutExpired as exc:
+        pytest.fail(
+            "tc-refs no-args fallback walked past cwd "
+            f"(timed out after 15 s): {exc!r}"
+        )
+
+    # Single-repo scan should be quick and bounded.
+    assert result.returncode == 0
+    assert "No violations found" in result.stdout
+    # Roots label reports the bounded directory, not /Users/les/Projects.
+    assert str(Path.cwd()) in result.stdout or tmp_path.name in result.stdout
+    # And it must NOT mention the parent's names either.
+    assert "/Users/les/Projects" not in result.stdout.replace(
+        str(tmp_path), ""  # strip our own tmp_path echo
+    )
+
+
+def test_cli_missing_root_fails_soft(tmp_path):
+    """A non-existent root is silently skipped, exit 0, no parent-dir fallback."""
+    import subprocess
+    import sys
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "crackerjack.tools.audit_type_checking_runtime_refs",
+            str(tmp_path / "does-not-exist"),
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=15,
+    )
+    # Missing root → 0 files scanned → exit 0.
+    assert result.returncode == 0
+    assert "Files scanned" in result.stdout and "0" in result.stdout
+    # MUST NOT quietly fall back to a parent directory.
+    assert "/Users/les/Projects" not in result.stdout

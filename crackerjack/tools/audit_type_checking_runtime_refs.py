@@ -11,6 +11,11 @@ to a name that was imported under a TYPE_CHECKING block. The fix is mechanical:
 move the offending import out of ``if TYPE_CHECKING:`` and keep
 ``from __future__ import annotations`` for forward-compat.
 
+When called with no ``ROOT`` args, falls back to ``Path.cwd()`` (the invoking
+repo) — NOT the user's projects dir. Missing targets are silently skipped
+(see ``_walk_python_files``) so a stale ``./scripts`` or ``./examples`` entry
+no longer turns a 5 s scan into a 300 s timeout.
+
 Confirmed bug instances in the Bodai ecosystem (2026-08-31):
   - opera-cloud-mcp — 31 test failures (Pydantic forward-ref)
   - graphics-mcp   — runtime NameError in pillow result constructors
@@ -768,7 +773,10 @@ def parse_args() -> argparse.Namespace:
         "roots",
         nargs="*",
         type=Path,
-        help="Root directories to scan (default: /Users/les/Projects).",
+        help=(
+            "Root directories to scan (default: cwd). Missing roots are "
+            "silently skipped — pass '.' to bound the scan to the invoking repo."
+        ),
     )
     parser.add_argument(
         "--json",
@@ -785,31 +793,46 @@ def parse_args() -> argparse.Namespace:
         "--per-repo",
         action="store_true",
         help=(
-            "When scanning /Users/les/Projects, group violations by immediate "
-            "parent directory of each file (one report section per Bodai repo)."
+            "Group violations by immediate parent directory of each file "
+            "(one report section per top-level subdir). Useful when scanning "
+            "a parent workspace containing multiple repos."
         ),
     )
     return parser.parse_args()
 
 
 def main() -> int:
-    """Run the audit end-to-end and return a shell exit code."""
+    """Run the audit end-to-end and return a shell exit code.
+
+    Default-roots behavior: when called with no positional ``roots``,
+    scan ``Path.cwd()`` — the invoking repo. Previously this defaulted to
+    ``Path("/Users/les/Projects")`` which silently ballooned a single-repo
+    audit into a 300 s timeout by walking every sibling Bodai repo.
+
+    --per-repo is silently ignored when no --roots were passed AND cwd has
+    no Python files under it (would degenerate to an unhelpful per-cwd
+    bucket).
+    """
     args = parse_args()
-    roots = args.roots or [Path("/Users/les/Projects")]
+    roots = args.roots or [Path.cwd()]
     files = _walk_python_files(roots)
     results: list[FileResult] = [_scan_file(p) for p in files]
 
-    # Optionally regroup by immediate parent (per-repo view)
+    # Optionally regroup by immediate parent (per-repo view).
+    # Per-repo grouping requires a "root container" — for the no-roots
+    # default (cwd), that container is cwd's parent (the user's projects
+    # dir); pass explicit --roots to group relative to your chosen roots.
     if args.per_repo and not args.roots:
+        root_container = Path.cwd().parent
         by_repo: dict[Path, list[FileResult]] = defaultdict(list)
         for r in results:
-            if r.path.is_relative_to(Path("/Users/les/Projects")):
-                rel = r.path.relative_to(Path("/Users/les/Projects"))
+            if r.path.is_relative_to(root_container):
+                rel = r.path.relative_to(root_container)
                 if rel.parts:
-                    repo_root = Path("/Users/les/Projects") / rel.parts[0]
+                    repo_root = root_container / rel.parts[0]
                     by_repo[repo_root].append(r)
                 else:
-                    by_repo[Path("/Users/les/Projects")].append(r)
+                    by_repo[root_container].append(r)
             else:
                 by_repo[r.path.parent].append(r)
 
