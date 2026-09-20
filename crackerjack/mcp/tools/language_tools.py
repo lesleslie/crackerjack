@@ -159,7 +159,7 @@ def _run_kotlin_lifecycle_sync(
     already verified ``adapter.detect(root)`` is True before invoking this
     helper (lifecycle raises if gradle.properties is missing).
     """
-    from crackerjack.adapters.base import LifecycleOptions, LifecycleResult
+    from crackerjack.adapters.base import LifecycleOptions
     from crackerjack.adapters.kotlin.git_backend import make_git_backend
     from crackerjack.adapters.kotlin.lifecycle import KotlinLifecycle
     from crackerjack.adapters.kotlin.version_source import GradlePropertiesVersionSource
@@ -454,5 +454,15 @@ def register_language_tools(mcp_app: FastMCP) -> None:
                         await asyncio.to_thread(path.write_text, formatted)
                     files.append(str(path))
                 except (OSError, UnicodeDecodeError) as exc:
-                    errors.append({"path": str(path), "kind": type(exc).__name__, "error": str(exc)})
-        return {"files": files, "errors": errors, "mode": "dry_run" if dry_run else "write"}
+                    errors.append(
+                        {
+                            "path": str(path),
+                            "kind": type(exc).__name__,
+                            "error": str(exc),
+                        }
+                    )
+        return {
+            "files": files,
+            "errors": errors,
+            "mode": "dry_run" if dry_run else "write",
+        }

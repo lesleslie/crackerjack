@@ -1708,9 +1708,17 @@ class PhaseCoordinator:
         # Options wins because it's a per-invocation operator override; the settings
         # layer is the per-repo default. Without this branch, a one-off CLI override
         # would be silently ignored and the repo's default URL would always win.
-        cli_publish_url = getattr(options, "publish_url", None)
+        cli_publish_url = t.cast("str | None", getattr(options, "publish_url", None))
+        # ``OptionsProtocol`` doesn't declare ``publish_url`` (the actual
+        # ``Options`` class at ``cli/options.py:77`` does, but the protocol
+        # is intentionally minimal). Without the cast, ``getattr`` widens to
+        # ``Any`` and ty refuses to assign it to the typed attribute.
         if cli_publish_url:
-            self.publish_manager.publish_url = cli_publish_url
+            # ty: ``PublishManager`` protocol doesn't declare ``publish_url``,
+            # so the ``PublishManager | PublishManagerImpl`` union sees it as
+            # ``Any`` on the protocol side. The Impl side is correctly typed
+            # (``str | None``); at runtime this is always the Impl after init.
+            self.publish_manager.publish_url = cli_publish_url  # ty: ignore[invalid-assignment]
 
         if not self.publish_manager.publish_package():
             self.session.fail_task("publishing", "Package publishing failed")

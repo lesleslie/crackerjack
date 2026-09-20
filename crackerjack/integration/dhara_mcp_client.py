@@ -178,9 +178,7 @@ class DharaMCPClient:
                 # CommonMCPClient already tolerates cross-task aclose
                 # with a DEBUG log; surface any other RuntimeError.
                 if "different task" not in str(exc):
-                    logger.debug(
-                        f"DharaMCPClient: aclose runtime error: {exc!r}"
-                    )
+                    logger.debug(f"DharaMCPClient: aclose runtime error: {exc!r}")
             except Exception as exc:
                 logger.debug(f"DharaMCPClient: aclose failed: {exc!r}")
             finally:

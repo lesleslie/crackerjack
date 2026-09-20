@@ -201,7 +201,9 @@ class PythonLifecycle(Lifecycle):
         from crackerjack.managers.publish_manager import PublishManagerImpl
 
         package_root = self._version_source._project_root
-        settings = load_settings(CrackerjackSettings, settings_dir=package_root / "settings")
+        settings = load_settings(
+            CrackerjackSettings, settings_dir=package_root / "settings"
+        )
         manager = PublishManagerImpl(
             pkg_path=package_root,
             publish_url=settings.publishing.publish_url,
