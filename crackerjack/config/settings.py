@@ -363,13 +363,6 @@ class LearningSettings(OneiricMCPConfig):
     workflow_min_executions: int = 5
 
 
-class DharaMCPSettings(OneiricMCPConfig):
-    url: str = "http://localhost: 8683"
-    timeout_seconds: int = 5
-    enabled: bool = True
-    token: str | None = None
-
-
 class MahavishnuSettings(OneiricMCPConfig):
     enabled: bool = False
     git_metrics_enabled: bool = True

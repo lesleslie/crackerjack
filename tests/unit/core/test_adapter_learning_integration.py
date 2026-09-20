@@ -4,8 +4,8 @@ import time
 from pathlib import Path
 from unittest.mock import MagicMock
 
-from crackerjack.integration.dhara_integration import (
-    DharaLearningIntegration,
+from crackerjack.integration.adapter_learning import (
+    AdapterLearningIntegration,
     NoOpAdapterLearner,
     create_adapter_learner,
 )
@@ -18,7 +18,7 @@ class TestHookExecutorTracking:
         """Verify track_adapter_execution is called with execution_time_ms > 0."""
         from crackerjack.executors.hook_executor import HookExecutor
 
-        mock_integration = MagicMock(spec=DharaLearningIntegration)
+        mock_integration = MagicMock(spec=AdapterLearningIntegration)
         HookExecutor(
             console=MagicMock(),
             pkg_path=Path("/tmp/test"),
@@ -51,7 +51,7 @@ class TestHookExecutorTracking:
 
     def test_tracking_failure_does_not_break_execution(self) -> None:
         """Verify that tracking exceptions are silently caught in production code."""
-        mock_integration = MagicMock(spec=DharaLearningIntegration)
+        mock_integration = MagicMock(spec=AdapterLearningIntegration)
         mock_integration.track_adapter_execution.side_effect = RuntimeError("DB down")
 
         # This simulates the try/except guard pattern used in production code:
@@ -99,7 +99,7 @@ class TestAutofixCoordinatorTracking:
 
     def test_tracks_adapter_with_timing(self) -> None:
         """Verify tracking is called in AutofixCoordinator path."""
-        mock_integration = MagicMock(spec=DharaLearningIntegration)
+        mock_integration = MagicMock(spec=AdapterLearningIntegration)
 
         check_start = time.monotonic()
         qa_result = MagicMock()
@@ -129,7 +129,7 @@ class TestPhaseCoordinatorLearnerCreation:
     def test_creates_learner_by_default(self) -> None:
         """Verify adapter learning is enabled by default."""
         from crackerjack.config.settings import CrackerjackSettings
-        from crackerjack.integration.dhara_integration import SQLiteAdapterLearner
+        from crackerjack.integration.adapter_learning import SQLiteAdapterLearner
 
         settings = CrackerjackSettings()
         assert settings.learning.adapter_learning_enabled is True
@@ -152,11 +152,11 @@ class TestPhaseCoordinatorLearnerCreation:
             backend="sqlite",
         )
         # SQLite is always available, so should get SQLiteAdapterLearner
-        from crackerjack.integration.dhara_integration import SQLiteAdapterLearner
+        from crackerjack.integration.adapter_learning import SQLiteAdapterLearner
         assert isinstance(learner, SQLiteAdapterLearner)
 
     def test_integration_wraps_learner(self) -> None:
-        """Verify DharaLearningIntegration wraps the created learner."""
+        """Verify AdapterLearningIntegration wraps the created learner."""
         learner = create_adapter_learner(enabled=True, backend="sqlite")
-        integration = DharaLearningIntegration(adapter_learner=learner)
+        integration = AdapterLearningIntegration(adapter_learner=learner)
         assert integration.adapter_learner is learner

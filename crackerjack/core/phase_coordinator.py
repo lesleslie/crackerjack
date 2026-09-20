@@ -103,8 +103,8 @@ class PhaseCoordinator:
 
         self._settings = settings or load_settings(CrackerjackSettings)
 
-        from crackerjack.integration.dhara_integration import (
-            DharaLearningIntegration,
+        from crackerjack.integration.adapter_learning import (
+            AdapterLearningIntegration,
             create_adapter_learner,
         )
 
@@ -119,7 +119,7 @@ class PhaseCoordinator:
             min_attempts=getattr(learning, "adapter_min_attempts", 5),
             backend=getattr(learning, "adapter_learning_backend", "auto"),
         )
-        self._adapter_learning = DharaLearningIntegration(
+        self._adapter_learning = AdapterLearningIntegration(
             adapter_learner=adapter_learner
         )
 

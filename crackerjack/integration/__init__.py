@@ -8,6 +8,15 @@ remain.
 
 from __future__ import annotations
 
+from crackerjack.integration.adapter_learning import (
+    AdapterAttemptRecord,
+    AdapterEffectiveness,
+    AdapterLearnerProtocol,
+    AdapterLearningIntegration,
+    NoOpAdapterLearner,
+    SQLiteAdapterLearner,
+    create_adapter_learner,
+)
 from crackerjack.integration.akosha_learning import (
     AkoshaLearningIntegration,
     NoOpQueryOptimizer,
@@ -15,15 +24,6 @@ from crackerjack.integration.akosha_learning import (
     QueryOptimizerProtocol,
     QuerySuggestion,
     create_query_optimizer,
-)
-from crackerjack.integration.dhara_integration import (
-    AdapterAttemptRecord,
-    AdapterEffectiveness,
-    AdapterLearnerProtocol,
-    DharaLearningIntegration,
-    NoOpAdapterLearner,
-    SQLiteAdapterLearner,
-    create_adapter_learner,
 )
 from crackerjack.integration.mahavishnu_learning import (
     MahavishnuLearningIntegration,
@@ -76,13 +76,13 @@ __all__ = [
     "AdapterAttemptRecord",
     "AdapterEffectiveness",
     "AdapterLearnerProtocol",
+    "AdapterLearningIntegration",
     "AkoshaLearningIntegration",
     "CorrelationInsight",
     "CorrelationStorage",
     "CorrelationStorageSQLite",
     "DAGExecutionRecord",
     "DAGOptimizerProtocol",
-    "DharaLearningIntegration",
     "ExecutionStrategy",
     "ExtendedSessionMetrics",
     "GitVelocityMetrics",

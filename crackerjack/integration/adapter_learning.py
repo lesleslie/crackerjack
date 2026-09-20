@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import shutil
 import sqlite3
 import tempfile
 import typing as t
@@ -500,6 +501,75 @@ def _adapter_learning_db_candidates(db_path: Path) -> list[Path]:
     return unique_candidates
 
 
+# First 16 bytes of every valid SQLite 3.x database file, per
+# https://www.sqlite.org/fileformat.html. Reads that don't match this
+# header mean the file is something else (the Dhara backend, before it was
+# decommissioned 2026-09-20, wrote ``dhara.collections.PersistentDict``
+# shelves to ``.crackerjack/adapter_learning.db`` — same filename, very
+# different format).
+SQLITE_MAGIC_HEADER = b"SQLite format 3\x00"
+
+
+def _is_valid_sqlite_file(path: Path) -> bool:
+    """True iff ``path`` exists, is non-empty, and begins with the SQLite magic header.
+
+    Reads only the first 16 bytes and never invokes ``sqlite3.connect``,
+    so it won't acquire a write lock or create ``-journal`` / ``-wal``
+    sidecars against a file we may decide to quarantine.
+    """
+    try:
+        if not path.is_file() or path.stat().st_size < 16:
+            return False
+    except OSError:
+        return False
+    try:
+        with path.open("rb") as f:
+            return f.read(16) == SQLITE_MAGIC_HEADER
+    except OSError:
+        return False
+
+
+def _quarantine_legacy_file(path: Path) -> Path | None:
+    """Move a non-SQLite file at ``path`` aside with a timestamp suffix.
+
+    Returns the new path, or None if ``path`` was already valid SQLite or
+    didn't exist. The legacy file is preserved on disk so users can
+    inspect it manually; we never destroy user data.
+
+    Uses ``shutil.move`` rather than ``Path.rename`` because the rename
+    syscall raises ``OSError(EXDEV)`` when source and destination land on
+    different filesystems — and on macOS the temp-dir fallback candidate
+    lives on a different APFS volume from ``.crackerjack/``, so a rename
+    would re-create the very cross-device crash we're trying to avoid.
+
+    Mirrors the precedence set by
+    ``mahavishnu.core.worktree_session_registry.quarantine_corrupt_file``,
+    which solved the same problem for its JSON registry.
+    """
+    if not path.exists():
+        return None
+    if _is_valid_sqlite_file(path):
+        return None
+    ts = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
+    backup = path.with_name(f"{path.name}.legacy-{ts}")
+    # If somehow a backup with that exact timestamp already exists
+    # (collision window of 1s, only when running the factory twice in
+    # the same second), append a counter so we never overwrite the
+    # preserved file.
+    counter = 0
+    while backup.exists():
+        counter += 1
+        backup = path.with_name(f"{path.name}.legacy-{ts}.{counter}")
+    shutil.move(str(path), str(backup))
+    logger.info(
+        "adapter_learning: moved legacy non-SQLite file aside "
+        "(%s → %s); creating fresh SQLite db at original path",
+        path.name,
+        backup.name,
+    )
+    return backup
+
+
 def create_adapter_learner(
     enabled: bool = True,
     db_path: Path | None = None,
@@ -512,6 +582,14 @@ def create_adapter_learner(
     SQLite. ``backend="dhara"`` is preserved as a keyword so old config
     files keep loading, but resolves to NoOp (with a warning) so users see
     the deprecation rather than a crash.
+
+    Before attempting SQLite init at each candidate path, the factory
+    checks for a legacy non-SQLite file (typically a ``PersistentDict``
+    shelf left over from the Dhara backend) and moves it aside with a
+    timestamped suffix. This prevents the recurring
+    ``file is not a database`` error that would otherwise surface on
+    every run for any repo whose ``.crackerjack/adapter_learning.db``
+    predates the Dhara→SQLite switch.
     """
     if not enabled:
         logger.info("adapter_learning: disabled, using NoOp")
@@ -527,6 +605,7 @@ def create_adapter_learner(
     db_path = db_path or Path(".crackerjack/adapter_learning.db")
 
     for candidate in _adapter_learning_db_candidates(db_path):
+        _quarantine_legacy_file(candidate)
         try:
             learner = SQLiteAdapterLearner(
                 db_path=candidate,
@@ -542,7 +621,7 @@ def create_adapter_learner(
 
 
 @dataclass
-class DharaLearningIntegration:
+class AdapterLearningIntegration:
     adapter_learner: AdapterLearnerProtocol
     min_attempts: int = 5
 

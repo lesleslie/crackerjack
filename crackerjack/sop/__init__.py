@@ -11,13 +11,11 @@ from crackerjack.sop.models import (
     ProjectSOP,
 )
 from crackerjack.sop.persisters import (
-    DharaSOPPersister,
     InMemorySOPPersister,
     SOPPersister,
 )
 
 __all__ = [
-    "DharaSOPPersister",
     "EvolutionEngine",
     "EvolutionTrigger",
     "FailureModeCatalog",

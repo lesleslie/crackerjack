@@ -10,6 +10,12 @@ blocks_on: []
 topic: changelog
 ---
 
+## [0.83.4] - 2026-09-20
+
+### Fixed
+
+- audit: Tc-refs no-args fallback defaults to cwd, not /Users/les/Projects
+
 ## [0.83.3] - 2026-09-20
 
 ### Added

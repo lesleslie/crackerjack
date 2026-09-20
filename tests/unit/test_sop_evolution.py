@@ -1,8 +1,7 @@
 """Tests for Spec #7: project-scoped SOP evolution.
 
 SOPs (standard operating procedures) live per project and evolve based on
-recurring failure modes. The substrate for now is in-memory; a Dhara-backed
-persister is documented as a stub.
+recurring failure modes. The substrate is in-memory.
 
 Coverage:
 
@@ -10,7 +9,6 @@ Coverage:
 - ``FailureModeCatalogEntry`` recording and counting
 - ``EvolutionTrigger`` proposing an SOP edit after N occurrences
 - ``InMemorySOPPersister`` CRUD (save / get / list)
-- ``DharaSOPPersister`` stub raises ``NotImplementedError`` (documented stub)
 - ``EvolutionEngine`` end-to-end: failure_mode -> trigger -> proposal
 """
 
@@ -31,7 +29,6 @@ from crackerjack.sop.models import (
     ProjectSOP,
 )
 from crackerjack.sop.persisters import (
-    DharaSOPPersister,
     InMemorySOPPersister,
     SOPPersister,
 )
@@ -251,30 +248,6 @@ class TestInMemorySOPPersister:
         fetched = persister.get(project_id="p1", name="release")
         assert fetched == evolved
         assert fetched.version == 2
-
-
-# ── DharaSOPPersister stub ────────────────────────────────────────────────
-
-
-class TestDharaSOPPersister:
-    def test_stub_raises_not_implemented(self):
-        persister = DharaSOPPersister()
-        with pytest.raises(NotImplementedError):
-            persister.save(
-                ProjectSOP(
-                    project_id="p1",
-                    name="release",
-                    body="body",
-                    version=1,
-                    last_failure_id=None,
-                    last_evolved_at=datetime(2026, 6, 27),
-                )
-            )
-
-    def test_stub_is_sop_persister(self):
-        # DharaSOPPersister implements the SOPPersister protocol
-        persister = DharaSOPPersister()
-        assert isinstance(persister, SOPPersister)
 
 
 # ── EvolutionEngine end-to-end ────────────────────────────────────────────
