@@ -21,6 +21,7 @@ Complete command-line interface reference for Crackerjack.
 - [Coverage Commands](#coverage-commands)
 - MCP Server Commands (see Core Commands and Advanced Options for `crackerjack start`, `crackerjack health`, and `--start-mcp-server`)
 - [Publishing Commands](#publishing-commands)
+  - [Private package indexes](#private-package-indexes)
 - [Monitoring Commands](#monitoring-commands)
 - [Configuration Commands](#configuration-commands)
 - [Advanced Options](#advanced-options)
@@ -593,6 +594,30 @@ python -m crackerjack run --all [VERSION_TYPE]
 ```bash
 python -m crackerjack run --bump [VERSION_TYPE] --run-tests --publish [VERSION_TYPE]
 ```
+
+### Private package indexes
+
+By default, `crackerjack -p <bump>` publishes to PyPI using either OIDC
+trusted publishing (when configured) or a `UV_PUBLISH_TOKEN` from keyring or
+environment. To publish to a private package index (GitLab PyPI registry,
+devpi, AWS CodeArtifact, etc.) instead, set `--publish-url`:
+
+```bash
+crackerjack -p minor --publish-url https://gitlab.example/api/v4/projects/1234/packages/pypi/upload
+```
+
+Resolution order (highest to lowest priority):
+
+1. `--publish-url` CLI flag
+2. `CRACKERJACK_PUBLISH_URL` environment variable
+3. `publish_url` key in `settings/crackerjack.yaml` (under `publishing:`)
+   or `settings/local.yaml`
+4. Unset — falls back to PyPI
+
+When `publish_url` is set, `--trusted-publishing` is disabled (the two
+flags are mutually exclusive in `uv publish`). Token auth via
+`UV_PUBLISH_TOKEN` is used instead — for GitLab CI, this is the
+auto-injected `$CI_JOB_TOKEN`.
 
 ## Monitoring Commands
 
