@@ -661,6 +661,74 @@ class TestPublishManagerPublishPackage:
         ):
             publish_manager._display_package_url()
 
+    def test_display_package_url_for_custom_gitlab_registry(
+        self, publish_manager,
+    ) -> None:
+        """When ``publish_url`` is set, the displayed URL must NOT show
+        ``pypi.org`` — pre-fix this was hard-coded to PyPI regardless of
+        target, so a successful gitlab.com publish printed a misleading
+        ``https://pypi.org/project/<name>/<version>/`` link."""
+        from io import StringIO
+        from rich.console import Console as RichConsole
+
+        publish_manager.publish_url = (
+            "https://gitlab.com/api/v4/projects/77841268/packages/pypi"
+        )
+        with (
+            patch.object(
+                publish_manager,
+                "_get_current_version",
+                return_value="0.2.0",
+            ),
+            patch.object(
+                publish_manager,
+                "_get_package_name",
+                return_value="mdinject",
+            ),
+        ):
+            buffer = StringIO()
+            publish_manager.console = RichConsole(
+                file=buffer, force_terminal=False,
+            )
+            publish_manager._display_package_url()
+        output = buffer.getvalue()
+        assert "pypi.org" not in output, (
+            "custom-registry publish must not display a pypi.org URL; "
+            f"got: {output!r}"
+        )
+        assert (
+            "https://gitlab.com/api/v4/projects/77841268/packages/pypi/"
+            "simple/mdinject/0.2.0/"
+        ) in output
+
+    def test_display_package_url_for_default_pypi(self, publish_manager) -> None:
+        """When ``publish_url`` is ``None`` (default), the URL still
+        points at ``pypi.org`` so the pre-existing happy path is
+        preserved."""
+        from io import StringIO
+        from rich.console import Console as RichConsole
+
+        publish_manager.publish_url = None
+        with (
+            patch.object(
+                publish_manager,
+                "_get_current_version",
+                return_value="1.0.0",
+            ),
+            patch.object(
+                publish_manager,
+                "_get_package_name",
+                return_value="mdinject",
+            ),
+        ):
+            buffer = StringIO()
+            publish_manager.console = RichConsole(
+                file=buffer, force_terminal=False,
+            )
+            publish_manager._display_package_url()
+        output = buffer.getvalue()
+        assert "https://pypi.org/project/mdinject/1.0.0/" in output
+
 
 class TestPublishManagerUtilities:
     @pytest.fixture

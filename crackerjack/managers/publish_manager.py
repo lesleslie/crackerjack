@@ -879,9 +879,26 @@ class PublishManagerImpl:
         current_version = self._get_current_version()
         package_name = self._get_package_name()
 
-        if package_name and current_version:
+        if not (package_name and current_version):
+            return
+
+        if self.publish_url:
+            # Custom-registry publish (e.g. gitlab.com PyPI). The
+            # operator just pushed to a non-PyPI endpoint — pointing
+            # them at ``pypi.org/project/<name>/`` would mislead, so
+            # we surface a registry-shaped URL anchored to the
+            # configured ``publish_url``. PEP 503 / PEP 691 simple
+            # index layout puts per-version pages under
+            # ``<base>/simple/<normalized-name>/<version>/``; we
+            # preserve the operator's exact ``publish_url`` (already
+            # canonical from ``_resolve_url_for_display`` callers)
+            # and append the simple-index path.
+            base = self.publish_url.rstrip("/")
+            url = f"{base}/simple/{package_name}/{current_version}/"
+        else:
             url = f"https://pypi.org/project/{package_name}/{current_version}/"
-            self.console.print(f"[cyan]🔗[/cyan] Package URL: {url}")
+
+        self.console.print(f"[cyan]🔗[/cyan] Package URL: {url}")
 
     def _get_package_name(self) -> str | None:
         pyproject_path = self.pkg_path / "pyproject.toml"
