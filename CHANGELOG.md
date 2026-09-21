@@ -10,6 +10,16 @@ blocks_on: []
 topic: changelog
 ---
 
+## [0.83.5] - 2026-09-20
+
+### Fixed
+
+- publish-url: Session-aware MCP probe + structuredContent parser
+
+### Internal
+
+- docs: Document Bodai flat-layout convention in /crackerjack:init
+
 ## [0.83.4] - 2026-09-20
 
 ### Fixed

@@ -31,6 +31,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+from collections.abc import Mapping
 
 import httpx2 as httpx
 
@@ -80,7 +81,7 @@ def _mcp_endpoint_url() -> str:
     return base.rstrip("/") + "/mcp"
 
 
-def _parse_mcp_response(payload: dict[str, object]) -> str | None:
+def _parse_mcp_response(payload: object) -> str | None:
     """Extract the publish URL from an MCP ``tools/call`` response.
 
     Tolerates four shapes (verified 2026-09-20 against running Mahavishnu
@@ -166,7 +167,7 @@ _MCP_NOTIFICATIONS_INITIALIZED = {
 def _post_mcp(
     endpoint: str,
     *,
-    json: dict[str, object],
+    json: Mapping[str, object],
     session_id: str | None = None,
 ):
     """Single-call seam: POST one JSON-RPC envelope with the right headers.
@@ -189,7 +190,9 @@ def _post_mcp(
     }
     if session_id:
         headers["mcp-session-id"] = session_id
-    return _http_post(endpoint, json=json, timeout=PROBE_TIMEOUT_SECONDS, headers=headers)
+    return _http_post(
+        endpoint, json=json, timeout=PROBE_TIMEOUT_SECONDS, headers=headers
+    )
 
 
 def _extract_json_payload(body: str | bytes) -> object | None:
@@ -269,9 +272,11 @@ def probe_publish_url(repo_path: str) -> str | None:
         # 1) initialize — server returns a session id in the response header.
         init_resp = _post_mcp(endpoint, json=_MCP_INITIALIZE)
         init_resp.raise_for_status()
-        session_id = init_resp.headers.get("mcp-session-id") if hasattr(
-            init_resp, "headers"
-        ) else None
+        session_id = (
+            init_resp.headers.get("mcp-session-id")
+            if hasattr(init_resp, "headers")
+            else None
+        )
         if not session_id:
             logger.debug(
                 "Mahavishnu initialize response carried no session id; "
@@ -283,7 +288,9 @@ def probe_publish_url(repo_path: str) -> str | None:
         #    Failure here is non-fatal: some implementations skip it.
         try:
             notif_resp = _post_mcp(
-                endpoint, json=_MCP_NOTIFICATIONS_INITIALIZED, session_id=session_id,
+                endpoint,
+                json=_MCP_NOTIFICATIONS_INITIALIZED,
+                session_id=session_id,
             )
             notif_resp.raise_for_status()
         except httpx.HTTPError:
@@ -309,7 +316,7 @@ def probe_publish_url(repo_path: str) -> str | None:
         payload = _extract_json_payload(body_text)
         if payload is None:
             logger.debug(
-                "Mahavishnu MCP probe returned unparseable body; soft fallback",
+                "Mahavishnu MCP probe returned unparsable body; soft fallback",
             )
             return None
         return _parse_mcp_response(payload)
