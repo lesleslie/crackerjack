@@ -145,6 +145,7 @@ class PhaseCoordinator:
             console=self.console,
             pkg_path=self.pkg_path,
             publish_url=self._resolve_publish_url(),
+            publish_token_env=self._resolve_publish_token_env(),
         )
         self.config_merge_service = config_merge_service
 
@@ -216,6 +217,33 @@ class PhaseCoordinator:
         from crackerjack.services.mahavishnu_discovery import probe_publish_url
 
         return probe_publish_url(repo_path=str(self.pkg_path.resolve()))
+
+    def _resolve_publish_token_env(self) -> str | None:
+        """Layered resolution for ``publish_token_env`` (mirror of
+        :meth:`_resolve_publish_url`).
+
+        Priority (highest → lowest):
+
+          1. ``Options.publish_token_env`` — handled separately in
+             ``_publish_to_pypi`` (per-invocation operator override via
+             ``--publish-token-env`` or ``$CRACKERJACK_PUBLISH_TOKEN_ENV``).
+          2. ``settings.publishing.publish_token_env`` — already includes
+             both ``settings/local.yaml`` AND ``BODAI_ECOSYSTEM_CONFIG``
+             synthesis (the loader runs the synthesis before returning
+             settings).
+          3. ``None`` — ``PublishManagerImpl`` will then default to
+             ``GITLAB_PERSONAL_ACCESS_TOKEN`` *if* a ``publish_url`` is
+             also set, otherwise it falls back to the public-PyPI auth
+             chain.
+
+        Why this matters: GitLab's PyPI registry rejects ``pypi-...``
+        tokens (the format ``PyPIAuth`` requires). A gitlab.com URL
+        paired with a PyPI token fails with HTTP 401. The ``token_env``
+        mechanism lets the per-repo ``BODAI_ECOSYSTEM_CONFIG`` point at
+        ``GITLAB_PERSONAL_ACCESS_TOKEN`` (a ``glpat-...`` PAT) so the
+        right credential is sourced automatically.
+        """
+        return self._settings.publishing.publish_token_env
 
     def set_event_publisher(self, event_publisher: t.Any | None) -> None:
         self._event_publisher = event_publisher
@@ -1751,6 +1779,17 @@ class PhaseCoordinator:
             # ``Any`` on the protocol side. The Impl side is correctly typed
             # (``str | None``); at runtime this is always the Impl after init.
             self.publish_manager.publish_url = cli_publish_url  # ty: ignore[invalid-assignment]
+
+        # Mirror of the publish_url block above: a per-invocation override
+        # via ``--publish-token-env`` / ``$CRACKERJACK_PUBLISH_TOKEN_ENV``
+        # beats the loader-resolved setting (settings/local.yaml +
+        # BODAI_ECOSYSTEM_CONFIG synthesis).
+        cli_publish_token_env = t.cast(
+            "str | None",
+            getattr(options, "publish_token_env", None),
+        )
+        if cli_publish_token_env:
+            self.publish_manager.publish_token_env = cli_publish_token_env  # ty: ignore[invalid-assignment]
 
         if not self.publish_manager.publish_package():
             self.session.fail_task("publishing", "Package publishing failed")

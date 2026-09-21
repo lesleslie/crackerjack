@@ -130,7 +130,7 @@ class TestParseMcpResponse:
 
     def test_text_content_shape(self) -> None:
         """Standard MCP ``tools/call`` response with a URL in content[0].text."""
-        url = "https://gitlab.com/api/v4/projects/123/packages/pypi/upload"
+        url = "https://gitlab.com/api/v4/projects/123/packages/pypi"
         payload = {
             "jsonrpc": "2.0",
             "id": 1,
@@ -143,7 +143,7 @@ class TestParseMcpResponse:
 
     def test_structured_result_shape(self) -> None:
         """If Mahavishnu returns the URL directly as a string result."""
-        url = "https://gitlab.com/api/v4/projects/123/packages/pypi/upload"
+        url = "https://gitlab.com/api/v4/projects/123/packages/pypi"
         payload = {"jsonrpc": "2.0", "id": 1, "result": url}
         assert _parse_mcp_response(payload) == url
 
@@ -155,7 +155,7 @@ class TestParseMcpResponse:
         branch the probe returns ``None`` and crackerjack falls through
         to public PyPI.
         """
-        url = "https://gitlab.com/api/v4/projects/123/packages/pypi/upload"
+        url = "https://gitlab.com/api/v4/projects/123/packages/pypi"
         payload = {
             "jsonrpc": "2.0",
             "id": 1,
@@ -215,7 +215,7 @@ class TestProbePublishUrl:
     """
 
     def test_returns_url_on_success(self) -> None:
-        url = "https://gitlab.com/api/v4/projects/77841268/packages/pypi/upload"
+        url = "https://gitlab.com/api/v4/projects/77841268/packages/pypi"
         call_response = _fake_response(
             json_payload={
                 "jsonrpc": "2.0",
@@ -408,7 +408,7 @@ class TestProbePublishUrl:
         """FastMCP returns SSE-formatted bodies even when JSON is accepted.
         The probe must extract the ``data:`` line and parse that as JSON.
         """
-        url = "https://gitlab.com/api/v4/projects/77841268/packages/pypi/upload"
+        url = "https://gitlab.com/api/v4/projects/77841268/packages/pypi"
         sse_body = (
             "event: message\n"
             f"data: {{\"jsonrpc\":\"2.0\",\"id\":2,\"result\":{{\"content\":[{{\"type\":\"text\",\"text\":\"{url}\"}}],\"isError\":false}}}}\n"

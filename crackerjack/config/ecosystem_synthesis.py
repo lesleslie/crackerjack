@@ -44,16 +44,19 @@ logger = logging.getLogger(__name__)
 ENV_VAR_NAME = "BODAI_ECOSYSTEM_CONFIG"
 
 
-def _read_ecosystem_publish_url(ecosystem_path: Path, cwd: Path) -> str | None:
-    """Return the ``publish.url`` for the repo whose path matches ``cwd``.
+def _read_ecosystem_publish_config(
+    ecosystem_path: Path, cwd: Path
+) -> tuple[str | None, str | None]:
+    """Return ``(publish_url, publish_token_env)`` for the cwd-matching repo.
 
-    Returns ``None`` if:
+    Both fields default to ``None`` when:
 
     - the file is unreadable / unparsable,
     - the cwd doesn't match any registered repo,
     - the matched repo has no ``publish`` block, or
-    - the matched repo's ``publish.url`` is ``None`` (operators set the
-      block but haven't filled in the URL yet).
+    - the operator hasn't filled in the URL yet (token_env is
+      optional — URL is the required field for a ``publish`` block
+      to be considered "configured").
 
     Path matching is exact (``Path.resolve()`` of both sides) to avoid
     silently routing to the wrong repo when two repos share a parent
@@ -66,14 +69,14 @@ def _read_ecosystem_publish_url(ecosystem_path: Path, cwd: Path) -> str | None:
         logger.debug(
             f"BODAI_ECOSYSTEM_CONFIG: failed to read {ecosystem_path}: {exc}",
         )
-        return None
+        return None, None
 
     if not isinstance(data, dict):
-        return None
+        return None, None
 
     repos = data.get("repos")
     if not isinstance(repos, list):
-        return None
+        return None, None
 
     cwd_resolved = cwd.resolve()
     for entry in repos:
@@ -94,13 +97,26 @@ def _read_ecosystem_publish_url(ecosystem_path: Path, cwd: Path) -> str | None:
 
         publish = entry.get("publish")
         if not isinstance(publish, dict):
-            return None
+            return None, None
         url = publish.get("url")
-        if isinstance(url, str) and url:
-            return url
-        return None
+        url_value = url if isinstance(url, str) and url else None
+        token_env_raw = publish.get("token_env")
+        token_env_value = (
+            token_env_raw if isinstance(token_env_raw, str) and token_env_raw else None
+        )
+        return url_value, token_env_value
 
-    return None
+    return None, None
+
+
+def _read_ecosystem_publish_url(ecosystem_path: Path, cwd: Path) -> str | None:
+    """Backwards-compat shim returning only the URL.
+
+    Kept so any out-of-tree caller (or older test) still compiles.
+    New code should call :func:`_read_ecosystem_publish_config` so it
+    can pick up ``token_env`` in the same pass.
+    """
+    return _read_ecosystem_publish_config(ecosystem_path, cwd)[0]
 
 
 def apply_ecosystem_publish_synthesis(
@@ -143,12 +159,19 @@ def apply_ecosystem_publish_synthesis(
         )
         return False
 
-    url = _read_ecosystem_publish_url(ecosystem_path, cwd)
+    url, token_env = _read_ecosystem_publish_config(ecosystem_path, cwd)
     if url is None:
         return False
 
     publishing["publish_url"] = url
+    if token_env is not None:
+        # Caller-set YAML value still wins — explicit per-repo token_env in
+        # ``settings/local.yaml`` overrides the ecosystem default, matching
+        # the "explicit beats default" invariant for ``publish_url``.
+        if not publishing.get("publish_token_env"):
+            publishing["publish_token_env"] = token_env
     logger.debug(
-        f"BODAI_ECOSYSTEM_CONFIG: synthesized publish_url={url} for cwd={cwd}",
+        "BODAI_ECOSYSTEM_CONFIG: synthesized publish_url="
+        f"{url} token_env={token_env!r} for cwd={cwd}",
     )
     return True

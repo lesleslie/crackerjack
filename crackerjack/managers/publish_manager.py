@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import os
 import subprocess
 import typing as t
 from contextlib import suppress
@@ -73,11 +74,19 @@ class PublishManagerImpl:
         pkg_path: Path | None = None,
         dry_run: bool = False,
         publish_url: str | None = None,
+        publish_token_env: str | None = None,
     ) -> None:
         self.console = self._resolve_console(console)
         self.pkg_path = self._resolve_pkg_path(pkg_path)
         self.dry_run = dry_run
         self.publish_url = publish_url
+        # Env-var name holding the registry-issued token for a custom
+        # ``publish_url``. When unset and the URL is gitlab.com, we
+        # default to ``GITLAB_PERSONAL_ACCESS_TOKEN`` since GitLab's
+        # PyPI registry rejects public-PyPI tokens. The pre-fix code
+        # unconditionally pushed the PyPI ``pypi-...`` token through
+        # ``auth.as_uv_publish_token()`` which GitLab returns 401 on.
+        self.publish_token_env = publish_token_env
 
         self._git_service = self._resolve_git_service(git_service)
         self._version_analyzer = self._resolve_version_analyzer(version_analyzer)
@@ -760,34 +769,81 @@ class PublishManagerImpl:
         return True
 
     def _execute_publish(self) -> bool:
+        if self.publish_url:
+            return self._execute_publish_to_custom_registry()
+
+        return self._execute_publish_to_pypi_public()
+
+    def _execute_publish_to_custom_registry(self) -> bool:
+        """Publish to a non-PyPI registry (``--publish-url`` set).
+
+        Custom registries (gitlab.com PyPI in particular) reject the
+        public-PyPI ``pypi-...`` token shape — they want a registry-issued
+        token (e.g. ``glpat-...`` for GitLab PATs, sent via HTTP Basic).
+        The PyPI auth chain doesn't model those token shapes, so we
+        resolve the registry token directly from the configured env var.
+        """
+        assert self.publish_url is not None  # narrow type for mypy
+        token_env_name = self._resolve_custom_token_env_name()
+        token = os.environ.get(token_env_name) if token_env_name else None
+        if not token:
+            env_hint = (
+                f"Set ${token_env_name} (or pass --publish-token-env to "
+                "point at a different env var name)."
+                if token_env_name
+                else "Pass --publish-token-env ENV_NAME so we know where "
+                "to read the registry token."
+            )
+            self.console.print(
+                f"[red]❌[/red] --publish-url {self.publish_url} requires "
+                f"a token. {env_hint} Public-PyPI tokens (pypi-...) are "
+                "not accepted by custom registries like gitlab.com."
+            )
+            return False
+
+        cmd = ["uv", "publish", "--publish-url", self.publish_url]
+        extra_env: dict[str, str] | None = {"UV_PUBLISH_TOKEN": token}
+        return self._dispatch_publish(cmd, extra_env)
+
+    def _resolve_custom_token_env_name(self) -> str | None:
+        """Pick the env var to read for a custom-registry token.
+
+        Precedence:
+
+          1. Explicit operator override (``self.publish_token_env``).
+          2. Conventional default for known registries: ``gitlab.com``
+             URLs default to ``GITLAB_PERSONAL_ACCESS_TOKEN`` because
+             that's the canonical token env var for GitLab PATs.
+          3. ``None`` — caller must error out asking for an explicit
+             ``--publish-token-env`` rather than silently picking one.
+        """
+        if self.publish_token_env:
+            return self.publish_token_env
+        if self.publish_url and "gitlab.com" in self.publish_url:
+            return "GITLAB_PERSONAL_ACCESS_TOKEN"
+        return None
+
+    def _execute_publish_to_pypi_public(self) -> bool:
+        """Publish to public PyPI using the standard auth chain."""
         auth = self._resolve_pypi_auth()
         if auth is None:
             return False
 
-        if self.publish_url:
-            # --publish-url and --trusted-publishing are mutually exclusive in
-            # `uv publish`; force token auth when targeting a custom index.
-            # If only OIDC is configured (no token), refuse with a clear
-            # error rather than crashing on sentinel.as_uv_publish_token().
-            if auth.is_trusted_publishing():
-                self.console.print(
-                    f"[red]❌[/red] --publish-url {self.publish_url} requires token "
-                    "auth, but only OIDC trusted publishing is available. "
-                    "Set UV_PUBLISH_TOKEN (or configure keyring) to publish "
-                    "to a custom index.",
-                )
-                return False
-            cmd = ["uv", "publish", "--publish-url", self.publish_url]
-            extra_env: dict[str, str] | None = {
-                "UV_PUBLISH_TOKEN": auth.as_uv_publish_token(),
-            }
-        elif auth.is_trusted_publishing():
+        if auth.is_trusted_publishing():
             cmd = ["uv", "publish", "--trusted-publishing", "always"]
             extra_env: dict[str, str] | None = {"UV_PUBLISH_TOKEN": ""}
         else:
             cmd = ["uv", "publish"]
             extra_env = {"UV_PUBLISH_TOKEN": auth.as_uv_publish_token()}
 
+        return self._dispatch_publish(cmd, extra_env)
+
+    def _dispatch_publish(
+        self,
+        cmd: list[str],
+        extra_env: dict[str, str] | None,
+    ) -> bool:
+        """Run the ``uv publish`` subprocess and resolve success/failure."""
         result = self._run_command(cmd, additional_env=extra_env)
 
         success_indicators = [

@@ -57,6 +57,15 @@ class PublishSettings(OneiricMCPConfig):
     bump: str | None = None
     all: str | None = None
     publish_url: str | None = None
+    # Env-var name that holds the publish token when `publish_url` targets a
+    # custom registry (e.g. ``GITLAB_PERSONAL_ACCESS_TOKEN`` for gitlab.com
+    # PyPI repos). When unset, ``PublishManagerImpl`` defaults to
+    # ``GITLAB_PERSONAL_ACCESS_TOKEN`` only when ``publish_url`` is set;
+    # otherwise the existing PyPI auth chain (UV_PUBLISH_TOKEN, keyring,
+    # OIDC) is used. Populated by ``crack/config/ecosystem_synthesis.py``
+    # from ``publish.token_env`` in ``BODAI_ECOSYSTEM_CONFIG`` when the
+    # cwd matches a registered repo.
+    publish_token_env: str | None = None
     no_git_tags: bool = False
     skip_version_check: bool = False
 

@@ -171,7 +171,7 @@ class TestPublishSettings:
             "  publish: '0.1.0'\n"
             "  bump: minor\n"
             "  all: remote\n"
-            "  publish_url: 'https://gitlab.example/api/v4/projects/1/packages/pypi/upload'\n"
+            "  publish_url: 'https://gitlab.example/api/v4/projects/1/packages/pypi'\n"
             "  no_git_tags: true\n"
             "  skip_version_check: true\n"
         )
@@ -183,7 +183,7 @@ class TestPublishSettings:
         assert loaded.publishing.all == "remote"
         assert (
             loaded.publishing.publish_url
-            == "https://gitlab.example/api/v4/projects/1/packages/pypi/upload"
+            == "https://gitlab.example/api/v4/projects/1/packages/pypi"
         )
         assert loaded.publishing.no_git_tags is True
         assert loaded.publishing.skip_version_check is True
@@ -243,7 +243,7 @@ class TestPublishSettings:
             f"  - name: test-repo\n"
             f"    path: {project_root}\n"
             "    publish:\n"
-            "      url: 'https://gitlab.example/api/v4/projects/42/packages/pypi/upload'\n"
+            "      url: 'https://gitlab.example/api/v4/projects/42/packages/pypi'\n"
             "      token_env: CI_JOB_TOKEN\n"
         )
         monkeypatch.setenv("BODAI_ECOSYSTEM_CONFIG", str(ecosystem_path))
@@ -251,8 +251,78 @@ class TestPublishSettings:
         loaded = load_settings(CrackerjackSettings, settings_dir=settings_dir)
 
         assert loaded.publishing.publish_url == (
-            "https://gitlab.example/api/v4/projects/42/packages/pypi/upload"
+            "https://gitlab.example/api/v4/projects/42/packages/pypi"
         )
+        # ``token_env`` from the ecosystem registry must also propagate so
+        # ``PublishManagerImpl`` can read the registry-issued token
+        # (gitlab.com rejects the public-PyPI ``pypi-...`` token).
+        assert loaded.publishing.publish_token_env == "CI_JOB_TOKEN"
+
+    def test_ecosystem_synthesis_propagates_token_env_without_url(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    ):
+        """``token_env`` is read from each repo's ``publish`` block
+        alongside ``url``. A registry entry with both fields flows
+        through to ``publish_token_env``.
+
+        Without this propagation the per-repo `BODAI_ECOSYSTEM_CONFIG`
+        entry's `publish.token_env` is just an unused comment field —
+        `PublishManagerImpl` would always default to
+        ``GITLAB_PERSONAL_ACCESS_TOKEN`` (or refuse) regardless of
+        whether the operator configured a different env var.
+        """
+        from crackerjack.config import load_settings
+
+        project_root = tmp_path
+        settings_dir = project_root / "settings"
+        settings_dir.mkdir()
+        ecosystem_path = tmp_path / "ecosystem.yaml"
+        ecosystem_path.write_text(
+            "repos:\n"
+            f"  - name: test-repo\n"
+            f"    path: {project_root}\n"
+            "    publish:\n"
+            "      url: 'https://gitlab.example/api/v4/projects/42/packages/pypi'\n"
+            "      token_env: GITLAB_PERSONAL_ACCESS_TOKEN\n"
+        )
+        monkeypatch.setenv("BODAI_ECOSYSTEM_CONFIG", str(ecosystem_path))
+
+        loaded = load_settings(CrackerjackSettings, settings_dir=settings_dir)
+
+        assert loaded.publishing.publish_url is not None
+        assert loaded.publishing.publish_token_env == "GITLAB_PERSONAL_ACCESS_TOKEN"
+
+    def test_ecosystem_synthesis_yaml_publish_token_env_beats_ecosystem(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    ):
+        """Operator-set ``publish_token_env`` in settings/local.yaml
+        beats the ecosystem default — mirrors the explicit-beats-default
+        invariant that ``publish_url`` already enforces."""
+        from crackerjack.config import load_settings
+
+        project_root = tmp_path
+        settings_dir = project_root / "settings"
+        settings_dir.mkdir()
+        ecosystem_path = tmp_path / "ecosystem.yaml"
+        ecosystem_path.write_text(
+            "repos:\n"
+            f"  - name: test-repo\n"
+            f"    path: {project_root}\n"
+            "    publish:\n"
+            "      url: 'https://gitlab.example/api/v4/projects/42/packages/pypi'\n"
+            "      token_env: ECOSYSTEM_TOKEN\n"
+        )
+        monkeypatch.setenv("BODAI_ECOSYSTEM_CONFIG", str(ecosystem_path))
+
+        # Operator explicitly overrides token_env in their local settings.
+        (settings_dir / "local.yaml").write_text(
+            "publishing:\n"
+            "  publish_token_env: OPERATOR_OVERRIDE_TOKEN\n"
+        )
+
+        loaded = load_settings(CrackerjackSettings, settings_dir=settings_dir)
+
+        assert loaded.publishing.publish_token_env == "OPERATOR_OVERRIDE_TOKEN"
 
     def test_ecosystem_synthesis_no_match_for_unregistered_cwd(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -275,7 +345,7 @@ class TestPublishSettings:
             f"  - name: elsewhere\n"
             f"    path: /Users/les/Projects/some-other-repo\n"
             "    publish:\n"
-            "      url: 'https://gitlab.example/api/v4/projects/99/packages/pypi/upload'\n"
+            "      url: 'https://gitlab.example/api/v4/projects/99/packages/pypi'\n"
         )
         monkeypatch.setenv("BODAI_ECOSYSTEM_CONFIG", str(ecosystem_path))
 

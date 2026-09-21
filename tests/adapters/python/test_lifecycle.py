@@ -71,7 +71,7 @@ def test_lifecycle_publish_threads_publish_url_from_settings(tmp_path: Path) -> 
     settings_dir = root / "settings"
     settings_dir.mkdir()
     gitlab_url = (
-        "https://gitlab.example/api/v4/projects/1/packages/pypi/upload"
+        "https://gitlab.example/api/v4/projects/1/packages/pypi"
     )
     (settings_dir / "local.yaml").write_text(
         f"publishing:\n  publish_url: '{gitlab_url}'\n",

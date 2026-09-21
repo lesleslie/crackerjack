@@ -261,20 +261,29 @@ class TestExecutePublishWithPublishUrl:
     (skipping OIDC trusted publishing)."""
 
     def test_injects_publish_url_and_uses_token_auth(
-        self, tmp_path: Path,
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        url = "https://gitlab.example/api/v4/projects/1/packages/pypi/upload"
+        """``uv publish --publish-url <URL>`` runs with a registry-issued
+        token sourced from the configured env var — NOT a public-PyPI
+        ``pypi-...`` token from the PyPI auth chain.
+
+        Pre-fix: this test passed a ``pypi-...`` keyring token to a
+        custom URL, which GitLab would 401 on. Post-fix, custom URLs
+        pull the token from the registry's env var so gitlab.com gets
+        the right token shape.
+        """
+        url = "https://gitlab.com/api/v4/projects/1/packages/pypi"
         (tmp_path / "pyproject.toml").write_text(
             '[project]\nname = "test-pkg"\nversion = "0.1.0"\n'
         )
+        gitlab_pat = "glpat-EXAMPLE-do-not-use"
+        # Even when a keyring has a stale pypi-... token, the
+        # gitlab.com URL must bypass the PyPI auth chain and source
+        # ``GITLAB_PERSONAL_ACCESS_TOKEN`` (the conventional default).
+        monkeypatch.setenv("GITLAB_PERSONAL_ACCESS_TOKEN", gitlab_pat)
         manager = PublishManagerImpl(pkg_path=tmp_path, publish_url=url)
-        token = "pypi-AgEIcHlwaS5vcmcCAAAAAAAAAAAA"
         with patch.object(manager, "build_package", return_value=True), \
-             patch.object(manager, "_run_command") as mock_run, \
-             patch(
-                 "crackerjack.services.pypi_auth._providers._keyring_get_raw",
-                 return_value=token,
-             ):
+             patch.object(manager, "_run_command") as mock_run:
             mock_run.return_value = subprocess.CompletedProcess(
                 args=[], returncode=0, stdout="Successfully uploaded", stderr="",
             )
@@ -283,7 +292,7 @@ class TestExecutePublishWithPublishUrl:
         cmd = mock_run.call_args.args[0]
         assert cmd == ["uv", "publish", "--publish-url", url]
         assert mock_run.call_args.kwargs["additional_env"] == {
-            "UV_PUBLISH_TOKEN": token,
+            "UV_PUBLISH_TOKEN": gitlab_pat,
         }
 
     def test_publish_url_suppresses_trusted_publishing(
@@ -300,7 +309,7 @@ class TestExecutePublishWithPublishUrl:
         (tmp_path / "pyproject.toml").write_text(
             '[project]\nname = "test-pkg"\nversion = "0.1.0"\n'
         )
-        url = "https://gitlab.example/api/v4/projects/1/packages/pypi/upload"
+        url = "https://gitlab.example/api/v4/projects/1/packages/pypi"
         manager = PublishManagerImpl(pkg_path=tmp_path, publish_url=url)
         monkeypatch.setenv("GITHUB_ACTIONS", "true")
         monkeypatch.setenv("ACTIONS_ID_TOKEN_REQUEST_TOKEN", "any-oidc-token")
@@ -324,7 +333,7 @@ class TestExecutePublishWithPublishUrl:
         (tmp_path / "pyproject.toml").write_text(
             '[project]\nname = "test-pkg"\nversion = "0.1.0"\n'
         )
-        url = "https://gitlab.example/api/v4/projects/1/packages/pypi/upload"
+        url = "https://gitlab.example/api/v4/projects/1/packages/pypi"
         manager = PublishManagerImpl(pkg_path=tmp_path, publish_url=url)
         # Capture console output via the manager's console.
         from io import StringIO
@@ -350,3 +359,148 @@ class TestExecutePublishWithPublishUrl:
         output = buffer.getvalue()
         assert "to PyPI" in output
         assert "gitlab" not in output.lower()
+
+
+class TestResolveCustomTokenEnvName:
+    """Pins the precedence for resolving the env-var that holds a
+    custom-registry publish token (``gitlab.com`` PyPI in particular)."""
+
+    def test_explicit_publish_token_env_wins(self, tmp_path: Path) -> None:
+        """Operator-set ``publish_token_env`` overrides the gitlab.com default."""
+        (tmp_path / "pyproject.toml").write_text(
+            '[project]\nname = "test-pkg"\nversion = "0.1.0"\n'
+        )
+        manager = PublishManagerImpl(
+            pkg_path=tmp_path,
+            publish_url="https://gitlab.com/api/v4/projects/1/packages/pypi",
+            publish_token_env="CRACKERJACK_TEST_TOKEN",
+        )
+        assert (
+            manager._resolve_custom_token_env_name() == "CRACKERJACK_TEST_TOKEN"
+        )
+
+    def test_gitlab_com_url_defaults_to_known_env(self, tmp_path: Path) -> None:
+        """Without an explicit override, gitlab.com URLs default to
+        ``GITLAB_PERSONAL_ACCESS_TOKEN`` — the canonical PAT env var name."""
+        (tmp_path / "pyproject.toml").write_text(
+            '[project]\nname = "test-pkg"\nversion = "0.1.0"\n'
+        )
+        manager = PublishManagerImpl(
+            pkg_path=tmp_path,
+            publish_url="https://gitlab.com/api/v4/projects/1/packages/pypi",
+        )
+        assert (
+            manager._resolve_custom_token_env_name()
+            == "GITLAB_PERSONAL_ACCESS_TOKEN"
+        )
+
+    def test_unknown_registry_returns_none_when_unset(self, tmp_path: Path) -> None:
+        """A non-PyPI URL that we don't recognize as a known registry
+        returns ``None`` so the caller errors out asking for an
+        explicit ``--publish-token-env``, rather than silently picking
+        the wrong env var."""
+        (tmp_path / "pyproject.toml").write_text(
+            '[project]\nname = "test-pkg"\nversion = "0.1.0"\n'
+        )
+        manager = PublishManagerImpl(
+            pkg_path=tmp_path,
+            publish_url="https://private.example.com/api/v4/....../packages/pypi",
+        )
+        assert manager._resolve_custom_token_env_name() is None
+
+
+class TestExecutePublishToCustomRegistry:
+    """Pins the auth wiring for publishing to a gitlab.com PyPI repo.
+
+    The pre-fix code unconditionally pushed the PyPI ``pypi-...`` token
+    through ``auth.as_uv_publish_token()``, which GitLab's PyPI registry
+    rejects with 401. The post-fix code resolves the GitLab PAT from the
+    configured env var instead of going through the PyPI auth chain.
+    """
+
+    def test_reads_token_from_configured_env_var(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        (tmp_path / "pyproject.toml").write_text(
+            '[project]\nname = "test-pkg"\nversion = "0.1.0"\n'
+        )
+        url = "https://gitlab.com/api/v4/projects/1/packages/pypi"
+        manager = PublishManagerImpl(
+            pkg_path=tmp_path,
+            publish_url=url,
+            publish_token_env="MY_GITLAB_TOKEN",
+        )
+        monkeypatch.setenv("MY_GITLAB_TOKEN", "glpat-EXAMPLE-do-not-use")
+        monkeypatch.delenv("UV_PUBLISH_TOKEN", raising=False)
+
+        with patch.object(manager, "build_package", return_value=True), \
+             patch.object(manager, "_run_command") as mock_run:
+            mock_run.return_value = subprocess.CompletedProcess(
+                args=[], returncode=0, stdout="Successfully uploaded", stderr="",
+            )
+            result = manager._execute_publish()
+        assert result is True
+        cmd = mock_run.call_args.args[0]
+        assert cmd == ["uv", "publish", "--publish-url", url]
+        assert mock_run.call_args.kwargs["additional_env"] == {
+            "UV_PUBLISH_TOKEN": "glpat-EXAMPLE-do-not-use",
+        }
+
+    def test_does_not_use_pypi_auth_chain_for_gitlab(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Even when the public-PyPI token chain is available, a
+        ``--publish-url`` publish must NOT pass the PyPI ``pypi-...``
+        token through to GitLab — it must use the registry-side env var.
+
+        This pins the regression that bit mdinject 2026-09-20 (the
+        pre-fix code sent ``pypi-...`` tokens to gitlab.com and got 401).
+        """
+        (tmp_path / "pyproject.toml").write_text(
+            '[project]\nname = "test-pkg"\nversion = "0.1.0"\n'
+        )
+        url = "https://gitlab.com/api/v4/projects/1/packages/pypi"
+        pypi_token = "pypi-AgEIcHlwaS5vcmcCAAAAAAAAAAAA"
+        monkeypatch.setenv("UV_PUBLISH_TOKEN", pypi_token)
+        monkeypatch.setenv("GITLAB_PERSONAL_ACCESS_TOKEN", "glpat-real-token")
+
+        manager = PublishManagerImpl(
+            pkg_path=tmp_path,
+            publish_url=url,
+            # No explicit publish_token_env — must default to
+            # GITLAB_PERSONAL_ACCESS_TOKEN for gitlab.com URLs.
+        )
+        with patch.object(manager, "build_package", return_value=True), \
+             patch.object(manager, "_run_command") as mock_run:
+            mock_run.return_value = subprocess.CompletedProcess(
+                args=[], returncode=0, stdout="Successfully uploaded", stderr="",
+            )
+            manager._execute_publish()
+        # The pypi-... token must NOT leak through to the registry call.
+        assert (
+            mock_run.call_args.kwargs["additional_env"]["UV_PUBLISH_TOKEN"]
+            != pypi_token
+        )
+        assert (
+            mock_run.call_args.kwargs["additional_env"]["UV_PUBLISH_TOKEN"]
+            == "glpat-real-token"
+        )
+
+    def test_refuses_when_token_env_unset(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """If neither ``publish_token_env`` nor the conventional
+        registry default is set in the environment, ``_execute_publish``
+        must return ``False`` and surface a clear error rather than
+        crashing or sending an empty token."""
+        (tmp_path / "pyproject.toml").write_text(
+            '[project]\nname = "test-pkg"\nversion = "0.1.0"\n'
+        )
+        url = "https://gitlab.com/api/v4/projects/1/packages/pypi"
+        monkeypatch.delenv("GITLAB_PERSONAL_ACCESS_TOKEN", raising=False)
+        manager = PublishManagerImpl(pkg_path=tmp_path, publish_url=url)
+        with patch.object(manager, "build_package", return_value=True), \
+             patch.object(manager, "_run_command") as mock_run:
+            result = manager._execute_publish()
+        assert result is False
+        mock_run.assert_not_called()

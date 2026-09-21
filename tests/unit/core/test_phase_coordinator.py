@@ -66,7 +66,7 @@ class TestPhaseCoordinatorInitialization:
         """
         from crackerjack.managers.publish_manager import PublishManagerImpl
 
-        gitlab_url = "https://gitlab.example/api/v4/projects/1/packages/pypi/upload"
+        gitlab_url = "https://gitlab.example/api/v4/projects/1/packages/pypi"
         settings = CrackerjackSettings()
         settings.publishing.publish_url = gitlab_url
 
@@ -128,7 +128,7 @@ class TestPhaseCoordinatorInitialization:
         """
         from unittest.mock import patch
 
-        gitlab_url = "https://gitlab.example/api/v4/projects/42/packages/pypi/upload"
+        gitlab_url = "https://gitlab.example/api/v4/projects/42/packages/pypi"
         settings = CrackerjackSettings()
         assert settings.publishing.publish_url is None
 

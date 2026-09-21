@@ -75,6 +75,7 @@ class Options(BaseModel):
     no_config_updates: bool = False
     publish: BumpOption | None = None
     publish_url: str | None = None
+    publish_token_env: str | None = None
     all: BumpOption | None = None
     bump: BumpOption | None = None
     verbose: bool = False
@@ -310,8 +311,22 @@ CLI_OPTIONS = {
         envvar="CRACKERJACK_PUBLISH_URL",
         help=(
             "PEP 517 repository URL for uploads (overrides PyPI default). "
-            "Example: https://gitlab.com/api/v4/projects/<id>/packages/pypi/upload. "
-            "When set, OIDC trusted publishing is disabled and token auth is used."
+            "Example: https://gitlab.com/api/v4/projects/<id>/packages/pypi. "
+            "When set, OIDC trusted publishing is disabled and token auth is used. "
+            "Pair with --publish-token-env to override the env var that holds the "
+            "token (default: GITLAB_PERSONAL_ACCESS_TOKEN for gitlab.com URLs)."
+        ),
+    ),
+    "publish_token_env": typer.Option(
+        None,
+        "--publish-token-env",
+        envvar="CRACKERJACK_PUBLISH_TOKEN_ENV",
+        help=(
+            "Env var that holds the publish token when --publish-url targets a "
+            "custom registry (e.g. GITLAB_PERSONAL_ACCESS_TOKEN for gitlab.com). "
+            "Required when --publish-url points at GitLab: GitLab's PyPI registry "
+            "rejects public-PyPI tokens (pypi-...). Read from ecosystem.yaml's "
+            "publish.token_env by default."
         ),
     ),
     "all": typer.Option(
@@ -1026,6 +1041,7 @@ def create_options(
     fast: bool,
     comp: bool,
     publish_url: str | None = None,
+    publish_token_env: str | None = None,
     fast_iteration: bool = False,
     tool: str | None = None,
     changed_only: bool = False,
