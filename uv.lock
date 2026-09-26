@@ -708,7 +708,7 @@ wheels = [
 
 [[package]]
 name = "crackerjack"
-version = "0.83.8"
+version = "0.83.9"
 source = { editable = "." }
 dependencies = [
     { name = "aiofiles" },
@@ -816,7 +816,7 @@ requires-dist = [
     { name = "keyring", specifier = ">=25.7.0" },
     { name = "libcst", specifier = ">=1.8.6" },
     { name = "linkcheckmd", specifier = ">=1.4.0" },
-    { name = "mcp-common", specifier = ">=0.18.0" },
+    { name = "mcp-common", specifier = ">=0.28.0" },
     { name = "mdformat", specifier = ">=1.0.0" },
     { name = "mdformat-ruff", specifier = ">=0.1.3" },
     { name = "numpy", specifier = ">=2.5.0" },
@@ -2167,7 +2167,7 @@ wheels = [
 
 [[package]]
 name = "mcp-common"
-version = "0.27.0"
+version = "0.28.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "cryptography" },
@@ -2184,9 +2184,9 @@ dependencies = [
     { name = "typer" },
     { name = "websockets" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/a5/bc/ce08fa16bcd0a5690f11c33d1eb06f2f3ef55fdcd9588b2bd944bc40fd34/mcp_common-0.27.0.tar.gz", hash = "sha256:0417e9812bc14a740beae47585c359d717b0516de4a12fad95f712f6543f5720", size = 1127942, upload-time = "2026-09-18T10:43:23.033Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/33/14/05610301354b38cd320c3f6f575d67c7d1a7a3096d594545a6c88bb0f666/mcp_common-0.28.0.tar.gz", hash = "sha256:135cc3bd298645f71e95be36e2f83592c661610cd86ae26a23d78942b83764bb", size = 1156404, upload-time = "2026-09-26T14:47:00.001Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/f2/7d/fc8e677534c1670581aba9c408e03498c95a7f99b44fda89347591d626c6/mcp_common-0.27.0-py3-none-any.whl", hash = "sha256:fa2ae6579a59a22c8cb3c56f8eb87a30c998a9fd6abc6262a92a4e25b7777ca1", size = 462839, upload-time = "2026-09-18T10:43:21.509Z" },
+    { url = "https://files.pythonhosted.org/packages/88/54/c7ac86bedb177a48727fd8b142cc4199b3c3b84d94e23cf852fd41c681d7/mcp_common-0.28.0-py3-none-any.whl", hash = "sha256:6b0864094990953256669ed3c74925467efe3574acfbf6eaa8ff37c876132ac7", size = 466931, upload-time = "2026-09-26T14:46:58.52Z" },
 ]
 
 [[package]]
