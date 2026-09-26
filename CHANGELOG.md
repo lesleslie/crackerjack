@@ -10,6 +10,12 @@ blocks_on: []
 topic: changelog
 ---
 
+## [0.83.9] - 2026-09-26
+
+### Documentation
+
+- crackerjack: Fix role frontmatter in mcp-launcher-migration decision
+
 ## [0.83.8] - 2026-09-26
 
 ### Documentation

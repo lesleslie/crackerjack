@@ -255,6 +255,17 @@ def test_symbol_in_source_def_function(tmp_path: Path) -> None:
     assert _symbol_in_source("m.my_func", tmp_path) is True
 
 
+def test_symbol_in_source_async_def_function(tmp_path: Path) -> None:
+    """Bug-fix regression: regex must accept ``async def NAME``, not only ``def NAME``.
+
+    Without this, any async-only ``Added`` symbol in a CHANGELOG
+    (e.g. ``mcp_common.server.launcher.launch``) fails release-audit
+    even though the function is defined in source.
+    """
+    (tmp_path / "m.py").write_text("async def launch(*, build_server):\n    pass\n")
+    assert _symbol_in_source("m.launch", tmp_path) is True
+
+
 def test_symbol_in_source_class(tmp_path: Path) -> None:
     (tmp_path / "m.py").write_text("class MyClass:\n    pass\n")
     assert _symbol_in_source("m.MyClass", tmp_path) is True

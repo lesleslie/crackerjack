@@ -179,7 +179,7 @@ def _symbol_in_source(symbol: str, source_root: Path) -> bool:
         _module_path, name = parts
         # Try a few patterns: def name, class name, NAME =, etc.
         patterns = [
-            rf"^\s*def\s+{re.escape(name)}\b",
+            rf"^\s*(?:async\s+)?def\s+{re.escape(name)}\b",
             rf"^\s*class\s+{re.escape(name)}\b",
             rf"^\s*{re.escape(name)}\s*[:=]",
         ]
