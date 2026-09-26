@@ -1,6 +1,6 @@
 ---
 status: active
-role: design-note
+role: implementation
 kind: migration-design
 date: 2026-09-26
 last_reviewed: 2026-09-26
