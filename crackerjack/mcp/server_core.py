@@ -1,6 +1,7 @@
 import asyncio
 import os
 import signal
+import sys
 import time
 import typing as t
 from contextlib import suppress
@@ -14,6 +15,7 @@ try:
 except Exception:
     __version__ = "0.0.0-unknown"
 
+import mcp_common
 from mcp_common.ui import ServerPanels
 from rich.console import Console
 
@@ -154,6 +156,15 @@ async def create_mcp_server(config: dict[str, t.Any] | None = None) -> t.Any | N
 
         from crackerjack.mcp.signer_feed import get_signer_feed_state
 
+        # REQ-005: surface the launcher version so MCP clients can verify
+        # which startup path the server actually used. Read at request time
+        # (not module-import) so editable-install version drift doesn't lie.
+        base = {
+            "service": "crackerjack",
+            "version": __version__,
+            "launcher": f"mcp_common.server.launcher@{mcp_common.__version__}",
+        }
+
         state = get_signer_feed_state()
         if state is None:
             # Pre-init warm-up window OR init failed inside
@@ -161,9 +172,8 @@ async def create_mcp_server(config: dict[str, t.Any] | None = None) -> t.Any | N
             # warm-up contract.
             return JSONResponse(
                 {
+                    **base,
                     "status": "degraded",
-                    "service": "crackerjack",
-                    "version": __version__,
                     "checks": {
                         "skills_signer": {
                             "ok": False,
@@ -181,9 +191,8 @@ async def create_mcp_server(config: dict[str, t.Any] | None = None) -> t.Any | N
             # per mcp-backend-wiring-discipline.md.
             return JSONResponse(
                 {
+                    **base,
                     "status": "degraded",
-                    "service": "crackerjack",
-                    "version": __version__,
                     "checks": {"skills_signer": signer_dict},
                 },
                 status_code=503,
@@ -191,9 +200,8 @@ async def create_mcp_server(config: dict[str, t.Any] | None = None) -> t.Any | N
 
         return JSONResponse(
             {
+                **base,
                 "status": "ok",
-                "service": "crackerjack",
-                "version": __version__,
                 "checks": {"skills_signer": signer_dict},
             }
         )
@@ -482,25 +490,54 @@ def _run_mcp_server(
     mcp_config: dict[str, t.Any],
     http_mode: bool,
 ) -> None:
+    """Run the FastMCP server via mcp_common.server.launcher (REQ-001..007, REQ-013).
+
+    HTTP mode → delegated to the canonical launcher. STDIO mode stays local
+    because the launcher's ``launch()`` is HTTP-only.
+    """
     console.print("[yellow]MCP app created, about to run...[/yellow]")
 
     try:
-        if mcp_config.get("http_enabled", False) or http_mode:
-            host = mcp_config.get("http_host", "127.0.0.1")
-            port = mcp_config.get("http_port", 8676)
-
-            # Override FastMCP's hardcoded 2s graceful-shutdown timeout
-            # so lifespan teardown can complete cleanup without being
-            # cancelled mid-shutdown.
-            asyncio.run(
-                mcp_app.run_http_async(
-                    host=host,
-                    port=port,
-                    uvicorn_config={"timeout_graceful_shutdown": 30},
-                )
-            )
-        else:
+        if not (mcp_config.get("http_enabled", False) or http_mode):
+            # Launcher is HTTP-only; STDIO path stays as-is.
             mcp_app.run()
+            return
+
+        host = mcp_config.get("http_host", "127.0.0.1")
+        port = mcp_config.get("http_port", 8676)
+
+        # REQ-014: explicit SIGTERM handler so the wrapper exits 0 (not -15)
+        # on cooperative shutdown. vanilla FastMCP/uvicorn exits with -15
+        # without this; see cookbook "Failure modes" row.
+        signal.signal(signal.SIGTERM, lambda *_: sys.exit(0))
+
+        from mcp_common.server import launch
+
+        def build_server() -> t.Any:
+            """Return the pre-built FastMCP app.
+
+            ``mcp_app`` is built upstream in ``main()`` via
+            ``_create_and_validate_server`` (``asyncio.run(create_mcp_server(...))``)
+            before this function is called, so the closure has no async work
+            to do. This sidesteps the nested-event-loop trap that cookbook
+            Example 4 hits with ``asyncio.get_event_loop().run_until_complete(...)``.
+            """
+            return mcp_app
+
+        asyncio.run(
+            launch(
+                build_server=build_server,
+                component_name="crackerjack",
+                # cj has no auth subsystem → no secrets.env pre-bind (REQ-002):
+                secrets_path=None,
+                # cj has no settings.yaml → launcher skips warm_settings_feed
+                # (REQ-004); the per-component skills_signer feed still
+                # satisfies the wire-up contract.
+                settings_path=None,
+                host=host,
+                port=port,
+            )
+        )
     except Exception as e:
         console.print(f"[red]MCP run failed: {e}[/red]")
         import traceback
