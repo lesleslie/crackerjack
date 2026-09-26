@@ -269,17 +269,6 @@ example.mcp.json
 report.txt
 
 # ============================================================================
-# Documentation — image assets (crackerjack-specific; lives outside the
-# Bodai-shared marker block because it's not part of the fleet standard)
-# ============================================================================
-# Tracked images live under docs/assets/images/. Session scratch outputs
-# (named like "*-v4.png", "*-window.png", or anything dropped in
-# .scratch/) are local-only and must not be committed. The dot-prefix on
-# `.scratch` is load-bearing — the gitignore rule only matches with it.
-docs/assets/images/.scratch/
-docs/assets/images/.scratch/**
-
-# ============================================================================
 # Bodai-wide gitignore patterns (added 2026-09-07; cross-repo cleanup sweep)
 # ============================================================================
 # Editor / pre-edit backups (foo.py.backup, foo.py.backup.json)
@@ -309,18 +298,6 @@ test-results/
 # Do NOT remove the marker line above — `crackerjack gitignore sync` uses it
 # to detect already-applied state.
 
-# Local configuration overlay (per-machine / per-developer; never commit)
-# Patterns mirror mahavishnu/.gitignore §Local Configuration so all Bodai
-# repos ignore the same overlay set. The four files are: developer-local
-# overrides (`local.yaml`), the legacy repo catalog (`repos.yaml`),
-# the orchestrator-managed catalog (`ecosystem.yaml`), and the per-machine
-# fleet registry overlay (`registry_metadata.local.yaml`, sibling of the
-# tracked `registry_metadata.yaml`).
-settings/local.yaml
-settings/repos.yaml
-settings/ecosystem.yaml
-settings/registry_metadata.local.yaml
-
 # Editor / pre-edit backups (foo.py.backup, foo.py.backup.json)
 *.backup
 *.backup.*
@@ -342,4 +319,14 @@ playwright-junit.xml
 playwright-report/
 playwright-results.json
 test-results/
+
+# ============================================================================
+# Documentation — image assets
+# ============================================================================
+# Tracked images live under docs/assets/images/. Session scratch outputs
+# (named like "*-v4.png", "*-window.png", or anything dropped in
+# .scratch/) are local-only and must not be committed. The dot-prefix on
+# `.scratch` is load-bearing — the gitignore rule only matches with it.
+docs/assets/images/.scratch/
+docs/assets/images/.scratch/**
 # <<< bodai-shared-gitignore <<<

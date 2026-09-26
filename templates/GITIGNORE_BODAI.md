@@ -5,6 +5,18 @@
 # Do NOT remove the marker line above — `crackerjack gitignore sync` uses it
 # to detect already-applied state.
 
+# Local configuration overlay (per-machine / per-developer; never commit)
+# Patterns mirror mahavishnu/.gitignore §Local Configuration so all Bodai
+# repos ignore the same overlay set. The four files are: developer-local
+# overrides (`local.yaml`), the legacy repo catalog (`repos.yaml`),
+# the orchestrator-managed catalog (`ecosystem.yaml`), and the per-machine
+# fleet registry overlay (`registry_metadata.local.yaml`, sibling of the
+# tracked `registry_metadata.yaml`).
+settings/local.yaml
+settings/repos.yaml
+settings/ecosystem.yaml
+settings/registry_metadata.local.yaml
+
 # Editor / pre-edit backups (foo.py.backup, foo.py.backup.json)
 *.backup
 *.backup.*

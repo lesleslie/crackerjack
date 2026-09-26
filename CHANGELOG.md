@@ -10,6 +10,16 @@ blocks_on: []
 topic: changelog
 ---
 
+## [0.83.8] - 2026-09-26
+
+### Documentation
+
+- crackerjack: Phase 4a launcher migration design note (REQ-013)
+
+### Testing
+
+- Extend coverage for config/hooks (43% → 100%)
+
 ## [0.83.5] - 2026-09-20
 
 ### Fixed
