@@ -574,7 +574,9 @@ class SessionBuddyDirectClient:
     ) -> t.Any:
 
         try:
-            from session_buddy.core.workflow_metrics import WorkflowMetricsStore
+            from session_buddy.core.workflow_metrics import (  # ty: ignore[unresolved-import]
+                WorkflowMetricsStore,
+            )
 
             store = WorkflowMetricsStore(db_path=self.db_path)
             return await store.get_workflow_metrics(

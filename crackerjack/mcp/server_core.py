@@ -171,8 +171,8 @@ async def create_mcp_server(config: dict[str, t.Any] | None = None) -> t.Any | N
             # create_mcp_server. Return 503 per the plan §10.3.2
             # warm-up contract.
             return JSONResponse(
-                {
-                    **base,
+                base
+                | {
                     "status": "degraded",
                     "checks": {
                         "skills_signer": {
@@ -190,20 +190,12 @@ async def create_mcp_server(config: dict[str, t.Any] | None = None) -> t.Any | N
             # Signer feed is degraded (empty manifest). Return 503
             # per mcp-backend-wiring-discipline.md.
             return JSONResponse(
-                {
-                    **base,
-                    "status": "degraded",
-                    "checks": {"skills_signer": signer_dict},
-                },
+                base | {"status": "degraded", "checks": {"skills_signer": signer_dict}},
                 status_code=503,
             )
 
         return JSONResponse(
-            {
-                **base,
-                "status": "ok",
-                "checks": {"skills_signer": signer_dict},
-            }
+            base | {"status": "ok", "checks": {"skills_signer": signer_dict}}
         )
 
     @mcp_app.custom_route("/healthz", methods=["GET"])
