@@ -10,6 +10,17 @@ blocks_on: []
 topic: changelog
 ---
 
+## [0.84.0] - 2026-09-26
+
+### Added
+
+- Migrate launcher to mcp_common.server.launcher.launch() (Phase 4b)
+
+### Internal
+
+- crackerjack: Ty ignore + dict-merge modernizer
+- deps: Bump mcp-common floor to >=0.28.0 for launcher migration (Phase 4)
+
 ## [0.83.9] - 2026-09-26
 
 ### Documentation
