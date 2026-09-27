@@ -15,6 +15,7 @@ objects. respx upstream's ``isinstance(httpx.Response)`` check rejects
 httpx2.Response instances, so we use the same seam pattern as
 ``crackerjack/services/mahavishnu_discovery.py``.
 """
+
 from __future__ import annotations
 
 import os
@@ -54,7 +55,7 @@ _install_default_seam()
 
 def _parse_pr_url(pr_url: str) -> tuple[str, str, str] | None:
     """Return (owner, repo, number) or None if the URL is malformed."""
-    stripped = pr_url.replace("https://github.com/", "").rstrip(".diff")
+    stripped = pr_url.replace("https://github.com/", "").removesuffix(".diff")
     parts = stripped.split("/")
     if len(parts) < 4 or parts[2] != "pull":
         return None
@@ -70,7 +71,7 @@ def _update_quota_from_headers(headers: Any) -> None:
     """Read ``x-ratelimit-remaining`` (if present) and store as a Gauge.
 
     GitHub emits the header on every authenticated API response; missing
-    or unparseable values are ignored so a 401 path doesn't raise.
+    or unparsable values are ignored so a 401 path doesn't raise.
     """
     try:
         remaining = headers.get("x-ratelimit-remaining")
@@ -80,7 +81,7 @@ def _update_quota_from_headers(headers: Any) -> None:
         return
     try:
         GITHUB_API_QUOTA_REMAINING.set(float(remaining))
-    except (TypeError, ValueError):
+    except TypeError, ValueError:
         return
 
 
@@ -147,10 +148,7 @@ async def post_pr_comment(pr_url: str, body: str) -> dict[str, Any]:
         raise GitHubAPIError(f"malformed PR URL: {pr_url}")
     owner, repo, number = parsed
 
-    api_url = (
-        f"https://api.github.com/repos/{owner}/{repo}"
-        f"/issues/{number}/comments"
-    )
+    api_url = f"https://api.github.com/repos/{owner}/{repo}/issues/{number}/comments"
     headers = {
         "Authorization": f"Bearer {token}",
         "Accept": "application/vnd.github+json",
@@ -173,21 +171,19 @@ async def post_pr_comment(pr_url: str, body: str) -> dict[str, Any]:
 
     status, text = _status_text(response)
     if status >= 400:
-        raise GitHubAPIError(
-            f"comment post failed {status}: {text[:200]}"
-        )
+        raise GitHubAPIError(f"comment post failed {status}: {text[:200]}")
 
     try:
         return dict(response.json())
-    except (ValueError, AttributeError):
+    except ValueError, AttributeError:
         return {}
 
 
 __all__ = [
     "DEFAULT_TIMEOUT_SECONDS",
     "GITHUB_TOKEN_ENV",
-    "GitHubAPIError",
     "USER_AGENT",
+    "GitHubAPIError",
     "_diff_url_for",
     "_parse_pr_url",
     "fetch_pr_diff",
