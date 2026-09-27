@@ -10,6 +10,28 @@ blocks_on: []
 topic: changelog
 ---
 
+## [0.84.1] - 2026-09-27
+
+### Added
+
+- crackerjack: C-13 review-pr skill (Akosha pattern subscription)
+
+### Fixed
+
+- crackerjack: Resolve 2 ty errors + 2 refurb errors (comprehensive hooks)
+- crackerjack: Use removesuffix for literal suffix strip (B005)
+
+### Documentation
+
+- crackerjack: Add .claude/decisions/deployability-discipline.md pointer
+- crackerjack: Add lite-schema frontmatter to deployability-discipline.md pointer
+
+### Internal
+
+- crackerjack: Extend .claude/ allowlist with decisions/agents/skills
+- crackerjack: Refresh uv.lock after version bump to 0.84.0
+- crackerjack: Remove tracked .cov_test + .gitignore.bak + extend gitignore
+
 ## [0.84.0] - 2026-09-26
 
 ### Added

@@ -15,6 +15,7 @@ Version-pin to ``mahavishnu >= 0.29`` for ``safe_publish`` +
 ``IdempotencyOptions``; the contract test in
 ``tests/integration/test_review_pr.py`` asserts this pin holds.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -182,7 +183,7 @@ async def _handle_pr_event(
 
     try:
         result = await dispatch(prompt, idempotency_nonce)
-    except Exception as exc:  # noqa: BLE001 — dispatcher boundary
+    except Exception as exc:
         PR_REVIEW_POST_TOTAL.labels(result="error").inc()
         if _is_fork_pr(pr_url):
             PR_REVIEW_FORK_PR_TOTAL.labels(result="error").inc()
