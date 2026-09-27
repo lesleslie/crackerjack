@@ -352,4 +352,13 @@ playwright-junit.xml
 playwright-report/
 playwright-results.json
 test-results/
+# Runtime data dirs (added 2026-09-26 fleet cleanup)
+data/
+# Backup files (added 2026-09-26 fleet cleanup)
+.gitignore.bak.*
+.gitignore.tmp
+# Coverage.py SQLite database (runtime artifact)
+.cov_test
+# pytest-benchmark baseline output
+benchmark_baseline.json
 # <<< bodai-shared-gitignore <<<
