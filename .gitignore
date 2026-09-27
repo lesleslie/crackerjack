@@ -223,6 +223,16 @@ crackerjack-*/
 .claude/*
 !.claude/workflows/
 !.claude/workflows/**
+# Standard Bodai allowlist: shared team content (decisions, agents, skills).
+# Extends the existing workflows allowlist above. Pattern matches
+# mahavishnu's allowlist style. Per
+# oneiric/docs/adr/0001-deployability-discipline.md.
+!.claude/decisions/
+!.claude/decisions/**
+!.claude/agents/
+!.claude/agents/**
+!.claude/skills/
+!.claude/skills/**
 .session-buddy/
 .crackerjack/
 
