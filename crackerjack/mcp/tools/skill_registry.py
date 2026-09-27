@@ -124,6 +124,30 @@ _STATIC_SKILLS: list[dict[str, Any]] = [
         ],
         "dependencies": [],
     },
+    {
+        "name": "review-pr",
+        "body_filename": "review-pr.md",
+        "version": "1.0.0",
+        "description": (
+            "Use ONLY when the user explicitly types "
+            "`/crackerjack:review-pr` or selects this Skill from the "
+            "picker to wire the C-13 review-pr trigger into a running "
+            "session. Do not auto-trigger. The skill subscribes to the "
+            "Akosha pattern `ecosystem.event.received{source='git-monitor'}` "
+            "(NOT a Mahavishnu webhook), fetches the PR diff via the "
+            "`CRACKERJACK_GITHUB_TOKEN` env var, dispatches a code-review "
+            "prompt to Mahavishnu's `pool-route-execute` (with "
+            "idempotency), and posts the review back as a PR comment. "
+            "Routes through `crackerjack.skills.review_pr.on_akosha_pattern`."
+        ),
+        "tool_refs": [],
+        "allowed_tools": [
+            "mcp__crackerjack__crackerjack_list_skills",
+            "mcp__crackerjack__crackerjack_get_skill",
+            "Read",
+        ],
+        "dependencies": [],
+    },
 ]
 
 

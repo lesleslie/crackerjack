@@ -451,6 +451,22 @@ class PoolScanningSettings(OneiricMCPConfig):
     pool_router: PoolRouterConfiguration = PoolRouterConfiguration()
 
 
+class ReviewPRSettings(OneiricMCPConfig):
+    """Settings for the review-pr skill (C-13, Akosha-pattern-triggered).
+
+    Toggle ``enabled`` to ``False`` to disable the skill without removing
+    the code path (binary rollback signal per plan §"Rollback / recovery").
+    ``api_key_env`` is the env-var name; the value itself is NEVER
+    stored in settings — operators set ``$CRACKERJACK_GITHUB_TOKEN``.
+    """
+
+    enabled: bool = True
+    api_key_env: str = "CRACKERJACK_GITHUB_TOKEN"
+    queue_path: str = "/tmp/crackerjack-review-queue"
+    mahavishnu_bin: str = "mahavishnu"
+    fork_pr_quota_buffer: int = 10
+
+
 class CrackerjackSettings(OneiricMCPConfig):
     pkg_path: Path | None = None
 
@@ -481,6 +497,7 @@ class CrackerjackSettings(OneiricMCPConfig):
     learning: LearningSettings = LearningSettings()
     mahavishnu: MahavishnuSettings = MahavishnuSettings()
     eventbridge: EventBridgeSettings = EventBridgeSettings()
+    review_pr: ReviewPRSettings = ReviewPRSettings()
     enable_orchestration: bool = True
     orchestration_mode: str = "oneiric"
     enable_caching: bool = True
