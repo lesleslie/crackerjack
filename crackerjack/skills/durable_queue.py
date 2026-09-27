@@ -12,15 +12,15 @@ Why sqlmodel: the project already depends on it (see
 ``crackerjack/data/models.py``) and the user directive for new ORM models
 is "use sqlmodel for any new ORM models".
 """
+
 from __future__ import annotations
 
 import fcntl
 import json
-import sqlite3
+from collections.abc import Iterator
 from contextlib import contextmanager
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Iterator
 
 from sqlmodel import Field, Session, SQLModel, create_engine, select
 
@@ -65,7 +65,7 @@ class DurableQueue:
     @contextmanager
     def _process_lock(self, mode: str = "r+") -> Iterator[None]:
         """Cross-process fcntl.flock wrapper for the SQL writer path."""
-        with open(self._lock_path, mode) as f:
+        with self._lock_path.open(mode) as f:
             fcntl.flock(f.fileno(), fcntl.LOCK_EX)
             try:
                 yield
@@ -87,9 +87,7 @@ class DurableQueue:
             self._lock_path.write_text("")
             with Session(self._engine) as session:
                 existing = session.exec(
-                    select(ReviewQueueRecord).where(
-                        ReviewQueueRecord.pr_url == pr_url
-                    )
+                    select(ReviewQueueRecord).where(ReviewQueueRecord.pr_url == pr_url)
                 ).first()
                 if existing is not None:
                     return
@@ -104,9 +102,12 @@ class DurableQueue:
         """
         with self._process_lock("r+"):
             with Session(self._engine) as session:
-                stmt = select(ReviewQueueRecord).order_by(
-                    ReviewQueueRecord.created_at
-                )
+                # ty infers ``ReviewQueueRecord.created_at`` as ``datetime`` (the
+                # declared annotation) instead of recognizing it as a SQLAlchemy
+                # column descriptor at class scope. Runtime resolution is
+                # correct (SQLAlchemy uses the descriptor); the ignore is
+                # purely to satisfy ty's static view of class-level access.
+                stmt = select(ReviewQueueRecord).order_by(ReviewQueueRecord.created_at)  # ty: ignore[invalid-argument-type]
                 record = session.exec(stmt).first()
                 if record is None:
                     return None
@@ -139,7 +140,7 @@ def _drain_legacy_jsonl(legacy_path: Path, queue: DurableQueue) -> int:
         try:
             payload = json.loads(line)
             item = payload.get("item")
-        except (ValueError, AttributeError):
+        except ValueError, AttributeError:
             continue
         if isinstance(item, str) and item:
             queue.enqueue(item)

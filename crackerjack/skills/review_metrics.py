@@ -6,6 +6,7 @@ the four counters/gauges the plan calls for, implemented as plain
 thread-safe accumulators. Operators can wire a real exporter later if
 needed — the surface area stays the same.
 """
+
 from __future__ import annotations
 
 import threading
@@ -48,7 +49,7 @@ class Histogram:
                     self._counts[index] += 1
             self._total += 1
 
-    def snapshot(self) -> dict[str, float]:
+    def snapshot(self) -> dict[str, dict[float, int] | int]:
         with self._lock:
             return {
                 "buckets": dict(zip(self.buckets, self._counts, strict=True)),
@@ -83,7 +84,7 @@ class Counter:
 
     def snapshot(self) -> dict[tuple[str, ...], int]:
         with self._lock:
-            return dict(self._values)
+            return self._values.copy()
 
 
 @dataclass
@@ -147,12 +148,12 @@ PR_REVIEW_FORK_PR_TOTAL = Counter(
 
 
 __all__ = [
+    "GITHUB_API_QUOTA_REMAINING",
+    "PR_REVIEW_DURATION",
+    "PR_REVIEW_FORK_PR_TOTAL",
+    "PR_REVIEW_POST_TOTAL",
     "Counter",
     "Gauge",
     "Histogram",
     "LabeledCounter",
-    "PR_REVIEW_DURATION",
-    "PR_REVIEW_FORK_PR_TOTAL",
-    "PR_REVIEW_POST_TOTAL",
-    "GITHUB_API_QUOTA_REMAINING",
 ]
