@@ -133,6 +133,13 @@ def _preferred_binary_command_with_report(
 
 def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
     return {
+        "plan-index-sync": _python_module_command(
+            "crackerjack.tools.plan_index_sync",
+            "--repo-root",
+            ".",
+            "--out",
+            "docs/plans/PLAN_INDEX.md",
+        ),
         "validate-regex-patterns": _python_module_command(
             "crackerjack.tools.validate_regex_patterns"
         ),

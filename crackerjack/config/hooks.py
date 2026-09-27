@@ -106,6 +106,19 @@ class HookStrategy:
 
 FAST_HOOKS = [
     HookDefinition(
+        name="plan-index-sync",
+        command=[],
+        is_formatting=True,
+        timeout=60,
+        retry_on_failure=True,
+        security_level=SecurityLevel.LOW,
+        description=(
+            "Regenerate docs/plans/PLAN_INDEX.md from per-store frontmatter so "
+            "a fresh plan file is reflected in the index without a manual "
+            "regenerate run."
+        ),
+    ),
+    HookDefinition(
         name="validate-regex-patterns",
         command=[],
         is_formatting=True,
@@ -536,10 +549,16 @@ def _update_hook_timeouts_from_settings(hooks: list[HookDefinition]) -> None:
         settings = load_settings(CrackerjackSettings)
 
         for hook in hooks:
-            timeout_attr = f"{hook.name}_timeout"
-            if hasattr(settings.adapter_timeouts, timeout_attr):
-                configured_timeout = getattr(settings.adapter_timeouts, timeout_attr)
-                hook.timeout = configured_timeout
+            # Schema uses snake_case field names; hook names use kebab-case
+            # (e.g. ``check-jsonschema``). Try both forms so operators can
+            # set either ``check_jsonschema_timeout`` or
+            # ``check-jsonschema_timeout`` and have it take effect.
+            candidates = [hook.name, hook.name.replace("-", "_")]
+            for candidate in candidates:
+                attr = f"{candidate}_timeout"
+                if hasattr(settings.adapter_timeouts, attr):
+                    hook.timeout = getattr(settings.adapter_timeouts, attr)
+                    break
 
 
 class HookConfigLoader:
