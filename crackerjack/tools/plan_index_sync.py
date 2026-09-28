@@ -47,10 +47,18 @@ except ImportError as exc:  # pragma: no cover - import guard
 # ---------------------------------------------------------------------------
 
 LIFECYCLE_VALUES: tuple[str, ...] = (
-    "draft", "active", "partial", "shipped", "complete",
+    "draft",
+    "active",
+    "partial",
+    "shipped",
+    "complete",
 )
 ROLE_VALUES: tuple[str, ...] = (
-    "canonical", "implementation", "umbrella", "historical", "superseded",
+    "canonical",
+    "implementation",
+    "umbrella",
+    "historical",
+    "superseded",
 )
 
 # Stores walked (POSIX, relative to repo root).
@@ -107,6 +115,22 @@ def _coerce_date(value: object) -> str:
     return ""
 
 
+def _coerce_str(value: object | None, fallback: str) -> str:
+    """Coerce an unknown ``front.get(...)`` value to ``str`` with fallback.
+
+    Centralises the ``front.get(...) if isinstance(...) else fallback``
+    pattern so callers don't rely on type-checkers narrowing
+    conditional expressions. The ``front`` mapping from
+    :func:`extract_frontmatter` is typed as ``dict[str, object]`` so
+    ``.get(k)`` returns ``object | None`` — a conditional expression
+    can't be narrowed to ``str`` even with an ``isinstance`` runtime
+    check (ty's narrowing rules treat the rhs of a ternary as the
+    join of both branches, not a narrowed version), so we route the
+    ``isinstance`` check through this explicitly-typed helper.
+    """
+    return value if isinstance(value, str) else fallback
+
+
 def _title_from_text(text: str, fallback: str) -> str:
     for line in text.splitlines():
         stripped = line.strip()
@@ -138,9 +162,7 @@ def _discover_files(repo_root: Path, store_rel: str) -> list[tuple[Path, str]]:
     return out
 
 
-def _entry_from_file(
-    abs_path: Path, rel: str, store: str
-) -> Entry | None:
+def _entry_from_file(abs_path: Path, rel: str, store: str) -> Entry | None:
     """Parse one file. Returns ``None`` when no valid frontmatter."""
     try:
         text = abs_path.read_text(encoding="utf-8")
@@ -150,13 +172,19 @@ def _entry_from_file(
     if front is None:
         return None
     date = _coerce_date(front.get("date"))
-    status = front.get("status") if isinstance(front.get("status"), str) else "unknown"
-    role = front.get("role") if isinstance(front.get("role"), str) else "unknown"
-    topic = front.get("topic") if isinstance(front.get("topic"), str) else "—"
+    status = _coerce_str(front.get("status"), "unknown")
+    role = _coerce_str(front.get("role"), "unknown")
+    topic = _coerce_str(front.get("topic"), "—")
     fallback_title = abs_path.stem.replace("-", " ").replace("_", " ")
     title = _title_from_text(text, fallback=fallback_title)
     return Entry(
-        rel=rel, store=store, date=date, status=status, role=role, topic=topic, title=title
+        rel=rel,
+        store=store,
+        date=date,
+        status=status,
+        role=role,
+        topic=topic,
+        title=title,
     )
 
 
@@ -185,11 +213,15 @@ def _entry_link(rel: str, _store: str) -> str:
 def _render_store_table(store: str, entries: list[Entry]) -> str:
     label = store.rstrip("/").replace("docs/", "Docs: ").replace(".claude/", ".claude/")
     rows: list[str] = [f"### {label}", ""]
-    rows.append("| Path | Date | Status | Role | Topic | Title |")
-    rows.append("|---|---|---|---|---|---|")
+    rows.extend((
+        "| Path | Date | Status | Role | Topic | Title |",
+        "|---|---|---|---|---|---|",
+    ))
     if not entries:
-        rows.append("| _no entries with valid frontmatter_ | | | | | |")
-        rows.append("")
+        rows.extend((
+            "| _no entries with valid frontmatter_ | | | | | |",
+            "",
+        ))
         return "\n".join(rows)
     sorted_entries = sorted(entries, key=lambda e: e.rel)
     for entry in sorted_entries:
@@ -208,15 +240,14 @@ def _render_store_table(store: str, entries: list[Entry]) -> str:
 def _render_distribution(entries: list[Entry]) -> str:
     counts: Counter[tuple[str, str]] = Counter()
     for e in entries:
-        if e.status == "unknown" or e.role == "unknown":
+        if "unknown" in (e.status, e.role):
             continue
         counts[(e.status, e.role)] += 1
 
     rows: list[str] = ["## Lifecycle × Role Distribution", ""]
     header = "| Role \\ Lifecycle | " + " | ".join(LIFECYCLE_VALUES) + " | Total |"
     sep = "|---|" + "|".join(["---"] * (len(LIFECYCLE_VALUES) + 1)) + "|"
-    rows.append(header)
-    rows.append(sep)
+    rows.extend((header, sep))
 
     for role in ROLE_VALUES:
         cells: list[str] = []
@@ -232,24 +263,22 @@ def _render_distribution(entries: list[Entry]) -> str:
         col_sum = sum(counts.get((lifecycle, role), 0) for role in ROLE_VALUES)
         col_totals.append(str(col_sum) if col_sum else "·")
     grand_total = sum(int(t) if t.isdigit() else 0 for t in col_totals)
-    rows.append(
+    rows.extend((
         "| **Total** | "
         + " | ".join(f"**{t}**" for t in col_totals)
-        + f" | **{grand_total}** |"
-    )
-    rows.append("")
+        + f" | **{grand_total}** |",
+        "",
+    ))
     return "\n".join(rows)
 
 
-def _render_index(
-    entries_by_store: dict[str, list[Entry]], generated_at: str
-) -> str:
+def _render_index(entries_by_store: dict[str, list[Entry]], generated_at: str) -> str:
     sections: list[str] = ["# Plan Index", ""]
-    sections.append(
+    sections.extend((
         f"_Regenerated {generated_at} by "
-        f"`crackerjack.tools.plan_index_sync` (fast-hook)._"
-    )
-    sections.append("")
+        f"`crackerjack.tools.plan_index_sync` (fast-hook)._",
+        "",
+    ))
 
     all_entries: list[Entry] = []
     for store in DEFAULT_STORES:
@@ -295,7 +324,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--repo-root",
         type=Path,
-        default=Path("."),
+        default=Path(),
         help="Repo root (default: cwd)",
     )
     parser.add_argument(
@@ -314,11 +343,7 @@ def main(argv: list[str] | None = None) -> int:
     new_content = render_plan_index(args.repo_root)
 
     if args.dry_run:
-        existing = (
-            args.out.read_text(encoding="utf-8")
-            if args.out.exists()
-            else ""
-        )
+        existing = args.out.read_text(encoding="utf-8") if args.out.exists() else ""
         if existing == new_content:
             print(f"no change → {args.out}")
             return 0
@@ -326,11 +351,7 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     args.out.parent.mkdir(parents=True, exist_ok=True)
-    existing = (
-        args.out.read_text(encoding="utf-8")
-        if args.out.exists()
-        else ""
-    )
+    existing = args.out.read_text(encoding="utf-8") if args.out.exists() else ""
     if existing == new_content:
         print(f"up-to-date → {args.out}")
         return 0
