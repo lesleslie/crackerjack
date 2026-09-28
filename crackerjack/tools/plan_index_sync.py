@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import argparse
 import datetime
+import os
 import re
 import sys
 from collections import Counter
@@ -165,13 +166,20 @@ def _entry_from_file(
 
 
 def _entry_link(rel: str, _store: str) -> str:
-    if rel.startswith("docs/plans/"):
-        return f"[`{rel}`]({rel})"
-    if rel.startswith("docs/"):
-        return f"[`{rel}`](../{rel})"
-    if rel.startswith(".claude/"):
-        return f"[`{rel}`](../{rel})"
-    return f"[`{rel}`](../{rel})"
+    """Render a markdown link from ``docs/plans/PLAN_INDEX.md`` to ``rel``.
+
+    The index file always lives at ``docs/plans/PLAN_INDEX.md``, so the
+    link target must be the path of ``rel`` *relative to* that directory.
+    We let stdlib compute it instead of hand-rolling prefix branches —
+    the previous version assumed PLAN_INDEX.md lived at the repo root,
+    producing links that resolved to ``docs/plans/docs/plans/...`` (and
+    the equivalent broken paths for ``docs/`` and ``.claude/`` stores).
+
+    Display text stays as the full repo-relative ``rel`` so readers can
+    see the absolute-looking path; only the link *target* is shortened.
+    """
+    target = os.path.relpath(rel, "docs/plans")
+    return f"[`{rel}`]({target})"
 
 
 def _render_store_table(store: str, entries: list[Entry]) -> str:
