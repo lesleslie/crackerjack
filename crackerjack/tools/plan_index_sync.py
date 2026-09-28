@@ -278,7 +278,10 @@ def render_plan_index(repo_root: Path) -> str:
                 continue
             store_entries.append(entry)
         entries_by_store[store] = store_entries
-    return _render_index(entries_by_store, generated_at=datetime.date.today().isoformat())
+    return _render_index(
+        entries_by_store,
+        generated_at=datetime.datetime.now(tz=datetime.UTC).date().isoformat(),
+    )
 
 
 def main(argv: list[str] | None = None) -> int:
