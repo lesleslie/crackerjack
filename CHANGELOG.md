@@ -10,6 +10,23 @@ blocks_on: []
 topic: changelog
 ---
 
+## [0.84.2] - 2026-09-28
+
+### Added
+
+- crackerjack: Plan-index-sync fast-hook auto-regenerates PLAN_INDEX.md
+
+### Fixed
+
+- crackerjack: PLAN_INDEX.md link targets now resolve from docs/plans/
+- crackerjack: Resolve ty errors + refurb warnings in plan_index_sync
+- crackerjack: Surface mdformat auto-format as a passed-formatting hook
+- crackerjack: Use timezone-aware datetime in plan_index_sync
+
+### Testing
+
+- crackerjack: Add SSO runtime parity guard
+
 ## [0.84.1] - 2026-09-27
 
 ### Added
