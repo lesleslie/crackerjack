@@ -213,15 +213,19 @@ def _entry_link(rel: str, _store: str) -> str:
 def _render_store_table(store: str, entries: list[Entry]) -> str:
     label = store.rstrip("/").replace("docs/", "Docs: ").replace(".claude/", ".claude/")
     rows: list[str] = [f"### {label}", ""]
-    rows.extend((
-        "| Path | Date | Status | Role | Topic | Title |",
-        "|---|---|---|---|---|---|",
-    ))
+    rows.extend(
+        (
+            "| Path | Date | Status | Role | Topic | Title |",
+            "|---|---|---|---|---|---|",
+        )
+    )
     if not entries:
-        rows.extend((
-            "| _no entries with valid frontmatter_ | | | | | |",
-            "",
-        ))
+        rows.extend(
+            (
+                "| _no entries with valid frontmatter_ | | | | | |",
+                "",
+            )
+        )
         return "\n".join(rows)
     sorted_entries = sorted(entries, key=lambda e: e.rel)
     for entry in sorted_entries:
@@ -263,24 +267,28 @@ def _render_distribution(entries: list[Entry]) -> str:
         col_sum = sum(counts.get((lifecycle, role), 0) for role in ROLE_VALUES)
         col_totals.append(str(col_sum) if col_sum else "·")
     grand_total = sum(int(t) if t.isdigit() else 0 for t in col_totals)
-    rows.extend((
-        "| **Total** | "
-        + " | ".join(f"**{t}**" for t in col_totals)
-        + f" | **{grand_total}** |",
-        "",
-    ))
+    rows.extend(
+        (
+            "| **Total** | "
+            + " | ".join(f"**{t}**" for t in col_totals)
+            + f" | **{grand_total}** |",
+            "",
+        )
+    )
     return "\n".join(rows)
 
 
 def _render_index(entries_by_store: dict[str, list[Entry]], generated_at: str) -> str:
     sections: list[str] = ["# Plan Index", ""]
-    sections.extend((
+    sections.extend(
         (
-            f"_Regenerated {generated_at} by "
-            f"`crackerjack.tools.plan_index_sync` (fast-hook)._"
-        ),
-        "",
-    ))
+            (
+                f"_Regenerated {generated_at} by "
+                f"`crackerjack.tools.plan_index_sync` (fast-hook)._"
+            ),
+            "",
+        )
+    )
 
     all_entries: list[Entry] = []
     for store in DEFAULT_STORES:

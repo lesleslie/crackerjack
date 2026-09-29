@@ -10,6 +10,12 @@ blocks_on: []
 topic: changelog
 ---
 
+## [0.84.3] - 2026-09-29
+
+### Fixed
+
+- crackerjack: Parenthesize implicit string concat (ISC004)
+
 ## [0.84.2] - 2026-09-28
 
 ### Added
