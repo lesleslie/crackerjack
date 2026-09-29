@@ -275,8 +275,10 @@ def _render_distribution(entries: list[Entry]) -> str:
 def _render_index(entries_by_store: dict[str, list[Entry]], generated_at: str) -> str:
     sections: list[str] = ["# Plan Index", ""]
     sections.extend((
-        f"_Regenerated {generated_at} by "
-        f"`crackerjack.tools.plan_index_sync` (fast-hook)._",
+        (
+            f"_Regenerated {generated_at} by "
+            f"`crackerjack.tools.plan_index_sync` (fast-hook)._"
+        ),
         "",
     ))
 
