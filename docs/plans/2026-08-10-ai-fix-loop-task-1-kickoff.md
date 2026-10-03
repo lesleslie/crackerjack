@@ -10,7 +10,7 @@ last_reviewed: 2026-09-09
 
 > **Status:** DRAFT — pre-execution checklist. Not yet executed.
 > **Created:** 2026-08-10 (post preflight amendments at commit `1d1527aa`).
-> **Plan under execution:** `docs/superpowers/plans/2026-08-06-ai-fix-external-loop.md`.
+> **Plan under execution:** `docs/plans/2026-08-06-ai-fix-external-loop.md`.
 > **Target of Task 1:** Verify `crackerjack run -v` produces informative output on both dirty and clean repo states; confirm exit-code signal reliability.
 
 ______________________________________________________________________
@@ -56,7 +56,7 @@ M  crackerjack/cli/handlers/main_handlers.py          (1 line)
 M  crackerjack/core/autofix_coordinator.py            (20 lines — Task 24b WIP)
 M  crackerjack/core/proactive_workflow.py             (2 lines)
 M  crackerjack/integration/__init__.py                (12 lines)
-M  docs/superpowers/plans/2026-08-06-ai-fix-removal-extraction.md
+M  docs/plans/2026-08-06-ai-fix-removal-extraction.md
 M  report.txt                                         (crackerjack-generated)
 M  tests/conftest_reset.py                            (2 lines)
 M  tests/fixers/test_formatting.py                    (10 lines)

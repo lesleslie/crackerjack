@@ -18,7 +18,7 @@ related:
 
 ## Why
 
-The Dhara MCP server is being absorbed into Mahavishnu, Oneiric, AkoSHA, and Crackerjack per `mahavishnu/docs/superpowers/specs/2026-09-14-dhara-mcp-decomposition-design.md`. Phase 8 of that spec retires the server entirely; no deprecation window (per Bodai pre-1.0 policy and the spec's §4.9 hard-cutover stance).
+The Dhara MCP server is being absorbed into Mahavishnu, Oneiric, AkoSHA, and Crackerjack per `mahavishnu/docs/specs/2026-09-14-dhara-mcp-decomposition-design.md`. Phase 8 of that spec retires the server entirely; no deprecation window (per Bodai pre-1.0 policy and the spec's §4.9 hard-cutover stance).
 
 `crackerjack/integration/dhara_mcp_client.py` is the sole in-tree consumer at the transport layer — every other crackerjack module that talks to Dhara goes through it. So the spec's "every consumer updated in the same commit as the tool's deletion" rule collapses to a single in-repo change here.
 

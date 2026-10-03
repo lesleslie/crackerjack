@@ -663,7 +663,7 @@ python -m crackerjack run --run-tests
 
 - [ ] **Step 2: Remove or update the "AI Agent System" and "Skills Tracking Integration" sections**
 
-These describe the 12-agent internal system and session-buddy skill tracking that no longer exist after the sibling plan's removal work. Replace with a short section pointing at the two design specs (`docs/superpowers/specs/2026-08-06-ai-fix-removal-external-loop-design.md`) for anyone looking for the old behavior's replacement.
+These describe the 12-agent internal system and session-buddy skill tracking that no longer exist after the sibling plan's removal work. Replace with a short section pointing at the two design specs (`docs/specs/2026-08-06-ai-fix-removal-external-loop-design.md`) for anyone looking for the old behavior's replacement.
 
 - [ ] **Step 3: Commit**
 

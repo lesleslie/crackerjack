@@ -22,9 +22,9 @@ blocks_on: []
 
 **Tech Stack:** Python 3.14, FastMCP 4.x, typer 0.26+, hatchling, Git CLI (via subprocess), SwiftPM CLI (subprocess invocation, no shell), gh CLI for GitHub release creation.
 
-**Spec:** `/Users/les/Projects/crackerjack/docs/superpowers/specs/2026-09-07-crackerjack-multi-language-design.md` (Rev 2, on `main` as of commit `b00b36f0`).
+**Spec:** `/Users/les/Projects/crackerjack/docs/specs/2026-09-07-crackerjack-multi-language-design.md` (Rev 2, on `main` as of commit `b00b36f0`).
 
-**Reviews:** 9 lenses at `docs/superpowers/plans/reviews/2026-09-07-phase2-{swift,mcp,testing,api,writing,security,simplification,a11y}.md`. **Phase 2 plan WAS REV 1 — DO NOT IMPLEMENT AGAINST REV 1.** The diff between Rev 1 and Rev 2 is documented inline below each affected task.
+**Reviews:** 9 lenses at `docs/plans/reviews/2026-09-07-phase2-{swift,mcp,testing,api,writing,security,simplification,a11y}.md`. **Phase 2 plan WAS REV 1 — DO NOT IMPLEMENT AGAINST REV 1.** The diff between Rev 1 and Rev 2 is documented inline below each affected task.
 
 ---
 
@@ -99,7 +99,7 @@ tests/
         ├── Package.swift                           # swift test + swift build smoke
         └── Sources/SwiftLib/SwiftLib.swift          # trivial implementation
 
-docs/superpowers/plans/
+docs/plans/
 ├── 2026-09-07-crackerjack-multi-language-phase2.md  # this plan (Rev 2)
 └── reviews/2026-09-07-phase2-*.md                 # 9 review files (preserved for audit)
 ```
@@ -2241,7 +2241,7 @@ The following spec Rev 2 items are broken or misleading and should be amended in
 
 ## Execution Handoff
 
-**Plan complete (Rev 2) and saved to `/Users/les/Projects/crackerjack/docs/superpowers/plans/2026-09-07-crackerjack-multi-language-phase2.md`.**
+**Plan complete (Rev 2) and saved to `/Users/les/Projects/crackerjack/docs/plans/2026-09-07-crackerjack-multi-language-phase2.md`.**
 
 8 tasks, ~12 commits, ~5-6 hours of focused implementation.
 

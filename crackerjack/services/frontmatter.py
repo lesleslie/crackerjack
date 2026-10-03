@@ -23,8 +23,8 @@ EXT_LINK_RE = re.compile(r"^ext:[A-Za-z0-9_.\-:]+$")
 DEFAULT_STORES = (
     "docs/adr/",
     "docs/plans/",
-    "docs/superpowers/specs/",
-    "docs/superpowers/plans/",
+    "docs/specs/",
+    "docs/plans/",
     ".claude/decisions/",
     "docs/followups/",
 )
@@ -770,8 +770,8 @@ def build_parser() -> argparse.ArgumentParser:
 STORE_LOOKUP = {
     "adr": "docs/adr/",
     "plans": "docs/plans/",
-    "superpowers-specs": "docs/superpowers/specs/",
-    "superpowers-plans": "docs/superpowers/plans/",
+    "superpowers-specs": "docs/specs/",
+    "superpowers-plans": "docs/plans/",
     "decisions": ".claude/decisions/",
     "followups": "docs/followups/",
 }

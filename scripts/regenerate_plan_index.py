@@ -32,8 +32,8 @@ ROLE_VALUES: tuple[str, ...] = (
 DEFAULT_STORES: tuple[str, ...] = (
     "docs/adr/",
     "docs/plans/",
-    "docs/superpowers/specs/",
-    "docs/superpowers/plans/",
+    "docs/specs/",
+    "docs/plans/",
     ".claude/decisions/",
     "docs/followups/",
 )
@@ -42,8 +42,8 @@ DEFAULT_STORES: tuple[str, ...] = (
 STORE_LABELS: dict[str, str] = {
     "docs/adr/": "Architecture Decision Records (`docs/adr/`)",
     "docs/plans/": "Plans & Specifications (`docs/plans/`)",
-    "docs/superpowers/specs/": "Superpowers Specs (`docs/superpowers/specs/`)",
-    "docs/superpowers/plans/": "Superpowers Plans (`docs/superpowers/plans/`)",
+    "docs/specs/": "Superpowers Specs (`docs/specs/`)",
+    "docs/plans/": "Superpowers Plans (`docs/plans/`)",
     ".claude/decisions/": "Repo-local Decisions (`.claude/decisions/`)",
     "docs/followups/": "Follow-up Notes (`docs/followups/`)",
 }
@@ -208,7 +208,7 @@ def _authority_matrix() -> str:
 | Bodai-wide observability surface | `docs/plans/2026-07-11-phase-6-bodai-observability.md` |
 | Repo-local decisions index | `.claude/decisions/README.md` |
 | Follow-up tracker index | `docs/followups/README.md` |
-| Source plan defining this index | `docs/superpowers/plans/2026-07-16-plan-lifecycle-unification.md` |
+| Source plan defining this index | `docs/plans/2026-07-16-plan-lifecycle-unification.md` |
 """
 
 

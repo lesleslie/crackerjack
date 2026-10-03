@@ -65,8 +65,8 @@ ROLE_VALUES: tuple[str, ...] = (
 DEFAULT_STORES: tuple[str, ...] = (
     "docs/adr/",
     "docs/plans/",
-    "docs/superpowers/specs/",
-    "docs/superpowers/plans/",
+    "docs/specs/",
+    "docs/plans/",
     ".claude/decisions/",
     "docs/followups/",
 )

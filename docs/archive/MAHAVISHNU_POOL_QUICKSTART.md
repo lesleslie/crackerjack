@@ -135,7 +135,7 @@ async def call_mcp_tool(tool_name: str, arguments: dict[str, Any]) -> dict[str, 
 > application/json, text/event-stream` request header, a `Mcp-Session-Id`
 > header carried across requests, and an explicit `initialize` request
 > before `tools/call`); see
-> `docs/superpowers/plans/2026-05-07-bodai-phase1-harden-control-plane.md:53`
+> `docs/plans/2026-05-07-bodai-phase1-harden-control-plane.md:53`
 > for the full requirements. For a runnable client, use the official
 > `mcp` Python SDK (`streamablehttp_client` + `ClientSession`) shown in
 > `docs/MAHAVISHNU_POOL_INTEGRATION.md` §"Using the official MCP Python

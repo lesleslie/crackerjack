@@ -377,8 +377,8 @@ Supported knobs (forwarded via `args`):
 - `args.auditLogPath` — JSONL output path (default `.crackerjack/audit/ai-fix-loop.jsonl`)
 
 For the design rationale and contract details, see
-`docs/superpowers/specs/2026-08-06-ai-fix-removal-external-loop-design.md`
-and `docs/superpowers/plans/2026-08-06-ai-fix-external-loop.md`.
+`docs/specs/2026-08-06-ai-fix-removal-external-loop-design.md`
+and `docs/plans/2026-08-06-ai-fix-external-loop.md`.
 
 ## Testing Commands
 

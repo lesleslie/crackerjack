@@ -282,4 +282,4 @@ git add crackerjack/core/autofix_coordinator.py tests/unit/core/test_autofix_no_
 git commit -m "feat(ai-fix): add no-op circuit breaker to skip identical retry plans (cluster 4)"
 ```
 
-Commit message body should reference the spec (`docs/superpowers/specs/2026-07-11-ai-fix-no-op-circuit-breaker-design.md` committed `6ee55480`) and note that the circuit breaker fires when 2 consecutive attempts produce no-op results with matching plan signatures.
+Commit message body should reference the spec (`docs/specs/2026-07-11-ai-fix-no-op-circuit-breaker-design.md` committed `6ee55480`) and note that the circuit breaker fires when 2 consecutive attempts produce no-op results with matching plan signatures.

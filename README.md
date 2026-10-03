@@ -247,7 +247,7 @@ python -m crackerjack run -i
 ## AI Auto-Fix Features
 
 ![AI Agent Orchestration](docs/diagrams/ai-agent-orchestration.png)
-*12 specialized AI agents with confidence-based routing and batch processing (NOTE: pending regeneration post AI-fix subsystem removal; see docs/superpowers/specs/2026-08-06-ai-fix-removal-external-loop-design.md)*
+*12 specialized AI agents with confidence-based routing and batch processing (NOTE: pending regeneration post AI-fix subsystem removal; see docs/specs/2026-08-06-ai-fix-removal-external-loop-design.md)*
 
 Crackerjack provides two distinct approaches to automatic error fixing:
 
@@ -1491,7 +1491,7 @@ keyring set https://upload.pypi.org/legacy/ __token__
 ## Quality Hook Modes
 
 ![Quality Hooks](docs/diagrams/quality-hooks.png)
-*Fast hooks (~5s) and Comprehensive hooks (~30s) with retry logic (AI-fix integration removed 2026-08-12; see docs/superpowers/specs/2026-08-06-ai-fix-removal-external-loop-design.md)*
+*Fast hooks (~5s) and Comprehensive hooks (~30s) with retry logic (AI-fix integration removed 2026-08-12; see docs/specs/2026-08-06-ai-fix-removal-external-loop-design.md)*
 
 Crackerjack runs quality checks in a two-stage process for optimal development workflow:
 

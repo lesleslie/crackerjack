@@ -132,8 +132,8 @@ def test_default_stores_match_akosha_canonical_set() -> None:
     assert pis.DEFAULT_STORES == (
         "docs/adr/",
         "docs/plans/",
-        "docs/superpowers/specs/",
-        "docs/superpowers/plans/",
+        "docs/specs/",
+        "docs/plans/",
         ".claude/decisions/",
         "docs/followups/",
     )
@@ -173,8 +173,8 @@ def test_entry_link_targets_resolve_from_plans_dir() -> None:
          "2026-09-27-pyproject-single-source-of-truth.md"),
         ("docs/adr/ADR-001-mcp-first-architecture.md",
          "../adr/ADR-001-mcp-first-architecture.md"),
-        ("docs/superpowers/specs/foo.md", "../superpowers/specs/foo.md"),
-        ("docs/superpowers/plans/foo.md", "../superpowers/plans/foo.md"),
+        ("docs/specs/foo.md", "../superpowers/specs/foo.md"),
+        ("docs/plans/foo.md", "../superpowers/plans/foo.md"),
         (".claude/decisions/deployability-discipline.md",
          "../../.claude/decisions/deployability-discipline.md"),
     ]

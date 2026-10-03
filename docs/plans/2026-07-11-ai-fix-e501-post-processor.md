@@ -271,4 +271,4 @@ git add crackerjack/ai_fix/code_post_processor.py tests/unit/ai_fix/test_code_po
 git commit -m "feat(ai-fix): post-process Python writes to wrap long lines (cluster 2)"
 ```
 
-Commit message body should reference the spec (`docs/superpowers/specs/2026-07-11-ai-fix-e501-post-processor-design.md` amended at commit `cd8b1f16`) and note that the post-processor uses `ruff format` subprocess (not libcst, which lacks a public line-wrap API as of 1.x).
+Commit message body should reference the spec (`docs/specs/2026-07-11-ai-fix-e501-post-processor-design.md` amended at commit `cd8b1f16`) and note that the post-processor uses `ruff format` subprocess (not libcst, which lacks a public line-wrap API as of 1.x).

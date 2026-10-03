@@ -22,7 +22,7 @@ This document is preserved because:
 
 1. It is still cited as the entry point for any future Phase 5
    `mahavishnu_pool_dispatcher.py` work referenced in
-   `docs/superpowers/specs/2026-05-20-ai-fix-comprehensive-overhaul-design.md:243`
+   `docs/specs/2026-05-20-ai-fix-comprehensive-overhaul-design.md:243`
    and `docs/plans/2026-06-27-ty-cleanup-and-ai-fix.md:286`. Both of
    those plans describe a file (`crackerjack/integration/mahavishnu_pool_dispatcher.py`)
    that does **not exist** in the current tree.
@@ -202,7 +202,7 @@ async def example_pool_list() -> list[dict[str, Any]]:
 > application/json, text/event-stream` request header, a `Mcp-Session-Id`
 > header carried across requests, and an explicit `initialize` request
 > before `tools/call`); see
-> `docs/superpowers/plans/2026-05-07-bodai-phase1-harden-control-plane.md:53`
+> `docs/plans/2026-05-07-bodai-phase1-harden-control-plane.md:53`
 > for the full requirements. For a runnable client, use the official
 > `mcp` Python SDK shown below.
 
@@ -287,7 +287,7 @@ scoped out during the **2026-08-06 AI-fix subsystem removal** (see
 
 | Removed item | Source | Status |
 |--------------|--------|--------|
-| `crackerjack/integration/mahavishnu_pool_dispatcher.py` (236 lines, routes via `mcp__mahavishnu__pool_route_execute`) | `docs/plans/2026-06-27-ty-cleanup-and-ai-fix.md:286`, `docs/superpowers/specs/2026-05-20-ai-fix-comprehensive-overhaul-design.md:243` | File does not exist. Phase 4 implementation was dropped when the AI-fix pipeline was removed. |
+| `crackerjack/integration/mahavishnu_pool_dispatcher.py` (236 lines, routes via `mcp__mahavishnu__pool_route_execute`) | `docs/plans/2026-06-27-ty-cleanup-and-ai-fix.md:286`, `docs/specs/2026-05-20-ai-fix-comprehensive-overhaul-design.md:243` | File does not exist. Phase 4 implementation was dropped when the AI-fix pipeline was removed. |
 | `pool_scanning:` Crackerjack config block | `crackerjack/config/settings.py` `pooled_tools`, `local_tools`, `autoscaling`, `memory` | These config keys still exist for forward compatibility but no production code reads them. |
 | `crackerjack/hooks/pool_based_hooks.py` | Earlier drafts of this document | File does not exist. The hook-based pool router was removed with the AI-fix subsystem. |
 | `crackerjack/services/pool_client.py` | Earlier drafts of this document | File EXISTS (180 lines, `crackerjack/services/pool_client.py`). Not consumed by any production code path; carried for forward compatibility. |

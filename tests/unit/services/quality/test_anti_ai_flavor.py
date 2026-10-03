@@ -1,6 +1,6 @@
 """Tests for anti-AI-flavor phrase detector.
 
-Spec: docs/superpowers/specs/2026-06-22-anti-ai-flavor-style-sop-design.md
+Spec: docs/specs/2026-06-22-anti-ai-flavor-style-sop-design.md
 Spec #6 from Phase 2 spec batch.
 
 TDD: red -> green -> refactor.

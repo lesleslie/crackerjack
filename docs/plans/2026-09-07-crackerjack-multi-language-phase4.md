@@ -13,7 +13,7 @@ blocks_on: []
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 >
 > **Status:** Rev 2 — Ready for execution after multi-agent review fixes applied.
-> **Rev 1 reviews:** `docs/superpowers/plans/reviews/2026-09-07-phase4-{a11y,api,mcp,security,simplification,testing,web,writing}.md`
+> **Rev 1 reviews:** `docs/plans/reviews/2026-09-07-phase4-{a11y,api,mcp,security,simplification,testing,web,writing}.md`
 
 **Goal:** Add a Web language adapter to crackerjack that activates only on JS/TS/CSS/HTML projects (or Python projects with explicit web opt-in). Provides 4 CLI hooks (stylelint, eslint, tsc, html-validate) with JSON output parsing, a Tier-1-only Jinja template formatter (`jinja2.Environment.lex()` for validation + raw source string ops for canonicalization), and 2 MCP tools (`check_web_lint`, `format_jinja_templates`).
 
@@ -21,7 +21,7 @@ blocks_on: []
 
 **Tech Stack:** Python 3.14, FastMCP 4.x, hatchling, jinja2 ≥3.1.6 (NEW direct dep per spec Jinja F11), subprocess (npx wrappers), tomllib (stdlib).
 
-**Spec:** `/Users/les/Projects/crackerjack/docs/superpowers/specs/2026-09-07-crackerjack-multi-language-design.md` (Rev 2, on `main` as of commit `b00b36f0`). Phase 4 is at lines 363-429 ("Per-adapter Web").
+**Spec:** `/Users/les/Projects/crackerjack/docs/specs/2026-09-07-crackerjack-multi-language-design.md` (Rev 2, on `main` as of commit `b00b36f0`). Phase 4 is at lines 363-429 ("Per-adapter Web").
 
 **Out of scope:** shared `jinja-test-fixtures/` Bodai sibling package (Phase 4 deliverable per spec line 420) — separate plan. CSS/HTML/JS/TS lifecycle (spec line 65). Jinja Tier 2 normalization (deferred; see Spec Revision Notes). PyCharm parity script (spec Jinja F10) — separate plan. CLI subcommand for `crackerjack web jinja format` — separate plan.
 

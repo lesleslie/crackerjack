@@ -163,4 +163,4 @@ git add crackerjack/core/autofix_coordinator.py tests/unit/core/test_ai_fix_env_
 git commit -m "feat(ai-fix): make plan-regen timeout operator-tunable (cluster 3)"
 ```
 
-Commit message body should reference the spec (`docs/superpowers/specs/2026-07-11-ai-fix-regen-timeout-design.md` at commit `2f222044`) and note that the previous hardcoded `timeout=30` was the root cause of the dominant timeout cascade in the AI-fix error log.
+Commit message body should reference the spec (`docs/specs/2026-07-11-ai-fix-regen-timeout-design.md` at commit `2f222044`) and note that the previous hardcoded `timeout=30` was the root cause of the dominant timeout cascade in the AI-fix error log.

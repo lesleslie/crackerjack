@@ -1726,7 +1726,7 @@ rmdir /tmp/smoke-out 2>/dev/null || true
 
 - [x] **Step 5: Update the spec's verification checklist**
 
-In `docs/superpowers/specs/2026-07-08-fix-sandbox-integration-design.md`, mark each item in the "Verification Checklist" section with a checkmark. Commit the change.
+In `docs/specs/2026-07-08-fix-sandbox-integration-design.md`, mark each item in the "Verification Checklist" section with a checkmark. Commit the change.
 
 - [x] **Step 6: Commit any final changes**
 

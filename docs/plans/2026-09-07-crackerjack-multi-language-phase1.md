@@ -18,9 +18,9 @@ blocks_on: []
 
 **Tech Stack:** Python 3.14, Pydantic v2.13+, FastMCP 4.x, typer 0.26+, hatchling build, pytest 9.1+ with pytest-asyncio auto mode.
 
-**Spec:** `/Users/les/Projects/crackerjack/docs/superpowers/specs/2026-09-07-crackerjack-multi-language-design.md` (Rev 2, commit `dd9d9c05`). This plan argues from the spec.
+**Spec:** `/Users/les/Projects/crackerjack/docs/specs/2026-09-07-crackerjack-multi-language-design.md` (Rev 2, commit `dd9d9c05`). This plan argues from the spec.
 
-**Reviews:** `/Users/les/Projects/crackerjack/docs/superpowers/specs/reviews/2026-09-07-*.md` — read for context on why specific design decisions were made.
+**Reviews:** `/Users/les/Projects/crackerjack/docs/specs/reviews/2026-09-07-*.md` — read for context on why specific design decisions were made.
 
 ## Global Constraints
 
@@ -81,7 +81,7 @@ tests/
     ├── __init__.py
     └── test_language_detector.py
 
-docs/superpowers/plans/
+docs/plans/
 └── 2026-09-07-crackerjack-multi-language-phase1.md   # this plan
 ```
 
@@ -1795,7 +1795,7 @@ registrations."
 
 ## Execution Handoff
 
-**Plan complete and saved to `/Users/les/Projects/crackerjack/docs/superpowers/plans/2026-09-07-crackerjack-multi-language-phase1.md`.**
+**Plan complete and saved to `/Users/les/Projects/crackerjack/docs/plans/2026-09-07-crackerjack-multi-language-phase1.md`.**
 
 8 tasks, ~30 commits, ~5 hours of focused implementation (estimate — actual depends on `PublishManager` integration complexity).
 

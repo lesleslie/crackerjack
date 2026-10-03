@@ -186,7 +186,7 @@ git -C /Users/les/Projects/crackerjack commit -m "fix(ruff): drop --unsafe-fixes
 - config_template.py: scaffolded pyproject.toml now sets unsafe-fixes=false
 
 No behavior change for the safe-fix path. Stage 0 of the Ruff fix-safety
-policy. See docs/superpowers/specs/2026-08-06-crackerjack-ruff-fix-policy-design.md."
+policy. See docs/specs/2026-08-06-crackerjack-ruff-fix-policy-design.md."
 ```
 
 ______________________________________________________________________
@@ -1028,7 +1028,7 @@ Insert (or replace the closest existing section) with:
 The default `ruff-check` hook in this repository applies Ruff's safe fixes
 only. Unsafe fixes (those that may change runtime behavior or delete
 comments) are an explicit opt-in. See
-`docs/superpowers/specs/2026-08-06-crackerjack-ruff-fix-policy-design.md`
+`docs/specs/2026-08-06-crackerjack-ruff-fix-policy-design.md`
 for the design rationale.
 
 - Default: `ruff check --output-format json --fix ./crackerjack`
@@ -1045,7 +1045,7 @@ Append a single entry near the top of the unreleased section, mirroring the hist
 - Ruff fix-safety policy: default hook drops `--unsafe-fixes`; explicit
   `--allow-unsafe-fixes` opt-in; generated config sets `unsafe-fixes=false`;
   Ruff pinned to `0.16.0`. See
-  `docs/superpowers/specs/2026-08-06-crackerjack-ruff-fix-policy-design.md`.
+  `docs/specs/2026-08-06-crackerjack-ruff-fix-policy-design.md`.
 ```
 
 - [ ] **Step 4: Resolve the `config_template.py:62` divergence in `docs/CONFIG_CONSOLIDATION_AUDIT.md`**

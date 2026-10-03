@@ -737,7 +737,7 @@ Distilled skills are refreshed on a *weekly schedule*, not per-commit.
 - The pre-commit `skill-coverage` fast hook was removed in 2026-08 because
   it produced a 5–10s HTTP round trip on every commit for data the commit
   could not invalidate. See
-  `docs/superpowers/plans/2026-08-11-skill-coverage-out-of-fast-hooks.md`.
+  `docs/plans/2026-08-11-skill-coverage-out-of-fast-hooks.md`.
 ```
 
 - [ ] **Step 2: Create `ops/crontab.example`**
@@ -899,7 +899,7 @@ Track state in `docs/feature-tracking/2026-08-11-skill-coverage-fast-hook-remova
 
 ______________________________________________________________________
 
-Plan complete and saved to `docs/superpowers/plans/2026-08-11-skill-coverage-out-of-fast-hooks.md`. Two execution options:
+Plan complete and saved to `docs/plans/2026-08-11-skill-coverage-out-of-fast-hooks.md`. Two execution options:
 
 **1. Subagent-Driven (recommended)** — I dispatch a fresh subagent per task, review between tasks, fast iteration with the bug fix landing early (Tasks 1–3) before the deletion (Task 5) so we never have a window where the warning surface is gone.
 

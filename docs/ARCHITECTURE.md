@@ -70,7 +70,7 @@ Crackerjack is a quality control and CI/CD automation platform designed to enfor
 │    │          (AI Auto-Fix removed 2026-08-12)      │      │
 │    │  ┌─────────────────────────────────────────┐  │      │
 │    │  │  No AI Auto-Fix Engine today             │  │      │
-│    │  │  (see docs/superpowers/specs/2026-08-    │  │      │
+│    │  │  (see docs/specs/2026-08-    │  │      │
 │    │  │   06-ai-fix-removal-external-loop-design)│  │      │
 │    │  └─────────────────────────────────────────┘  │      │
 │    └───────────────────────────────────────────────┘      │
@@ -235,7 +235,7 @@ Manages test execution and result aggregation:
 
 **Status**: Removed. The `crackerjack/ai/` package and all agent orchestration
 machinery have been deleted as part of the 2026-08-12 AI-fix subsystem
-removal. See `docs/superpowers/specs/2026-08-06-ai-fix-removal-external-loop-design.md`
+removal. See `docs/specs/2026-08-06-ai-fix-removal-external-loop-design.md`
 for the rationale and the new external-loop design.
 
 **Former capabilities** (now deleted):

@@ -529,7 +529,7 @@ stashes. Cross-referencing them:
 ### Stash-to-plan mapping
 
 Cross-referencing each stash's parent commit and file paths against the 11
-specs in `docs/superpowers/specs/` and 12 plans in `docs/superpowers/plans/`:
+specs in `docs/specs/` and 12 plans in `docs/plans/`:
 
 | Stash | Parent | Most-relevant plan | Status |
 |---|---|---|---|
@@ -716,6 +716,6 @@ This audit produced three new memory entries:
 - `stash-impl-without-tests-on-main.md` — protocol for identifying when a
   stash contains the implementation that failing tests on main exercise
 - `active-plan-stash-implementation.md` — protocol for cross-referencing
-  stashes with active plans in `docs/superpowers/plans/`
+  stashes with active plans in `docs/plans/`
 
 All three are loaded into the CC memory index. See `~/.claude/projects/-Users-les-Projects-mahavishnu/memory/MEMORY.md`.

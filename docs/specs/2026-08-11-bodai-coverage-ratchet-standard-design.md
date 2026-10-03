@@ -277,7 +277,7 @@ None. All design decisions are confirmed.
 
 ## Related docs
 
-- `docs/superpowers/plans/2026-08-11-bodai-coverage-ratchet-standard.md` (the implementation plan, written by writing-plans)
+- `docs/plans/2026-08-11-bodai-coverage-ratchet-standard.md` (the implementation plan, written by writing-plans)
 - `crackerjack/crackerjack/services/coverage_ratchet.py` (the service)
-- `crackerjack/docs/superpowers/specs/2026-06-29-ty-ratchet-cleanup-design.md` (related ty-ratchet spec, separate concern)
+- `crackerjack/docs/specs/2026-06-29-ty-ratchet-cleanup-design.md` (related ty-ratchet spec, separate concern)
 - `.claude/decisions/bodai-pre-1.0-merge-policy.md` (memory: direct-to-main policy)

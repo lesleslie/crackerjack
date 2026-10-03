@@ -22,7 +22,7 @@ blocks_on: []
 
 **Tech Stack:** Python 3.14, FastMCP 4.x, typer 0.26+, hatchling, Git CLI (via subprocess), Gradle CLI (`./gradlew`, subprocess invocation, no shell), gh CLI for GitHub release creation.
 
-**Spec:** `/Users/les/Projects/crackerjack/docs/superpowers/specs/2026-09-07-crackerjack-multi-language-design.md` (Rev 2, on `main` as of commit `b00b36f0`).
+**Spec:** `/Users/les/Projects/crackerjack/docs/specs/2026-09-07-crackerjack-multi-language-design.md` (Rev 2, on `main` as of commit `b00b36f0`).
 
 **Reviews:** None yet. Phase 3 plan should be reviewed via 9-lens multi-agent review before execution (mirror Phase 2's review process).
 

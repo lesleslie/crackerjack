@@ -222,9 +222,9 @@ regression, a JSONL audit trail, and best-effort Akosha logging.
 
 For the design rationale and contract details, see:
 
-- `docs/superpowers/specs/2026-08-06-ai-fix-removal-external-loop-design.md`
+- `docs/specs/2026-08-06-ai-fix-removal-external-loop-design.md`
   (removal rationale + external-loop design)
-- `docs/superpowers/plans/2026-08-06-ai-fix-external-loop.md` (the
+- `docs/plans/2026-08-06-ai-fix-external-loop.md` (the
   implementation plan; 9 tasks, all completed)
 
 ## High-Performance Rust Integration
@@ -243,7 +243,7 @@ Session-buddy skill-tracking for the removed 12-agent system is no
 longer active. The replacement external loop ships best-effort
 fix-outcome memory to Akosha via `generate_embedding` → `store_memory`
 on each successful iteration; see
-`docs/superpowers/plans/2026-08-06-ai-fix-external-loop.md` (Task 7)
+`docs/plans/2026-08-06-ai-fix-external-loop.md` (Task 7)
 for the contract and the deterministic `memory_id` scheme.
 
 ## MCP Server Integration

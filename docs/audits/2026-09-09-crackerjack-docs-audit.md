@@ -3,7 +3,7 @@
 **Repo:** `/Users/les/Projects/crackerjack` (v0.80.8, branch `main`, clean merge state)
 **Audit type:** Read-only five-lens fanout
 **Scope:** All `.md` files under `docs/`, `README.md`, `AGENTS.md`, `CLAUDE.md`, `QUICKSTART.md`, `CHANGELOG.md`, `pyproject.toml` doc-adjacent keys, MCP specs, Bodai cross-component references
-**Working tree touched:** None. The audit team did not modify any file (verified by 5 of 5 lens subagents being read-only). The user's 9 uncommitted `docs/superpowers/specs/*.md` edits + `report.txt` were explicitly excluded from edit scope.
+**Working tree touched:** None. The audit team did not modify any file (verified by 5 of 5 lens subagents being read-only). The user's 9 uncommitted `docs/specs/*.md` edits + `report.txt` were explicitly excluded from edit scope.
 
 ______________________________________________________________________
 
@@ -260,7 +260,7 @@ ______________________________________________________________________
 - `docs/python-review-logging-progress-implementation.md:261, 599` imports `crackerjack.utils.logger_config` and `crackerjack.utils.logger_state` — neither module exists in `crackerjack/utils/`.
 - `docs/AI_FIX_TEST_FAILURE_IMPLEMENTATION_PLAN.md:642, 1173` imports `crackerjack.parsers.test_result_parser.TestResultParser` and `TestFailureCategory` — actual path is `crackerjack.services.testing.test_result_parser`; exports are `TestErrorType` and `TestFailure` (not `TestFailureCategory`).
 - `docs/reporting_tools_investigation.md:318` + `docs/archive/analysis/PHASE_3.3_SOLID_ANALYSIS.md:93` import `crackerjack.adapters.format.ruff_adapter.RuffAdapter` and `crackerjack.adapters.format.ruff.RuffAdapter,RuffSettings` — actual is `crackerjack.adapters.format.ruff` (`ruff.py`); no `_adapter` suffix.
-- `docs/superpowers/specs/2026-06-03-dhara-mcp-migration-design.md:581, 647` references `crackerjack.services.aiosqlite_cleanup` — module does not exist.
+- `docs/specs/2026-06-03-dhara-mcp-migration-design.md:581, 647` references `crackerjack.services.aiosqlite_cleanup` — module does not exist.
 
 #### Subcommand / CLI drift
 
@@ -268,7 +268,7 @@ ______________________________________________________________________
 
 #### Hook references
 
-- Review docs in `docs/superpowers/plans/reviews/2026-09-07-phase4-*.md` (8 files) still describe the pre-split `web.eslint_tsc` hook — historical record of the discovery+split, OK as historical, but the recurring mention can mislead readers. The plan itself (`2026-09-07-crackerjack-multi-language-phase4.md`) describes the converged 4-hook split correctly.
+- Review docs in `docs/plans/reviews/2026-09-07-phase4-*.md` (8 files) still describe the pre-split `web.eslint_tsc` hook — historical record of the discovery+split, OK as historical, but the recurring mention can mislead readers. The plan itself (`2026-09-07-crackerjack-multi-language-phase4.md`) describes the converged 4-hook split correctly.
 
 #### Env var name drift
 
@@ -364,7 +364,7 @@ Either update the ADR to reflect `mcp_websocket_port: 8696` (live) and add a "Po
 
 ### Category H — Bodai integration doc rewrite
 
-`docs/MAHAVISHNU_POOL_INTEGRATION.md` and `docs/MAHAVISHNU_POOL_QUICKSTART.md` describe work that was scoped out during AI-fix removal. Either rewrite to current reality (no kubernetes pool, no container worker, vulture → Skylos, JSON-RPC not import) or move to `docs/superpowers/plans/.archive/`.
+`docs/MAHAVISHNU_POOL_INTEGRATION.md` and `docs/MAHAVISHNU_POOL_QUICKSTART.md` describe work that was scoped out during AI-fix removal. Either rewrite to current reality (no kubernetes pool, no container worker, vulture → Skylos, JSON-RPC not import) or move to `docs/plans/.archive/`.
 
 ### Category I — Internal dead-link repair
 
@@ -384,7 +384,7 @@ ______________________________________________________________________
 
 - 5 read-only subagents dispatched in parallel from `/Users/les/Projects/crackerjack/main`.
 - Each agent was given a single lens and explicit read-only/no-git-state-change instructions.
-- The user's working tree (9 uncommitted spec edits in `docs/superpowers/specs/` + `report.txt`) was excluded from edit scope.
+- The user's working tree (9 uncommitted spec edits in `docs/specs/` + `report.txt`) was excluded from edit scope.
 - No edits, no writes, no commits. This audit report is the only new file produced.
 - All findings are anchored to file:line + a code-side anchor in the crackerjack repo.
 - Three cross-repo ground-truth checks were performed in `MAHAVISHNU` and `SESSION_BUDDY`; both were strictly read-only (no git operations on those repos either).

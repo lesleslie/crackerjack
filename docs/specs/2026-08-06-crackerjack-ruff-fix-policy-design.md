@@ -191,7 +191,7 @@ Add or extend the following tests:
 - Add a "Safe vs. Unsafe Fixes" subsection to `crackerjack/hooks/README.md`.
 - Add a single `CHANGELOG.md` entry mirroring the historical enable-unsafe-fixes line.
 - Resolve the `services/config_template.py:62` divergence in `docs/CONFIG_CONSOLIDATION_AUDIT.md:729`.
-- Add the new design document under `docs/superpowers/specs/`.
+- Add the new design document under `docs/specs/`.
 
 ## 7. Rollout
 
@@ -200,7 +200,7 @@ Add or extend the following tests:
 3. **Stage 2 — Wire settings through**: replace direct `preflight.py:176-180` field lookup with `HookSettings` lookup; fix the silent no-op branch in `adapters/format/ruff.py:146-150`; reconcile `shell/adapter.py` banner with behavior; fix the phantom `ruff-isort` reference in `services/profiler.py:101`.
 4. **Stage 3 — Rollback and dirty-tree guard**: route every unsafe-fix invocation through `SafeCodeModifier`; add a `crackerjack rollback-last-fixes` command; wire `_validate_working_tree_clean()` as a precondition for any `--fix` invocation.
 5. **Stage 4 — Exit semantics and pinning**: replace `preflight.py:135-143` `subprocess.run(check=False)` with explicit 0/1/2 handling; pin `pyproject.toml:54` to `ruff==0.16.0` with hash-pinned `uv.lock` entry; add the golden-diff test.
-6. **Stage 5 — Docs and changelog**: docs/CLI_REFERENCE.md, hooks/README.md, CHANGELOG.md, CONFIG_CONSOLIDATION_AUDIT.md, and `docs/superpowers/specs/`.
+6. **Stage 5 — Docs and changelog**: docs/CLI_REFERENCE.md, hooks/README.md, CHANGELOG.md, CONFIG_CONSOLIDATION_AUDIT.md, and `docs/specs/`.
 
 ## 8. Fastest path through the 1249-finding backlog
 

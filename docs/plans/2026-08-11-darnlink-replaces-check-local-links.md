@@ -331,7 +331,7 @@ Append to `crackerjack/settings/local.yaml.example` (create the file if it does 
 # Experimental: run darnlink alongside check-local-links during the pilot.
 # Darnlink is a robust markdown link checker that survives file refactors
 # by anchoring links to UUIDs. See
-# docs/superpowers/plans/2026-08-11-darnlink-replaces-check-local-links.md
+# docs/plans/2026-08-11-darnlink-replaces-check-local-links.md
 # for context and removal of check-local-links timeline.
 enable_darnlink: true
 ```

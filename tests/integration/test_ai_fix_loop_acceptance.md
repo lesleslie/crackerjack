@@ -2,7 +2,7 @@
 
 > **Status:** Active manual runbook. Not a pytest test.
 > **Owner:** Workflow script changes (`.claude/workflows/ai-fix-loop.js`) — run after every change.
-> **Plan:** `docs/superpowers/plans/2026-08-06-ai-fix-external-loop.md` (Task 9).
+> **Plan:** `docs/plans/2026-08-06-ai-fix-external-loop.md` (Task 9).
 
 ## What This Is
 
@@ -93,7 +93,7 @@ Run it after:
 This repo currently has ~1019 baseline issues across multiple hooks
 (ruff-check=999, check-local-links=8, codespell=7, pip-audit=2,
 mdformat=1, skill-coverage=2 — sum is 1019; per-hook counts recorded
-in `docs/superpowers/plans/2026-08-10-ai-fix-loop-task-1-kickoff.md`).
+in `docs/plans/2026-08-10-ai-fix-loop-task-1-kickoff.md`).
 That's well above `INITIAL_ISSUE_GUARD=200`, so:
 
 | Step | Expected result |

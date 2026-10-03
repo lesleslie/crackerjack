@@ -12,7 +12,7 @@ blocks_on: []
 
 - **Status:** Reviewed — ready for implementation
 - **Reviewed by:** 3 parallel agents (architecture, code quality, test strategy) 2026-05-20
-- **Spec:** [`docs/superpowers/specs/2026-05-20-ai-fix-comprehensive-overhaul-design.md`](../specs/2026-05-20-ai-fix-comprehensive-overhaul-design.md) §5.1
+- **Spec:** [`docs/specs/2026-05-20-ai-fix-comprehensive-overhaul-design.md`](../specs/2026-05-20-ai-fix-comprehensive-overhaul-design.md) §5.1
 - **Scope:** Phase 0 only. No behavior changes from the user's perspective; foundation for Phases 1–4.
 - **Estimated effort:** 1.5–2 days (Task 3 re-estimated after logger.warning audit; see note)
 - **Risk:** Low

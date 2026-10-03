@@ -1020,7 +1020,7 @@ Expected: passes. The five bug fixes themselves should be clean code per the cra
 
 ```bash
 cd /Users/les/Projects/crackerjack
-git add docs/superpowers/plans/2026-06-02-ai-fix-display-loop-bugs.md
+git add docs/plans/2026-06-02-ai-fix-display-loop-bugs.md
 git commit -m "docs(ai-fix): record dhara smoke-test verification"
 ```
 

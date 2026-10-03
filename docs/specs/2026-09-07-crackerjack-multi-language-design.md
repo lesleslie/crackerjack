@@ -8,7 +8,7 @@ last_reviewed: 2026-09-09
 
 # Crackerjack Multi-Language Extension
 
-> **Status:** Rev 2 — post-11-agent-review. All blocker + high findings from the review at `docs/superpowers/specs/reviews/2026-09-07-*.md` are incorporated.
+> **Status:** Rev 2 — post-11-agent-review. All blocker + high findings from the review at `docs/specs/reviews/2026-09-07-*.md` are incorporated.
 > **Architecture:** Approach A — Language Adapters as first-class packages.
 > **Phase 0 design; Phase 1 (foundation + Python refactor) is next.**
 
@@ -775,8 +775,8 @@ Before Phase 2 implementation, verify `mcp-common` exposes the testing helpers t
 
 ## See also
 
-- 11 review files at `docs/superpowers/specs/reviews/2026-09-07-{lens}.md`
-- Existing crackerjack specs in `docs/superpowers/specs/` — refactor patterns
+- 11 review files at `docs/specs/reviews/2026-09-07-{lens}.md`
+- Existing crackerjack specs in `docs/specs/` — refactor patterns
 - `BODAI_REPO_REGISTRY.md` — language column addition
 - `jinja2-custom-delimiters` plugin.xml — delimiter conversion contract
 - memory `multi-agent-review-catches-blind-spots.md` — pattern for spec review

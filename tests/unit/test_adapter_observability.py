@@ -1,6 +1,6 @@
 """TDD red-green tests for adapter runtime observability.
 
-Spec: docs/superpowers/specs/2026-06-22-adapter-runtime-observability-design.md
+Spec: docs/specs/2026-06-22-adapter-runtime-observability-design.md
 Pivot (Phase 3): Dhara-backed settings versioning (was: cross-machine session continuity).
 
 Coverage targets:

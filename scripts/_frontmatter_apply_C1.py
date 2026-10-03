@@ -44,8 +44,8 @@ SUBDIR_DEFAULTS: list[tuple[str, tuple[str, str, str]]] = [
     ("docs/reference/", ("active", "canonical", "mcp-design")),
     ("docs/reviews/", ("complete", "historical", "lifecycle")),
     ("docs/runbooks/", ("active", "canonical", "lifecycle")),
-    ("docs/superpowers/plans/", ("active", "implementation", "lifecycle")),
-    ("docs/superpowers/specs/", ("active", "implementation", "lifecycle")),
+    ("docs/plans/", ("active", "implementation", "lifecycle")),
+    ("docs/specs/", ("active", "implementation", "lifecycle")),
     ("docs/superpowers/triage/", ("active", "implementation", "lifecycle")),
 ]
 
@@ -318,117 +318,117 @@ ASSIGNMENTS: dict[str, tuple[str, str, str]] = {
     ),
     "docs/plans/AI_FIX_IMPROVEMENT_PLAN.md": ("complete", "historical", "lifecycle"),
     "docs/plans/swarm-autofix-integration.md": ("complete", "historical", "lifecycle"),
-    "docs/superpowers/plans/2026-05-20-phase-0-event-bus-plan.md": (
+    "docs/plans/2026-05-20-phase-0-event-bus-plan.md": (
         "active",
         "implementation",
         "lifecycle",
     ),
-    "docs/superpowers/plans/2026-06-02-ai-fix-display-loop-bugs.md": (
+    "docs/plans/2026-06-02-ai-fix-display-loop-bugs.md": (
         "active",
         "implementation",
         "lifecycle",
     ),
-    "docs/superpowers/plans/2026-06-03-dhara-mcp-migration.md": (
+    "docs/plans/2026-06-03-dhara-mcp-migration.md": (
         "active",
         "implementation",
         "lifecycle",
     ),
-    "docs/superpowers/plans/2026-06-29-ty-ratchet-cleanup.md": (
+    "docs/plans/2026-06-29-ty-ratchet-cleanup.md": (
         "active",
         "implementation",
         "lifecycle",
     ),
-    "docs/superpowers/plans/2026-07-08-fix-sandbox-integration.md": (
+    "docs/plans/2026-07-08-fix-sandbox-integration.md": (
         "active",
         "implementation",
         "lifecycle",
     ),
-    "docs/superpowers/plans/2026-07-10-libcst-surgeon-extract-method-fallback.md": (
+    "docs/plans/2026-07-10-libcst-surgeon-extract-method-fallback.md": (
         "active",
         "implementation",
         "lifecycle",
     ),
-    "docs/superpowers/plans/2026-07-10-output-validator-traceback-details.md": (
+    "docs/plans/2026-07-10-output-validator-traceback-details.md": (
         "active",
         "implementation",
         "lifecycle",
     ),
-    "docs/superpowers/plans/2026-07-10-validation-coordinator-serialization.md": (
+    "docs/plans/2026-07-10-validation-coordinator-serialization.md": (
         "active",
         "implementation",
         "lifecycle",
     ),
-    "docs/superpowers/plans/2026-07-11-ai-fix-e501-post-processor.md": (
+    "docs/plans/2026-07-11-ai-fix-e501-post-processor.md": (
         "active",
         "implementation",
         "lifecycle",
     ),
-    "docs/superpowers/plans/2026-07-11-ai-fix-no-op-circuit-breaker.md": (
+    "docs/plans/2026-07-11-ai-fix-no-op-circuit-breaker.md": (
         "active",
         "implementation",
         "lifecycle",
     ),
-    "docs/superpowers/plans/2026-07-11-ai-fix-regen-timeout.md": (
+    "docs/plans/2026-07-11-ai-fix-regen-timeout.md": (
         "active",
         "implementation",
         "lifecycle",
     ),
-    "docs/superpowers/plans/2026-07-12-eventbridge-publisher.md": (
+    "docs/plans/2026-07-12-eventbridge-publisher.md": (
         "active",
         "implementation",
         "lifecycle",
     ),
-    "docs/superpowers/specs/2026-05-20-ai-fix-comprehensive-overhaul-design.md": (
+    "docs/specs/2026-05-20-ai-fix-comprehensive-overhaul-design.md": (
         "draft",
         "implementation",
         "lifecycle",
     ),
-    "docs/superpowers/specs/2026-06-03-dhara-mcp-migration-design.md": (
+    "docs/specs/2026-06-03-dhara-mcp-migration-design.md": (
         "draft",
         "implementation",
         "lifecycle",
     ),
-    "docs/superpowers/specs/2026-06-29-ty-ratchet-cleanup-design.md": (
+    "docs/specs/2026-06-29-ty-ratchet-cleanup-design.md": (
         "draft",
         "implementation",
         "lifecycle",
     ),
-    "docs/superpowers/specs/2026-07-07-ai-fix-improvement-design.md": (
+    "docs/specs/2026-07-07-ai-fix-improvement-design.md": (
         "draft",
         "implementation",
         "lifecycle",
     ),
-    "docs/superpowers/specs/2026-07-08-fix-sandbox-integration-design.md": (
+    "docs/specs/2026-07-08-fix-sandbox-integration-design.md": (
         "draft",
         "implementation",
         "lifecycle",
     ),
-    "docs/superpowers/specs/2026-07-10-libcst-surgeon-extract-method-fallback-design.md": (
+    "docs/specs/2026-07-10-libcst-surgeon-extract-method-fallback-design.md": (
         "draft",
         "implementation",
         "lifecycle",
     ),
-    "docs/superpowers/specs/2026-07-10-output-validator-traceback-details-design.md": (
+    "docs/specs/2026-07-10-output-validator-traceback-details-design.md": (
         "draft",
         "implementation",
         "lifecycle",
     ),
-    "docs/superpowers/specs/2026-07-10-validation-coordinator-serialization-design.md": (
+    "docs/specs/2026-07-10-validation-coordinator-serialization-design.md": (
         "draft",
         "implementation",
         "lifecycle",
     ),
-    "docs/superpowers/specs/2026-07-11-ai-fix-e501-post-processor-design.md": (
+    "docs/specs/2026-07-11-ai-fix-e501-post-processor-design.md": (
         "draft",
         "implementation",
         "lifecycle",
     ),
-    "docs/superpowers/specs/2026-07-11-ai-fix-no-op-circuit-breaker-design.md": (
+    "docs/specs/2026-07-11-ai-fix-no-op-circuit-breaker-design.md": (
         "draft",
         "implementation",
         "lifecycle",
     ),
-    "docs/superpowers/specs/2026-07-11-ai-fix-regen-timeout-design.md": (
+    "docs/specs/2026-07-11-ai-fix-regen-timeout-design.md": (
         "draft",
         "implementation",
         "lifecycle",

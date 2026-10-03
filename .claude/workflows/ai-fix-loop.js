@@ -4,7 +4,7 @@
 // dispatches them to a fix agent, re-verifies, repeats until clean
 // or capped. After each successful fix iteration, ships the fix
 // outcome to Akosha via generate_embedding → store_memory. Full
-// design: docs/superpowers/plans/2026-08-06-ai-fix-external-loop.md
+// design: docs/plans/2026-08-06-ai-fix-external-loop.md
 //
 // Status: All 9 plan tasks complete. Post-implementation multi-agent
 // review (code, mcp-integration, workflow-contract, documentation)

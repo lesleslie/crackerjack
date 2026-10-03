@@ -1077,7 +1077,7 @@ ______________________________________________________________________
 
 ## Self-Review Notes
 
-- **Spec coverage**: All sections of `docs/superpowers/specs/2026-06-29-ty-ratchet-cleanup-design.md` are covered by Tasks 1-7. Task 8 verifies end-to-end.
+- **Spec coverage**: All sections of `docs/specs/2026-06-29-ty-ratchet-cleanup-design.md` are covered by Tasks 1-7. Task 8 verifies end-to-end.
 - **Item 2 (per-project pyproject keys)**: Explicitly out of scope per the spec's "Out-of-scope follow-ups" section. No task addresses it. This is correct YAGNI behavior.
 - **No placeholders**: All steps show concrete code, file paths, and commands.
 - **Type consistency**: `HookResult.advisory_issues: list[str]` is referenced consistently across Tasks 1, 4, 5, 7. `_parse_ty_ratchet -> tuple[int, list[str]]` is consistent in Tasks 2, 3. `_zero_result` is referenced consistently in Task 6.

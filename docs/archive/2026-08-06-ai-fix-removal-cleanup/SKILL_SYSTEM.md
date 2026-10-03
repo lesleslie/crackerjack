@@ -21,7 +21,7 @@ Crackerjack's Skills System provides a multi-layered architecture that bridges A
 > **Post-removal note (2026-08-12)**: The `crackerjack/skills/` package today
 > contains only `__init__.py` and `health.py`. The three registries above
 > (Agent, MCP, Hybrid) were removed as part of the AI-fix subsystem removal
-> (see `docs/superpowers/specs/2026-08-06-ai-fix-removal-external-loop-design.md`).
+> (see `docs/specs/2026-08-06-ai-fix-removal-external-loop-design.md`).
 > The code samples below describe the **legacy** registry model and are
 > preserved here for historical reference and as a reference for the new
 > external-loop pattern. Do NOT treat these as live code.
@@ -422,7 +422,7 @@ Distilled skills are refreshed on a *weekly schedule*, not per-commit.
 - The pre-commit `skill-coverage` fast hook was removed in 2026-08 because
   it produced a 5–10s HTTP round trip on every commit for data the commit
   could not invalidate. See
-  `docs/superpowers/plans/2026-08-11-skill-coverage-out-of-fast-hooks.md`.
+  `docs/plans/2026-08-11-skill-coverage-out-of-fast-hooks.md`.
 
 ## Testing
 

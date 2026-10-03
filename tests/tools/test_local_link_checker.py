@@ -80,7 +80,7 @@ And more [text](other.md) inline alongside `more code`
 def test_extract_markdown_links_skips_table_row_brackets():
     """Markdown table cells with backtick-wrapped code are not flagged.
 
-    Regression for mahavishnu's docs/superpowers/specs/2026-08-18
+    Regression for mahavishnu's docs/specs/2026-08-18
     -mcp-tool-profile-adoption-design.md line 146, where
     ``| ... dispatch `registration_map[name](server)` for each |``
     was incorrectly extracted as a broken local link to ``server``.

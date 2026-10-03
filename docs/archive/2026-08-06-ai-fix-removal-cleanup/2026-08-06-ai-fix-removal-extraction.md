@@ -8,7 +8,7 @@
 
 **Tech Stack:** Python 3.13+, pytest, ruff, ast/libcst (existing dependencies — no new ones), Pydantic (for the versioned JSON schema).
 
-**Reference spec:** [docs/superpowers/specs/2026-08-06-ai-fix-removal-external-loop-design.md](../specs/2026-08-06-ai-fix-removal-external-loop-design.md)
+**Reference spec:** [docs/specs/2026-08-06-ai-fix-removal-external-loop-design.md](../specs/2026-08-06-ai-fix-removal-external-loop-design.md)
 
 ## Global Constraints
 
@@ -20,7 +20,7 @@
 
 ## Scope note
 
-This plan covers spec sections 1a, 1b, 2, 3, and 4 (extraction, shared vocabulary, `--json` contract, destructive removal, post-delete verification) — everything that happens **inside the crackerjack repository**. Spec sections 5 and 6 (the external loop driver and the Akosha logging hook, which live **outside** crackerjack) are a separate, independent plan: `docs/superpowers/plans/2026-08-06-ai-fix-external-loop.md`, because they depend on this plan's `--json` contract existing first and are otherwise a fully separate piece of software with its own test cycle.
+This plan covers spec sections 1a, 1b, 2, 3, and 4 (extraction, shared vocabulary, `--json` contract, destructive removal, post-delete verification) — everything that happens **inside the crackerjack repository**. Spec sections 5 and 6 (the external loop driver and the Akosha logging hook, which live **outside** crackerjack) are a separate, independent plan: `docs/plans/2026-08-06-ai-fix-external-loop.md`, because they depend on this plan's `--json` contract existing first and are otherwise a fully separate piece of software with its own test cycle.
 
 ## File Structure
 
@@ -63,7 +63,7 @@ This plan covers spec sections 1a, 1b, 2, 3, and 4 (extraction, shared vocabular
 - `crackerjack/core/proactive_workflow.py`, `crackerjack/core/tier3_factory.py`, `crackerjack/documentation/dual_output_generator.py`, `crackerjack/services/batch_processor.py`, `crackerjack/services/agent_delegator.py`, `crackerjack/mcp/tools/skill_tools.py` — repointed off deleted orchestration.
 - `crackerjack/adapters/format/ruff.py`, `crackerjack/parsers/{base,factory,json_parsers,lychee_parser,regex_parsers}.py` — import path repointed to `crackerjack/models/issues.py`.
 - `crackerjack/__main__.py` — remove `--ai-fix` flag and its wiring.
-- Eight files in `docs/superpowers/specs/` — frontmatter `superseded_by` set to this design's spec filename.
+- Eight files in `docs/specs/` — frontmatter `superseded_by` set to this design's spec filename.
 
 ______________________________________________________________________
 
@@ -1418,14 +1418,14 @@ ______________________________________________________________________
 **Files:**
 
 - Modify frontmatter (`superseded_by` field) in:
-  - `docs/superpowers/specs/2026-07-07-ai-fix-improvement-design.md`
-  - `docs/superpowers/specs/2026-07-08-fix-sandbox-integration-design.md`
-  - `docs/superpowers/specs/2026-07-10-libcst-surgeon-extract-method-fallback-design.md`
-  - `docs/superpowers/specs/2026-07-10-output-validator-traceback-details-design.md`
-  - `docs/superpowers/specs/2026-07-10-validation-coordinator-serialization-design.md`
-  - `docs/superpowers/specs/2026-07-11-ai-fix-e501-post-processor-design.md`
-  - `docs/superpowers/specs/2026-07-11-ai-fix-no-op-circuit-breaker-design.md`
-  - `docs/superpowers/specs/2026-07-11-ai-fix-regen-timeout-design.md`
+  - `docs/specs/2026-07-07-ai-fix-improvement-design.md`
+  - `docs/specs/2026-07-08-fix-sandbox-integration-design.md`
+  - `docs/specs/2026-07-10-libcst-surgeon-extract-method-fallback-design.md`
+  - `docs/specs/2026-07-10-output-validator-traceback-details-design.md`
+  - `docs/specs/2026-07-10-validation-coordinator-serialization-design.md`
+  - `docs/specs/2026-07-11-ai-fix-e501-post-processor-design.md`
+  - `docs/specs/2026-07-11-ai-fix-no-op-circuit-breaker-design.md`
+  - `docs/specs/2026-07-11-ai-fix-regen-timeout-design.md`
 
 **Interfaces:** N/A — documentation update.
 
@@ -1434,7 +1434,7 @@ ______________________________________________________________________
 - [ ] **Step 2: Commit**
 
 ```bash
-git add docs/superpowers/specs/
+git add docs/specs/
 git commit -m "docs(superpowers): mark 8 ai-fix specs as superseded by the removal design"
 ```
 
@@ -1488,4 +1488,4 @@ Run: `git diff --stat pre-ai-fix-removal..HEAD | tail -1`
 
 Confirm the net change is a large deletion (expected: tens of thousands of lines removed, a few thousand added in `crackerjack/fixers/` and `crackerjack/models/issues.py`).
 
-- [ ] **Step 4: If everything passes, this plan is complete.** The external loop replacement is a separate plan (`docs/superpowers/plans/2026-08-06-ai-fix-external-loop.md`) that depends on this one's `--json` contract (Task 3) and can now begin.
+- [ ] **Step 4: If everything passes, this plan is complete.** The external loop replacement is a separate plan (`docs/plans/2026-08-06-ai-fix-external-loop.md`) that depends on this one's `--json` contract (Task 3) and can now begin.

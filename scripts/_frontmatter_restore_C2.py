@@ -91,8 +91,8 @@ def find_broken_files() -> list[Path]:
     stores = [
         "docs/adr",
         "docs/plans",
-        "docs/superpowers/specs",
-        "docs/superpowers/plans",
+        "docs/specs",
+        "docs/plans",
         ".claude/decisions",
         "docs/followups",
     ]

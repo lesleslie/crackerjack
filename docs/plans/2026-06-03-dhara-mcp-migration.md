@@ -1657,7 +1657,7 @@ ______________________________________________________________________
 
 ## Execution handoff
 
-Plan complete and saved to `docs/superpowers/plans/2026-06-03-dhara-mcp-migration.md`. Two execution options:
+Plan complete and saved to `docs/plans/2026-06-03-dhara-mcp-migration.md`. Two execution options:
 
 1. **Subagent-Driven (recommended)** — I dispatch a fresh subagent per task, review between tasks, fast iteration
 1. **Inline Execution** — Execute tasks in this session using executing-plans, batch execution with checkpoints

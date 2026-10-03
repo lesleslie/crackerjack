@@ -10,9 +10,9 @@ topic: lifecycle
 
 # Feature Tracking Template
 
-> Copy this file to `docs/feature-tracking/<YYYY-MM-DD>-<feature-slug>.md` and fill in the sections. Filename convention matches `docs/superpowers/plans/`.
+> Copy this file to `docs/feature-tracking/<YYYY-MM-DD>-<feature-slug>.md` and fill in the sections. Filename convention matches `docs/plans/`.
 >
-> Referenced by `crackerjack/CLAUDE.md` (Process Discipline → "Track `{built, wired, adopted}` state for every feature") and by every implementation plan that lands in `docs/superpowers/plans/`.
+> Referenced by `crackerjack/CLAUDE.md` (Process Discipline → "Track `{built, wired, adopted}` state for every feature") and by every implementation plan that lands in `docs/plans/`.
 
 **What this is for:** Tracking the *delivery lifecycle* of a feature from "code exists" through "in production use" through "removed." It is **not** a feature spec or architecture doc — those live in `docs/features/<feature>.md`. One tracking entry per feature; reference the canonical doc from the `links.canonical_doc` field below.
 
@@ -82,7 +82,7 @@ Bullet list of the user-visible behavior, hook names, CLI flags, or MCP tools th
 
 ### Links
 
-- **Plan:** `docs/superpowers/plans/<plan-filename>.md` — the implementation plan this entry tracks. Required.
+- **Plan:** `docs/plans/<plan-filename>.md` — the implementation plan this entry tracks. Required.
 - **Canonical doc:** `docs/features/<feature>.md` — if a feature-level architecture/usage doc exists. Optional but recommended for `adopted` features.
 - **Issue / discussion:** ticket URLs, design-doc paths, or Slack thread links that justify the feature.
 - **Related entries:** list of other feature-tracking entries this depends on or supersedes. Symmetric with `blocks_on`.
@@ -112,8 +112,8 @@ How to confirm the feature is in `adopted` state. List concrete queries (Prometh
 
 The two existing plans that already cite this template are good references once their tracking entries are written:
 
-- `docs/superpowers/plans/2026-08-11-skill-coverage-out-of-fast-hooks.md` (skill-coverage removal — already in `docs/feature-tracking/`-shaped state via Phase 4-5 of that plan)
-- `docs/superpowers/plans/2026-08-11-darnlink-replaces-check-local-links.md` (this template's first real user, when implementation begins)
+- `docs/plans/2026-08-11-skill-coverage-out-of-fast-hooks.md` (skill-coverage removal — already in `docs/feature-tracking/`-shaped state via Phase 4-5 of that plan)
+- `docs/plans/2026-08-11-darnlink-replaces-check-local-links.md` (this template's first real user, when implementation begins)
 
 When in doubt, look at how those entries resolve their `{built, wired, adopted}` mapping in the plans' Self-review sections, then mirror that structure here.
 
@@ -163,7 +163,7 @@ blocks_on: []
 
 ## Links
 
-- **Plan:** `docs/superpowers/plans/2026-08-11-darnlink-replaces-check-local-links.md`
+- **Plan:** `docs/plans/2026-08-11-darnlink-replaces-check-local-links.md`
 - **Canonical doc:** `docs/features/DARNLINK_HOOK.md` (pending)
 - **Issue / discussion:** bodai/bodai#145
 - **Related entries:** none

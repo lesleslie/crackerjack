@@ -20,7 +20,7 @@ blocks_on: []
 
 **Related:**
 
-- Spec: `docs/superpowers/specs/2026-07-10-libcst-surgeon-extract-method-fallback-design.md` (commit `87cd3ea3`)
+- Spec: `docs/specs/2026-07-10-libcst-surgeon-extract-method-fallback-design.md` (commit `87cd3ea3`)
 - Triage: `docs/superpowers/triage/2026-07-10-refactoring-agent-ast-fallback.md` (commit `92ea7e8a`)
 - WIP cleanup commit: `c6c52fd2` (66 files pre-existing modifications; should not regress)
 
