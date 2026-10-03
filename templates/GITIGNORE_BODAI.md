@@ -38,4 +38,11 @@ playwright-junit.xml
 playwright-report/
 playwright-results.json
 test-results/
+# Superpowers skill artifacts (local-only, per-project runtime).
+# All `.superpowers/` content is scratch: SDD controller workspace
+# (briefs, reports, ledger, review packages) and the brainstorm
+# visual-companion's mockup HTML+server-state. Plans and specs live
+# at docs/plans/ and docs/specs/ — committed under their canonical
+# paths, never under .superpowers/.
+.superpowers/
 # <<< bodai-shared-gitignore <<<
