@@ -13,7 +13,7 @@ blocks_on: []
 **Date**: 2026-07-10
 **Status**: Draft — awaiting user review <!-- legacy status — see YAML frontmatter -->
 **Author**: Claude (brainstorming session)
-**Related**: triage note `docs/superpowers/triage/2026-07-10-refactoring-agent-ast-fallback.md`; WIP commit `c6c52fd2` (prior-session cleanup); upstream commit `92ea7e8a` (sandbox spec + triage capture).
+**Related**: triage note `docs/followups/triage/2026-07-10-refactoring-agent-ast-fallback.md`; WIP commit `c6c52fd2` (prior-session cleanup); upstream commit `92ea7e8a` (sandbox spec + triage capture).
 
 ## Problem
 
@@ -41,7 +41,7 @@ Affected tests (all in `TestRefactoringAgentAstTransformFallback`, plus one in `
 - `test_execute_fix_plan_reports_ast_transform_write_failure`
 - `TestRefactoringAgentThreeTierFallback::test_three_tier_full_analysis_uses_ast_fallback`
 
-These were already failing before this session. The prior-session triage note (`docs/superpowers/triage/2026-07-10-refactoring-agent-ast-fallback.md`) hypothesized two root causes — both of which the present brainstorming session found to be **incorrect approximations**:
+These were already failing before this session. The prior-session triage note (`docs/followups/triage/2026-07-10-refactoring-agent-ast-fallback.md`) hypothesized two root causes — both of which the present brainstorming session found to be **incorrect approximations**:
 
 | Triage hypothesis | Actual finding |
 |---|---|

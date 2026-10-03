@@ -13,7 +13,7 @@ blocks_on: []
 **Date**: 2026-07-11
 **Status**: Draft — awaiting user review <!-- legacy status — see YAML frontmatter -->
 **Author**: Claude (brainstorming session)
-**Related**: triage note `docs/superpowers/triage/2026-07-10-output-validator-import-check.md`; recon-driven reframing from "validator crash" to "validator discards traceback frames"; Defect #2 commit chain `88f2b181..1d7fad27` (now on `origin/main`).
+**Related**: triage note `docs/followups/triage/2026-07-10-output-validator-import-check.md`; recon-driven reframing from "validator crash" to "validator discards traceback frames"; Defect #2 commit chain `88f2b181..1d7fad27` (now on `origin/main`).
 
 ## Problem
 

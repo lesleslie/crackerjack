@@ -13,7 +13,7 @@ blocks_on: []
 **Date**: 2026-07-10
 **Status**: Draft — awaiting user review <!-- legacy status — see YAML frontmatter -->
 **Author**: Claude (brainstorming session)
-**Related**: triage note `docs/superpowers/triage/2026-07-10-validation-coordinator-concurrency.md`; untracked regression test `tests/unit/agents/test_validation_coordinator_concurrency.py`; Phase 4 commit chain `87ea8dac..5bd14598` (now on `origin/main`).
+**Related**: triage note `docs/followups/triage/2026-07-10-validation-coordinator-concurrency.md`; untracked regression test `tests/unit/agents/test_validation_coordinator_concurrency.py`; Phase 4 commit chain `87ea8dac..5bd14598` (now on `origin/main`).
 
 ## Problem
 

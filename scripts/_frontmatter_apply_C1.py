@@ -46,7 +46,7 @@ SUBDIR_DEFAULTS: list[tuple[str, tuple[str, str, str]]] = [
     ("docs/runbooks/", ("active", "canonical", "lifecycle")),
     ("docs/plans/", ("active", "implementation", "lifecycle")),
     ("docs/specs/", ("active", "implementation", "lifecycle")),
-    ("docs/superpowers/triage/", ("active", "implementation", "lifecycle")),
+    ("docs/followups/triage/", ("active", "implementation", "lifecycle")),
 ]
 
 

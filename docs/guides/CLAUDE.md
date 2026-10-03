@@ -352,3 +352,11 @@ When adding any new MCP tool to this repo:
 - [ ] Data feed exposes the four mandatory metrics.
 - [ ] `/health` aggregator includes this feed's state.
 - [ ] CI smoke test calls this tool and asserts non-empty response.
+
+# Worktree location preference (per-repo)
+
+Inherit the user-level convention from `~/.claude/CLAUDE.md`. The canonical path for this repo is:
+
+    ~/.local/state/mahavishnu/worktrees/<basename-of-cwd>/
+
+The superpowers `using-git-worktrees` skill reads this block before its hard-coded project-local default, so the XDG path wins.
