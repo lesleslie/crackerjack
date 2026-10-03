@@ -362,3 +362,17 @@ data/
 # pytest-benchmark baseline output
 benchmark_baseline.json
 # <<< bodai-shared-gitignore <<<
+
+# Superpowers Skill Artifacts (local-only, per-project runtime)
+# ============================================================================
+# All `.superpowers/` content is scratch: SDD controller workspace
+# (briefs, reports, ledger, review packages) keyed by plan-basename, and
+# the brainstorm visual-companion's mockup HTML + server-state JSON.
+# Plans and specs live at `docs/plans/` and `docs/specs/` instead — they
+# are committed under their canonical paths, never under `.superpowers/`.
+.superpowers/
+
+!docs/plans/.archive/
+!docs/plans/.archive/**
+!docs/specs/.archive/
+!docs/specs/.archive/**
