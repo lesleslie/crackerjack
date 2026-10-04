@@ -223,16 +223,6 @@ crackerjack-*/
 .claude/*
 !.claude/workflows/
 !.claude/workflows/**
-# Standard Bodai allowlist: shared team content (decisions, agents, skills).
-# Extends the existing workflows allowlist above. Pattern matches
-# mahavishnu's allowlist style. Per
-# oneiric/docs/adr/0001-deployability-discipline.md.
-!.claude/decisions/
-!.claude/decisions/**
-!.claude/agents/
-!.claude/agents/**
-!.claude/skills/
-!.claude/skills/**
 .session-buddy/
 .crackerjack/
 
@@ -279,17 +269,6 @@ example.mcp.json
 report.txt
 
 # ============================================================================
-# Documentation — image assets (crackerjack-specific; lives outside the
-# Bodai-shared marker block because it's not part of the fleet standard)
-# ============================================================================
-# Tracked images live under docs/assets/images/. Session scratch outputs
-# (named like "*-v4.png", "*-window.png", or anything dropped in
-# .scratch/) are local-only and must not be committed. The dot-prefix on
-# `.scratch` is load-bearing — the gitignore rule only matches with it.
-docs/assets/images/.scratch/
-docs/assets/images/.scratch/**
-
-# ============================================================================
 # Bodai-wide gitignore patterns (added 2026-09-07; cross-repo cleanup sweep)
 # ============================================================================
 # Editor / pre-edit backups (foo.py.backup, foo.py.backup.json)
@@ -312,39 +291,12 @@ playwright-results.json
 test-results/
 
 
-# Superpowers Skill Artifacts (local-only, per-project runtime)
-# ============================================================================
-# All `.superpowers/` content is scratch: SDD controller workspace
-# (briefs, reports, ledger, review packages) keyed by plan-basename, and
-# the brainstorm visual-companion's mockup HTML + server-state JSON.
-# Plans and specs live at `docs/plans/` and `docs/specs/` instead — they
-# are committed under their canonical paths, never under `.superpowers/`.
-.superpowers/
-
-!docs/plans/.archive/
-!docs/plans/.archive/**
-!docs/specs/.archive/
-!docs/specs/.archive/**
-
-
 # >>> bodai-shared-gitignore >>>
 # Source of truth: crackerjack/templates/GITIGNORE_BODAI.md
 # Enforced by: crackerjack check `gitignore-conformance`
 # Fleet list: /Users/les/Projects/mahavishnu/BODAI_REPO_REGISTRY.md
 # Do NOT remove the marker line above — `crackerjack gitignore sync` uses it
 # to detect already-applied state.
-
-# Local configuration overlay (per-machine / per-developer; never commit)
-# Patterns mirror mahavishnu/.gitignore §Local Configuration so all Bodai
-# repos ignore the same overlay set. The four files are: developer-local
-# overrides (`local.yaml`), the legacy repo catalog (`repos.yaml`),
-# the orchestrator-managed catalog (`ecosystem.yaml`), and the per-machine
-# fleet registry overlay (`registry_metadata.local.yaml`, sibling of the
-# tracked `registry_metadata.yaml`).
-settings/local.yaml
-settings/repos.yaml
-settings/ecosystem.yaml
-settings/registry_metadata.local.yaml
 
 # Editor / pre-edit backups (foo.py.backup, foo.py.backup.json)
 *.backup
@@ -367,11 +319,14 @@ playwright-junit.xml
 playwright-report/
 playwright-results.json
 test-results/
-# Superpowers skill artifacts (local-only, per-project runtime).
-# All `.superpowers/` content is scratch: SDD controller workspace
-# (briefs, reports, ledger, review packages) and the brainstorm
-# visual-companion's mockup HTML+server-state. Plans and specs live
-# at docs/plans/ and docs/specs/ — committed under their canonical
-# paths, never under .superpowers/.
-.superpowers/
+
+# ============================================================================
+# Documentation — image assets
+# ============================================================================
+# Tracked images live under docs/assets/images/. Session scratch outputs
+# (named like "*-v4.png", "*-window.png", or anything dropped in
+# .scratch/) are local-only and must not be committed. The dot-prefix on
+# `.scratch` is load-bearing — the gitignore rule only matches with it.
+docs/assets/images/.scratch/
+docs/assets/images/.scratch/**
 # <<< bodai-shared-gitignore <<<

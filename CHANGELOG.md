@@ -10,6 +10,18 @@ blocks_on: []
 topic: changelog
 ---
 
+## [0.85.0] - 2026-10-03
+
+### Added
+
+- crackerjack: Blanket-ignore .superpowers/ in shared gitignore template
+
+### Internal
+
+- crackerjack: Gitignore .superpowers/; archive exceptions for plans/specs
+- crackerjack: Relocate plans/specs to canonical paths + 53 in-repo refs
+- crackerjack: Relocate plans/specs/reviews + triage to canonical paths
+
 ## [0.84.3] - 2026-09-29
 
 ### Fixed

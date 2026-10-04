@@ -312,21 +312,6 @@ playwright-results.json
 test-results/
 
 
-# Superpowers Skill Artifacts (local-only, per-project runtime)
-# ============================================================================
-# All `.superpowers/` content is scratch: SDD controller workspace
-# (briefs, reports, ledger, review packages) keyed by plan-basename, and
-# the brainstorm visual-companion's mockup HTML + server-state JSON.
-# Plans and specs live at `docs/plans/` and `docs/specs/` instead — they
-# are committed under their canonical paths, never under `.superpowers/`.
-.superpowers/
-
-!docs/plans/.archive/
-!docs/plans/.archive/**
-!docs/specs/.archive/
-!docs/specs/.archive/**
-
-
 # >>> bodai-shared-gitignore >>>
 # Source of truth: crackerjack/templates/GITIGNORE_BODAI.md
 # Enforced by: crackerjack check `gitignore-conformance`
@@ -367,11 +352,27 @@ playwright-junit.xml
 playwright-report/
 playwright-results.json
 test-results/
-# Superpowers skill artifacts (local-only, per-project runtime).
-# All `.superpowers/` content is scratch: SDD controller workspace
-# (briefs, reports, ledger, review packages) and the brainstorm
-# visual-companion's mockup HTML+server-state. Plans and specs live
-# at docs/plans/ and docs/specs/ — committed under their canonical
-# paths, never under .superpowers/.
-.superpowers/
+# Runtime data dirs (added 2026-09-26 fleet cleanup)
+data/
+# Backup files (added 2026-09-26 fleet cleanup)
+.gitignore.bak.*
+.gitignore.tmp
+# Coverage.py SQLite database (runtime artifact)
+.cov_test
+# pytest-benchmark baseline output
+benchmark_baseline.json
 # <<< bodai-shared-gitignore <<<
+
+# Superpowers Skill Artifacts (local-only, per-project runtime)
+# ============================================================================
+# All `.superpowers/` content is scratch: SDD controller workspace
+# (briefs, reports, ledger, review packages) keyed by plan-basename, and
+# the brainstorm visual-companion's mockup HTML + server-state JSON.
+# Plans and specs live at `docs/plans/` and `docs/specs/` instead — they
+# are committed under their canonical paths, never under `.superpowers/`.
+.superpowers/
+
+!docs/plans/.archive/
+!docs/plans/.archive/**
+!docs/specs/.archive/
+!docs/specs/.archive/**
