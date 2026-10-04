@@ -34,9 +34,9 @@ class TestToolCommandsRegistry:
 
     def test_registry_has_expected_count(self) -> None:
         """Test that registry contains expected number of tools."""
-        # 6 custom + 9 native + 20 third-party = 35 tools
-        # tc-refs was added to third-party without bumping the count here.
-        assert len(TOOL_COMMANDS) == 35
+        # 7 custom + 9 native + 20 third-party = 36 tools
+        # plan-index-sync was added to custom without bumping the count here.
+        assert len(TOOL_COMMANDS) == 36
 
     def test_all_commands_are_lists(self) -> None:
         """Test that all commands are lists of strings."""
@@ -603,7 +603,7 @@ class TestRegistryConsistency:
 
     def test_all_tools_documented_in_phase_8(self) -> None:
         """Test that tool count matches current implementation."""
-        # 6 custom + 9 native + 20 third-party = 35 tools
+        # 7 custom + 9 native + 20 third-party = 36 tools
 
         custom = [
             "validate-regex-patterns",
@@ -612,6 +612,7 @@ class TestRegistryConsistency:
             "pyrefly",
             "ty",
             "ty-ignore-syntax",
+            "plan-index-sync",
         ]
         native = [
             "trailing-whitespace",
@@ -647,7 +648,7 @@ class TestRegistryConsistency:
             "tc-refs",
         ]
 
-        assert len(custom) == 6
+        assert len(custom) == 7
         assert len(native) == 9
         assert len(third_party) == 20
         assert len(TOOL_COMMANDS) == len(custom) + len(native) + len(third_party)
