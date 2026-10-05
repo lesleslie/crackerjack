@@ -21,6 +21,13 @@ settings/registry_metadata.local.yaml
 *.backup
 *.backup.*
 *.bak
+# `.bak.` infix (e.g. `.gitignore.bak.20261004T104858Z`,
+# `foo.py.bak.20261004T104858Z`) — `*.bak` only matches a SUFFIX and silently
+# misses timestamped backups where `.bak` is followed by `.` + suffix.
+# Added 2026-10-05 after a session-buddy tool modifier wrote
+# `.gitignore.bak.20261004T104858Z` to the working tree and the existing
+# `*.bak` pattern failed to catch it on the next `git add`.
+*.bak.*
 *.tmpl
 # XDG mistake dirs (env var expansion failed; literal names)
 # Note: both `{` and `}` are escaped (`{` -> `[{]`, `}` -> `[}]`)
