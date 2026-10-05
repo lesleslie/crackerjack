@@ -64,9 +64,6 @@ dependencies = [
     "refurb>=2.3.1",
     "rich>=15.0.0",
     "ruff==0.16.0",
-    "scikit-learn>=1.9.0",
-    "scipy>=1.18.0",
-    "scipy-stubs>=1.18.0.0",
     "skylos>=4.25.0",
     "structlog>=26.1.0",
     "tomli-w>=1.2.0",
@@ -141,12 +138,11 @@ type-checking = [
     "ty>=0.0.51",
 ]
 
-# neural group intentionally empty — sentence-transformers and torch removed.
-# Crackerjack uses FallbackIssueEmbedder (TF-IDF via scikit-learn) when neural
-# embeddings are unavailable. See crackerjack/memory/issue_embedder.py and
-# crackerjack/memory/git_history_embedder.py. The fallback path uses
-# scikit-learn which is already a main dependency.
-# No torch or sentence-transformers needed.
+# neural group intentionally empty — sentence-transformers, torch, and
+# scikit-learn all removed. Crackerjack's `quality_intelligence.py` keeps
+# a `try: SCIPY_AVAILABLE ... except: ...` scaffold for graceful degradation,
+# but the actual scipy/sklearn imports were removed in step with the dep
+# cleanup. The FallbackIssueEmbedder class is not currently defined.
 neural = []
 
 # snob group: pytest-snob + its Rust extension snob-lib. Gated because
@@ -662,11 +658,9 @@ exclude-deps = [
     # Never imported by name, so creosote (which scans `import` statements)
     # cannot see them in use and would false-positive them as unused.
     "codespell",
-    # scikit-learn used via FallbackIssueEmbedder (TF-IDF path); unidiff
-    # and scipy are transitive/optional; flake8-bugbear dep is consumed
-    # indirectly via ruff tooling, not imported by name.
-    "scikit-learn",
-    "scipy",
+    # unidiff is invoked via tool wrappers, never imported by name;
+    # flake8-bugbear dep is consumed indirectly via ruff tooling, not
+    # imported by name.
     "unidiff",
 ]
 
