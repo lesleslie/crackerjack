@@ -41,7 +41,6 @@ One file per topic. A short header (`## Context`, `## Decision rule`,
 
 ## Current decisions
 
-- [`tool-profile-rationale.md`](tool-profile-rationale.md) — W2a (2026-08-18)
-  rationale for the `CRACKERJACK_TOOL_PROFILE` tier composition (MINIMAL /
-  STANDARD / FULL) and which groups live in each tier (e.g. `eventbridge_tools`
-  and `progress_tools` are FULL-only, `validate_claude_md` is STANDARD).
+_No decisions recorded yet. When the first operational rule needs to be
+captured, add it here as a sibling file and link it from this section —
+see "File shape" above for the template._

@@ -63,7 +63,7 @@ def test_health_feed_halflife_respects_env_override(
 def test_health_feed_halflife_falls_back_on_garbage(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Unparseable env var should fall back to the 60s default, not raise."""
+    """Unparsable env var should fall back to the 60s default, not raise."""
     monkeypatch.setenv("HEALTH_FEED_HALFLIFE_SECONDS", "not-a-number")
     assert get_health_feed_halflife_seconds() == 60.0
 

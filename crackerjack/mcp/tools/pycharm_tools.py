@@ -172,10 +172,8 @@ def _local_regex_search(
             for line_no, line_text in enumerate(lines, start=1):
                 if compiled.search(line_text):
                     rel_path = file_path
-                    try:
+                    with suppress(ValueError):
                         rel_path = file_path.relative_to(search_root)
-                    except ValueError:
-                        pass
                     results.append(
                         {
                             "file_path": str(rel_path),
@@ -231,8 +229,12 @@ def _register_search_code_tool(mcp_app: t.Any) -> None:
                 "line": r["line"] if isinstance(r, dict) else r.line_number,
                 "column": r["column"] if isinstance(r, dict) else r.column,
                 "match": r["match"] if isinstance(r, dict) else r.match_text,
-                "context_before": r["context_before"] if isinstance(r, dict) else r.context_before,
-                "context_after": r["context_after"] if isinstance(r, dict) else r.context_after,
+                "context_before": r["context_before"]
+                if isinstance(r, dict)
+                else r.context_before,
+                "context_after": r["context_after"]
+                if isinstance(r, dict)
+                else r.context_after,
             }
             for r in results
         ]
