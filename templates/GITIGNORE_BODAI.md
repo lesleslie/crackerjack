@@ -28,6 +28,7 @@ settings/registry_metadata.local.yaml
 # `.gitignore.bak.20261004T104858Z` to the working tree and the existing
 # `*.bak` pattern failed to catch it on the next `git add`.
 *.bak.*
+.gitignore.bak.*
 *.tmpl
 # XDG mistake dirs (env var expansion failed; literal names)
 # Note: both `{` and `}` are escaped (`{` -> `[{]`, `}` -> `[}]`)
