@@ -10,6 +10,33 @@ blocks_on: []
 topic: changelog
 ---
 
+## [0.86.0] - 2026-10-09
+
+### Added
+
+- crackerjack: Adopt mcp_common HealthAggregator + 503 on degraded (Phase 1.2)
+
+### Changed
+
+- crackerjack: Drop unused scikit-learn/scipy/scipy-stubs deps
+- crackerjack: Pre-existing test fix — bump tool registry count
+
+### Fixed
+
+- crackerjack: Add *.bak.* to GITIGNORE_BODAI template
+- crackerjack: Restore non-deceptive search_code + search_semantic envelopes
+
+### Documentation
+
+- cj: Document role as stage-3 merge gate in Bodai trunk-based workflow; bump last_reviewed to 2026-10-09
+
+### Internal
+
+- crackerjack: Add .claude/decisions README index
+- crackerjack: Bump mcp-common pin (Phase 1.2 dependency update)
+- crackerjack: SessionEnd hook wire-up + push governance cross-link
+- Remove tracked .gitignore.bak.* backups, drop unused anthropic stub + .superpowers stray, add .gitignore.bak.* to canonical template
+
 ## [0.85.0] - 2026-10-03
 
 ### Added
