@@ -2,7 +2,7 @@
 status: active
 role: canonical
 date: 2026-07-17
-last_reviewed: 2026-07-17
+last_reviewed: 2026-10-09
 superseded_by: null
 blocks_on: []
 topic: lifecycle
@@ -92,6 +92,27 @@ Workflow({
 
 For the design rationale and contract details, see the **AI Agent
 System** section below.
+
+## Role in the Bodai Trunk-Based Workflow
+
+Crackerjack is the **stage-3 merge gate** in the Bodai ecosystem's
+trunk-based agent-review dev workflow. Canonical spec:
+`~/Projects/mahavishnu/docs/specs/2026-10-03-agent-reviewed-trunk-based-dev.md`.
+
+When invoked from the workflow — the `merge-to-main` slash command,
+its SessionEnd hook, or `mahavishnu/core/merge_to_main.py::run_pipeline()`:
+
+- The gate invocation is **`crackerjack run -v`**. NOT `-p`.
+- **`-p` (publish) must never fire from the merge path.** `-p` would
+  tag, version-bump, and push, which the workflow explicitly forbids
+  at the merge stage. Publish is stage 7, owned by the human.
+- A non-zero exit blocks the merge. The workflow is fail-closed.
+
+Any change to `crackerjack run` semantics that could affect the gate
+(verbosity contract, exit codes, default-flag drift, etc.) **must** be
+reflected back into the mahavishnu spec and its decision doc
+(`~/Projects/mahavishnu/.claude/decisions/2026-10-03-trunk-based-agent-review.md`)
+so the contract stays in sync.
 
 ## Critical Architectural Pattern: Protocol-Based Design
 
