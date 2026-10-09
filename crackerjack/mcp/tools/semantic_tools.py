@@ -108,12 +108,33 @@ def _register_search_semantic_tool(mcp_app: t.Any) -> None:
             vector_store = VectorStore(config, db_path=_get_persistent_db_path())
             results = vector_store.search(search_query)
 
+            stats = vector_store.get_stats()
+            index_empty = stats.total_chunks == 0
+
             response_data = _format_search_results(
                 results,
                 sanitized_query,
                 max_results,
                 min_similarity,
             )
+
+            if index_empty:
+                response_data["status"] = "degraded"
+                response_data["hint"] = (
+                    "Semantic index is empty. Run the reindex procedure "
+                    "documented in crackerjack/docs/operations/reindex.md "
+                    "to populate the index, or call `index_file_semantic` "
+                    "with files you want searchable."
+                )
+            elif not results:
+                response_data["status"] = "ok"
+                response_data["hint"] = (
+                    "Index is populated, but no chunk reached "
+                    f"min_similarity={min_similarity}."
+                )
+            else:
+                response_data["status"] = "ok"
+
             return json.dumps(response_data)
 
         except Exception as e:

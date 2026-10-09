@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import typing as t
 from contextlib import suppress
+from pathlib import Path
 
 from crackerjack.mcp.context import get_context
 from crackerjack.services.pycharm_mcp_integration import (
@@ -11,6 +13,24 @@ from crackerjack.services.pycharm_mcp_integration import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _resolve_local_search_root() -> Path:
+    """Resolve the directory to walk for the local regex fallback.
+
+    Prefers the MCP server context's configured ``project_path`` (set in
+    ``crackerjack/mcp/server_core.py:_setup_server_context``), then falls back
+    to ``Path.cwd()``. This keeps ``search_code`` deterministic regardless of
+    which working directory the MCP client launched from.
+    """
+    try:
+        ctx = get_context()
+        project_path = getattr(ctx.config, "project_path", None)  # type: ignore[attr-defined]
+        if project_path is not None:
+            return Path(project_path).resolve()
+    except RuntimeError:
+        logger.debug("MCP context not initialized; using Path.cwd() for search root")
+    return Path.cwd().resolve()
 
 
 def register_pycharm_tools(mcp_app: t.Any) -> None:
@@ -97,6 +117,84 @@ def _register_get_ide_diagnostics_tool(mcp_app: t.Any) -> None:
         )
 
 
+def _local_regex_search(
+    pattern: str,
+    file_pattern: str | None,
+    search_root: Path,
+    max_results: int = 100,
+) -> list[dict[str, t.Any]]:
+    """Walk ``search_root`` and return up to ``max_results`` matches.
+
+    Used as the local fallback when the PyCharm MCP adapter is unavailable
+    (no PyCharm IDE running) or returns no results. Cwd-independent: the
+    caller passes ``_resolve_local_search_root()`` so the search is scoped
+    to the configured project_path, not whatever directory the MCP client
+    launched from.
+    """
+    try:
+        compiled = re.compile(pattern)
+    except re.error as e:
+        logger.warning(f"Invalid regex pattern rejected: {pattern[:50]!r}: {e}")
+        return []
+
+    results: list[dict[str, t.Any]] = []
+    if file_pattern:
+        if file_pattern.startswith("*."):
+            extensions = [file_pattern[1:]]
+        else:
+            extensions = []
+            if file_pattern.startswith("."):
+                extensions = [file_pattern]
+            else:
+                extensions = (
+                    [f".{file_pattern}"] if "." not in file_pattern else [file_pattern]
+                )
+    else:
+        extensions = [".py"]
+
+    if not search_root.exists():
+        logger.debug(f"search_root does not exist: {search_root}")
+        return []
+
+    try:
+        for file_path in search_root.rglob("*"):
+            if not file_path.is_file():
+                continue
+            if file_path.suffix not in extensions:
+                continue
+            try:
+                lines = file_path.read_text(
+                    encoding="utf-8", errors="ignore"
+                ).splitlines()
+            except OSError, UnicodeError:
+                continue
+
+            for line_no, line_text in enumerate(lines, start=1):
+                if compiled.search(line_text):
+                    rel_path = file_path
+                    try:
+                        rel_path = file_path.relative_to(search_root)
+                    except ValueError:
+                        pass
+                    results.append(
+                        {
+                            "file_path": str(rel_path),
+                            "line": line_no,
+                            "column": 0,
+                            "match": line_text.strip()[:200],
+                            "context_before": None,
+                            "context_after": None,
+                        }
+                    )
+                    if len(results) >= max_results:
+                        return results
+    except Exception as e:
+        logger.debug(f"Local regex search failed: {e}")
+        return results
+
+    return results
+
+
 def _register_search_code_tool(mcp_app: t.Any) -> None:
 
     @mcp_app.tool()
@@ -106,38 +204,60 @@ def _register_search_code_tool(mcp_app: t.Any) -> None:
     ) -> str:
         adapter = _get_adapter()
 
-        if adapter is None:
-            return _create_error_response(
-                "MCP context not initialized",
-                pattern=pattern,
-            )
+        results: list = []
+        adapter_used: bool = False
+        adapter_error: str | None = None
 
-        try:
-            results = await adapter.search_regex(pattern, file_pattern)
-        except Exception as e:
-            logger.error(f"Code search failed: {e}")
-            return _create_error_response(str(e), pattern=pattern)
+        if adapter is not None:
+            try:
+                results = await adapter.search_regex(pattern, file_pattern)
+                adapter_used = True
+            except Exception as e:
+                logger.error(f"Code search via adapter failed: {e}")
+                adapter_error = str(e)
+
+        if not results:
+            try:
+                search_root = _resolve_local_search_root()
+                local = _local_regex_search(pattern, file_pattern, search_root)
+                if local:
+                    results = local
+            except Exception as e:
+                logger.debug(f"Local search fallback failed: {e}")
 
         formatted_results = [
             {
-                "file_path": r.file_path,
-                "line": r.line_number,
-                "column": r.column,
-                "match": r.match_text,
-                "context_before": r.context_before,
-                "context_after": r.context_after,
+                "file_path": r["file_path"] if isinstance(r, dict) else r.file_path,
+                "line": r["line"] if isinstance(r, dict) else r.line_number,
+                "column": r["column"] if isinstance(r, dict) else r.column,
+                "match": r["match"] if isinstance(r, dict) else r.match_text,
+                "context_before": r["context_before"] if isinstance(r, dict) else r.context_before,
+                "context_after": r["context_after"] if isinstance(r, dict) else r.context_after,
             }
             for r in results
         ]
 
-        return _create_success_response(
-            {
-                "results": formatted_results,
-                "count": len(formatted_results),
-                "pattern": pattern,
-                "file_pattern": file_pattern,
-            }
-        )
+        if formatted_results:
+            status = "ok"
+        else:
+            status = "degraded"
+        payload: dict[str, t.Any] = {
+            "results": formatted_results,
+            "count": len(formatted_results),
+            "pattern": pattern,
+            "file_pattern": file_pattern,
+            "status": status,
+            "source": "pycharm_adapter" if adapter_used else "local_fallback",
+        }
+        if adapter_error:
+            payload["adapter_error"] = adapter_error
+        if status == "degraded":
+            payload["hint"] = (
+                "No matches found via PyCharm MCP and the local fallback. "
+                "Ensure PyCharm is running with the MCP server enabled, or "
+                "verify the search root contains files matching pattern."
+            )
+        return _create_success_response(payload)
 
 
 def _register_get_symbol_info_tool(mcp_app: t.Any) -> None:
