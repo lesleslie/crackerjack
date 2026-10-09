@@ -381,3 +381,22 @@ Inherit the user-level convention from `~/.claude/CLAUDE.md`. The canonical path
     ~/.local/state/mahavishnu/worktrees/<basename-of-cwd>/
 
 The superpowers `using-git-worktrees` skill reads this block before its hard-coded project-local default, so the XDG path wins.
+
+## Merge workflow
+
+The `agent-merge-on-end.py` SessionEnd hook (`.claude/hooks/agent-merge-on-end.py`)
+runs on every Claude session end. When the active worktree is on a feature
+branch and the merge workflow contract is satisfied, the hook squashes the
+branch into local `main` and clears the worktree. The orchestration module
+(`mahavishnu.core.merge_to_main`) and the `/merge-to-main` slash command
+live in the mahavishnu repo. See
+`docs/specs/2026-10-03-agent-reviewed-trunk-based-dev.md` for the full
+contract and `.claude/decisions/2026-10-03-trunk-based-agent-review.md`
+for the rationale.
+
+**Push governance:** This repo retains user-controlled push. `git push origin main`
+is governed by the user; see
+`/Users/les/Projects/mahavishnu/.claude/decisions/2026-10-03-mainautopush.md`
+for the auto-push pattern that mahavishnu adopted (mahavishnu is the only
+Bodai repo with auto-push; this repo does not). Until the user replicates
+the decision locally, no `git push` is to be performed by automation.

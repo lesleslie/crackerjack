@@ -213,14 +213,17 @@ crackerjack-*/
 # ============================================================================
 # XDG - State directories
 # ============================================================================
-.claude/
-# Workflow scripts are project-shared canonical config — track them.
-# IMPORTANT: `.claude/` excludes the parent directory; transitive directory
-# matches in `.claude/*` would otherwise drop `.claude/workflows/**` too.
-# Re-include the directory entry first, then recursively with `**` so nested
-# paths like `.claude/workflows/.archive/*.js` are tracked. Pattern matches
-# mahavishnu's `.claude/commands/`, `.claude/skills/` allow-rules.
+# `.claude/*` excludes top-level entries only — directory itself stays
+# accessible, so the per-subdir negation rules below can re-include nested
+# content. Per `man gitignore`: "It is not possible to re-include a file
+# if a parent directory of that file is excluded."
 .claude/*
+# Workflow scripts are project-shared canonical config — track them.
+# IMPORTANT: `.claude/*` excludes top-level children; the negation
+# rules below re-include the directory entry first, then recursively
+# with `**` so nested paths like `.claude/workflows/.archive/*.js` are
+# tracked. Pattern matches mahavishnu's `.claude/commands/`,
+# `.claude/skills/` allow-rules.
 !.claude/workflows/
 !.claude/workflows/**
 # Standard Bodai allowlist: shared team content (decisions, agents, skills).
@@ -233,6 +236,12 @@ crackerjack-*/
 !.claude/agents/**
 !.claude/skills/
 !.claude/skills/**
+# PR-1c: SessionEnd hook + settings.json are part of the cross-repo
+# merge-workflow infra (mahavishnu/.claude/hooks/agent-merge-on-end.py
+# + .claude/settings.json). Track them so fresh clones ship the hook.
+!.claude/hooks/
+!.claude/hooks/**
+!.claude/settings.json
 .session-buddy/
 .crackerjack/
 
