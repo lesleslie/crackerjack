@@ -152,9 +152,18 @@ async def create_mcp_server(config: dict[str, t.Any] | None = None) -> t.Any | N
 
     @mcp_app.custom_route("/health", methods=["GET"])
     async def health_check(request: t.Any) -> t.Any:
+        from time import perf_counter
+
+        from mcp_common.health.metrics import update_health_metrics
+        from prometheus_client import REGISTRY
         from starlette.responses import JSONResponse
 
-        from crackerjack.mcp.signer_feed import get_signer_feed_state
+        from crackerjack.mcp.health import (
+            build_health_envelope,
+            build_health_snapshot,
+            get_health_feed_halflife_seconds,
+            status_to_http_code,
+        )
 
         # REQ-005: surface the launcher version so MCP clients can verify
         # which startup path the server actually used. Read at request time
@@ -165,8 +174,12 @@ async def create_mcp_server(config: dict[str, t.Any] | None = None) -> t.Any | N
             "launcher": f"mcp_common.server.launcher@{mcp_common.__version__}",
         }
 
-        state = get_signer_feed_state()
-        if state is None:
+        start = perf_counter()
+        snap = build_health_snapshot()
+        duration_ms = (perf_counter() - start) * 1000.0
+
+        envelope = build_health_envelope()
+        if envelope is None:
             # Pre-init warm-up window OR init failed inside
             # create_mcp_server. Return 503 per the plan §10.3.2
             # warm-up contract.
@@ -180,23 +193,31 @@ async def create_mcp_server(config: dict[str, t.Any] | None = None) -> t.Any | N
                             "error": "not initialized",
                         },
                     },
+                    "degraded_feeds": ["skills_signer"],
                 },
                 status_code=503,
             )
 
-        signer_dict = state.as_dict()
-        signer_ok = bool(signer_dict.get("ok"))
-        if not signer_ok:
-            # Signer feed is degraded (empty manifest). Return 503
-            # per mcp-backend-wiring-discipline.md.
-            return JSONResponse(
-                base | {"status": "degraded", "checks": {"skills_signer": signer_dict}},
-                status_code=503,
-            )
+        http_code = status_to_http_code(snap) if snap is not None else 503
 
-        return JSONResponse(
-            base | {"status": "ok", "checks": {"skills_signer": signer_dict}}
-        )
+        # Update prometheus metrics with the aggregator's verdict so
+        # the alerts in config/prometheus/health_aggregator_alerts.yml
+        # fire live. Never let metrics failure break the health route.
+        if snap is not None:
+            try:
+                update_health_metrics(
+                    registry=REGISTRY,
+                    snap=snap,
+                    repo="crackerjack",
+                    halflife_seconds=get_health_feed_halflife_seconds(),
+                    duration_ms=duration_ms,
+                )
+            except Exception as metrics_exc:
+                console.print(
+                    f"[yellow]Warning: health metrics update failed: {metrics_exc}[/yellow]",
+                )
+
+        return JSONResponse(base | envelope, status_code=http_code)
 
     @mcp_app.custom_route("/healthz", methods=["GET"])
     async def healthz_check(request: t.Any) -> t.Any:
