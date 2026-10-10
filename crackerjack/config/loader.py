@@ -44,11 +44,7 @@ def crackerjack_env_overlay[T: BaseModel](settings_class: type[T]) -> dict[str, 
 def _merge_env_overlay(merged: dict[str, t.Any], env_overlay: dict[str, t.Any]) -> None:
     """Merge per-key for nested sections (avoid clobbering YAML siblings)."""
     for key, value in env_overlay.items():
-        if (
-            key in merged
-            and isinstance(merged[key], dict)
-            and isinstance(value, dict)
-        ):
+        if key in merged and isinstance(merged[key], dict) and isinstance(value, dict):
             merged[key].update(value)
         else:
             merged[key] = value
@@ -139,4 +135,13 @@ def load_settings[T: BaseModel](
 async def load_settings_async[T: BaseModel](
     settings_class: type[T],
 ) -> T:
-    return await asyncio.to_thread(load_settings, settings_class)
+    # Body-rebind guard for ty: ``asyncio.to_thread(load_settings, ...)``
+    # returns ``T@load_settings``, which ty cannot unify with this
+    # function's outer ``T`` even though they're bound to the same
+    # ``settings_class`` input. The inner closure's explicit ``-> T``
+    # gives ty a single concrete return type to bind, which then
+    # propagates through ``to_thread``. See feedback-ty-narrowing-pattern.
+    def _load() -> T:
+        return load_settings(settings_class)
+
+    return await asyncio.to_thread(_load)

@@ -1,6 +1,6 @@
 # Plan Index
 
-_Regenerated 2026-10-09 by `crackerjack.tools.plan_index_sync` (fast-hook)._
+_Regenerated 2026-10-10 by `crackerjack.tools.plan_index_sync` (fast-hook)._
 
 ### Docs: adr
 
@@ -44,7 +44,7 @@ _Regenerated 2026-10-09 by `crackerjack.tools.plan_index_sync` (fast-hook)._
 | [`docs/plans/2026-09-07-crackerjack-multi-language-phase2.md`](2026-09-07-crackerjack-multi-language-phase2.md) | 2026-09-08 | `shipped` | `implementation` | `architecture` | Crackerjack Multi-Language Extension — Phase 2 (Swift) Plan |
 | [`docs/plans/2026-09-07-crackerjack-multi-language-phase3.md`](2026-09-07-crackerjack-multi-language-phase3.md) | 2026-09-09 | `shipped` | `implementation` | `architecture` | Crackerjack Multi-Language Extension — Phase 3 (Kotlin/Gradle) Plan |
 | [`docs/plans/2026-09-07-crackerjack-multi-language-phase4.md`](2026-09-07-crackerjack-multi-language-phase4.md) | 2026-09-09 | `shipped` | `implementation` | `architecture` | Crackerjack Multi-Language Extension — Phase 4 (Web/CSS/HTML/JS/TS) Plan |
-| [`docs/plans/2026-10-10-crackerjack-oneiric-loader-migration.md`](2026-10-10-crackerjack-oneiric-loader-migration.md) | 2026-10-10 | `draft` | `implementation` | `settings-resolution` | Crackerjack Settings Loader — Migration to Oneiric |
+| [`docs/plans/2026-10-10-crackerjack-oneiric-loader-migration.md`](2026-10-10-crackerjack-oneiric-loader-migration.md) | 2026-10-10 | `draft` | `implementation` | `settings-resolution` | Crackerjack Settings Loader — Migration to Oneiric — Implementation Plan |
 | [`docs/plans/AI_FIX_IMPROVEMENT_PLAN.md`](AI_FIX_IMPROVEMENT_PLAN.md) | 2026-07-17 | `complete` | `historical` | `lifecycle` | AI-Fix Improvement Plan |
 
 ### Docs: specs
@@ -63,6 +63,7 @@ _Regenerated 2026-10-09 by `crackerjack.tools.plan_index_sync` (fast-hook)._
 | [`docs/specs/2026-08-06-crackerjack-ruff-fix-policy-design.md`](../specs/2026-08-06-crackerjack-ruff-fix-policy-design.md) | 2026-08-06 | `draft` | `implementation` | `architecture` | Crackerjack Ruff Fix Policy Design |
 | [`docs/specs/2026-08-11-bodai-coverage-ratchet-standard-design.md`](../specs/2026-08-11-bodai-coverage-ratchet-standard-design.md) | 2026-08-11 | `complete` | `canonical` | `architecture` | Coverage-Ratchet Standardization — Design |
 | [`docs/specs/2026-09-07-crackerjack-multi-language-design.md`](../specs/2026-09-07-crackerjack-multi-language-design.md) | 2026-09-07 | `complete` | `canonical` | `architecture` | Crackerjack Multi-Language Extension |
+| [`docs/specs/2026-10-10-crackerjack-oneiric-loader-migration-design.md`](../specs/2026-10-10-crackerjack-oneiric-loader-migration-design.md) | 2026-10-10 | `draft` | `implementation` | `settings-resolution` | Spec: Crackerjack Settings Loader — Migration to Oneiric |
 
 ### Docs: plans
 
@@ -97,7 +98,7 @@ _Regenerated 2026-10-09 by `crackerjack.tools.plan_index_sync` (fast-hook)._
 | [`docs/plans/2026-09-07-crackerjack-multi-language-phase2.md`](2026-09-07-crackerjack-multi-language-phase2.md) | 2026-09-08 | `shipped` | `implementation` | `architecture` | Crackerjack Multi-Language Extension — Phase 2 (Swift) Plan |
 | [`docs/plans/2026-09-07-crackerjack-multi-language-phase3.md`](2026-09-07-crackerjack-multi-language-phase3.md) | 2026-09-09 | `shipped` | `implementation` | `architecture` | Crackerjack Multi-Language Extension — Phase 3 (Kotlin/Gradle) Plan |
 | [`docs/plans/2026-09-07-crackerjack-multi-language-phase4.md`](2026-09-07-crackerjack-multi-language-phase4.md) | 2026-09-09 | `shipped` | `implementation` | `architecture` | Crackerjack Multi-Language Extension — Phase 4 (Web/CSS/HTML/JS/TS) Plan |
-| [`docs/plans/2026-10-10-crackerjack-oneiric-loader-migration.md`](2026-10-10-crackerjack-oneiric-loader-migration.md) | 2026-10-10 | `draft` | `implementation` | `settings-resolution` | Crackerjack Settings Loader — Migration to Oneiric |
+| [`docs/plans/2026-10-10-crackerjack-oneiric-loader-migration.md`](2026-10-10-crackerjack-oneiric-loader-migration.md) | 2026-10-10 | `draft` | `implementation` | `settings-resolution` | Crackerjack Settings Loader — Migration to Oneiric — Implementation Plan |
 | [`docs/plans/AI_FIX_IMPROVEMENT_PLAN.md`](AI_FIX_IMPROVEMENT_PLAN.md) | 2026-07-17 | `complete` | `historical` | `lifecycle` | AI-Fix Improvement Plan |
 
 ### .claude/decisions
@@ -124,8 +125,8 @@ _Regenerated 2026-10-09 by `crackerjack.tools.plan_index_sync` (fast-hook)._
 | Role \\ Lifecycle | draft | active | partial | shipped | complete | Total |
 |---|---|---|---|---|---|---|
 | `canonical` | · | 6 | · | · | 2 | **8** |
-| `implementation` | 18 | 30 | · | 16 | 1 | **65** |
+| `implementation` | 21 | 30 | · | 16 | 1 | **68** |
 | `umbrella` | · | · | · | · | · | **0** |
 | `historical` | · | · | · | · | 12 | **12** |
 | `superseded` | · | · | · | · | · | **0** |
-| **Total** | **18** | **36** | **·** | **16** | **15** | **85** |
+| **Total** | **21** | **36** | **·** | **16** | **15** | **88** |

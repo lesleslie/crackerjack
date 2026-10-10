@@ -1,6 +1,7 @@
 import logging
 import sys
 import typing as t
+from contextlib import suppress
 
 _EARLY_DEBUG_MODE = any(
     arg in ("--debug", "-d", "--ai-debug") or arg.startswith("--debug=")
@@ -24,6 +25,38 @@ if not _EARLY_DEBUG_MODE:
         logger = logging.getLogger(logger_name)
         logger.setLevel(logging.WARNING)
         logger.propagate = False
+
+    # Silence oneiric's *structlog* loggers (``config``, ``plugins``,
+    # ``observability``, etc.) before any module import triggers
+    # ``load_settings``. The stdlib ``logging`` silencing above does NOT
+    # catch structlog output — oneiric.core.logging.get_logger returns a
+    # structlog ``BoundLogger`` whose level is governed by structlog's
+    # ``wrapper_class`` (``make_filtering_bound_logger``), not by
+    # ``logging.getLogger().setLevel``. Without this block, every
+    # ``load_settings`` call emits ``project-config-loaded`` /
+    # ``xdg-local-config-loaded`` events to stderr before crackerjack's
+    # banner prints — those are internal config-trace events, not user-
+    # facing diagnostics, so they belong at WARNING+ in non-debug mode.
+    #
+    # Why ``cache_logger_on_first_use=True`` matters: oneiric's modules
+    # (``oneiric/core/config.py:25``, ``plugins.py:13``, etc.) eagerly
+    # fetch their loggers at import time via ``get_logger("config")``. With
+    # caching on, those fetches bind to the current wrapper_class — our
+    # WARNING floor. Later calls to ``oneiric.core.logging.configure_logging``
+    # (``crackerjack.services.logging.setup_structured_logging`` etc.) reset
+    # the *config* but the cached loggers still hold the wrapper we set
+    # here, so they stay silenced. In ``--debug`` mode we skip this block
+    # entirely, leaving structlog at its defaults so oneiric's later
+    # ``configure_logging(DEBUG)`` call takes effect normally.
+    with suppress(ImportError):
+        # structlog is a hard dep but stay defensive — a missing import
+        # here should never break CLI startup.
+        import structlog
+
+        structlog.configure(
+            wrapper_class=structlog.make_filtering_bound_logger(logging.WARNING),
+            cache_logger_on_first_use=True,
+        )
 
 from importlib.metadata import version
 

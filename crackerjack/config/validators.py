@@ -45,6 +45,8 @@ def reshape_adapter_timeouts(data: t.Any) -> t.Any:
     for k in timeouts:
         data.pop(k, None)
     return data
+
+
 # _KNOWN_PYPROJECT_SUBTABLES now lives in settings.py (Task 1). Import lazily
 # to avoid a circular import.
 def warn_unknown_pyproject_subtables(instance: t.Any) -> t.Any:

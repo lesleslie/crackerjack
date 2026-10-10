@@ -4,6 +4,7 @@ date: 2026-10-10
 last_reviewed: 2026-10-10
 title: "Crackerjack Settings Loader — Migration to Oneiric"
 topic: settings-resolution
+role: implementation
 kind: design
 ---
 
@@ -79,7 +80,7 @@ Crackerjack uses Oneiric's schema base but a hand-rolled loader:
 "Migrate 37 settings classes to OneiricMCPConfig". The loader was
 deliberately *not* part of that migration. The 2026-09-29 Mahavishnu
 migration (commit history at `mahavishnu/core/config.py:3134`) is the
-working template this spec re-uses.
+working template this spec reuses.
 
 **Call-site inventory (blast radius — 18 files reference `load_settings`,
 7 reference the loader module directly)**

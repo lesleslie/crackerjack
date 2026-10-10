@@ -30,7 +30,7 @@ collision. Two resolutions are mathematically possible:
 1. **Override `env_prefix` to `CRACKERJACK_MCP_` on a `_CrackerjackMCPConfig`
    subclass** of `OneiricMCPConfig`, and re-parent the ~38 settings classes
    in `crackerjack/config/settings.py` onto the subclass.
-2. **Route `CRACKERJACK_*` env vars through an explicit overlay**, as
+1. **Route `CRACKERJACK_*` env vars through an explicit overlay**, as
    Mahavishnu does at `mahavishnu/core/config.py:3209`.
 
 A mechanical probe (subclassing `OneiricMCPConfig` with a new
@@ -70,7 +70,7 @@ The overlay is sufficient because:
    keys without a matching field are silently dropped (verified via
    `crackerjack_env_overlay` returning `{}` for unknown keys such as
    `CRACKERJACK_LOG_LEVEL`).
-2. Operators who hit a top-level field via env var get the exact value
+1. Operators who hit a top-level field via env var get the exact value
    the loader computed from the layered precedence.
 
 ## Status
@@ -89,10 +89,10 @@ auto-binding (Option B from spec §5.5), a follow-up PR should:
 
 1. Introduce `_CrackerjackMCPConfig(OneiricMCPConfig)` with the new
    `env_prefix="CRACKERJACK_MCP_"`.
-2. Re-parent the ~38 settings classes in `crackerjack/config/settings.py`.
-3. Verify that pydantic-settings' auto-binding composition order does
+1. Re-parent the ~38 settings classes in `crackerjack/config/settings.py`.
+1. Verify that pydantic-settings' auto-binding composition order does
    not violate REQ-006's layered precedence (XDG → YAML → env overlay).
-4. Add an integration test that asserts pydantic-settings auto-binding
+1. Add an integration test that asserts pydantic-settings auto-binding
    matches `_crackerjack_env_overlay` for every declared top-level field
    (catch any field that diverges between the two paths).
 

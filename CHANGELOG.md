@@ -10,6 +10,20 @@ blocks_on: []
 topic: changelog
 ---
 
+## [0.87.0] - 2026-10-10
+
+### Added
+
+- config: Route Crackerjack settings loader through Oneiric
+
+### Documentation
+
+- crackerjack: Spec + plan for Oneiric loader migration
+
+### Internal
+
+- Remove crackerjack 1:1 wrapper slash commands
+
 ## [0.86.0] - 2026-10-09
 
 ### Added

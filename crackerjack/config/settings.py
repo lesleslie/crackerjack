@@ -491,7 +491,7 @@ class CrackerjackSettings(OneiricMCPConfig):
         return reshape_adapter_timeouts(data)
 
     @model_validator(mode="after")
-    def _warn_unknown_pyproject_subtables(self) -> "CrackerjackSettings":  # REQ-003
+    def _warn_unknown_pyproject_subtables(self) -> CrackerjackSettings:  # REQ-003
         warn_unknown_pyproject_subtables(self)
         return self
 

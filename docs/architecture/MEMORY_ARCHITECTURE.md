@@ -1273,7 +1273,7 @@ ______________________________________________________________________
 
 Settings are resolved through Oneiric's
 `load_settings(project_name="crackerjack")` — see
-[`crackerjack/config/loader.py`](../../config/loader.py). The
+[`crackerjack/config/loader.py`](../../crackerjack/config/loader.py). The
 CWD-relative `load_settings(settings_class)` is the common path; call
 sites that need a specific anchor (e.g.
 `crackerjack/adapters/python/lifecycle.py:200, 204` — anchored at
@@ -1284,10 +1284,11 @@ Precedence mirrors the fleet (XDG override → project committed → env
 var → defaults). The two bespoke behaviors (`[tool.crackerjack.X]`
 sub-table warning; `*_timeout` reshape into `adapter_timeouts`) are
 Pydantic `model_validator`s on `CrackerjackSettings` — see
-[`crackerjack/config/validators.py`](../../config/validators.py). See
+[`crackerjack/config/validators.py`](../../crackerjack/config/validators.py). See
 the migration plan
 [`docs/plans/2026-10-10-crackerjack-oneiric-loader-migration.md`](../plans/2026-10-10-crackerjack-oneiric-loader-migration.md)
 for the rationale.
+
 - **`enable_zuban` opt-in** (`pyproject.toml:182`): Zuban LSP
   starts when both `zuban_lsp.enabled=true` and the subprocess
   launcher succeeds. Disabled by default in `pyproject.toml:181`.

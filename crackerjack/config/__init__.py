@@ -13,7 +13,11 @@ from .hooks import (
     HookStrategy,
     RetryPolicy,
 )
-from .loader import load_settings, load_settings_async, load_settings_for_project
+from .loader import (
+    load_settings,
+    load_settings_async,
+    load_settings_for_project,  # noqa: F401  # re-exported for tests/unit/test_config_settings.py
+)
 from .profile_loader import (
     ProfileConfig,
     ProfileLoader,
