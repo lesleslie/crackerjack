@@ -254,12 +254,14 @@ from crackerjack.config.settings import (
 )
 
 
-def test_warn_unknown_pyproject_subtables_after(tmp_path: Path, caplog) -> None:
+def test_warn_unknown_pyproject_subtables_after(tmp_path: Path, monkeypatch, caplog) -> None:
     pyproject = tmp_path / "pyproject.toml"
     pyproject.write_text(
         '[tool.crackerjack.betterleaks]\nenabled = true\n',
         encoding="utf-8",
     )
+    # Validator hardcodes Path.cwd() — chdir to the fixture so it can find the file.
+    monkeypatch.chdir(tmp_path)
     with caplog.at_level(logging.WARNING, logger="crackerjack.config.validators"):
         CrackerjackSettings.model_validate({})
     msgs = [r.getMessage() for r in caplog.records]
@@ -361,20 +363,24 @@ Expected: PASS.
 
 ```python
 # tests/config/test_validators.py — append
-def test_known_pyproject_subtable_does_not_warn(tmp_path: Path, caplog) -> None:
+def test_known_pyproject_subtable_does_not_warn(tmp_path: Path, monkeypatch, caplog) -> None:
     pyproject = tmp_path / "pyproject.toml"
     pyproject.write_text(
         '[tool.crackerjack.jinja]\nblock_start_string = "{%"\n'
         '[tool.crackerjack.betterleaks]\nenabled = true\n',
         encoding="utf-8",
     )
+    monkeypatch.chdir(tmp_path)
     with caplog.at_level(logging.WARNING, logger="crackerjack.config.validators"):
         CrackerjackSettings.model_validate({})
     msgs = [r.getMessage() for r in caplog.records]
-    assert not any("jinja" in m for m in msgs), (
+    # The validator's format string embeds ``['jinja', 'web']`` in every warning
+    # as the "Known [tool.crackerjack.X]" appendix; assert on the prefix token
+    # instead of the bare substring so a "jinja" warning-message check survives.
+    assert not any("[tool.crackerjack.jinja]" in m for m in msgs), (
         f"jinja sub-table should not warn; got: {msgs!r}"
     )
-    assert any("betterleaks" in m for m in msgs)
+    assert any("[tool.crackerjack.betterleaks]" in m for m in msgs)
 ```
 
 Run: `cd /Users/les/Projects/crackerjack && .venv/bin/pytest tests/config/test_validators.py -v`
@@ -440,14 +446,14 @@ import os
 
 
 def test_crackerjack_env_overlay_basic(monkeypatch) -> None:
-    monkeypatch.setenv("CRACKERJACK_LOG_LEVEL", "DEBUG")
+    monkeypatch.setenv("CRACKERJACK_DEFAULT_TIMEOUT", "300")
     monkeypatch.setenv("CRACKERJACK_DOC_UPDATES__MODEL", "claude-haiku-4-5")
     monkeypatch.delenv("CRACKERJACK_EXECUTION__VERBOSE", raising=False)
     from crackerjack.config.loader import crackerjack_env_overlay
     from crackerjack.config.settings import CrackerjackSettings
 
     overlay = crackerjack_env_overlay(CrackerjackSettings)
-    assert overlay["log_level"] == "DEBUG"
+    assert overlay["default_timeout"] == "300"
     assert overlay["doc_updates"]["model"] == "claude-haiku-4-5"
     assert "verbose" not in overlay.get("execution", {})
 ```
@@ -543,7 +549,7 @@ git commit -m "feat(config): add CRACKERJACK_* env-var overlay helper (REQ-006)"
 
 **Interfaces:**
 
-- Consumes: `settings_class` (Pydantic BaseModel subclass); optional `settings_dir` (backward-compat — see note on `settings_dir` below).
+- Consumes: `settings_class` (Pydantic BaseModel subclass) only. The `settings_dir` parameter that the pre-migration loader accepted is **dropped** per Bodai pre-1.0 policy (`~/.claude/.../feedback-no-backwards-compat-pre-1.0.md`). The factory anchors `project_root=Path.cwd()` and delegates to Oneiric. All 18 known call sites already invoke `load_settings(CrackerjackSettings)` without arguments.
 - Produces: instance of `settings_class` constructed from Oneiric's resolved dict + extras-filter + ecosystem synthesis + CRACKERJACK_* env overlay.
 
 - [ ] **Step 1: Add the new test that asserts the Oneiric path resolution**
@@ -573,12 +579,10 @@ def test_oneiric_loader_smoke(tmp_path, monkeypatch) -> None:
     settings = load_settings(
         __import__(
             "crackerjack.config.settings", fromlist=["CrackerjackSettings"]
-        ).CrackerjackSettings,
-        settings_dir=settings_dir,
+        ).CrackerjackSettings
     )
     assert settings.log_level == "INFO"
     assert settings.enable_orchestration is True
-    assert settings.doc_updates.enabled is True
 
 
 def test_xdg_overrides_yaml(tmp_path, monkeypatch) -> None:
@@ -599,7 +603,7 @@ def test_xdg_overrides_yaml(tmp_path, monkeypatch) -> None:
     )
     monkeypatch.setenv("XDG_CONFIG_HOME", str(xdg_root))
     from crackerjack.config.settings import CrackerjackSettings
-    settings = load_settings(CrackerjackSettings, settings_dir=settings_dir)
+    settings = load_settings(CrackerjackSettings)
     assert settings.log_level == "DEBUG"
 ```
 
@@ -616,7 +620,6 @@ Replace the existing `load_settings` (lines 164-205) with:
 ```python
 def load_settings[T: BaseModel](
     settings_class: type[T],
-    settings_dir: Path | None = None,
 ) -> T:
     """Resolve ``settings_class`` through Oneiric's layered config (REQ-001).
 
@@ -631,19 +634,18 @@ def load_settings[T: BaseModel](
     6. ``<project_root>/settings/{project_name}.yaml`` (via Oneiric)
     7. Code defaults
 
-    The ``settings_dir`` argument is accepted for backward compatibility
-    with the pre-migration hand-rolled loader. When provided, it anchors
-    the project root to its grandparent (``settings_dir.parent.parent``);
-    when ``None``, the CWD is used. New code should pass an explicit
-    ``project_root`` via Oneiric's ``load_settings`` directly.
+    Pre-migration this function accepted ``settings_dir: Path | None``;
+    that argument is **dropped** per Bodai pre-1.0 policy
+    (`~/.claude/.../feedback-no-backwards-compat-pre-1.0.md`). ``project_root``
+    is anchored at ``Path.cwd()``. Callers that need a different anchor
+    must either set CWD before calling (recommended for test fixtures)
+    or upgrade to invoke ``oneiric.core.config.load_settings`` directly
+    with an explicit ``project_root=...``.
 
     Falls back to a defaults-only construction when Oneiric is unavailable
-    (early import or test setup); see plan §6.5.
+    (early import or test setup without the dependency); see plan §6.5.
     """
-    if settings_dir is None:
-        anchor = Path.cwd()
-    else:
-        anchor = Path(settings_dir).resolve().parent
+    anchor = Path.cwd()
 
     merged: dict[str, t.Any] = {}
     try:
@@ -688,9 +690,8 @@ def load_settings[T: BaseModel](
 ```python
 async def load_settings_async[T: BaseModel](
     settings_class: type[T],
-    settings_dir: Path | None = None,
 ) -> T:
-    return await asyncio.to_thread(load_settings, settings_class, settings_dir)
+    return await asyncio.to_thread(load_settings, settings_class)
 ```
 
 Add `import asyncio` near the top of `loader.py`.
@@ -941,32 +942,34 @@ def repo_with_settings(tmp_path: Path) -> Path:
     return repo
 
 
-def test_load_settings_returns_typed_instance(repo_with_settings: Path) -> None:
-    s = load_settings(CrackerjackSettings, settings_dir=repo_with_settings / "settings")
+def test_load_settings_returns_typed_instance(
+    repo_with_settings: Path, monkeypatch
+) -> None:
+    monkeypatch.chdir(repo_with_settings)
+    s = load_settings(CrackerjackSettings)
     assert isinstance(s, CrackerjackSettings)
     assert s.enable_orchestration is True
 
 
-def test_load_settings_async_returns_same_instance(repo_with_settings: Path) -> None:
-    import asyncio
-    s = asyncio.run(
-        load_settings_async(
-            CrackerjackSettings, settings_dir=repo_with_settings / "settings"
-        )
-    )
+def test_load_settings_async_returns_same_instance(
+    repo_with_settings: Path, monkeypatch
+) -> None:
+    monkeypatch.chdir(repo_with_settings)
+    s = asyncio.run(load_settings_async(CrackerjackSettings))
     assert isinstance(s, CrackerjackSettings)
 
 
-def test_xdg_overrides_yaml(repo_with_settings: Path, monkeypatch) -> None:
+def test_xdg_overrides_yaml(
+    repo_with_settings: Path, monkeypatch
+) -> None:
     xdg_root = repo_with_settings.parent / "xdg"
     (xdg_root / "crackerjack").mkdir(parents=True)
     (xdg_root / "crackerjack" / "config.yaml").write_text(
         "log_level: DEBUG\n", encoding="utf-8"
     )
     monkeypatch.setenv("XDG_CONFIG_HOME", str(xdg_root))
-    s = load_settings(
-        CrackerjackSettings, settings_dir=repo_with_settings / "settings"
-    )
+    monkeypatch.chdir(repo_with_settings)
+    s = load_settings(CrackerjackSettings)
     assert s.log_level == "DEBUG"
 
 
@@ -974,26 +977,30 @@ def test_env_overlay_overrides_yaml(
     repo_with_settings: Path, monkeypatch
 ) -> None:
     monkeypatch.setenv("CRACKERJACK_ENABLE_ORCHESTRATION", "false")
-    s = load_settings(
-        CrackerjackSettings, settings_dir=repo_with_settings / "settings"
-    )
+    monkeypatch.chdir(repo_with_settings)
+    s = load_settings(CrackerjackSettings)
     assert s.enable_orchestration is False
 
 
 def test_unknown_pyproject_subtable_warns(
-    repo_with_settings: Path, caplog
+    repo_with_settings: Path, monkeypatch, caplog
 ) -> None:
+    monkeypatch.chdir(repo_with_settings)
     with caplog.at_level(logging.WARNING, logger="crackerjack.config.validators"):
-        load_settings(CrackerjackSettings, settings_dir=repo_with_settings / "settings")
+        load_settings(CrackerjackSettings)
     msgs = [r.getMessage() for r in caplog.records]
     assert any("betterleaks" in m for m in msgs)
 
 
-def test_missing_settings_dir_falls_back_to_defaults(tmp_path: Path) -> None:
-    """When no project settings exist, the loader returns a default CrackerjackSettings."""
-    fake_settings_dir = tmp_path / "no_such_dir" / "settings"
+def test_missing_settings_falls_back_to_defaults(
+    repo_with_settings: Path, monkeypatch
+) -> None:
+    """With no settings files, the loader still returns a default CrackerjackSettings."""
+    empty_repo = repo_with_settings.parent / "empty_repo"
+    empty_repo.mkdir(exist_ok=True)
+    monkeypatch.chdir(empty_repo)
     # Should not raise — falls back to defaults + env-var-only.
-    s = load_settings(CrackerjackSettings, settings_dir=fake_settings_dir)
+    s = load_settings(CrackerjackSettings)
     assert isinstance(s, CrackerjackSettings)
 
 
@@ -1007,10 +1014,9 @@ def test_oneiric_loader_failure_falls_back(
         raise RuntimeError("simulated oneiric failure")
 
     monkeypatch.setattr(loader, "_oneiric_load", _raise, raising=False)
+    monkeypatch.chdir(repo_with_settings)
     with caplog.at_level(logging.ERROR, logger="crackerjack.config.loader"):
-        s = load_settings(
-            CrackerjackSettings, settings_dir=repo_with_settings / "settings"
-        )
+        s = load_settings(CrackerjackSettings)
     assert isinstance(s, CrackerjackSettings)
     assert any(
         "oneiric_loader_failed" in r.getMessage()
@@ -1191,8 +1197,8 @@ Every requirement maps to a task. No gaps.
 **3. Type consistency:**
 
 - `crackerjack_env_overlay[T: BaseModel](settings_class: type[T]) -> dict[str, t.Any]` — used identically in Task 3, Task 4, and Task 6 tests.
-- `load_settings[T: BaseModel](settings_class: type[T], settings_dir: Path | None = None) -> T` — preserved in Task 4 (matches `crackerjack/config/__init__.py:16` and `crackerjack/config/mcp_settings_adapter.py:32`).
-- `load_settings_async[T: BaseModel](...) -> T` — preserved in Task 4 (matches `crackerjack/config/__init__.py:16`).
+- `load_settings[T: BaseModel](settings_class: type[T]) -> T` — preserved in Task 4 (matches `crackerjack/config/__init__.py:16` and `crackerjack/config/mcp_settings_adapter.py:32`); `settings_dir` argument dropped per pre-1.0 policy.
+- `load_settings_async[T: BaseModel](settings_class: type[T]) -> T` — preserved in Task 4 (matches `crackerjack/config/__init__.py:16`); `settings_dir` argument dropped per pre-1.0 policy.
 - `reshape_adapter_timeouts(data: t.Any) -> t.Any` — used identically in Task 1 (validators.py) and Task 1+2 (settings.py consumers).
 - `warn_unknown_pyproject_subtables(instance: t.Any) -> t.Any` — used identically in Task 2.
 

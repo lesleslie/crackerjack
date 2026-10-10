@@ -13,7 +13,7 @@ from .hooks import (
     HookStrategy,
     RetryPolicy,
 )
-from .loader import load_settings, load_settings_async
+from .loader import load_settings, load_settings_async, load_settings_for_project
 from .profile_loader import (
     ProfileConfig,
     ProfileLoader,

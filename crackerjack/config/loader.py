@@ -1,289 +1,142 @@
 from __future__ import annotations
 
+import asyncio
 import logging
+import os
 import typing as t
 from pathlib import Path
 from typing import TypeVar
 
-import yaml
 from pydantic.main import BaseModel
 
 logger = logging.getLogger(__name__)
 
 T = TypeVar("T", bound=BaseModel)
 
-# Sub-table keys under ``[tool.crackerjack.*]`` that crackerjack ACTUALLY
-# reads. A user writing any other sub-table block is almost certainly
-# configuring a hook via the wrong mechanism (the 2026-09-19 mdinject
-# followup suggested ``[tool.crackerjack.betterleaks]`` and
-# ``[tool.crackerjack.lychee]`` — both fictional; betterleaks reads
-# ``.betterleaks.toml`` and lychee reads ``.lycheeignore``). Keep this
-# list short and explicit so the warning message is actionable.
-_KNOWN_PYPROJECT_SUBTABLES: frozenset[str] = frozenset(
-    {
-        # Read by ``crackerjack/adapters/web/jinja_formatter.py:144`` for
-        # per-project Jinja delimiter config (6 keys).
-        "jinja",
-        # Read by ``crackerjack/adapters/web/__init__.py:35`` as an
-        # opt-in flag for the Web adapter.
-        "web",
-    }
-)
 
+def crackerjack_env_overlay[T: BaseModel](settings_class: type[T]) -> dict[str, t.Any]:
+    """Convert ``CRACKERJACK_*`` env vars into a nested-dict overlay.
 
-def _load_single_config_file(config_file: Path) -> dict[str, t.Any]:
-    if not config_file.exists():
-        logger.debug(f"Configuration file not found: {config_file}")
-        return {}
-
-    try:
-        with config_file.open() as f:
-            loaded_data: t.Any = yaml.safe_load(f)
-            if isinstance(loaded_data, dict):
-                logger.debug(f"Loaded configuration from {config_file}")
-                return loaded_data
-            logger.warning(
-                f"Invalid YAML format in {config_file}: expected dict, got {type(loaded_data).__name__}",
-            )
-            return {}
-    except yaml.YAMLError as e:
-        logger.exception(f"Failed to parse YAML from {config_file}: {e}")
-        return {}
-    except OSError as e:
-        logger.exception(f"Failed to read {config_file}: {e}")
-        return {}
-
-
-def _merge_config_data(config_files: list[Path]) -> dict[str, t.Any]:
-    merged_data = {}
-    for config_file in config_files:
-        file_data = _load_single_config_file(config_file)
-        merged_data.update(file_data)
-    return merged_data
-
-
-def _extract_adapter_timeouts(crackerjack_config: dict[str, t.Any]) -> None:
-    adapter_timeouts_data: dict[str, t.Any] = {}
-
-    for key, value in list(crackerjack_config.items()):
-        if key.endswith("_timeout"):
-            adapter_timeouts_data[key] = value
-
-            del crackerjack_config[key]
-
-    if adapter_timeouts_data:
-        crackerjack_config["adapter_timeouts"] = adapter_timeouts_data
-
-
-def _validate_pyproject_subtables(crackerjack_config: dict[str, t.Any]) -> None:
-    """Warn on ``[tool.crackerjack.X]`` sub-tables crackerjack does not read.
-
-    Most hooks either auto-discover a config file (``.betterleaks.toml``,
-    ``.gitleaks.toml``, ``.lycheeignore``) or use built-in defaults. A
-    user writing ``[tool.crackerjack.betterleaks]`` (or ``lychee``,
-    ``creosote``, ``refurb``, ``check-added-large-files``, ...) in
-    ``pyproject.toml`` will silently get NO effect, then wonder why
-    the hook still fires. Surface that mistake at WARNING level so it
-    appears in normal ``crackerjack run`` output (not buried in DEBUG).
-
-    Top-level keys (strings, ints, lists, etc.) that aren't in the
-    ``CrackerjackSettings`` model are caught by ``_log_filtered_fields``
-    at DEBUG level; this function only handles the nested sub-table
-    case where that filter doesn't apply.
+    Mirrors Mahavishnu's ``_mahavishnu_env_overlay`` at
+    ``mahavishnu/core/config.py:3209`` (REQ-006). Returns only top-level keys
+    that exist in ``settings_class.model_fields``. Nested keys (separated
+    by ``__``) are merged into per-section sub-dicts.
     """
-    for key, value in crackerjack_config.items():
-        if not isinstance(value, dict):
-            continue  # top-level scalar/list; handled by _log_filtered_fields
-        if key in _KNOWN_PYPROJECT_SUBTABLES:
+    overlay: dict[str, t.Any] = {}
+    for key, value in os.environ.items():
+        if not key.startswith("CRACKERJACK_"):
             continue
-        logger.warning(
-            "[tool.crackerjack.%s] block in pyproject.toml is not read "
-            "by crackerjack. If you meant to configure the %r hook, "
-            "check its auto-discovery mechanism (e.g. .betterleaks.toml, "
-            ".lycheeignore, .gitleaks.toml) rather than pyproject.toml. "
-            "Known [tool.crackerjack.X] sub-tables: %s.",
-            key,
-            key,
-            sorted(_KNOWN_PYPROJECT_SUBTABLES),
-        )
+        suffix = key[len("CRACKERJACK_") :]
+        if "__" in suffix:
+            section, leaf = suffix.split("__", 1)
+            section_lower = section.lower()
+            if section_lower in settings_class.model_fields:
+                sub = overlay.setdefault(section_lower, {})
+                if isinstance(sub, dict):
+                    sub[leaf.lower()] = value
+            continue
+        flat = suffix.lower()
+        if flat in settings_class.model_fields:
+            overlay[flat] = value
+    return overlay
 
 
-def _load_pyproject_toml(settings_dir: Path) -> dict[str, t.Any]:
-    pyproject_path = settings_dir.parent / "pyproject.toml"
+def _merge_env_overlay(merged: dict[str, t.Any], env_overlay: dict[str, t.Any]) -> None:
+    """Merge per-key for nested sections (avoid clobbering YAML siblings)."""
+    for key, value in env_overlay.items():
+        if (
+            key in merged
+            and isinstance(merged[key], dict)
+            and isinstance(value, dict)
+        ):
+            merged[key].update(value)
+        else:
+            merged[key] = value
 
-    if not pyproject_path.exists():
-        logger.debug(f"pyproject.toml not found at {pyproject_path}")
-        return {}
 
+def load_settings_for_project[T: BaseModel](
+    project_root: Path,
+    settings_class: type[T],
+) -> T:
+    """Resolve ``settings_class`` via Oneiric with an explicit ``project_root``.
+
+    Use this when the caller is not CWD'd at the project root. The
+    one-pass-CWD ``load_settings(settings_class)`` is the common path;
+    this sibling covers lifecycle adapters and worker-pool dispatchers
+    that need an explicit anchor (R6.3 follow-up to the pre-1.0
+    ``settings_dir`` removal).
+
+    Precedence (highest -> lowest):
+
+    1. ``CRACKERJACK_*`` env vars (applied last via ``crackerjack_env_overlay``)
+    2. ``publishing.publish_url`` synthesised from
+       ``$BODAI_ECOSYSTEM_CONFIG`` (when ``project_root`` matches a
+       registered repo) - REQ-005
+    3. XDG user-local override (via Oneiric's ``load_settings``)
+    4. XDG user config (via Oneiric's ``load_settings``)
+    5. ``<project_root>/settings/local.yaml`` (via Oneiric)
+    6. ``<project_root>/settings/{project_name}.yaml`` (via Oneiric)
+    7. Code defaults
+
+    Falls back to a defaults-only construction when Oneiric is unavailable
+    (early import or test setup without the dependency); see plan sec 6.5.
+    """
+    merged: dict[str, t.Any] = {}
     try:
-        import tomllib
+        from oneiric.core.config import load_settings as _oneiric_load
 
-        with pyproject_path.open("rb") as f:
-            data = tomllib.load(f)
+        oneiric_obj = _oneiric_load(
+            project_name="crackerjack",
+            project_root=project_root,
+        )
+        # ``extras`` only contains keys NOT declared on ``OneiricSettings``
+        # (declared fields like ``adapters``, ``services``, ``tasks`` live
+        # on the OneiricSettings instance itself). The
+        # ``extra="ignore"`` on ``CrackerjackSettings`` (via
+        # ``OneiricMCPConfig``) drops anything not in
+        # ``CrackerjackSettings.model_fields``, so forwarding ALL extras
+        # is safe. Critically, this lets top-level ``*_timeout`` keys
+        # reach the ``_reshape_adapter_timeouts`` validator (REQ-004) —
+        # dropping them in the per-key filter would silently lose the
+        # timeout value (R6.2). The ``if v is not None`` check still
+        # strips spurious nulls.
+        extras = getattr(oneiric_obj, "__pydantic_extra__", None) or {}
+        merged = {k: v for k, v in extras.items() if v is not None}
+    except Exception:
+        # Oneiric unavailable (early import, test setup without the
+        # dependency). Mirror Mahavishnu's fallback at
+        # ``mahavishnu/core/config.py:3192-3199`` - never raise purely on a
+        # missing loader; pydantic-settings still reads env vars natively.
+        logger.exception("crackerjack.config.oneiric_loader_failed_falling_back")
 
-        crackerjack_config = data.get("tool", {}).get("crackerjack", {})
+    # Ecosystem publish-url synthesis sits between Oneiric's resolution
+    # and the CRACKERJACK_* env overlay (REQ-005). Slot rationale: CLI
+    # flag and env var beat this; YAML beats this; this sits between.
+    from .ecosystem_synthesis import apply_ecosystem_publish_synthesis
 
-        if crackerjack_config:
-            logger.debug("Loaded configuration from pyproject.toml")
-            # Validate BEFORE ``_extract_adapter_timeouts`` reshapes
-            # the dict — the reshape synthesises an ``adapter_timeouts``
-            # sub-dict from top-level ``*_timeout`` keys, which the
-            # validator would otherwise mistake for a user-written
-            # ``[tool.crackerjack.adapter_timeouts]`` block.
-            _validate_pyproject_subtables(crackerjack_config)
-            _extract_adapter_timeouts(crackerjack_config)
+    apply_ecosystem_publish_synthesis(merged, project_root)
 
-        return crackerjack_config
+    # Apply CRACKERJACK_* env vars as final overlay (REQ-006).
+    env_overlay = crackerjack_env_overlay(settings_class)
+    _merge_env_overlay(merged, env_overlay)
 
-    except ImportError:
-        try:
-            import tomli
-
-            with pyproject_path.open("rb") as f:
-                data = tomli.load(f)
-
-            crackerjack_config = data.get("tool", {}).get("crackerjack", {})
-
-            if crackerjack_config:
-                logger.debug("Loaded configuration from pyproject.toml (via tomli)")
-                _validate_pyproject_subtables(crackerjack_config)
-                _extract_adapter_timeouts(crackerjack_config)
-
-            return crackerjack_config
-
-        except ImportError:
-            logger.warning(
-                "Neither tomllib nor tomli available for pyproject.toml parsing",
-            )
-            return {}
-    except Exception as e:
-        logger.exception(f"Failed to parse pyproject.toml: {e}")
-        return {}
+    return settings_class(**merged)
 
 
 def load_settings[T: BaseModel](
     settings_class: type[T],
-    settings_dir: Path | None = None,
 ) -> T:
-    if settings_dir is None:
-        settings_dir = Path.cwd() / "settings"
+    """CWD-relative entry point; delegate to ``load_settings_for_project``.
 
-    config_files = [
-        settings_dir / "crackerjack.yaml",
-        settings_dir / "local.yaml",
-    ]
-
-    merged_data = _merge_config_data(config_files)
-
-    pyproject_data = _load_pyproject_toml(settings_dir)
-    merged_data.update(pyproject_data)
-
-    # Ecosystem-wide publish_url synthesis (BODAI_ECOSYSTEM_CONFIG).
-    # Runs after YAML merge so settings/local.yaml can override; runs
-    # before the field filter so the synthesized key is treated like
-    # any other merged value. See crackerjack/config/ecosystem_synthesis.py
-    # for the priority order this slot into (between CLI/env var layers
-    # and the settings YAML layer).
-    from .ecosystem_synthesis import apply_ecosystem_publish_synthesis
-
-    apply_ecosystem_publish_synthesis(merged_data, settings_dir.parent)
-
-    relevant_data = {
-        k: v for k, v in merged_data.items() if k in settings_class.model_fields
-    }
-
-    excluded_fields = set(merged_data.keys()) - set(relevant_data.keys())
-    if excluded_fields:
-        logger.debug(
-            f"Ignored unknown configuration fields: {', '.join(sorted(excluded_fields))}",
-        )
-
-    logger.debug(
-        f"Loaded {len(relevant_data)} configuration values for {settings_class.__name__}",
-    )
-
-    return settings_class(**relevant_data)
+    Pre-migration this function accepted ``settings_dir: Path | None``.
+    That argument is dropped per pre-1.0 policy
+    (`~/.claude/.../feedback-no-backwards-compat-pre-1.0.md`); callers
+    that need a specific anchor use ``load_settings_for_project``.
+    """
+    return load_settings_for_project(Path.cwd(), settings_class)
 
 
 async def load_settings_async[T: BaseModel](
     settings_class: type[T],
-    settings_dir: Path | None = None,
 ) -> T:
-    if settings_dir is None:
-        settings_dir = Path.cwd() / "settings"
-
-    config_files = [
-        settings_dir / "crackerjack.yaml",
-        settings_dir / "local.yaml",
-    ]
-
-    merged_data = await _load_yaml_data(config_files)
-
-    pyproject_data = _load_pyproject_toml(settings_dir)
-    merged_data.update(pyproject_data)
-
-    relevant_data = _filter_relevant_data(merged_data, settings_class)
-    _log_filtered_fields(merged_data, relevant_data)
-    _log_load_info(settings_class, relevant_data)
-
-    return settings_class(**relevant_data)
-
-
-async def _load_yaml_data(config_files: list[Path]) -> dict[str, t.Any]:
-    merged_data: dict[str, t.Any] = {}
-    for config_file in config_files:
-        file_data = await _load_single_yaml_file(config_file)
-        if file_data is not None:
-            merged_data.update(file_data)
-        elif not config_file.exists():
-            logger.debug(f"Configuration file not found: {config_file}")
-    return merged_data
-
-
-async def _load_single_yaml_file(config_file: Path) -> dict[str, t.Any] | None:
-    if not config_file.exists():
-        return None
-
-    try:
-        with config_file.open() as f:
-            loaded_data: t.Any = yaml.safe_load(f)
-            if isinstance(loaded_data, dict):
-                logger.debug(f"Loaded configuration from {config_file}")
-                return loaded_data
-            logger.warning(
-                f"Invalid YAML format in {config_file}: expected dict, got {type(loaded_data).__name__}",
-            )
-            return {}
-    except yaml.YAMLError as e:
-        logger.exception(f"Failed to parse YAML from {config_file}: {e}")
-        return None
-    except OSError as e:
-        logger.exception(f"Failed to read {config_file}: {e}")
-        return None
-
-
-def _filter_relevant_data[T: BaseModel](
-    merged_data: dict[str, t.Any],
-    settings_class: type[T],
-) -> dict[str, t.Any]:
-    return {k: v for k, v in merged_data.items() if k in settings_class.model_fields}
-
-
-def _log_filtered_fields(
-    merged_data: dict[str, t.Any],
-    relevant_data: dict[str, t.Any],
-) -> None:
-    excluded_fields = set(merged_data.keys()) - set(relevant_data.keys())
-    if excluded_fields:
-        logger.debug(
-            f"Ignored unknown configuration fields: {', '.join(sorted(excluded_fields))}",
-        )
-
-
-def _log_load_info[T: BaseModel](
-    settings_class: type[T],
-    relevant_data: dict[str, t.Any],
-) -> None:
-    logger.debug(
-        f"Loaded {len(relevant_data)} configuration values for {settings_class.__name__} (async)",
-    )
+    return await asyncio.to_thread(load_settings, settings_class)

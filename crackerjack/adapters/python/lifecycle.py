@@ -197,13 +197,11 @@ class PythonLifecycle(Lifecycle):
         invoked by the package-version lifecycle, not the CLI) — settings YAML
         and ``BODAI_ECOSYSTEM_CONFIG`` synthesis are the only sources.
         """
-        from crackerjack.config import CrackerjackSettings, load_settings
+        from crackerjack.config import CrackerjackSettings, load_settings_for_project
         from crackerjack.managers.publish_manager import PublishManagerImpl
 
         package_root = self._version_source._project_root
-        settings = load_settings(
-            CrackerjackSettings, settings_dir=package_root / "settings"
-        )
+        settings = load_settings_for_project(package_root, CrackerjackSettings)
         manager = PublishManagerImpl(
             pkg_path=package_root,
             publish_url=settings.publishing.publish_url,

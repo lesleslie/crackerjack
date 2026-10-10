@@ -1271,16 +1271,23 @@ ______________________________________________________________________
 
 ### Self-improvement / wiring notes
 
-- **`crackerjack.yaml` vs `pyproject.toml`**: Crackerjack has
-  two parallel config sources. `crackerjack.yaml`
-  (`settings/crackerjack.yaml`) is the Oneiric-style settings layer
-  (via `oneiric.core.config.OneiricSettings`); `pyproject.toml:[tool.crackerjack]`
-  (`pyproject.toml:173-217`) is the MCP-level layer (port, host,
-  zuban LSP, adapter timeouts). The two are merged in
-  `crackerjack/config/settings.py::CrackerjackSettings` (Pydantic
-  `extra="forbid"` per group). Operators can override either, but
-  the `pyproject.toml` defaults are the source of truth for MCP
-  port wiring.
+Settings are resolved through Oneiric's
+`load_settings(project_name="crackerjack")` — see
+[`crackerjack/config/loader.py`](../../config/loader.py). The
+CWD-relative `load_settings(settings_class)` is the common path; call
+sites that need a specific anchor (e.g.
+`crackerjack/adapters/python/lifecycle.py:200, 204` — anchored at
+`package_root`; `crackerjack/mcp/tools/workflow_executor.py:221, 241` —
+anchored at `working_dir`) use
+`load_settings_for_project(project_root, settings_class)` instead.
+Precedence mirrors the fleet (XDG override → project committed → env
+var → defaults). The two bespoke behaviors (`[tool.crackerjack.X]`
+sub-table warning; `*_timeout` reshape into `adapter_timeouts`) are
+Pydantic `model_validator`s on `CrackerjackSettings` — see
+[`crackerjack/config/validators.py`](../../config/validators.py). See
+the migration plan
+[`docs/plans/2026-10-10-crackerjack-oneiric-loader-migration.md`](../plans/2026-10-10-crackerjack-oneiric-loader-migration.md)
+for the rationale.
 - **`enable_zuban` opt-in** (`pyproject.toml:182`): Zuban LSP
   starts when both `zuban_lsp.enabled=true` and the subprocess
   launcher succeeds. Disabled by default in `pyproject.toml:181`.
@@ -1343,7 +1350,10 @@ least one `@mcp_app.tool()` call per group.
 The contracts in Section 5 are derived from these ADRs and decisions:
 
 - **ADR-001** — Oneiric for configuration and logging (drives the
-  `OneiricMCPConfig` base in `crackerjack/config/settings.py`)
+  `load_settings` loader in `crackerjack/config/loader.py`. Validity
+  behaviors on `CrackerjackSettings` — `*_timeout` reshape; unknown
+  `[tool.crackerjack.X]` sub-table warnings — live in
+  `crackerjack/config/validators.py`)
 - **ADR-002** — MCP-first design with FastMCP + mcp-common (drives
   the `crackerjack/mcp/server_core.py` lifecycle)
 - **ADR-003** — Error handling with retry, circuit breakers, dead

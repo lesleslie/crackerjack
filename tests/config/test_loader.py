@@ -1,810 +1,230 @@
-import tempfile
-import yaml
+"""Tests for ``crackerjack.config.loader`` public surface (REQ-002, REQ-007).
+
+This file is the single canonical location for loader tests. The previous
+version imported private helpers that were deleted in Task 4 (factory
+swap); the wholesale replacement tests the public surface only.
+
+Merged from ``tests/config/test_loader_oneiric.py`` (deleted in this
+commit per R6.1) and the pre-existing env-overlay / XDG-override tests.
+
+R3 — every fixture-based test uses ``monkeypatch.chdir(tmp_path)`` so
+``load_settings`` (CWD-relative) and ``crackerjack_env_overlay`` resolve
+against the fixture repo.
+
+R5 — assertions reference real ``CrackerjackSettings.model_fields``
+keys (``enable_orchestration``, ``cache_ttl``, ``default_timeout``,
+``adapter_timeouts``, etc.). Do NOT introduce ``log_level`` — it is not
+a field on CrackerjackSettings.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import logging
 from pathlib import Path
+
 import pytest
-from unittest.mock import patch, mock_open
-from pydantic import BaseModel
+
+from crackerjack.config.settings import CrackerjackSettings
 from crackerjack.config.loader import (
-    _load_single_config_file,
-    _merge_config_data,
-    _extract_adapter_timeouts,
-    _load_pyproject_toml,
+    crackerjack_env_overlay,
     load_settings,
     load_settings_async,
-    _load_yaml_data,
-    _load_single_yaml_file,
-    _filter_relevant_data,
-    _log_filtered_fields,
-    _log_load_info,
-    _validate_pyproject_subtables,
-    _KNOWN_PYPROJECT_SUBTABLES,
 )
 
 
-class MockSettings(BaseModel):
-    """Mock settings class for testing."""
-    name: str = "default"
-    value: int = 42
-    timeout: int = 30
+# --- Fixtures ----------------------------------------------------------------
 
 
-def test_load_single_config_file_exists():
-    """Test loading a single config file that exists."""
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as tmp:
-        yaml.dump({"name": "test", "value": 100}, tmp)
-        tmp_path = Path(tmp.name)
+@pytest.fixture
+def repo_with_settings(tmp_path: Path) -> Path:
+    """Fixture: a repo layout with ``settings/crackerjack.yaml`` + ``pyproject.toml``.
 
-    try:
-        data = _load_single_config_file(tmp_path)
-        assert data == {"name": "test", "value": 100}
-    finally:
-        tmp_path.unlink()
-
-
-def test_load_single_config_file_not_exists():
-    """Test loading a single config file that doesn't exist."""
-    data = _load_single_config_file(Path("nonexistent.yaml"))
-    assert data == {}
-
-
-def test_load_single_config_file_invalid_yaml():
-    """Test loading a config file with invalid YAML."""
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as tmp:
-        tmp.write("invalid: [ yaml: content")
-        tmp_path = Path(tmp.name)
-
-    try:
-        data = _load_single_config_file(tmp_path)
-        assert data == {}  # Should return empty dict on error
-    finally:
-        tmp_path.unlink()
-
-
-def test_merge_config_data():
-    """Test merging multiple config files."""
-    with tempfile.TemporaryDirectory() as tmp_dir:
-        tmp_dir_path = Path(tmp_dir)
-
-        # Create first config file
-        config1_path = tmp_dir_path / "config1.yaml"
-        with config1_path.open('w') as f:
-            yaml.dump({"name": "first", "value":1}, f)
-
-        # Create second config file
-        config2_path = tmp_dir_path / "config2.yaml"
-        with config2_path.open('w') as f:
-            yaml.dump({"name": "second", "extra": "data"}, f)
-
-        merged = _merge_config_data([config1_path, config2_path])
-
-        # Second file should override first for overlapping keys
-        assert merged["name"] == "second"
-        assert merged["value"] == 1
-        assert merged["extra"] == "data"
-
-
-def test_extract_adapter_timeouts():
-    """Test extracting adapter timeouts from config."""
-    config = {
-        "name": "test",
-        "ruff_timeout": 60,
-        "mypy_timeout": 120,
-        "value": 42
-    }
-
-    _extract_adapter_timeouts(config)
-
-    # Check that timeouts were extracted
-    assert "adapter_timeouts" in config
-    assert config["adapter_timeouts"]["ruff_timeout"] == 60
-    assert config["adapter_timeouts"]["mypy_timeout"] == 120
-
-    # Check that original timeout keys were removed
-    assert "ruff_timeout" not in config
-    assert "mypy_timeout" not in config
-
-    # Check that non-timeout keys remain
-    assert config["name"] == "test"
-    assert config["value"] == 42
-
-
-def test_load_pyproject_toml_exists():
-    """Test loading configuration from pyproject.toml."""
-    with tempfile.TemporaryDirectory() as tmp_dir:
-        tmp_dir_path = Path(tmp_dir)
-
-        # Create a pyproject.toml file
-        pyproject_path = tmp_dir_path.parent / "pyproject.toml"  # Need to simulate parent structure
-        with tempfile.TemporaryDirectory() as outer_tmp:
-            outer_path = Path(outer_tmp)
-            pyproject_path = outer_path / "pyproject.toml"
-
-            with pyproject_path.open('w') as f:
-                f.write("""
-[tool.crackerjack]
-name = "from_pyproject"
-value = 999
-ruff_timeout = 45
-""")
-
-            # Create a settings directory to match the expected structure
-            settings_dir = outer_path / "settings"
-            settings_dir.mkdir()
-
-            data = _load_pyproject_toml(settings_dir)
-
-            # Check that the data was loaded correctly
-            assert data["name"] == "from_pyproject"
-            assert data["value"] == 999
-            assert data["adapter_timeouts"]["ruff_timeout"] == 45
-
-
-def test_load_settings():
-    """Test loading settings with the main function."""
-    with tempfile.TemporaryDirectory() as tmp_dir:
-        tmp_dir_path = Path(tmp_dir)
-
-        # Create settings directory
-        settings_dir = tmp_dir_path / "settings"
-        settings_dir.mkdir()
-
-        # Create a config file
-        config_path = settings_dir / "crackerjack.yaml"
-        with config_path.open('w') as f:
-            yaml.dump({"name": "configured", "value": 200}, f)
-
-        # Load settings
-        settings = load_settings(MockSettings, settings_dir)
-
-        assert settings.name == "configured"
-        assert settings.value == 200
-        assert settings.timeout == 30  # Default value
-
-
-@pytest.mark.asyncio
-async def test_load_settings_async():
-    """Test loading settings with the async function."""
-    with tempfile.TemporaryDirectory() as tmp_dir:
-        tmp_dir_path = Path(tmp_dir)
-
-        # Create settings directory
-        settings_dir = tmp_dir_path / "settings"
-        settings_dir.mkdir()
-
-        # Create a config file
-        config_path = settings_dir / "crackerjack.yaml"
-        with config_path.open('w') as f:
-            yaml.dump({"name": "async_configured", "value": 300}, f)
-
-        # Load settings
-        settings = await load_settings_async(MockSettings, settings_dir)
-
-        assert settings.name == "async_configured"
-        assert settings.value == 300
-        assert settings.timeout == 30  # Default value
-
-
-@pytest.mark.asyncio
-async def test_load_yaml_data():
-    """Test loading YAML data asynchronously."""
-    with tempfile.TemporaryDirectory() as tmp_dir:
-        tmp_dir_path = Path(tmp_dir)
-
-        # Create a config file
-        config_path = tmp_dir_path / "test.yaml"
-        with config_path.open('w') as f:
-            yaml.dump({"name": "yaml_test", "value": 400}, f)
-
-        data = await _load_yaml_data([config_path])
-
-        assert data["name"] == "yaml_test"
-        assert data["value"] == 400
-
-
-@pytest.mark.asyncio
-async def test_load_single_yaml_file():
-    """Test loading a single YAML file asynchronously."""
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as tmp:
-        yaml.dump({"name": "single_file", "value": 500}, tmp)
-        tmp_path = Path(tmp.name)
-
-    try:
-        data = await _load_single_yaml_file(tmp_path)
-        assert data == {"name": "single_file", "value": 500}
-    finally:
-        tmp_path.unlink()
-
-
-@pytest.mark.asyncio
-async def test_load_single_yaml_file_not_exists():
-    """Test loading a single YAML file that doesn't exist asynchronously."""
-    data = await _load_single_yaml_file(Path("nonexistent.yaml"))
-    assert data is None
-
-
-def test_filter_relevant_data():
-    """Test filtering relevant data for a settings class."""
-    merged_data = {
-        "name": "test",
-        "value": 100,
-        "unknown_field": "should_be_filtered",
-        "another_unknown": "also_filtered"
-    }
-
-    filtered_data = _filter_relevant_data(merged_data, MockSettings)
-
-    # Should only contain fields that exist in MockSettings
-    assert "name" in filtered_data
-    assert "value" in filtered_data
-    assert "unknown_field" not in filtered_data
-    assert "another_unknown" not in filtered_data
-    assert filtered_data["name"] == "test"
-    assert filtered_data["value"] == 100
-
-
-def test_log_filtered_fields(caplog):
-    """Test logging of filtered fields."""
-    import logging
-
-    merged_data = {
-        "name": "test",
-        "value": 100,
-        "unknown_field": "should_be_filtered"
-    }
-
-    relevant_data = {
-        "name": "test",
-        "value": 100
-    }
-
-    # Target the specific logger for crackerjack.config.loader
-    with caplog.at_level(logging.DEBUG, logger="crackerjack.config.loader"):
-        _log_filtered_fields(merged_data, relevant_data)
-
-        # Check that the unknown field was logged
-        assert "unknown_field" in caplog.text
-
-
-def test_log_load_info(caplog):
-    """Test logging of load information."""
-    import logging
-
-    relevant_data = {
-        "name": "test",
-        "value": 100
-    }
-
-    # Target the specific logger for crackerjack.config.loader
-    with caplog.at_level(logging.DEBUG, logger="crackerjack.config.loader"):
-        _log_load_info(MockSettings, relevant_data)
-
-        # Check that the load info was logged
-        assert "Loaded 2 configuration values" in caplog.text
-        assert "MockSettings" in caplog.text
-
-
-# --------------------------------------------------------------------------- #
-# Extended tests for uncovered branches (push 85% -> 95%+).
-# --------------------------------------------------------------------------- #
-
-
-def test_load_single_config_file_non_dict_yaml():
-    """YAML that parses to a non-dict (e.g. a bare scalar or list) should return {}."""
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as tmp:
-        # Bare scalar (string), not a mapping.
-        tmp.write("just_a_string_value\n")
-        tmp_path = Path(tmp.name)
-
-    try:
-        with patch("crackerjack.config.loader.logger") as mock_logger:
-            data = _load_single_config_file(tmp_path)
-            assert data == {}
-            mock_logger.warning.assert_called_once()
-            warning_msg = mock_logger.warning.call_args[0][0]
-            assert "Invalid YAML format" in warning_msg
-            assert "str" in warning_msg
-    finally:
-        tmp_path.unlink()
-
-
-def test_load_single_config_file_list_yaml():
-    """YAML that parses to a list should be treated as invalid and return {}."""
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as tmp:
-        yaml.dump([1, 2, 3], tmp)
-        tmp_path = Path(tmp.name)
-
-    try:
-        data = _load_single_config_file(tmp_path)
-        assert data == {}
-    finally:
-        tmp_path.unlink()
-
-
-def test_load_single_config_file_oserror(monkeypatch):
-    """An OSError while opening the file is caught and returns {}."""
-    fake_path = Path("/does/not/matter.yaml")
-
-    # Force exists() to True, then make .open() raise OSError.
-    monkeypatch.setattr(Path, "exists", lambda self: True)
-
-    def _raise_oserror(self, *args, **kwargs):
-        raise OSError("simulated disk failure")
-
-    monkeypatch.setattr(Path, "open", _raise_oserror)
-
-    with patch("crackerjack.config.loader.logger") as mock_logger:
-        data = _load_single_config_file(fake_path)
-        assert data == {}
-        mock_logger.exception.assert_called_once()
-        exc_msg = mock_logger.exception.call_args[0][0]
-        assert "Failed to read" in exc_msg
-
-
-def test_merge_config_data_empty_list():
-    """Merging no files returns an empty dict."""
-    assert _merge_config_data([]) == {}
-
-
-def test_merge_config_data_missing_file():
-    """A single missing file produces an empty dict (via the not-exists branch)."""
-    with tempfile.TemporaryDirectory() as tmp_dir:
-        missing_path = Path(tmp_dir) / "missing.yaml"
-        assert _merge_config_data([missing_path]) == {}
-
-
-def test_merge_config_data_single_file():
-    """Merging one file returns its data unchanged."""
-    with tempfile.TemporaryDirectory() as tmp_dir:
-        cfg = Path(tmp_dir) / "only.yaml"
-        with cfg.open("w") as f:
-            yaml.dump({"only_key": "only_value", "value": 7}, f)
-        merged = _merge_config_data([cfg])
-        assert merged == {"only_key": "only_value", "value": 7}
-
-
-def test_extract_adapter_timeouts_no_timeouts():
-    """When no *_timeout keys exist, no adapter_timeouts key is added (56->exit)."""
-    config = {"name": "test", "value": 42, "regular_key": "stay"}
-    _extract_adapter_timeouts(config)
-    assert "adapter_timeouts" not in config
-    assert config == {"name": "test", "value": 42, "regular_key": "stay"}
-
-
-def test_extract_adapter_timeouts_empty_dict():
-    """An empty dict is a no-op."""
-    config: dict[str, object] = {}
-    _extract_adapter_timeouts(config)
-    assert config == {}
-
-
-def test_extract_adapter_timeouts_single_timeout():
-    """A single _timeout key is moved into adapter_timeouts."""
-    config = {"ruff_timeout": 30}
-    _extract_adapter_timeouts(config)
-    assert config == {"adapter_timeouts": {"ruff_timeout": 30}}
-
-
-def test_load_pyproject_toml_missing(tmp_path):
-    """When no pyproject.toml exists in the parent dir, returns {}."""
-    settings_dir = tmp_path / "settings"
-    settings_dir.mkdir()
-    # tmp_path.parent is the test runner's tmpdir root; pyproject.toml does not exist there.
-    data = _load_pyproject_toml(settings_dir)
-    assert data == {}
-
-
-def test_load_pyproject_toml_no_crackerjack_section(tmp_path):
-    """pyproject.toml without [tool.crackerjack] returns {} (no extraction)."""
-    outer = tmp_path
-    pyproject = outer / "pyproject.toml"
-    pyproject.write_text(
-        '[tool.other]\nname = "unrelated"\n',
-        encoding="utf-8",
-    )
-    settings_dir = outer / "settings"
-    settings_dir.mkdir()
-    data = _load_pyproject_toml(settings_dir)
-    assert data == {}
-
-
-def test_load_pyproject_toml_empty_tool_crackerjack(tmp_path):
-    """[tool.crackerjack] present but empty -> {} and no extraction call (75->79)."""
-    outer = tmp_path
-    pyproject = outer / "pyproject.toml"
-    pyproject.write_text("[tool.crackerjack]\n", encoding="utf-8")
-    settings_dir = outer / "settings"
-    settings_dir.mkdir()
-    data = _load_pyproject_toml(settings_dir)
-    assert data == {}
-
-
-def test_load_pyproject_toml_invalid_contents(tmp_path):
-    """Invalid TOML is caught by the generic exception handler (101-103)."""
-    outer = tmp_path
-    pyproject = outer / "pyproject.toml"
-    pyproject.write_text("this is = not valid toml ====", encoding="utf-8")
-    settings_dir = outer / "settings"
-    settings_dir.mkdir()
-    with patch("crackerjack.config.loader.logger") as mock_logger:
-        data = _load_pyproject_toml(settings_dir)
-        assert data == {}
-        mock_logger.exception.assert_called_once()
-        assert "Failed to parse pyproject.toml" in mock_logger.exception.call_args[0][0]
-
-
-def test_load_pyproject_toml_no_toml_libraries(monkeypatch, tmp_path):
-    """When neither tomllib nor tomli is importable, returns {} with a warning."""
-    outer = tmp_path
-    pyproject = outer / "pyproject.toml"
-    pyproject.write_text("[tool.crackerjack]\nname = 'x'\n", encoding="utf-8")
-    settings_dir = outer / "settings"
-    settings_dir.mkdir()
-
-    # Make both import statements raise ImportError.
-    import builtins
-
-    real_import = builtins.__import__
-
-    def _fake_import(name, *args, **kwargs):
-        if name in ("tomllib", "tomli"):
-            raise ImportError(f"simulated missing {name}")
-        return real_import(name, *args, **kwargs)
-
-    monkeypatch.setattr(builtins, "__import__", _fake_import)
-
-    with patch("crackerjack.config.loader.logger") as mock_logger:
-        data = _load_pyproject_toml(settings_dir)
-        assert data == {}
-        mock_logger.warning.assert_called_once()
-        assert "Neither tomllib nor tomli" in mock_logger.warning.call_args[0][0]
-
-
-def test_load_settings_uses_pyproject_data(tmp_path):
-    """load_settings merges pyproject.toml [tool.crackerjack] into the result."""
-    outer = tmp_path
-    pyproject = outer / "pyproject.toml"
-    pyproject.write_text(
-        '[tool.crackerjack]\nname = "from_pyproject"\nvalue = 777\n',
-        encoding="utf-8",
-    )
-    settings_dir = outer / "settings"
-    settings_dir.mkdir()
-
-    settings = load_settings(MockSettings, settings_dir)
-    assert settings.name == "from_pyproject"
-    assert settings.value == 777
-
-
-def test_load_settings_filters_unknown_fields(tmp_path):
-    """load_settings logs ignored (non-model) fields but still constructs the model."""
-    settings_dir = tmp_path / "settings"
-    settings_dir.mkdir()
-    config = settings_dir / "crackerjack.yaml"
-    config.write_text(
-        "name: configured\nvalue: 100\nsome_unknown_key: ignored\n",
-        encoding="utf-8",
-    )
-
-    with patch("crackerjack.config.loader.logger") as mock_logger:
-        settings = load_settings(MockSettings, settings_dir)
-        assert settings.name == "configured"
-        assert settings.value == 100
-        # The "Ignored unknown configuration fields" debug log was emitted.
-        debug_msgs = [c.args[0] for c in mock_logger.debug.call_args_list]
-        assert any("Ignored unknown configuration fields" in m for m in debug_msgs)
-
-
-def test_load_settings_uses_defaults(tmp_path):
-    """Without any config files, defaults from the model are used."""
-    settings_dir = tmp_path / "settings"
-    settings_dir.mkdir()
-    settings = load_settings(MockSettings, settings_dir)
-    assert settings.name == "default"
-    assert settings.value == 42
-    assert settings.timeout == 30
-
-
-@pytest.mark.asyncio
-async def test_load_settings_async_uses_defaults(tmp_path, monkeypatch):
-    """load_settings_async without settings_dir defaults to <cwd>/settings (line 145)."""
-    import tempfile as _tf
-
-    with _tf.TemporaryDirectory() as cwd:
-        monkeypatch.chdir(cwd)
-        # No settings dir in cwd; load_settings_async should fall back to defaults.
-        settings = await load_settings_async(MockSettings)
-        assert settings.name == "default"
-        assert settings.value == 42
-
-
-@pytest.mark.asyncio
-async def test_load_settings_async_uses_pyproject_data(tmp_path):
-    """load_settings_async pulls [tool.crackerjack] from pyproject.toml."""
-    outer = tmp_path
-    pyproject = outer / "pyproject.toml"
-    pyproject.write_text(
-        '[tool.crackerjack]\nname = "async_pyproject"\nvalue = 555\n',
-        encoding="utf-8",
-    )
-    settings_dir = outer / "settings"
-    settings_dir.mkdir()
-
-    settings = await load_settings_async(MockSettings, settings_dir)
-    assert settings.name == "async_pyproject"
-    assert settings.value == 555
-
-
-@pytest.mark.asyncio
-async def test_load_yaml_data_skips_missing_files(tmp_path):
-    """Files that do not exist are skipped (170->166)."""
-    missing = tmp_path / "nope.yaml"
-    data = await _load_yaml_data([missing])
-    assert data == {}
-
-
-@pytest.mark.asyncio
-async def test_load_yaml_data_mixed_missing_and_present(tmp_path):
-    """A missing file does not block loading from a present file."""
-    present = tmp_path / "present.yaml"
-    present.write_text("name: present\nvalue: 11\n", encoding="utf-8")
-    missing = tmp_path / "missing.yaml"
-    data = await _load_yaml_data([missing, present])
-    assert data == {"name": "present", "value": 11}
-
-
-@pytest.mark.asyncio
-async def test_load_single_yaml_file_non_dict():
-    """Non-dict YAML returns {} (not None) from _load_single_yaml_file."""
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as tmp:
-        tmp.write("just_a_string\n")
-        tmp_path = Path(tmp.name)
-    try:
-        with patch("crackerjack.config.loader.logger") as mock_logger:
-            data = await _load_single_yaml_file(tmp_path)
-            assert data == {}
-            mock_logger.warning.assert_called_once()
-    finally:
-        tmp_path.unlink()
-
-
-@pytest.mark.asyncio
-async def test_load_single_yaml_file_yamlerror(monkeypatch):
-    """YAMLError during parsing is caught and returns None."""
-    fake_path = Path("/fake/config.yaml")
-    monkeypatch.setattr(Path, "exists", lambda self: True)
-
-    def _raise_yamlerror(*args, **kwargs):
-        import yaml as _yaml
-
-        raise _yaml.YAMLError("simulated parse failure")
-
-    monkeypatch.setattr(Path, "open", _raise_yamlerror)
-
-    with patch("crackerjack.config.loader.logger") as mock_logger:
-        data = await _load_single_yaml_file(fake_path)
-        assert data is None
-        mock_logger.exception.assert_called_once()
-        assert "Failed to parse YAML" in mock_logger.exception.call_args[0][0]
-
-
-@pytest.mark.asyncio
-async def test_load_single_yaml_file_oserror(monkeypatch):
-    """OSError during read is caught and returns None."""
-    fake_path = Path("/fake/config.yaml")
-    monkeypatch.setattr(Path, "exists", lambda self: True)
-
-    def _raise_oserror(self, *args, **kwargs):
-        raise OSError("simulated disk failure")
-
-    monkeypatch.setattr(Path, "open", _raise_oserror)
-
-    with patch("crackerjack.config.loader.logger") as mock_logger:
-        data = await _load_single_yaml_file(fake_path)
-        assert data is None
-        mock_logger.exception.assert_called_once()
-        assert "Failed to read" in mock_logger.exception.call_args[0][0]
-
-
-def test_filter_relevant_data_empty_input():
-    """Empty dict passes through _filter_relevant_data unchanged."""
-    assert _filter_relevant_data({}, MockSettings) == {}
-
-
-def test_filter_relevant_data_all_unknown():
-    """A dict with only unknown keys filters down to empty."""
-    filtered = _filter_relevant_data({"a": 1, "b": 2}, MockSettings)
-    assert filtered == {}
-
-
-def test_log_filtered_fields_no_excluded(caplog):
-    """No debug log is emitted when nothing is filtered out."""
-    import logging
-
-    merged = {"name": "x", "value": 1}
-    relevant = {"name": "x", "value": 1}
-    with caplog.at_level(logging.DEBUG, logger="crackerjack.config.loader"):
-        _log_filtered_fields(merged, relevant)
-    # No "Ignored unknown configuration fields" log expected.
-    assert "Ignored unknown configuration fields" not in caplog.text
-
-
-def test_log_load_info_empty_data(caplog):
-    """_log_load_info reports 0 values when relevant_data is empty."""
-    import logging
-
-    with caplog.at_level(logging.DEBUG, logger="crackerjack.config.loader"):
-        _log_load_info(MockSettings, {})
-    assert "Loaded 0 configuration values" in caplog.text
-    assert "MockSettings" in caplog.text
-
-
-# --------------------------------------------------------------------------- #
-# _validate_pyproject_subtables — warn on unknown [tool.crackerjack.X] blocks.
-#
-# Reproduces the 2026-09-19 mdinject followup where users wrote
-# ``[tool.crackerjack.betterleaks]`` and ``[tool.crackerjack.lychee]`` in
-# pyproject.toml — both keys are fictional; betterleaks reads
-# ``.betterleaks.toml`` and lychee reads ``.lycheeignore``. The warning
-# surfaces that mistake at run-time so users don't write dead config.
-# --------------------------------------------------------------------------- #
-
-
-def test_validate_pyproject_subtables_warns_on_unknown_block(caplog):
-    """``[tool.crackerjack.betterleaks]`` (fictional) must produce a
-    WARNING that names the key and points to the auto-discovery hint.
-    The existing DEBUG-level filter on top-level keys does not catch
-    sub-tables, so this is the only line of defense for nested keys.
+    The pyproject.toml includes ``[tool.crackerjack]`` (a real scalar
+    section read by load_settings) and ``[tool.crackerjack.betterleaks]``
+    (a fictional sub-table used by the unknown-block warning test). The
+    ``crackerjack/`` package marker is irrelevant to the loader but
+    mirrors a real project layout.
     """
-    import logging
-
-    config = {
-        "betterleaks": {"config_file": "custom.toml"},
-        "lychee": {"exclude": ["foo"]},
-    }
-    with caplog.at_level(logging.WARNING, logger="crackerjack.config.loader"):
-        _validate_pyproject_subtables(config)
-
-    # Both unknown sub-tables must surface; neither key is in the
-    # known-good set today.
-    warnings = [r.getMessage() for r in caplog.records if r.levelno == logging.WARNING]
-    assert any(
-        "[tool.crackerjack.betterleaks]" in m for m in warnings
-    ), f"missing betterleaks warning; got: {warnings}"
-    assert any(
-        "[tool.crackerjack.lychee]" in m for m in warnings
-    ), f"missing lychee warning; got: {warnings}"
-    # Message must hint at the auto-discovery mechanism so the user
-    # knows where to look next.
-    for m in warnings:
-        assert ".betterleaks.toml" in m or ".lycheeignore" in m or ".gitleaks.toml" in m
-    # Message must list the VALID sub-tables for a fast self-service
-    # fix.
-    for m in warnings:
-        assert "jinja" in m and "web" in m
-
-
-def test_validate_pyproject_subtables_silent_on_known_blocks(caplog):
-    """``[tool.crackerjack.jinja]`` and ``[tool.crackerjack.web]`` ARE
-    real sub-tables (read by the Web adapter). They must NOT trigger
-    the unknown-block warning — that would be noise on every run.
-    """
-    import logging
-
-    config = {
-        "jinja": {"block_start": "{%"},
-        "web": {"enabled": True},
-    }
-    with caplog.at_level(logging.WARNING, logger="crackerjack.config.loader"):
-        _validate_pyproject_subtables(config)
-
-    warnings = [r.getMessage() for r in caplog.records if r.levelno == logging.WARNING]
-    assert warnings == [], (
-        f"known sub-tables must not warn; got: {warnings}"
+    repo = tmp_path / "repo"
+    settings_dir = repo / "settings"
+    settings_dir.mkdir(parents=True)
+    (settings_dir / "crackerjack.yaml").write_text(
+        "enable_orchestration: true\ncache_ttl: 3600\n",
+        encoding="utf-8",
     )
-
-
-def test_validate_pyproject_subtables_ignores_top_level_keys(caplog):
-    """Top-level scalars/lists (e.g. ``name = "x"``, ``banned_imports =
-    []``) are filtered by ``_log_filtered_fields`` at DEBUG level, not
-    by this validator. Passing them through must produce NO WARNING —
-    otherwise the validator would double-log every unrecognised key.
-    """
-    import logging
-
-    config = {
-        "name": "some_value",       # top-level scalar
-        "value": 42,                # top-level scalar
-        "banned_imports": ["x"],    # top-level list
-        "jinja": {"block_start": "{%"},  # known sub-table
-    }
-    with caplog.at_level(logging.WARNING, logger="crackerjack.config.loader"):
-        _validate_pyproject_subtables(config)
-
-    warnings = [r.getMessage() for r in caplog.records if r.levelno == logging.WARNING]
-    assert warnings == [], (
-        f"top-level scalars/lists + known sub-table must be silent; "
-        f"got: {warnings}"
+    (repo / "pyproject.toml").write_text(
+        "[tool.crackerjack]\nenable_orchestration = true\n\n"
+        "[tool.crackerjack.betterleaks]\nenabled = true\n",
+        encoding="utf-8",
     )
+    (repo / "crackerjack").mkdir(exist_ok=True)
+    return repo
 
 
-def test_load_pyproject_toml_emits_warning_for_fictional_block(
-    tmp_path, caplog
+# --- Public-surface behaviour tests (REQ-002, REQ-007) -----------------------
+
+
+def test_load_settings_returns_typed_instance(
+    repo_with_settings: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """End-to-end: a real ``pyproject.toml`` with a fictional
-    ``[tool.crackerjack.betterleaks]`` block must emit the WARNING
-    when ``_load_pyproject_toml`` is called (this is the function that
-    crackerjack invokes at startup, so the warning reaches the user).
-    """
-    import logging
-
-    outer = tmp_path
-    pyproject = outer / "pyproject.toml"
-    pyproject.write_text(
-        "[tool.crackerjack.betterleaks]\nconfig_file = 'custom.toml'\n",
-        encoding="utf-8",
-    )
-    settings_dir = outer / "settings"
-    settings_dir.mkdir()
-
-    with caplog.at_level(logging.WARNING, logger="crackerjack.config.loader"):
-        _load_pyproject_toml(settings_dir)
-
-    warnings = [r.getMessage() for r in caplog.records if r.levelno == logging.WARNING]
-    assert any(
-        "[tool.crackerjack.betterleaks]" in m for m in warnings
-    ), f"end-to-end load must surface the fictional-block warning; got: {warnings}"
+    """``load_settings(CrackerjackSettings)`` returns a typed instance with
+    ``enable_orchestration`` propagated from the YAML (R5: real field)."""
+    monkeypatch.chdir(repo_with_settings)
+    s = load_settings(CrackerjackSettings)
+    assert isinstance(s, CrackerjackSettings)
+    assert s.enable_orchestration is True
 
 
-def test_known_pyproject_subtables_constant_is_explicit():
-    """The known-subtable set must stay short and explicit so the
-    warning message stays actionable. Guard against accidental
-    expansion (which would silence the warning for future
-    fictional-but-common typos like ``[tool.crackerjack.refurb]``).
-    """
-    assert _KNOWN_PYPROJECT_SUBTABLES == frozenset({"jinja", "web"})
-
-
-def test_load_pyproject_toml_no_warning_on_internal_adapter_timeouts(
-    tmp_path, caplog
+def test_load_settings_async_returns_same_instance(
+    repo_with_settings: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Regression for false-positive ``[tool.crackerjack.adapter_timeouts]``
-    warning that fired on every ``crackerjack --help`` / ``crackerjack
-    run --help`` invocation.
+    """Async wrapper returns the same typed instance (REQ-007)."""
+    monkeypatch.chdir(repo_with_settings)
+    s = asyncio.run(load_settings_async(CrackerjackSettings))
+    assert isinstance(s, CrackerjackSettings)
+    assert s.enable_orchestration is True
 
-    The bug: ``_extract_adapter_timeouts`` reshapes top-level
-    ``*_timeout`` keys (e.g. ``ruff_timeout = 45``) into a synthesized
-    ``adapter_timeouts`` sub-dict AFTER the validator ran — so the
-    validator saw ``adapter_timeouts`` as a user-written
-    ``[tool.crackerjack.adapter_timeouts]`` block and warned about it.
-    The user never wrote that block; crackerjack synthesised it.
 
-    Fix: validate BEFORE the reshape. The validator now sees only
-    user-written keys, so internal scaffolding never trips it.
+def test_xdg_overrides_yaml(
+    repo_with_settings: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """XDG user-local override beats project YAML (REQ-001, REQ-002).
+
+    The Oneiric factory reads ``$XDG_CONFIG_HOME/crackerjack/config.yaml``
+    after the project YAML; here we override ``cache_ttl`` (a real
+    ``CrackerjackSettings`` field) and assert the XDG value wins.
     """
-    import logging
-
-    outer = tmp_path
-    pyproject = outer / "pyproject.toml"
-    pyproject.write_text(
-        "[tool.crackerjack]\n"
-        "ruff_timeout = 45\n"
-        "mypy_timeout = 120\n",
-        encoding="utf-8",
+    xdg_root = repo_with_settings.parent / "xdg"
+    (xdg_root / "crackerjack").mkdir(parents=True)
+    (xdg_root / "crackerjack" / "config.yaml").write_text(
+        "cache_ttl: 9999\n", encoding="utf-8"
     )
-    settings_dir = outer / "settings"
-    settings_dir.mkdir()
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(xdg_root))
+    monkeypatch.chdir(repo_with_settings)
+    s = load_settings(CrackerjackSettings)
+    assert s.cache_ttl == 9999
 
-    with caplog.at_level(logging.WARNING, logger="crackerjack.config.loader"):
-        data = _load_pyproject_toml(settings_dir)
 
-    # The original ``*_timeout`` values must still be reshaped into the
-    # ``adapter_timeouts`` sub-dict (regression guard on the fix).
-    assert data["adapter_timeouts"]["ruff_timeout"] == 45
-    assert data["adapter_timeouts"]["mypy_timeout"] == 120
+def test_env_overlay_overrides_yaml(
+    repo_with_settings: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """``CRACKERJACK_*`` env vars override YAML (REQ-006)."""
+    monkeypatch.setenv("CRACKERJACK_ENABLE_ORCHESTRATION", "false")
+    monkeypatch.chdir(repo_with_settings)
+    s = load_settings(CrackerjackSettings)
+    assert s.enable_orchestration is False
 
-    # But the validator must NOT have flagged the synthesised
-    # ``adapter_timeouts`` sub-dict as a fictional user block.
-    warnings = [r.getMessage() for r in caplog.records if r.levelno == logging.WARNING]
-    assert not any(
-        "[tool.crackerjack.adapter_timeouts]" in m for m in warnings
-    ), f"internal scaffolding must not warn; got: {warnings}"
+
+def test_unknown_pyproject_subtable_warns(
+    repo_with_settings: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """``[tool.crackerjack.betterleaks]`` (fictional) emits a WARNING
+    from ``crackerjack.config.validators`` (the post-merge validator in
+    ``CrackerjackSettings._warn_unknown_pyproject_subtables`` — REQ-003)."""
+    monkeypatch.chdir(repo_with_settings)
+    with caplog.at_level(logging.WARNING, logger="crackerjack.config.validators"):
+        load_settings(CrackerjackSettings)
+    msgs = [r.getMessage() for r in caplog.records]
+    assert any("betterleaks" in m for m in msgs)
+
+
+def test_missing_settings_falls_back_to_defaults(
+    repo_with_settings: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """With no settings files, the loader returns a default CrackerjackSettings."""
+    empty_repo = repo_with_settings.parent / "empty_repo"
+    empty_repo.mkdir(exist_ok=True)
+    monkeypatch.chdir(empty_repo)
+    # Should not raise — falls back to defaults + env-var-only.
+    s = load_settings(CrackerjackSettings)
+    assert isinstance(s, CrackerjackSettings)
+
+
+def test_oneiric_loader_failure_falls_back(
+    repo_with_settings: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """When the Oneiric factory raises, the loader must not propagate.
+
+    ``crackerjack.config.loader.load_settings_for_project`` does
+    ``from oneiric.core.config import load_settings as _oneiric_load``
+    inside its body — so the local import re-resolves ``load_settings``
+    on the source module each call. Patching
+    ``oneiric.core.config.load_settings`` (the original symbol) is the
+    correct attach point; patching ``crackerjack.config.loader._oneiric_load``
+    would NOT work because that name is local-scope only.
+
+    The ``log_settings`` exception path records the failure on the
+    ``crackerjack.config.loader`` logger — we assert the canonical
+    fingerprint (``oneiric_loader_failed``) is present in the log.
+    """
+    def _raise(*_a: object, **_kw: object) -> object:
+        raise RuntimeError("simulated oneiric failure")
+
+    monkeypatch.setattr("oneiric.core.config.load_settings", _raise)
+    monkeypatch.chdir(repo_with_settings)
+    with caplog.at_level(logging.ERROR, logger="crackerjack.config.loader"):
+        s = load_settings(CrackerjackSettings)
+    assert isinstance(s, CrackerjackSettings)
+    assert any(
+        "oneiric_loader_failed" in r.getMessage() for r in caplog.records
+    )
+
+
+def test_timeout_reshape_works(
+    repo_with_settings: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Regression guard for R6.2: top-level ``*_timeout`` keys reach the
+    ``_reshape_adapter_timeouts`` validator (REQ-004) so values land in
+    ``adapter_timeouts.<key>`` rather than being silently dropped by the
+    per-key extras filter.
+
+    Uses ``bandit_timeout`` and ``semgrep_timeout`` because both are
+    declared on ``AdapterTimeouts`` (``crackerjack/config/settings.py:239-240``);
+    earlier draft used ``ruff_timeout``/``mypy_timeout`` (review I1)
+    which only worked because ``OneiricMCPConfig`` accepts extras —
+    fragile against any future tighten of ``extra="allow"``.
+    """
+    settings_dir = repo_with_settings / "settings"
+    (settings_dir / "crackerjack.yaml").write_text(
+        "bandit_timeout: 60\nsemgrep_timeout: 120\n", encoding="utf-8"
+    )
+    monkeypatch.chdir(repo_with_settings)
+    s = load_settings(CrackerjackSettings)
+    assert s.adapter_timeouts.bandit_timeout == 60
+    assert s.adapter_timeouts.semgrep_timeout == 120
+    # The top-level ``*_timeout`` keys must NOT survive at the top
+    # level — REQ-004's contract is reshape-into-sub-dict.
+    dump = s.model_dump()
+    assert "bandit_timeout" not in dump
+    assert "semgrep_timeout" not in dump
+
+
+# --- Helper-unit tests ------------------------------------------------------
+
+
+def test_crackerjack_env_overlay_basic(monkeypatch: pytest.MonkeyPatch) -> None:
+    """``crackerjack_env_overlay`` builds the nested-dict overlay shape
+    and drops non-``model_fields`` keys (REQ-006).
+    """
+    monkeypatch.setenv("CRACKERJACK_DOC_UPDATES__MODEL", "claude-haiku-4-5")
+    monkeypatch.delenv("CRACKERJACK_FOO", raising=False)
+    overlay = crackerjack_env_overlay(CrackerjackSettings)
+    assert overlay["doc_updates"]["model"] == "claude-haiku-4-5"
+    # Unknown top-level keys (not in model_fields) are silently dropped.
+    assert "foo" not in overlay
+
+
+def test_crackerjack_env_overlay_drops_non_field_keys(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Keys not declared on ``CrackerjackSettings.model_fields`` are
+    silently dropped (R5: respect the model's field set).
+    """
+    monkeypatch.setenv("CRACKERJACK_NONEXISTENT_FIELD_XYZ", "9999")
+    overlay = crackerjack_env_overlay(CrackerjackSettings)
+    assert "nonexistent_field_xyz" not in overlay

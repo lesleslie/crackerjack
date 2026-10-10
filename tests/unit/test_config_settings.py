@@ -27,6 +27,7 @@ from crackerjack.config.settings import (
     AdapterTimeouts,
     ConfigCleanupSettings,
 )
+from crackerjack.config import load_settings_for_project
 
 
 class TestCleaningSettings:
@@ -162,7 +163,6 @@ class TestPublishSettings:
         field, written as ``publishing.<key>``, must surface on
         ``CrackerjackSettings.publishing.<key>`` after a load.
         """
-        from crackerjack.config import load_settings
 
         settings_dir = tmp_path / "settings"
         settings_dir.mkdir()
@@ -176,7 +176,7 @@ class TestPublishSettings:
             "  skip_version_check: true\n"
         )
 
-        loaded = load_settings(CrackerjackSettings, settings_dir=settings_dir)
+        loaded = load_settings_for_project(tmp_path, CrackerjackSettings)
 
         assert loaded.publishing.publish == "0.1.0"
         assert loaded.publishing.bump == "minor"
@@ -196,7 +196,6 @@ class TestPublishSettings:
         may have stale entries in their ``settings/local.yaml``; the
         loader must ignore them rather than crash.
         """
-        from crackerjack.config import load_settings
 
         settings_dir = tmp_path / "settings"
         settings_dir.mkdir()
@@ -209,7 +208,7 @@ class TestPublishSettings:
             "skip_version_check: true\n"
         )
 
-        loaded = load_settings(CrackerjackSettings, settings_dir=settings_dir)
+        loaded = load_settings_for_project(tmp_path, CrackerjackSettings)
 
         # Defaults — flat keys must not populate anything.
         assert loaded.publishing.publish is None
@@ -229,7 +228,6 @@ class TestPublishSettings:
         ``publish.url`` set, ``load_settings`` must surface that URL on
         ``CrackerjackSettings.publishing.publish_url``.
         """
-        from crackerjack.config import load_settings
 
         # Pretend tmp_path IS the project root for this repo.
         project_root = tmp_path
@@ -248,7 +246,7 @@ class TestPublishSettings:
         )
         monkeypatch.setenv("BODAI_ECOSYSTEM_CONFIG", str(ecosystem_path))
 
-        loaded = load_settings(CrackerjackSettings, settings_dir=settings_dir)
+        loaded = load_settings_for_project(project_root, CrackerjackSettings)
 
         assert loaded.publishing.publish_url == (
             "https://gitlab.example/api/v4/projects/42/packages/pypi"
@@ -271,7 +269,6 @@ class TestPublishSettings:
         ``GITLAB_PERSONAL_ACCESS_TOKEN`` (or refuse) regardless of
         whether the operator configured a different env var.
         """
-        from crackerjack.config import load_settings
 
         project_root = tmp_path
         settings_dir = project_root / "settings"
@@ -287,7 +284,7 @@ class TestPublishSettings:
         )
         monkeypatch.setenv("BODAI_ECOSYSTEM_CONFIG", str(ecosystem_path))
 
-        loaded = load_settings(CrackerjackSettings, settings_dir=settings_dir)
+        loaded = load_settings_for_project(project_root, CrackerjackSettings)
 
         assert loaded.publishing.publish_url is not None
         assert loaded.publishing.publish_token_env == "GITLAB_PERSONAL_ACCESS_TOKEN"
@@ -298,7 +295,6 @@ class TestPublishSettings:
         """Operator-set ``publish_token_env`` in settings/local.yaml
         beats the ecosystem default — mirrors the explicit-beats-default
         invariant that ``publish_url`` already enforces."""
-        from crackerjack.config import load_settings
 
         project_root = tmp_path
         settings_dir = project_root / "settings"
@@ -320,7 +316,7 @@ class TestPublishSettings:
             "  publish_token_env: OPERATOR_OVERRIDE_TOKEN\n"
         )
 
-        loaded = load_settings(CrackerjackSettings, settings_dir=settings_dir)
+        loaded = load_settings_for_project(project_root, CrackerjackSettings)
 
         assert loaded.publishing.publish_token_env == "OPERATOR_OVERRIDE_TOKEN"
 
@@ -333,7 +329,6 @@ class TestPublishSettings:
         not silently route to a different repo. The synthesis must
         yield None when no registered repo matches the cwd.
         """
-        from crackerjack.config import load_settings
 
         project_root = tmp_path
         settings_dir = project_root / "settings"
@@ -349,7 +344,7 @@ class TestPublishSettings:
         )
         monkeypatch.setenv("BODAI_ECOSYSTEM_CONFIG", str(ecosystem_path))
 
-        loaded = load_settings(CrackerjackSettings, settings_dir=settings_dir)
+        loaded = load_settings_for_project(project_root, CrackerjackSettings)
 
         assert loaded.publishing.publish_url is None
 
@@ -363,7 +358,6 @@ class TestPublishSettings:
         has already populated ``publishing.publish_url`` — operators
         expect explicit per-repo config to beat ecosystem-wide defaults.
         """
-        from crackerjack.config import load_settings
 
         project_root = tmp_path
         settings_dir = project_root / "settings"
@@ -383,7 +377,7 @@ class TestPublishSettings:
         )
         monkeypatch.setenv("BODAI_ECOSYSTEM_CONFIG", str(ecosystem_path))
 
-        loaded = load_settings(CrackerjackSettings, settings_dir=settings_dir)
+        loaded = load_settings_for_project(project_root, CrackerjackSettings)
 
         # Settings YAML beats ecosystem.
         assert loaded.publishing.publish_url == "https://yaml-override.example/pypi"
@@ -397,7 +391,6 @@ class TestPublishSettings:
         var) must see crackerjack behave exactly as before — no lookup,
         no surprise values, PyPI default.
         """
-        from crackerjack.config import load_settings
 
         monkeypatch.delenv("BODAI_ECOSYSTEM_CONFIG", raising=False)
 
@@ -405,7 +398,7 @@ class TestPublishSettings:
         settings_dir.mkdir()
         # Note: no ecosystem.yaml file exists at all.
 
-        loaded = load_settings(CrackerjackSettings, settings_dir=settings_dir)
+        loaded = load_settings_for_project(tmp_path, CrackerjackSettings)
 
         assert loaded.publishing.publish_url is None
 
@@ -415,7 +408,6 @@ class TestPublishSettings:
         """A registered repo with ``publish.url: null`` must NOT be
         picked up — the synthesis is for ACTIVE private-index configs.
         """
-        from crackerjack.config import load_settings
 
         project_root = tmp_path
         settings_dir = project_root / "settings"
@@ -432,7 +424,7 @@ class TestPublishSettings:
         )
         monkeypatch.setenv("BODAI_ECOSYSTEM_CONFIG", str(ecosystem_path))
 
-        loaded = load_settings(CrackerjackSettings, settings_dir=settings_dir)
+        loaded = load_settings_for_project(project_root, CrackerjackSettings)
 
         assert loaded.publishing.publish_url is None
 
@@ -440,7 +432,6 @@ class TestPublishSettings:
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ):
         """A pointing env var with a non-existent file must not crash."""
-        from crackerjack.config import load_settings
 
         settings_dir = tmp_path / "settings"
         settings_dir.mkdir()
@@ -449,7 +440,7 @@ class TestPublishSettings:
             "BODAI_ECOSYSTEM_CONFIG", str(tmp_path / "nonexistent.yaml")
         )
 
-        loaded = load_settings(CrackerjackSettings, settings_dir=settings_dir)
+        loaded = load_settings_for_project(tmp_path, CrackerjackSettings)
 
         assert loaded.publishing.publish_url is None
 

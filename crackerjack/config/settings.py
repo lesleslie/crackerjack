@@ -4,7 +4,9 @@ import typing as t
 from pathlib import Path
 
 from oneiric.core.config import OneiricMCPConfig
-from pydantic import Field
+from pydantic import Field, model_validator
+
+from .validators import reshape_adapter_timeouts, warn_unknown_pyproject_subtables
 
 
 class CleaningSettings(OneiricMCPConfig):
@@ -467,8 +469,31 @@ class ReviewPRSettings(OneiricMCPConfig):
     fork_pr_quota_buffer: int = 10
 
 
+# _KNOWN_PYPROJECT_SUBTABLES moves here from crackerjack/config/loader.py:22-31.
+_KNOWN_PYPROJECT_SUBTABLES: frozenset[str] = frozenset(
+    {
+        # Read by ``crackerjack/adapters/web/jinja_formatter.py:144`` for
+        # per-project Jinja delimiter config (6 keys).
+        "jinja",
+        # Read by ``crackerjack/adapters/web/__init__.py:35`` as an
+        # opt-in flag for the Web adapter.
+        "web",
+    }
+)
+
+
 class CrackerjackSettings(OneiricMCPConfig):
     pkg_path: Path | None = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def _reshape_adapter_timeouts(cls, data: t.Any) -> t.Any:  # REQ-004
+        return reshape_adapter_timeouts(data)
+
+    @model_validator(mode="after")
+    def _warn_unknown_pyproject_subtables(self) -> "CrackerjackSettings":  # REQ-003
+        warn_unknown_pyproject_subtables(self)
+        return self
 
     console: ConsoleSettings = ConsoleSettings()
     cleaning: CleaningSettings = CleaningSettings()

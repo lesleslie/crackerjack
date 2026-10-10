@@ -218,7 +218,7 @@ def _create_standard_orchestrator(
 
 
 async def _register_core_services(container: t.Any, working_dir: t.Any) -> None:
-    from crackerjack.config import CrackerjackSettings, load_settings
+    from crackerjack.config import CrackerjackSettings, load_settings_for_project
     from crackerjack.core.console import CrackerjackConsole
     from crackerjack.managers.async_hook_manager import AsyncHookManager
     from crackerjack.managers.publish_manager import PublishManagerImpl
@@ -238,7 +238,7 @@ async def _register_core_services(container: t.Any, working_dir: t.Any) -> None:
     # Typer) — settings YAML + BODAI_ECOSYSTEM_CONFIG synthesis are the
     # only sources on this path. Mirrors PhaseCoordinator's init-time
     # threading so the two paths stay symmetric.
-    settings = load_settings(CrackerjackSettings, settings_dir=working_dir / "settings")
+    settings = load_settings_for_project(working_dir, CrackerjackSettings)
     publish_url = settings.publishing.publish_url
 
     container.register_singleton(
