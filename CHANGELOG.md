@@ -10,6 +10,12 @@ blocks_on: []
 topic: changelog
 ---
 
+## [0.87.1] - 2026-10-10
+
+### Fixed
+
+- release-audit: Recognise file-path CHANGELOG claims (e.g. audit_cli_inventory.py)
+
 ## [0.87.0] - 2026-10-10
 
 ### Added

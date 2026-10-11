@@ -308,7 +308,9 @@ def _file_path_exists(
     source_root: Path,
 ) -> bool:
     """True if any candidate filesystem path for ``symbol`` exists on disk."""
-    return any(p.exists() for p in _file_path_candidates(symbol, project_root, source_root))
+    return any(
+        p.exists() for p in _file_path_candidates(symbol, project_root, source_root)
+    )
 
 
 def _verify_added(
