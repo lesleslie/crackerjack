@@ -78,7 +78,6 @@ dependencies = [
     "vulture>=2.16",
     "watchdog>=6.0.0",
     "websockets>=17.1",
-    "zuban>=0.10.0",
     "sqlmodel>=0.0.47",
     "transformers>=5.18.0",
     "pypistats>=1.14.0",
@@ -131,7 +130,7 @@ adapter-learning = [
 ]
 
 # Type-checking group: experimental type checkers.
-# pyrefly and ty are alternatives to zuban; install one to try them.
+# pyrefly and ty are alternatives; install one to try them.
 type-checking = [
     "pyrefly>=1.3.2",
     "ty>=0.0.84",
@@ -436,11 +435,6 @@ mcp_http_port = 8676
 mcp_http_host = "127.0.0.1"
 mcp_websocket_port = 8675
 mcp_http_enabled = true
-zuban_lsp_enabled = true
-zuban_lsp_host = "127.0.0.1"
-zuban_lsp_port = 8677
-zuban_lsp_timeout = 120.0
-zuban_lsp_strict_mode = true
 terminal_width = 70
 # Refurb on the crackerjack package takes ~22 min when run
 # alone and ~57 min when run in parallel with the rest of
@@ -451,7 +445,6 @@ terminal_width = 70
 # enforcement should run ``refurb`` separately, e.g.
 # ``uv run refurb crackerjack/``.
 refurb_timeout = 1800
-zuban_timeout = 60
 semgrep_timeout = 300
 pyscn_timeout = 60
 gitleaks_timeout = 60
