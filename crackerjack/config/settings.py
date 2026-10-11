@@ -24,7 +24,6 @@ class HookSettings(OneiricMCPConfig):
     experimental_hooks: bool = False
     enable_pyrefly: bool = False
     enable_ty: bool = True
-    enable_zuban: bool = False
     enable_ty_ignore_syntax: bool = False
     enable_lsp_optimization: bool = False
     skip_offline_osv_scanner: bool = True
@@ -203,14 +202,6 @@ class MCPServerSettings(OneiricMCPConfig):
     websocket_port: int = 8696
 
 
-class ZubanLSPSettings(OneiricMCPConfig):
-    enabled: bool = False
-    auto_start: bool = False
-    port: int = 8685
-    mode: str = "stdio"
-    timeout: int = 120
-
-
 class GlobalLockSettings(OneiricMCPConfig):
     enabled: bool = True
     timeout_seconds: float = 1800.0
@@ -229,11 +220,7 @@ class EventBridgeSettings(OneiricMCPConfig):
 
 
 class AdapterTimeouts(OneiricMCPConfig):
-    zuban_lsp_timeout: float = 120.0
-    skylos_timeout: int = 900
-
     refurb_timeout: int = 1800
-    zuban_timeout: int = 60
     ty_timeout: int = 120
     pyrefly_timeout: int = 120
     bandit_timeout: int = 300
@@ -415,7 +402,6 @@ class PoolRouterConfiguration(OneiricMCPConfig):
         "pylint": "heavy-cpu-worker",
         "mypy": "heavy-cpu-worker",
         "bandit": "heavy-cpu-worker",
-        "skylos": "fast-worker",
         "ruff": "fast-worker",
         "vulture": "fast-worker",
         "codespell": "fast-worker",
@@ -434,7 +420,6 @@ class PoolScanningSettings(OneiricMCPConfig):
     pooled_tools: list[str] = [
         "refurb",
         "complexipy",
-        "skylos",
         "semgrep",
         "gitleaks",
     ]
@@ -509,7 +494,6 @@ class CrackerjackSettings(OneiricMCPConfig):
     documentation: DocumentationSettings = DocumentationSettings()
     advanced: AdvancedSettings = AdvancedSettings()
     mcp_server: MCPServerSettings = MCPServerSettings()
-    zuban_lsp: ZubanLSPSettings = ZubanLSPSettings()
     global_lock: GlobalLockSettings = GlobalLockSettings()
     adapter_timeouts: AdapterTimeouts = AdapterTimeouts()
     config_cleanup: ConfigCleanupSettings = ConfigCleanupSettings()

@@ -193,13 +193,6 @@ mcp_http_host: "127.0.0.1"
 mcp_websocket_port: 8696
 mcp_http_enabled: true
 
-# Zuban LSP
-zuban_enabled: false
-zuban_auto_start: false
-zuban_port: 8685
-zuban_mode: "stdio"
-zuban_timeout: 30
-
 # === Orchestration Settings ===
 
 # Core orchestration
@@ -243,10 +236,7 @@ qa_enable_incremental: true
 
 # Adapter-specific settings
 adapter_timeouts:
-  zuban_lsp_timeout: 120.0
-  skylos_timeout: 60
   refurb_timeout: 600
-  zuban_timeout: 60
   bandit_timeout: 300
   semgrep_timeout: 300
   osv_scanner_timeout: 120

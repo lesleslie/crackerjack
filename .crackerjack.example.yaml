@@ -41,7 +41,6 @@ pool_scanning:
   pooled_tools:
     - refurb
     - complexipy
-    - skylos
     - semgrep
     - gitleaks
 
