@@ -32,6 +32,11 @@ class ChangelogClaim:
     claim_type: ClaimType
     symbol: str
     context: str = ""
+    # True when the captured symbol looks like a file path (e.g.
+    # ``audit_cli_inventory.py``) rather than a Python identifier
+    # (e.g. ``mymodule.MyClass.method``). File-path claims are verified
+    # by filesystem existence, not by searching source for a def/class.
+    is_file_path: bool = False
 
 
 @dataclass(frozen=True)
@@ -130,6 +135,7 @@ def _parse_changelog(text: str) -> list[ChangelogClaim]:
             ChangelogClaim(
                 claim_type=current_section,
                 symbol=symbol,
+                is_file_path=_is_file_path_symbol(symbol),
                 context=bullet,
             )
         )
@@ -196,7 +202,134 @@ def _symbol_in_source(symbol: str, source_root: Path) -> bool:
     return _symbol_in_source(f"{symbol}.{symbol.split('.')[-1]}", source_root)
 
 
-def _verify_added(claim: ChangelogClaim, source_root: Path) -> VerifyResult:
+# Known file extensions the audit recognises as file-path claims (rather
+# than Python identifiers). 1-5 chars, alphabetic, common across
+# Bodai repos (``.py``, ``.md``, ``.toml``, ``.yaml``, ``.json``,
+# ``.sh``, ``.rst``, ``.html``, ``.css``, ``.js``/``.ts``).
+_KNOWN_FILE_EXTS: frozenset[str] = frozenset(
+    {
+        "py",
+        "md",
+        "toml",
+        "yaml",
+        "yml",
+        "json",
+        "sh",
+        "txt",
+        "cfg",
+        "ini",
+        "rst",
+        "html",
+        "css",
+        "js",
+        "ts",
+        "tsx",
+        "jsx",
+    },
+)
+
+
+def _is_file_path_symbol(symbol: str) -> bool:
+    """True if the captured CHANGELOG symbol is a file path, not a Python identifier.
+
+    A symbol is a file path when its last ``.``-separated segment is one of
+    :data:`_KNOWN_FILE_EXTS`. Real Python identifiers (e.g.
+    ``mahavishnu.dev_log.write_entry``, ``mymodule.MyClass.new_method``)
+    never have a final segment that matches a known extension, so the
+    disambiguation is reliable in practice.
+
+    Examples:
+        ``mahavishnu.audit_cli_inventory.py`` -> True   (final segment ``py``)
+        ``audit_cli_inventory.py``             -> True   (final segment ``py``)
+        ``settings.workers.entries``           -> False  (final segment ``entries``)
+        ``mymodule.MyClass.new_method``        -> False  (final segment ``new_method``)
+    """
+    parts = symbol.rsplit(".", 1)
+    if len(parts) != 2:
+        return False
+    ext = parts[1].lower()
+    if ext not in _KNOWN_FILE_EXTS:
+        return False
+    # Reject 1-char "extensions" like ``a.b`` where ``b`` happens to be
+    # in the set — extensions are conventionally 2-5 chars. (Defensive;
+    # no current extension in the set is 1 char, but the check is cheap.)
+    return 2 <= len(ext) <= 5
+
+
+def _file_path_candidates(
+    symbol: str,
+    project_root: Path,
+    source_root: Path,
+) -> list[Path]:
+    """Generate filesystem candidates to verify a file-path CHANGELOG claim.
+
+    The captured symbol may be the bare basename (``audit_cli_inventory.py``)
+    or include a repo/module prefix that the parser prepended
+    (``mahavishnu.audit_cli_inventory.py``). We try the basename AND
+    the symbol-as-path (with each ``.`` mapped to ``/``) in each
+    Bodai-standard location.
+
+    Search roots (in priority order):
+        1. ``<project_root>/scripts``  — utility scripts (Bodai convention)
+        2. ``<project_root>/tests``    — test helpers
+        3. ``<project_root>/docs``     — long-form docs
+        4. ``<project_root>``          — top-level
+        5. ``<source_root>``           — inside the package
+
+    The basename is reconstructed as the last TWO ``.``-separated segments
+    (``audit_cli_inventory`` + ``py`` = ``audit_cli_inventory.py``) so the
+    extension stays attached. The full-path form treats each ``.`` as a
+    directory boundary, which covers the rare case where a CHANGELOG
+    entry references a nested path like ``docs.specs.foo.md``.
+    """
+    parts = symbol.split(".")
+    if len(parts) >= 2:
+        basename = ".".join(parts[-2:])  # e.g. "audit_cli_inventory.py"
+        full_path = Path(*parts)  # treat each ``.`` as a directory boundary
+    else:
+        basename = symbol
+        full_path = Path(symbol)
+    candidates: list[Path] = []
+    for path in (basename, full_path):
+        for root in (
+            project_root / "scripts",
+            project_root / "tests",
+            project_root / "docs",
+            project_root,
+            source_root,
+        ):
+            candidates.append(root / path)
+    return candidates
+
+
+def _file_path_exists(
+    symbol: str,
+    project_root: Path,
+    source_root: Path,
+) -> bool:
+    """True if any candidate filesystem path for ``symbol`` exists on disk."""
+    return any(p.exists() for p in _file_path_candidates(symbol, project_root, source_root))
+
+
+def _verify_added(
+    claim: ChangelogClaim,
+    source_root: Path,
+    project_root: Path,
+) -> VerifyResult:
+    if claim.is_file_path:
+        if _file_path_exists(claim.symbol, project_root, source_root):
+            return VerifyResult(
+                True,
+                "changelog",
+                claim,
+                f"CHANGELOG: {claim.symbol} added — file verified on disk",
+            )
+        return VerifyResult(
+            False,
+            "changelog",
+            claim,
+            f"CHANGELOG claims {claim.symbol} was added but the file does not exist",
+        )
     if _symbol_in_source(claim.symbol, source_root):
         return VerifyResult(
             True, "changelog", claim, f"CHANGELOG: {claim.symbol} added — verified"
@@ -209,7 +342,25 @@ def _verify_added(claim: ChangelogClaim, source_root: Path) -> VerifyResult:
     )
 
 
-def _verify_removed(claim: ChangelogClaim, source_root: Path) -> VerifyResult:
+def _verify_removed(
+    claim: ChangelogClaim,
+    source_root: Path,
+    project_root: Path,
+) -> VerifyResult:
+    if claim.is_file_path:
+        if not _file_path_exists(claim.symbol, project_root, source_root):
+            return VerifyResult(
+                True,
+                "changelog",
+                claim,
+                f"CHANGELOG: {claim.symbol} removed — file no longer on disk",
+            )
+        return VerifyResult(
+            False,
+            "changelog",
+            claim,
+            f"CHANGELOG claims {claim.symbol} was removed but the file still exists",
+        )
     if not _symbol_in_source(claim.symbol, source_root):
         return VerifyResult(
             True, "changelog", claim, f"CHANGELOG: {claim.symbol} removed — verified"
@@ -390,9 +541,9 @@ def check_release_audit(
     # Verify CHANGELOG claims
     for claim in _parse_changelog(changelog_text):
         if claim.claim_type is ClaimType.ADDED:
-            report.results.append(_verify_added(claim, source_root))
+            report.results.append(_verify_added(claim, source_root, project_root))
         else:
-            report.results.append(_verify_removed(claim, source_root))
+            report.results.append(_verify_removed(claim, source_root, project_root))
 
     # Verify CLAUDE.md claims. Coverage is only checked when a real ratchet
     # file exists — passing ``None`` or a missing path skips the check
