@@ -57,6 +57,7 @@ from .context import (
     clear_context,
     set_context,
 )
+from .oneiric_runtime import report_runtime_to_oneiric
 from .rate_limiter import RateLimitConfig
 
 
@@ -635,6 +636,11 @@ def main(
         )
         write_runtime_health(runtime_dir / "runtime_health.json", snapshot)
         write_pid_file(runtime_dir / "server.pid", pid)
+
+        # Plan 1 Phase 3 — fire-and-forget push of the FastMCP tool
+        # registry to Oneiric. Runs on a daemon thread; never blocks
+        # the boot path or the blocking _run_mcp_server call below.
+        report_runtime_to_oneiric(mcp_app)
 
         _run_mcp_server(mcp_app, mcp_config, http_mode)
 
