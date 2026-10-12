@@ -2,49 +2,19 @@
 
 # Type Adapters
 
-Static type checking with a stable Rust-backed default and two opt-in experimental tools.
+Static type checking with a stable Rust-backed default and one opt-in experimental tool.
 
 ## Overview
 
 - Ty is the active default type checker (active by default via `settings.hooks.enable_ty`)
-- Zuban is opt-in (legacy, gated behind `enable_zuban`) and remains available as a fallback
 - Pyrefly is opt-in and speaks JSON with `pyrefly check --output-format=json`
 
 ## Built-in Implementations
 
 | Module | Description | Status |
 | ------ | ----------- | ------ |
-| `zuban.py` | Rust-based type checking, opt-in legacy baseline | Stable |
 | `pyrefly.py` | Python type checker with JSON diagnostics, baseline/suppress support | Experimental |
 | `ty.py` | Python type checker with concise output and native fix support | Experimental |
-
-## Zuban Settings
-
-Settings class: `ZubanSettings`
-
-- `strict_mode` (bool)
-- `ignore_missing_imports` (bool)
-- `follow_imports` ("normal"/"skip"/"silent")
-- `incremental` (bool)
-- `cache_dir` (Path)
-- `warn_unused_ignores` (bool)
-
-Example:
-
-```python
-from pathlib import Path
-from crackerjack.adapters.type.zuban import ZubanAdapter, ZubanSettings
-
-
-async def run_zuban() -> None:
-    adapter = ZubanAdapter(settings=ZubanSettings(strict_mode=True, incremental=True))
-    await adapter.init()
-    result = await adapter.check(files=[Path("src/")])
-```
-
-## LSP Integration
-
-For editor-like performance, see [LSP adapters](../lsp/README.md) to run Zuban diagnostics via LSP with automatic CLI fallback.
 
 ## Ty Settings
 

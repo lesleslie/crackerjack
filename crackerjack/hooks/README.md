@@ -354,9 +354,8 @@ lsp_server_startup_timeout: 30
 hook_overrides:
   ruff-format:
     timeout: 120
-  zuban-lsp:
-    use_lsp: true
-    fallback_command: ["zuban", "check", "src"]
+  mypy:
+    fallback_command: ["mypy", "check", "src"]
 ```
 
 ## Usage Examples

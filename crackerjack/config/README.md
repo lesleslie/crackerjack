@@ -70,7 +70,6 @@ class CrackerjackSettings(Settings):
     cleanup: CleanupSettings
     advanced: AdvancedSettings
     mcp_server: MCPServerSettings
-    zuban_lsp: ZubanLSPSettings
     global_lock: GlobalLockSettings
 
     # Orchestration settings
@@ -105,7 +104,7 @@ class HookSettings(Settings):
     enable_lsp_optimization: bool = False
 ```
 
-`enable_pyrefly` and `enable_ty` are opt-in flags. When disabled, comprehensive mode keeps `zuban` as the default type checker and omits the newer adapters from the hook list.
+`enable_pyrefly` and `enable_ty` are opt-in flags. When disabled, comprehensive mode keeps `ty` as the default type checker and omits the newer adapters from the hook list.
 
 #### Test Settings
 
@@ -269,11 +268,9 @@ Thorough static analysis:
 
 ```yaml
 hooks:
-  - zuban (type checking)
-  - ty (optional, when `hooks.enable_ty: true`)
+  - ty (type checking, default-on)
   - pyrefly (optional, when `hooks.enable_pyrefly: true`)
   - bandit/semgrep (security)
-  - skylos (dead code)
   - creosote (unused deps)
   - complexipy (complexity ≤15)
   - refurb (modern patterns)

@@ -16,7 +16,6 @@ Modernization and dead-code tooling to simplify code and reduce risk.
 | ------ | ----------- | ------ |
 | `refurb.py` | Refactoring suggestions for modern Python idioms | Stable |
 | `creosote.py` | Detects unused dependencies in `pyproject.toml`/`requirements*.txt` | Stable |
-| `skylos.py` | Dead code detection (text/JSON parsing) | Stable |
 
 ## Examples
 

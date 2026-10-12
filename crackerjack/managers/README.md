@@ -51,7 +51,7 @@ Managers (80% compliant) ← You are here
     ↓
 Services (95% compliant) + Adapters (varies)
     ↓
-External Tools (ruff, zuban, pytest, etc.)
+External Tools (ruff, mypy, pytest, etc.)
 ```
 
 ### legacy Compliance Status
@@ -127,7 +127,7 @@ await manager.init()
 
 # Parallel execution with progress tracking
 results = await manager.run_hooks_parallel(
-    hooks=["ruff", "zuban", "bandit"],
+    hooks=["ruff", "mypy", "bandit"],
     progress_callback=lambda p: print(f"Progress: {p}%"),
 )
 
@@ -183,9 +183,8 @@ else:
 
 **Hooks:**
 
-- Zuban type checking (20-200x faster than pyright)
+- Ty type checking (default)
 - Bandit security analysis
-- Dead code detection (skylos, 20x faster than vulture)
 - Dependency analysis (creosote)
 - Complexity limits (complexipy ≤15 per function)
 - Modern Python patterns (refurb)
@@ -321,7 +320,7 @@ failures = [r for r in results if not r.passed]
 
 ```python
 # Increase timeout for specific hooks
-manager.set_hook_timeout("zuban", 120)
+manager.set_hook_timeout("mypy", 120)
 
 # Or globally
 manager.hook_timeout = 120

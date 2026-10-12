@@ -133,9 +133,7 @@ The services package contains 60+ specialized service modules organized into fun
 
 **LSP Integration**
 
-- `lsp_client.py`: Generic LSP client implementation
-- `zuban_lsp_service.py`: Zuban LSP service integration
-- `server_manager.py`: LSP server lifecycle management
+- `server_manager.py`: Process lifecycle management (ps + kill helpers)
 
 ### Utilities
 
