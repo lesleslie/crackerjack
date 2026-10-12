@@ -112,7 +112,6 @@ class Options(BaseModel):
     coverage: bool = False
     watchdog: bool = False
     enable_parallel_phases: bool = True
-    enable_lsp_hooks: bool = True
     dev: bool = False
     max_iterations: int = 5
     advanced_batch: str | None = None
@@ -999,7 +998,6 @@ def create_options(
     fail_first: bool = False,
     enable_pyrefly: bool = False,
     enable_ty: bool = False,
-    enable_lsp_hooks: bool = True,
     enable_hooks: list[str] | None = None,
     enable_parallel_phases: bool = True,
     no_git_tags: bool = False,

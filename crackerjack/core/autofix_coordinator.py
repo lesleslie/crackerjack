@@ -1143,7 +1143,7 @@ class AutofixCoordinator:
 
         return refreshed_issues
 
-    def _apply_pycharm_diagnostics_context(
+    async def _apply_pycharm_diagnostics_context(
         self,
         issues: list[Issue],
     ) -> list[Issue]:
