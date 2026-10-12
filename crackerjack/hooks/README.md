@@ -402,7 +402,6 @@ Hooks are executed by specialized executors (see [Executors](../executors/README
 - **AsyncHookExecutor** - Asynchronous hook execution
 - **CachedHookExecutor** - Caching for repeated executions
 - **ProgressHookExecutor** - Progress tracking and reporting
-- **LSPAwareHookExecutor** - LSP-aware execution optimization
 
 ## Best Practices
 

@@ -101,7 +101,6 @@ class HookSettings(Settings):
     experimental_hooks: bool = False
     enable_pyrefly: bool = False
     enable_ty: bool = False
-    enable_lsp_optimization: bool = False
 ```
 
 `enable_pyrefly` and `enable_ty` are opt-in flags. When disabled, comprehensive mode keeps `ty` as the default type checker and omits the newer adapters from the hook list.
@@ -199,7 +198,6 @@ mcp_server:
 
 hooks:
   experimental_hooks: true
-  enable_lsp_optimization: true
 
 # Orchestration tuning
 max_parallel_hooks: 8

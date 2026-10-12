@@ -20,7 +20,6 @@ The executors package provides specialized execution engines for running quality
 
 ### Specialized Executors
 
-- **`lsp_aware_hook_executor.py`** - LSP-optimized execution for type checking
 - **`hook_lock_manager.py`** - Lock management to prevent concurrent execution conflicts
 - **`tool_proxy.py`** - Proxy layer for tool execution with error handling
 
@@ -184,38 +183,6 @@ result = executor.execute_hook(
 if not result.success:
     print(f"Hook failed with exit code: {result.exit_code}")
     print(f"Error output:\n{result.stderr}")
-```
-
-### LSPAwareHookExecutor
-
-LSP-optimized executor for ultra-fast type checking:
-
-**Features:**
-
-- **LSP Integration** - Communicates with running LSP servers
-- **Incremental Analysis** - Only check changed files
-- **Fallback Support** - Falls back to direct execution if LSP unavailable
-- **Server Health Checking** - Monitors LSP server status
-- **Shared State** - Leverages LSP server's incremental compilation
-
-**Performance:**
-
-```
-Traditional execution:  ~30-60s
-LSP-aware execution:    ~2-5s (10-20x faster)
-```
-
-**Usage:**
-
-```python
-from crackerjack.executors import LSPAwareHookExecutor
-
-executor = LSPAwareHookExecutor(
-    console=console, pkg_path=pkg_path, lsp_enabled=True, fallback_enabled=True
-)
-
-# Uses LSP server if available, falls back otherwise
-result = executor.execute_type_checking()
 ```
 
 ### HookLockManager
@@ -455,21 +422,6 @@ for i in range(3):
     print(f"  Cache hits: {result.cache_hits}")
     print(f"  Cache hit rate: {result.cache_hit_rate:.1%}")
     print(f"  Performance gain: {result.performance_gain:.1%}")
-```
-
-### LSP-Aware Type Checking
-
-```python
-from crackerjack.executors import LSPAwareHookExecutor
-
-executor = LSPAwareHookExecutor(console=console, pkg_path=pkg_path, lsp_enabled=True)
-
-# Fast type checking via LSP
-result = executor.execute_type_checking()
-
-print(f"Type checking completed in {result.total_duration:.2f}s")
-print(f"Used LSP: {result.used_lsp}")
-print(f"Speedup: {result.speedup_factor:.1f}x")
 ```
 
 ### Progress Tracking with Rich Console

@@ -72,7 +72,6 @@ This document describes all command-line options and usage patterns.
 - `--boost_coverage` (bool):
 - `--watchdog` (bool):
 - `--enable_parallel_phases` (bool):
-- `--enable_lsp_hooks` (bool):
 - `--dev` (bool):
 - `--max_iterations` (int):
 - `--advanced_batch` (str | None):
