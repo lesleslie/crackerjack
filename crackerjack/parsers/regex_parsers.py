@@ -410,7 +410,7 @@ class MypyRegexParser(RegexParser):
             if issue:
                 issues.append(issue)
 
-        logger.debug(f"Parsed {len(issues)} issues from mypy/zuban")
+        logger.debug(f"Parsed {len(issues)} issues from mypy")
         return issues
 
     def _should_parse_mypy_line(self, line: str) -> bool:
@@ -439,7 +439,7 @@ class MypyRegexParser(RegexParser):
                 message=message,
                 file_path=file_path,
                 line_number=line_number,
-                stage="zuban",
+                stage="mypy",
             )
         except (ValueError, IndexError) as e:
             logger.debug(f"Failed to parse mypy line: {line} ({e})")
@@ -922,11 +922,9 @@ def register_regex_parsers(factory: ParserFactory) -> None:
     factory.register_regex_parser("complexity", ComplexityRegexParser)
     factory.register_regex_parser("creosote", CreosoteRegexParser)
     factory.register_regex_parser("mypy", MypyRegexParser)
-    factory.register_regex_parser("zuban", MypyRegexParser)
     factory.register_regex_parser("ty", TyRegexParser)
     factory.register_regex_parser("cohesion", CohesionRegexParser)
     factory.register_regex_parser("pymetrica", PymetricaRegexParser)
-    factory.register_regex_parser("skylos", SkylosRegexParser)
     factory.register_regex_parser("check-local-links", LocalLinkCheckerRegexParser)
     factory.register_regex_parser("lychee", LycheeRegexParser)
     factory.register_regex_parser("linkcheckmd", LinkcheckmdRegexParser)
@@ -950,64 +948,11 @@ def register_regex_parsers(factory: ParserFactory) -> None:
     logger.info(
         "Registered regex parsers: codespell, refurb, ruff, ruff-check, ruff-format, "
         "complexipy, complexity, "
-        "creosote, mypy, zuban, skylos, check-local-links, lychee, linkcheckmd, check-jsonschema, "
+        "creosote, mypy, check-local-links, lychee, linkcheckmd, check-jsonschema, "
         "check-yaml, check-toml, check-json, "
         "validate-regex-patterns, trailing-whitespace, end-of-file-fixer, format-json, "
         "mdformat, uv-lock, check-added-large-files, check-ast"
     )
-
-
-class SkylosRegexParser(RegexParser):
-    def parse_text(self, output: str) -> list[Issue]:
-        issues: list[Issue] = []
-
-        for line in output.split("\n"):
-            line = line.strip()
-            if not self._should_parse_skylos_line(line):
-                continue
-
-            try:
-                issue = self._parse_skylos_line(line)
-                if issue:
-                    issues.append(issue)
-            except Exception as e:
-                logger.debug(f"Failed to parse skylos line: {line} ({e})")
-
-        logger.debug(f"Parsed {len(issues)} issues from skylos")
-        return issues
-
-    def _should_parse_skylos_line(self, line: str) -> bool:
-        return bool(line and "ERROR" in line and "-" in line)
-
-    def _parse_skylos_line(self, line: str) -> Issue | None:
-
-        error_idx = line.find(" - ERROR - ")
-        if error_idx == -1:
-            return None
-
-        file_path = line[:error_idx].strip()
-
-        error_part = line[error_idx + 11 :].strip()
-
-        message = error_part
-
-        line_number = None
-        if "line " in message:
-            import re
-
-            match = re.search(r"line (\d+)", message)
-            if match:
-                line_number = int(match.group(1))
-
-        return Issue(
-            type=IssueType.DEAD_CODE,
-            severity=Priority.MEDIUM,
-            message=message[:200],
-            file_path=file_path,
-            line_number=line_number,
-            details=[line],
-            stage="skylos",
-        )
 
 
 class ValidateRegexPatternsParser(GenericRegexParser):

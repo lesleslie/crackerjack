@@ -75,14 +75,6 @@ class CrackerjackServer:
             enabled_names,
         )
 
-        zuban_enabled = getattr(
-            getattr(self.settings, "zuban_lsp", None),
-            "enabled",
-            True,
-        )
-        if zuban_enabled:
-            await self._init_zuban_adapter(enabled_names)
-
         await self._init_adapter_if_enabled(
             "enable_pyrefly",
             False,
@@ -104,13 +96,6 @@ class CrackerjackServer:
             enabled_names,
         )
 
-        await self._init_adapter_if_enabled(
-            "skylos_enabled",
-            True,
-            "Skylos",
-            enabled_names,
-        )
-
         await self._init_claude_adapter(enabled_names)
 
     async def _init_adapter_if_enabled(
@@ -129,16 +114,6 @@ class CrackerjackServer:
                 logger.debug(f"{adapter_name} adapter initialized via factory")
             except Exception as e:
                 logger.warning(f"Failed to initialize {adapter_name} adapter: {e}")
-
-    async def _init_zuban_adapter(self, enabled_names: list[str]) -> None:
-        try:
-            zuban = self.adapter_factory.create_adapter("Zuban")
-            await zuban.init()
-            self.adapters.append(zuban)
-            enabled_names.append("Zuban")
-            logger.debug("Zuban adapter initialized via factory")
-        except Exception as e:
-            logger.warning(f"Failed to initialize Zuban adapter: {e}")
 
     async def _init_claude_adapter(self, enabled_names: list[str]) -> None:
         ai_settings = getattr(self.settings, "ai", None)
@@ -221,11 +196,6 @@ class CrackerjackServer:
                 getattr(self.settings, "hooks", None), "enable_pyrefly", False
             ),
             "ty": getattr(getattr(self.settings, "hooks", None), "enable_ty", False),
-            "zuban": getattr(
-                getattr(self.settings, "zuban_lsp", None),
-                "enabled",
-                True,
-            ),
             "pytest": hasattr(self.settings, "testing"),
         }
 

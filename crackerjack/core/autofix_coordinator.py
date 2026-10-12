@@ -70,7 +70,6 @@ _HOOK_SCOPES: dict[str, tuple[str, ...]] = {
     "refurb": ("**/*.py", "**/*.pyi"),
     "complexipy": ("**/*.py",),
     "pyscn": ("**/*.py",),
-    "zuban": ("**/*.py", "**/*.pyi"),
     "ruff": ("**/*.py", "**/*.pyi"),
     "ruff-format": ("**/*.py", "**/*.pyi"),
     "semgrep": ("**/*.py",),
@@ -415,10 +414,9 @@ class AutofixCoordinator:
                     refreshed_type_issues,
                 )
 
-            await self._apply_zuban_fix_prepass(hook_results)
-
             issues = await self._apply_pycharm_hook_diagnostics_context(
-                issues, "comprehensive"
+                issues,
+                "comprehensive",
             )
 
             pycharm_reformat_success = await self._apply_pycharm_reformat_prepass(
@@ -474,9 +472,6 @@ class AutofixCoordinator:
 
         if "bandit" in failed_hooks:
             fixes.append((["uv", "run", "bandit", "-r", "."], "bandit analysis"))
-
-        if "zuban" in failed_hooks:
-            self._fix_zuban_missing_imports_in_mypy_ini()
 
         if "ty" in failed_hooks:
             fixes.append(
@@ -1078,9 +1073,6 @@ class AutofixCoordinator:
         type_tool_files = self._collect_type_tool_files(hook_results)
 
         for tool_name, file_paths in type_tool_files.items():
-            if tool_name == "zuban":
-                continue
-
             adapter = self._create_type_tool_adapter(tool_name)
             if adapter is None:
                 continue
@@ -1151,79 +1143,7 @@ class AutofixCoordinator:
 
         return refreshed_issues
 
-    def _collect_zuban_files(self, hook_results: Sequence[object]) -> list[Path]:
-        files: list[Path] = []
-        for result in hook_results:
-            if not self._validate_hook_result(result):
-                continue
-            status = getattr(result, "status", "")
-            if not isinstance(status, str) or status.lower() not in (
-                "failed",
-                "timeout",
-            ):
-                continue
-            hook_name = getattr(result, "name", "").lower()
-            if hook_name != "zuban":
-                continue
-            for file_path in self._extract_hook_result_files(result):
-                if file_path not in files:
-                    files.append(file_path)
-        return files
-
-    def _fix_zuban_missing_imports_in_mypy_ini(self) -> int:
-        import re
-
-        mypy_ini_path = self.pkg_path / "mypy.ini"
-        if not mypy_ini_path.exists():
-            return 0
-        content = mypy_ini_path.read_text()
-        if "ignore_missing_imports" in content.lower():
-            return 0
-        new_content = re.sub(
-            r"(\[mypy\][^\[]*)",
-            lambda m: m.group(0).rstrip() + "\nignore_missing_imports = True\n",
-            content,
-            count=1,
-        )
-        if new_content == content:
-            return 0
-        mypy_ini_path.write_text(new_content)
-        return 1
-
-    async def _apply_zuban_fix_prepass(
-        self, hook_results: Sequence[object]
-    ) -> dict[str, list[Issue]]:
-        refreshed: dict[str, list[Issue]] = {}
-        zuban_files = self._collect_zuban_files(hook_results)
-        if not zuban_files:
-            return refreshed
-
-        all_issues = self._collect_fixable_issues(hook_results)
-        import_errors = [
-            i
-            for i in all_issues
-            if getattr(i, "stage", "") == "zuban"
-            and "import-not-found" in (getattr(i, "code", "") or "")
-        ]
-
-        if import_errors:
-            fixed = self._fix_zuban_missing_imports_in_mypy_ini()
-            if fixed:
-                self.logger.info(
-                    "✅ Added ignore_missing_imports to mypy.ini "
-                    f"({len(import_errors)} import-not-found errors suppressed)"
-                )
-
-        adapter = self._create_type_tool_adapter("zuban")
-        if adapter is None:
-            return refreshed
-
-        refreshed["zuban"] = await self._rerun_type_tool_check(
-            adapter, "zuban", zuban_files
-        )
-        return refreshed
-
-    async def _apply_pycharm_diagnostics_context(
+    def _apply_pycharm_diagnostics_context(
         self,
         issues: list[Issue],
     ) -> list[Issue]:
@@ -1666,7 +1586,7 @@ def _extract_issue_count_from_json(output: str, tool_name: str) -> int | None:
 
 
 def _count_issues_for_tool(data: object, tool_name: str) -> int | None:
-    if tool_name in ("ruff", "ruff-check", "mypy", "zuban", "pyrefly", "ty", "pyright"):
+    if tool_name in ("ruff", "ruff-check", "mypy", "pyrefly", "ty", "pyright"):
         return _count_list_data(data)
     if tool_name == "bandit":
         return _count_bandit_results(data)

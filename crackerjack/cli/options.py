@@ -102,7 +102,6 @@ class Options(BaseModel):
     fail_first: bool = False
     enable_pyrefly: bool = False
     enable_ty: bool = False
-    enable_zuban: bool = False
     cleanup: t.Any | None = None
     no_git_tags: bool = False
     skip_version_check: bool = False
@@ -112,14 +111,7 @@ class Options(BaseModel):
     boost_coverage: bool = True
     coverage: bool = False
     watchdog: bool = False
-    start_zuban_lsp: bool = False
-    stop_zuban_lsp: bool = False
     enable_parallel_phases: bool = True
-    restart_zuban_lsp: bool = False
-    no_zuban_lsp: bool = False
-    zuban_lsp_port: int = 8685
-    zuban_lsp_mode: str = "tcp"
-    zuban_lsp_timeout: int = 120
     enable_lsp_hooks: bool = True
     dev: bool = False
     max_iterations: int = 5
@@ -257,15 +249,11 @@ class Options(BaseModel):
             )
 
     @classmethod
-    @field_validator("zuban_lsp_mode", mode="before")
-    def validate_zuban_lsp_mode(cls, value: t.Any) -> str:
+    @field_validator("enable_lsp_hooks", mode="before")
+    def validate_enable_lsp_hooks(cls, value: t.Any) -> bool:
         if value is None:
-            return "tcp"
-        valid_modes = ["tcp", "stdio"]
-        if value.lower() not in valid_modes:
-            msg = f"Invalid zuban LSP mode: {value}. Must be one of: {', '.join(valid_modes)}"
-            raise ValueError(msg)
-        return str(value).lower()
+            return True
+        return bool(value)
 
 
 allow_unsafe_fixes: bool = False
@@ -399,7 +387,7 @@ CLI_OPTIONS = {
     "tool": typer.Option(
         None,
         "--tool",
-        help="Run only the specified tool (e.g., 'ruff-check', 'zuban').",
+        help="Run only the specified tool (e.g., 'ruff-check', 'mypy').",
     ),
     "changed_only": typer.Option(
         False,
@@ -482,11 +470,6 @@ CLI_OPTIONS = {
             "(requires experimental hooks mode)."
         ),
     ),
-    "enable_zuban": typer.Option(
-        False,
-        "--enable-zuban",
-        help=("Enable zuban type checking alongside ty (legacy type checker, opt-in)."),
-    ),
     "no_git_tags": typer.Option(
         False,
         "--no-git-tags",
@@ -502,41 +485,6 @@ CLI_OPTIONS = {
             "Skip version consistency verification between pyproject.toml and git tags."
         ),
     ),
-    "start_zuban_lsp": typer.Option(
-        False,
-        "--start-zuban-lsp",
-        help="Start Zuban LSP server for real-time type checking.",
-    ),
-    "stop_zuban_lsp": typer.Option(
-        False,
-        "--stop-zuban-lsp",
-        help="Stop all running Zuban LSP servers.",
-    ),
-    "restart_zuban_lsp": typer.Option(
-        False,
-        "--restart-zuban-lsp",
-        help="Restart Zuban LSP server (stop and start again).",
-    ),
-    "no_zuban_lsp": typer.Option(
-        False,
-        "--no-zuban-lsp",
-        help="Disable automatic Zuban LSP server startup.",
-    ),
-    "zuban_lsp_port": typer.Option(
-        8685,
-        "--zuban-lsp-port",
-        help="Port for Zuban LSP server (default: 8685).",
-    ),
-    "zuban_lsp_mode": typer.Option(
-        "tcp",
-        "--zuban-lsp-mode",
-        help="Transport mode for Zuban LSP: tcp or stdio (default: tcp).",
-    ),
-    "zuban_lsp_timeout": typer.Option(
-        30,
-        "--zuban-lsp-timeout",
-        help="Timeout in seconds for LSP server operations (default: 30).",
-    ),
     "enable_lsp_hooks": typer.Option(
         True,
         "--enable-lsp-hooks/--no-lsp-hooks",
@@ -549,7 +497,7 @@ CLI_OPTIONS = {
         help=(
             "Force-enable a disabled hook by name. "
             "Can be specified multiple times. "
-            "Example: --enable-hook skylos --enable-hook complexipy"
+            "Example: --enable-hook complexipy --enable-hook vulture"
         ),
     ),
     "enable_parallel_phases": typer.Option(
@@ -1051,14 +999,6 @@ def create_options(
     fail_first: bool = False,
     enable_pyrefly: bool = False,
     enable_ty: bool = False,
-    enable_zuban: bool = False,
-    start_zuban_lsp: bool = False,
-    stop_zuban_lsp: bool = False,
-    restart_zuban_lsp: bool = False,
-    no_zuban_lsp: bool = False,
-    zuban_lsp_port: int = 8685,
-    zuban_lsp_mode: str = "tcp",
-    zuban_lsp_timeout: int = 120,
     enable_lsp_hooks: bool = True,
     enable_hooks: list[str] | None = None,
     enable_parallel_phases: bool = True,

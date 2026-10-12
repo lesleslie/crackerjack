@@ -206,16 +206,16 @@ def _parse_dead_code_issue_enhanced(issue: Issue, content: str) -> DeadCodeInfo 
     message = issue.message
     line_number = issue.line_number or 0
 
-    skylos_match = re.search(
+    dead_code_match = re.search(
         r"Unused\s+(function|class|method|attribute|variable|import)\s+"
         r"'?(\w+)'?\s*\(.*?line\s+(\d+)",
         message,
         re.IGNORECASE,
     )
-    if skylos_match:
-        code_type = skylos_match.group(1).lower()
-        name = skylos_match.group(2)
-        parsed_line = int(skylos_match.group(3))
+    if dead_code_match:
+        code_type = dead_code_match.group(1).lower()
+        name = dead_code_match.group(2)
+        parsed_line = int(dead_code_match.group(3))
         confidence = _extract_confidence(message.lower())
 
         end_line = _find_block_end(content, parsed_line, code_type)

@@ -15,13 +15,6 @@ class PoolRouter:
         "pylint": "heavy-cpu-worker",
         "mypy": "heavy-cpu-worker",
         "bandit": "heavy-cpu-worker",
-        # NOTE: vulture was REMOVED — replaced by skylos (see README,
-        # "Skylos (Dead Code Detection): Replaces vulture with 20x
-        # performance improvement"). VultureAdapter still exists at
-        # `crackerjack/adapters/refactor/vulture.py` but is no longer
-        # instantiated by any production code path; skylos is the
-        # canonical dead-code detector now.
-        "skylos": "fast-worker",
         "ruff": "fast-worker",
         "codespell": "fast-worker",
         "check-jsonschema": "fast-worker",
@@ -66,7 +59,6 @@ class PoolRouter:
             ): "PyLint performs comprehensive AST analysis",
             ("heavy-cpu-worker", "mypy"): "MyPy needs full type checking",
             ("heavy-cpu-worker", "bandit"): "Bandit requires deep security analysis",
-            ("fast-worker", "skylos"): "Skylos is Rust-based, already optimized",
             ("fast-worker", "ruff"): "Ruff is fast enough for shared workers",
             ("fast-worker", "codespell"): "Codespell is fast spell checker",
             (

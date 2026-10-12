@@ -148,9 +148,6 @@ class WorkflowPipeline:
     def _configure_session_cleanup(self, options: t.Any) -> None:
         pass
 
-    def _initialize_zuban_lsp(self, options: t.Any) -> None:
-        pass
-
     def _configure_hook_manager_lsp(self, options: t.Any) -> None:
         pass
 
