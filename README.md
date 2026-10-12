@@ -277,7 +277,7 @@ AI-assisted code quality enforcement that can automatically fix many issue types
 
 The AI agent can fix:
 
-- **Type Errors (zuban)**: Adds missing annotations, fixes type mismatches
+- **Type Errors (ty)**: Adds missing annotations, fixes type mismatches
 - **Type Errors (ty, opt-in)**: Applies Ty's native `--fix` pass first, then sends remaining diagnostics to AI
 - **Type Errors (pyrefly, opt-in)**: Uses JSON diagnostics, baselines, and suppressions to guide AI-assisted fixes
 - **Security Issues (bandit)**: Security hardening including:
@@ -294,7 +294,7 @@ The AI agent can fix:
 - **Code Quality (refurb)**: Applies refactoring, reduces complexity
 - **All Hook Failures**: Formatting, linting, style issues
 
-The AI-fix workflow runs `ty --fix` as a pre-pass; residual diagnostics are sent to the AI loop. Type checking is opt-in via `enable_zuban` (Zuban) or `enable_pyrefly` (Pyrefly) — the default lane is `ty`.
+The AI-fix workflow runs `ty --fix` as a pre-pass; residual diagnostics are sent to the AI loop. Type checking is opt-in via `enable_pyrefly` (Pyrefly) — the default lane is `ty`.
 
 #### AI Auto-Fix (Workflow Tool — not a shell command)
 
@@ -385,7 +385,7 @@ removed on 2026-08-06 alongside the `--ai-fix` flag.
 - **Formatting** (style, import organization, formatting violations)
 - **Test failures** (fixture repair, import errors, assertion fixes)
 - **Unused-import cleanup**
-- **Type annotations** (ty first, then zuban or pyrefly if enabled)
+- **Type annotations** (ty first, then pyrefly if enabled)
 
 **Auto-Fix Coordination Features**:
 
@@ -416,10 +416,9 @@ removed on 2026-08-06 alongside the `--ai-fix` flag.
   - Default in the comprehensive hook stage (`enable_ty` is implicit)
   - `ty --fix` runs as a pre-pass before the AI auto-fix loop
 
-- **Zuban** (Type Checking, opt-in): 20-200x faster than pyright
+- **Pyrefly** (Type Checking, opt-in): 20-200x faster than pyright
 
-  - Enable via the Pydantic `enable_zuban` field on `HookSettings` (loaded via the `ONEIRIC_MCP_HOOKS__ENABLE_ZUBAN` env var, not from `[tool.crackerjack]` in `pyproject.toml`)
-  - LSP server wiring lives in `zuban_lsp_enabled = true` (default on)
+  - Enable via the Pydantic `enable_pyrefly` field on `HookSettings` (loaded via the `ONEIRIC_MCP_HOOKS__ENABLE_PYREFLY` env var, not from `[tool.crackerjack]` in `pyproject.toml`)
 
 **Performance Benefits**:
 
@@ -1509,7 +1508,7 @@ Crackerjack runs quality checks in a two-stage process for optimal development w
 
 **Comprehensive Hooks (~30–120 seconds):**
 
-- `ty` type checking (default; zuban is opt-in via `enable_zuban`)
+- `ty` type checking (default; pyrefly is opt-in via `enable_pyrefly`)
 - Pyrefly type checking when explicitly enabled (`enable_pyrefly`)
 - Bandit security analysis
 - betterleaks secrets detection (replaces gitleaks, which is opt-in)
@@ -1524,11 +1523,10 @@ Crackerjack runs quality checks in a two-stage process for optimal development w
 
 **Opt-in comprehensive hooks (disabled by default):**
 
-- Zuban type checking — controlled by the Pydantic `enable_zuban` field on `HookSettings` (env var `ONEIRIC_MCP_HOOKS__ENABLE_ZUBAN`, not `[tool.crackerjack]` in `pyproject.toml`); CLI flag `--enable-zuban`
 - Pyrefly type checking — same shape: Pydantic `enable_pyrefly` / env `ONEIRIC_MCP_HOOKS__ENABLE_PYREFLY` / CLI flag `--enable-pyrefly`
 - gitleaks secrets detection (replaced by betterleaks)
 
-`ty` is the default type checker as of v0.8. Zuban and Pyrefly remain available as opt-in alternatives for repositories that require them.
+`ty` is the default type checker as of v0.8. Pyrefly remains available as an opt-in alternative for repositories that require it.
 
 ```bash
 # Default behavior runs comprehensive hooks
@@ -1685,14 +1683,6 @@ python -m crackerjack run --no-boost-coverage   # Disable coverage improvements
 **Zuban LSP Server Management:**
 
 ```bash
-python -m crackerjack run --start-zuban-lsp     # Start Zuban LSP server
-python -m crackerjack run --stop-zuban-lsp      # Stop Zuban LSP server
-python -m crackerjack run --restart-zuban-lsp   # Restart Zuban LSP server
-python -m crackerjack run --no-zuban-lsp        # Disable automatic LSP startup
-python -m crackerjack run --zuban-lsp-port 8677 # Custom LSP port
-python -m crackerjack run --zuban-lsp-mode tcp  # Transport mode (tcp/stdio)
-python -m crackerjack run --zuban-lsp-timeout 30 # LSP operation timeout
-python -m crackerjack run --enable-lsp-hooks    # Enable LSP-optimized hooks
 ```
 
 **Documentation Generation:**

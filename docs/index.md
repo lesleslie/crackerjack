@@ -50,7 +50,7 @@ python -m crackerjack run --ai-fix --run-tests
 
 ### Performance & Optimization
 
-- [Quality Scanning Strategy](QUALITY_SCANNING_STRATEGY.md) - Decision framework for optimizing slow hooks (refurb, complexipy, skylos)
+- [Quality Scanning Strategy](QUALITY_SCANNING_STRATEGY.md) - Decision framework for optimizing slow hooks (refurb, complexipy)
 - [Incremental Scanning Options](INTEGRAL_SCANNING_OPTIONS.md) - Four approaches to change-based scanning (git-diff, markers, hybrid, pools)
 - [Mahavishnu Pool Integration](archive/MAHAVISHNU_POOL_INTEGRATION.md) - Worker pool architecture for parallel tool execution
 

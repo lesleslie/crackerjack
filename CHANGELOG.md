@@ -10,6 +10,12 @@ blocks_on: []
 topic: changelog
 ---
 
+## [Unreleased]
+
+### Removed
+
+- zuban and skylos LSP adapters deleted: `crackerjack/adapters/lsp/` package, `crackerjack/services/{lsp_client,zuban_lsp_service}.py`, `crackerjack/executors/lsp_aware_hook_executor.py`, parallel `crackerjack/adapters/{refactor/skylos,type/zuban}.py` adapter modules. `ty` remains the default type checker; `pyrefly` stays opt-in. See `docs/plans/2026-10-11-remove-zuban-skylos-lsp-from-crackerjack.md`.
+
 ## [0.87.1] - 2026-10-10
 
 ### Fixed
