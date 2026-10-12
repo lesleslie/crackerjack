@@ -96,9 +96,9 @@ Crackerjack and pre-commit solve related but different problems. While pre-commi
 | ------------------------- | ----------------------------------- | ---------------------------------------------- |
 | **Code Formatting** | ✅ Via hooks (black, ruff, etc.) | ✅ Native Ruff integration + mdformat |
 | **Linting** | ✅ Via hooks (flake8, pylint, etc.) | ✅ Native Ruff + codespell |
-| **Type Checking** | ✅ Via hooks (mypy, pyright) | ✅**ty** (default) + opt-in Zuban/Pyrefly lanes |
+| **Type Checking** | ✅ Via hooks (mypy, pyright) | ✅**ty** (default) + opt-in Pyrefly lane |
 | **Security Scanning** | ✅ Via hooks (bandit, gitleaks) | ✅ Native bandit + gitleaks integration |
-| **Dead Code Detection** | ✅ Via vulture hook | ✅**Skylos** (20x faster than vulture) |
+| **Dead Code Detection** | ✅ Via vulture hook | ✅ Native vulture integration |
 | **Complexity Analysis** | ❌ Not built-in | ✅ Native complexipy integration |
 | **Dependency Validation** | ❌ Not built-in | ✅ Native creosote unused dependency detection |
 | **Custom Python Tools** | ✅ Via`repo: local` hooks | ✅ 6 native tools in`crackerjack/tools/` |
@@ -404,12 +404,6 @@ removed on 2026-08-06 alongside the `--ai-fix` flag.
 #### High-Performance Rust Tool Integration
 
 **High-Performance Static Analysis Tools**:
-
-- **Skylos** (Dead Code Detection): Replaces vulture with **20x performance improvement**
-
-  - Rust-powered dead code detection and import analysis
-  - Integrates with crackerjack's quality workflow
-  - Zero configuration changes required
 
 - **ty** (Type Checking, default since v0.8): Rust-based type checker
 
@@ -932,7 +926,7 @@ legacy-registered adapters for all quality checks:
 - **Format:** Ruff formatting, mdformat
 - **Lint:** Codespell, complexity analysis
 - **Security:** Bandit security scanning, Gitleaks secret detection
-- **Type:** `ty` type checking by default (since v0.8), with opt-in Zuban and Pyrefly lanes for repositories that require them
+- **Type:** `ty` type checking by default (since v0.8), with opt-in Pyrefly lane for repositories that require it
 - **Refactor:** Creosote (unused dependencies), Refurb (Python idioms)
 - **Complexity:** Complexipy analysis
 - **Utility:** Various validation checks
@@ -1252,16 +1246,15 @@ This pattern management system standardizes regex validation and helps reduce sp
 ![Adapter Taxonomy](docs/diagrams/adapter-taxonomy.png)
 *26 QA adapters organized by category (verified 2026-08-19 via `crackerjack/adapters/`) with protocol-based registration. Note: the diagram still references the Q1 2026 taxonomy image; `docs/diagrams/README.md` says "18 QA adapters" — both are stale. Use `python -c "from pathlib import Path; [print(p.parent.name + '/' + p.stem) for p in Path('crackerjack/adapters').rglob('adapter.py') if not p.name.startswith('_')]" | wc -l` to re-derive the count.*
 
-Adapters connect Crackerjack to external tools and subsystems (e.g., Ruff, Zuban, Bandit) using legacy patterns. Each adapter exposes typed settings, async initialization, and standardized results.
+Adapters connect Crackerjack to external tools and subsystems (e.g., Ruff, Bandit) using legacy patterns. Each adapter exposes typed settings, async initialization, and standardized results.
 
 - AI — Claude-powered code fixes: [crackerjack/adapters/ai/README.md](./crackerjack/adapters/ai/README.md)
 - Complexity — Code complexity analysis (Complexipy): [crackerjack/adapters/complexity/README.md](./crackerjack/adapters/complexity/README.md)
 - Format — Python/Markdown formatting (Ruff, Mdformat): [crackerjack/adapters/format/README.md](./crackerjack/adapters/format/README.md)
 - Lint — Spelling and simple linters (Codespell): [crackerjack/adapters/lint/README.md](./crackerjack/adapters/lint/README.md)
-- LSP — Rust tools with LSP (Zuban, Skylos): [crackerjack/adapters/lsp/README.md](./crackerjack/adapters/lsp/README.md)
-- Refactor — Modernization, dead code, unused deps (Refurb, Skylos, Creosote): [crackerjack/adapters/refactor/README.md](./crackerjack/adapters/refactor/README.md)
+- Refactor — Modernization and dead code, unused deps (Refurb, Creosote): [crackerjack/adapters/refactor/README.md](./crackerjack/adapters/refactor/README.md)
 - Security — Static analysis and secrets (Bandit, Gitleaks, Pyscn): [crackerjack/adapters/security/README.md](./crackerjack/adapters/security/README.md)
-- Type — Static type checking (Zuban, Pyrefly, Ty): [crackerjack/adapters/type/README.md](./crackerjack/adapters/type/README.md)
+- Type — Static type checking (Pyrefly, Ty): [crackerjack/adapters/type/README.md](./crackerjack/adapters/type/README.md)
 - Utility — Config-driven checks (EOF newline, regex, size, lock): [crackerjack/adapters/utility/README.md](./crackerjack/adapters/utility/README.md)
 
 Quick index: [crackerjack/adapters/README.md](./crackerjack/adapters/README.md).
@@ -1517,7 +1510,6 @@ Crackerjack runs quality checks in a two-stage process for optimal development w
 - Cohesion class-cohesion analysis
 - pymetrica Halstead Volume, Primitive Obsession, Instability metrics
 - Complexipy cognitive complexity
-- Skylos dead code detection (Rust, comprehensive stage)
 - Refurb modern Python patterns
 - Creosote unused dependency analysis
 
@@ -1678,11 +1670,6 @@ python -m crackerjack run --coverage-goal 85.0  # Set explicit coverage target
 python -m crackerjack run --no-coverage-ratchet # Disable coverage ratchet temporarily
 python -m crackerjack run --boost-coverage      # Auto-improve test coverage (default)
 python -m crackerjack run --no-boost-coverage   # Disable coverage improvements
-```
-
-**Zuban LSP Server Management:**
-
-```bash
 ```
 
 **Documentation Generation:**

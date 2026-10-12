@@ -23,10 +23,9 @@ Crackerjack uses a two-stage hook execution model for optimal performance:
 
 1. **Comprehensive Hooks** (~30s) - Thorough analysis without retry
 
-   - Type checking (Zuban/mypy via LSP)
+   - Type checking (ty)
    - Security scanning (Bandit)
    - Complexity analysis
-   - Dead code detection (Skylos)
    - **Retry Policy**: Run once, collect all issues
 
 ### Hook Lifecycle
@@ -106,33 +105,6 @@ for the design rationale.
 - Unsafe (opt-in): `crackerjack run --allow-unsafe-fixes`
 
 ## Hook Implementations
-
-### LSP Hook (`lsp_hook.py`)
-
-LSP-aware type checking hook that communicates with running Zuban LSP server:
-
-**Features:**
-
-- **Fast Type Checking** - Uses running LSP server (no process spawn overhead)
-- **Incremental Analysis** - Checks only modified files when possible
-- **Fallback Support** - Falls back to direct Zuban execution if LSP unavailable
-- **Smart Caching** - Leverages LSP server's incremental compilation cache
-
-**Benefits:**
-
-- 10-20x faster than spawning separate type checker process
-- Real-time feedback during development
-- Shared analysis state with IDE
-- Reduced memory usage (single server process)
-
-**Usage:**
-
-```python
-from crackerjack.hooks.lsp_hook import main as lsp_hook_main
-
-# Run LSP-aware type checking
-exit_code = lsp_hook_main(console=console)
-```
 
 ## Hook Definitions
 

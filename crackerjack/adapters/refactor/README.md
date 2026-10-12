@@ -8,7 +8,6 @@ Modernization and dead-code tooling to simplify code and reduce risk.
 
 - Suggest idiomatic patterns and cleanups (Refurb)
 - Identify unused dependencies (Creosote)
-- Detect dead code for deletion (Skylos)
 
 ## Built-in Implementations
 
