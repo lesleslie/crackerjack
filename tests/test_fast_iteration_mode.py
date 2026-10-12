@@ -96,11 +96,11 @@ class TestToolFlag:
             clean=False,
             test=False,
             benchmark=False,
-            tool="zuban",
+            tool="mypy",
         )
 
         assert hasattr(options, "tool")
-        assert options.tool == "zuban"
+        assert options.tool == "mypy"
 
 
 class TestChangedOnlyFlag:
@@ -166,12 +166,12 @@ class TestFlagCombinations:
             test=False,
             benchmark=False,
             fast_iteration=True,
-            tool="zuban",
+            tool="mypy",
             changed_only=False,
         )
 
         assert options.fast_iteration is True
-        assert options.tool == "zuban"
+        assert options.tool == "mypy"
 
     def test_fast_iteration_with_changed_only(self) -> None:
         """Test fast_iteration combined with changed_only."""

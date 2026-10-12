@@ -59,14 +59,14 @@ def test_json_hooks_integration() -> None:
     """Integration test for the JSON validation hooks execution.
 
     The current ``HookDefinition.build_command`` implementation
-    hard-codes ``uv run zuban check`` regardless of hook name, so a
+    hard-codes a fixed command regardless of hook name, so a
     ``check-json`` definition with ``command=[]`` cannot actually
     validate JSON in the current environment. Skip the integration
     check pending a source-side fix that routes check-json to a real
     JSON validator.
     """
     pytest.skip(
-        "HookDefinition.build_command always returns a 'zuban' command; "
+        "HookDefinition.build_command always returns a 'mypy' command; "
         "the check-json integration path is not wired up in the source."
     )
 

@@ -57,7 +57,7 @@ def test_shipped_default_enables_ty() -> None:
     opt-in while the whole suite stayed green — type checking was silently off
     for every consumer that upgraded past crackerjack 0.70.x.
 
-    ty replaced zuban as primary; zuban stays opt-in. If this fails, do not
+    ty is the primary type checker. If this fails, do not
     "fix" it by flipping the assertion — that is exactly how the regression
     happened the first time.
     """
@@ -68,9 +68,6 @@ def test_shipped_default_enables_ty() -> None:
     assert defaults.enable_ty is True, (
         "shipped enable_ty default is False — ty is the primary type checker "
         "and must be active by default; see 370983cf"
-    )
-    assert defaults.enable_zuban is False, (
-        "zuban was replaced by ty as primary and must remain opt-in"
     )
 
 

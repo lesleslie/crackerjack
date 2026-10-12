@@ -97,7 +97,7 @@ def test_get_expensive_hook_result_no_backend(temp_cache_dir):
     """Test get_expensive_hook_result when no backend is available."""
     cache = CrackerjackCache(cache_dir=temp_cache_dir)
 
-    result = cache.get_expensive_hook_result("zuban", ["hash1", "hash2"])
+    result = cache.get_expensive_hook_result("mypy", ["hash1", "hash2"])
 
     assert result is None
     assert cache.stats.misses == 1
@@ -111,7 +111,7 @@ def test_set_expensive_hook_result_no_backend(temp_cache_dir):
     mock_result = Mock(spec=HookResult)
 
     # This should not raise an exception even though backend is None
-    cache.set_expensive_hook_result("zuban", ["hash1", "hash2"], mock_result)
+    cache.set_expensive_hook_result("mypy", ["hash1", "hash2"], mock_result)
 
     # Stats should not change since nothing was stored
     assert cache.stats.total_entries == 0

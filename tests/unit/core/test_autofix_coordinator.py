@@ -238,7 +238,7 @@ class TestAutofixCoordinatorPrivateMethods:
         """Import errors should not suppress unrelated fixable hook failures."""
         coordinator = AutofixCoordinator()
         import_error = SimpleNamespace(
-            name="zuban",
+            name="mypy",
             status="failed",
             output="ModuleNotFoundError: No module named 'missing'",
             error="",

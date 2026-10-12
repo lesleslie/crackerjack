@@ -717,7 +717,7 @@ class TestSkylosRegexParser:
         return SkylosRegexParser()
 
     def test_parse_valid_error(self, parser):
-        """Test parsing valid skylos error."""
+        """Test parsing valid vulture error."""
         output = "module.py - ERROR - file.py:10: Unused function 'foo'"
 
         issues = parser.parse_text(output)

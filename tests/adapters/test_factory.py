@@ -23,8 +23,8 @@ class TestDefaultAdapterFactory:
         assert factory.TOOL_TO_ADAPTER_NAME["bandit"] == "Bandit"
         assert factory.TOOL_TO_ADAPTER_NAME["semgrep"] == "Semgrep"
         assert factory.TOOL_TO_ADAPTER_NAME["refurb"] == "Refurb"
-        assert factory.TOOL_TO_ADAPTER_NAME["skylos"] == "Skylos"
-        assert factory.TOOL_TO_ADAPTER_NAME["zuban"] == "Zuban"
+        assert factory.TOOL_TO_ADAPTER_NAME["vulture"] == "Skylos"
+        assert factory.TOOL_TO_ADAPTER_NAME["mypy"] == "Zuban"
         assert factory.TOOL_TO_ADAPTER_NAME["pyrefly"] == "Pyrefly"
         assert factory.TOOL_TO_ADAPTER_NAME["ty"] == "Ty"
 

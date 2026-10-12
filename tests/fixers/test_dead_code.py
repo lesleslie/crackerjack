@@ -66,7 +66,7 @@ class TestIsTestFile:
 
 
 class TestParseDeadCodeIssue:
-    def test_parse_dead_code_issue_skylos_format(self) -> None:
+    def test_parse_dead_code_issue_vulture_format(self) -> None:
         issue = _issue(message="Unused function 'foo' at line 10", line_number=10)
         # Pad content so the function actually lives at line 10 -- the
         # parser also walks back to collect decorators, so we need the

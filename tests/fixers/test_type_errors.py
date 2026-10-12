@@ -83,7 +83,7 @@ class TestFixVarAnnotated:
             message='Need type annotation for "entries"  [var-annotated]',
             file_path="mod.py",
             line_number=4,
-            stage="zuban",
+            stage="mypy",
         )
         new_content, fixes = type_errors._fix_var_annotated(content, issue)
         assert fixes, f"Expected a fix, got none. new_content:\n{new_content}"
@@ -102,7 +102,7 @@ class TestFixVarAnnotated:
             message='Need type annotation for "items"  [var-annotated]',
             file_path="mod.py",
             line_number=2,
-            stage="zuban",
+            stage="mypy",
         )
         new_content, fixes = type_errors._fix_var_annotated(content, issue)
         assert fixes
@@ -114,7 +114,7 @@ class TestFixVarAnnotated:
             message="Argument 1 has incompatible type",
             file_path="mod.py",
             line_number=1,
-            stage="zuban",
+            stage="mypy",
         )
         new_content, fixes = type_errors._fix_var_annotated(content, issue)
         assert new_content == content
@@ -126,7 +126,7 @@ class TestFixVarAnnotated:
             message='Need type annotation for "x"  [var-annotated]',
             file_path="mod.py",
             line_number=999,
-            stage="zuban",
+            stage="mypy",
         )
         new_content, fixes = type_errors._fix_var_annotated(content, issue)
         assert new_content == content
@@ -462,7 +462,7 @@ class TestFixLiteralMismatch:
             message=message,
             file_path="/tmp/example.py",
             line_number=42,
-            stage="zuban",
+            stage="mypy",
         )
 
     def test_adds_new_value_to_literal(self) -> None:

@@ -62,10 +62,10 @@ class TestHookSettings:
     def test_default_values(self):
         """Test default values for HookSettings.
 
-        enable_ty is True: ty replaced zuban as the primary type checker, so it
+        enable_ty is True: ty is the primary type checker, so it
         is active by default. It was briefly False after 370983cf (2026-08-03)
         demoted the hook to opt-in, which silently disabled type checking for
-        every consumer past 0.70.x. zuban and pyrefly remain opt-in.
+        every consumer past 0.70.x. pyrefly remains opt-in.
         """
         settings = HookSettings()
         assert settings.skip_hooks is False
@@ -641,8 +641,8 @@ class TestZubanLSPSettings:
     def test_default_values(self):
         """Test default Zuban LSP settings.
 
-        Per commit 13be8c1c (feat(crackerjack): disable zuban LSP by default
-        — ty is the new default type checker), zuban is opt-in: both
+        Per commit 13be8c1c (feat(crackerjack): disable LSP by default
+        — ty is the new default type checker), opt-in: both
         enabled and auto_start default to False. The other invariants
         (port, mode, timeout) are unchanged.
         """
@@ -660,8 +660,8 @@ class TestAdapterTimeouts:
     def test_default_values(self):
         """Test default adapter timeouts."""
         settings = AdapterTimeouts()
-        assert settings.zuban_lsp_timeout == 120.0
-        assert settings.skylos_timeout == 900
+        assert settings.mypy_timeout == 120.0
+        assert settings.vulture_timeout == 900
         assert settings.bandit_timeout == 300
         assert settings.semgrep_timeout == 300
 

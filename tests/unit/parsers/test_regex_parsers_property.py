@@ -134,7 +134,7 @@ def test_local_link_random_text_never_crashes(text: str) -> None:
 
 @given(text=st.text(min_size=0, max_size=200))
 @settings(max_examples=50, deadline=None)
-def test_skylos_random_text_never_crashes(text: str) -> None:
+def test_vulture_random_text_never_crashes(text: str) -> None:
     """Skylos parser must never raise on arbitrary text input."""
     parser = SkylosRegexParser()
     issues = parser.parse_text(text)
@@ -957,9 +957,9 @@ class TestSkylosRegexParserEdges:
         self, parser: SkylosRegexParser
     ) -> None:
         """A line with 'ERROR' but no ' - ERROR - ' separator returns None."""
-        # _should_parse_skylos_line requires line and "ERROR" and "-".
-        # Direct call to _parse_skylos_line with no ' - ERROR - ' returns None.
-        assert parser._parse_skylos_line("file.py ERROR no dashes") is None
+        # _should_parse_vulture_line requires line and "ERROR" and "-".
+        # Direct call to _parse_vulture_line with no ' - ERROR - ' returns None.
+        assert parser._parse_vulture_line("file.py ERROR no dashes") is None
 
     def test_message_truncated_to_200(self, parser: SkylosRegexParser) -> None:
         """Long messages are truncated to 200 chars in the issue."""
@@ -988,10 +988,10 @@ class TestSkylosRegexParserEdges:
         self, parser: SkylosRegexParser
     ) -> None:
         """Guard requires both '-' and 'ERROR' substrings."""
-        assert parser._should_parse_skylos_line("") is False
-        assert parser._should_parse_skylos_line("just a line") is False
-        assert parser._should_parse_skylos_line("has-dash but no error") is False
-        assert parser._should_parse_skylos_line("has ERROR but no dash") is False
+        assert parser._should_parse_vulture_line("") is False
+        assert parser._should_parse_vulture_line("just a line") is False
+        assert parser._should_parse_vulture_line("has-dash but no error") is False
+        assert parser._should_parse_vulture_line("has ERROR but no dash") is False
 
 
 # ---------------------------------------------------------------------------

@@ -281,7 +281,7 @@ def test_get_check_type():
     class TypeAdapter(ConcreteToolAdapter):
         @property
         def tool_name(self) -> str:
-            return "zuban"
+            return "mypy"
 
     class SecurityAdapter(ConcreteToolAdapter):
         @property

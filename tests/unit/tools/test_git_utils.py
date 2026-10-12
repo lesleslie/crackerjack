@@ -129,21 +129,21 @@ class TestGetGitTrackedFiles:
     def test_get_tracked_filters_gitignored_files(self, mock_run, tmp_path, monkeypatch):
         """Test that files matched by .gitignore are excluded."""
         monkeypatch.chdir(tmp_path)
-        (tmp_path / ".gitignore").write_text(".skylos/\n")
+        (tmp_path / ".gitignore").write_text(".vulture/\n")
         (tmp_path / "README.md").write_text("readme")
-        skylos_file = tmp_path / ".skylos" / "cache.sqlite"
-        skylos_file.parent.mkdir(parents=True)
-        skylos_file.write_text("cache")
+        vulture_file = tmp_path / ".vulture" / "cache.sqlite"
+        vulture_file.parent.mkdir(parents=True)
+        vulture_file.write_text("cache")
 
         mock_result = Mock()
-        mock_result.stdout = "README.md\n.skylos/cache.sqlite\n"
+        mock_result.stdout = "README.md\n.vulture/cache.sqlite\n"
         mock_result.check_returncode = lambda: None
         mock_run.return_value = mock_result
 
         files = get_git_tracked_files()
 
         assert Path("README.md") in files
-        assert all(".skylos" not in str(path) for path in files)
+        assert all(".vulture" not in str(path) for path in files)
 
 
 class TestGitignoreHelpers:

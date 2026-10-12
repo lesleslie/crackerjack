@@ -238,7 +238,7 @@ class TestParallelExecutionWithProgress:
                 is_formatting=False,
             ),
             HookDefinition(
-                name="zuban",
+                name="mypy",
                 command=[],
                 stage=HookStage.COMPREHENSIVE,
                 is_formatting=False,
@@ -271,8 +271,8 @@ class TestParallelExecutionWithProgress:
                     stage="fast",
                 ),
                 HookResult(
-                    id="zuban",
-                    name="zuban",
+                    id="mypy",
+                    name="mypy",
                     status="passed",
                     duration=0.1,
                     issues_found=[],

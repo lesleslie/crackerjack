@@ -104,11 +104,11 @@ class TestRichFormatting:
     def test_format_rich_with_all_fields(self, tmp_path) -> None:
         """Test rich formatting with all fields populated."""
         error = ToolExecutionError(
-            tool="zuban",
+            tool="mypy",
             exit_code=2,
             stdout="Type checking...",
             stderr="error: Incompatible types",
-            command=["uv", "run", "zuban", "check"],
+            command=["uv", "run", "mypy", "check"],
             cwd=tmp_path,
             duration=3.14,
         )
@@ -117,7 +117,7 @@ class TestRichFormatting:
         panel = error.format_rich(console)
 
         # Panel should contain all information
-        assert "zuban" in panel.title
+        assert "mypy" in panel.title
         assert panel.border_style == "red"
 
     def test_format_rich_truncates_long_output(self) -> None:
@@ -251,7 +251,7 @@ class TestActionableMessages:
     def test_actionable_message_type_error(self) -> None:
         """Test actionable message for type errors."""
         error = ToolExecutionError(
-            tool="zuban",
+            tool="mypy",
             exit_code=1,
             stderr="TypeError: incompatible types",
         )

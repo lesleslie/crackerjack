@@ -309,8 +309,8 @@ class TestToolProfiler:
         )
 
         # Add comprehensive phase tools
-        profiler.results["zuban"] = ProfileResult(
-            tool_name="zuban",
+        profiler.results["mypy"] = ProfileResult(
+            tool_name="mypy",
             runs=3,
             execution_times=[2.0, 2.1, 2.05],
         )

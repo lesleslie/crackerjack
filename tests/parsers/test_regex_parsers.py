@@ -603,8 +603,8 @@ class TestSkylosRegexParser:
     def parser(self):
         return SkylosRegexParser()
 
-    def test_parse_basic_skylos_output(self, parser):
-        """Test parsing basic skylos output."""
+    def test_parse_basic_vulture_output(self, parser):
+        """Test parsing basic vulture output."""
         output = "src/dead_code.py - ERROR - line 42: unused import"
         issues = parser.parse_text(output)
         assert len(issues) == 1
@@ -614,11 +614,11 @@ class TestSkylosRegexParser:
 
     def test_should_parse_only_error_lines(self, parser):
         """Test that only ERROR lines are parsed."""
-        assert parser._should_parse_skylos_line("some file - ERROR - message") is True
-        assert parser._should_parse_skylos_line("some file - WARNING - message") is False
+        assert parser._should_parse_vulture_line("some file - ERROR - message") is True
+        assert parser._should_parse_vulture_line("some file - WARNING - message") is False
 
     def test_parse_without_line_in_message(self, parser):
-        """Test parsing skylos output without 'line' in message."""
+        """Test parsing vulture output without 'line' in message."""
         output = "src/file.py - ERROR - some error message"
         issues = parser.parse_text(output)
         assert len(issues) == 1
@@ -794,8 +794,8 @@ class TestRegisterRegexParsers:
 
         expected_tools = [
             "codespell", "refurb", "ruff", "ruff-format",
-            "complexipy", "complexity", "creosote", "mypy", "zuban",
-            "skylos", "check-local-links", "lychee", "linkcheckmd",
+            "complexipy", "complexity", "creosote", "mypy", "mypy",
+            "vulture", "check-local-links", "lychee", "linkcheckmd",
             "check-jsonschema", "check-yaml", "check-toml", "check-json"
         ]
 

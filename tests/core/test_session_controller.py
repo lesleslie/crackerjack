@@ -31,8 +31,8 @@ class _FakePipeline:
     def _configure_session_cleanup(self, options: Any) -> None:
         self.calls.append("cleanup")
 
-    def _initialize_zuban_lsp(self, options: Any) -> None:
-        self.calls.append("zuban")
+    def _initialize_lsp_placeholder(self, options: Any) -> None:
+        self.calls.append("mypy")
 
     def _configure_hook_manager_lsp(self, options: Any) -> None:
         self.calls.append("hook_manager")
@@ -61,7 +61,7 @@ async def test_session_controller_initializes_pipeline_components() -> None:
     # SessionTracker; no explicit 'workflow' task is tracked here.
     assert pipeline.calls == [
         "cleanup",
-        "zuban",
+        "mypy",
         "hook_manager",
         "register_cleanup",
         "info",

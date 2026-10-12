@@ -297,7 +297,7 @@ class TestCreosoteHelperMethods:
         """Common PyPI distribution names should pass validation."""
         adapter = CreosoteAdapter()
 
-        for name in ("pytest", "mypy", "python-dateutil", "zuban", "a", "A.b-1_x"):
+        for name in ("pytest", "mypy", "python-dateutil", "mypy", "a", "A.b-1_x"):
             assert adapter._looks_like_dep_name(name), name
 
     def test_looks_like_dep_name_rejects_loguru_prose(self) -> None:

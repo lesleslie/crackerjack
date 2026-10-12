@@ -27,7 +27,7 @@ class TestToolProfilerIntegration:
             time.sleep(0.002)  # Fast import sorter
 
         # Simulate comprehensive analysis tools
-        def zuban() -> None:
+        def mypy() -> None:
             time.sleep(0.02)  # Type checking
 
         def bandit() -> None:
@@ -36,7 +36,7 @@ class TestToolProfilerIntegration:
         # Profile each tool
         profiler.profile_tool("ruff-format", ruff_format, runs=5)
         profiler.profile_tool("ruff-isort", ruff_isort, runs=5)
-        profiler.profile_tool("zuban", zuban, runs=3)
+        profiler.profile_tool("mypy", mypy, runs=3)
         profiler.profile_tool("bandit", bandit, runs=3)
 
         # Verify all tools were profiled
@@ -48,7 +48,7 @@ class TestToolProfilerIntegration:
             + profiler.results["ruff-isort"].mean_time
         )
         comp_time = (
-            profiler.results["zuban"].mean_time + profiler.results["bandit"].mean_time
+            profiler.results["mypy"].mean_time + profiler.results["bandit"].mean_time
         )
 
         assert comp_time > fast_time * 5  # Comprehensive should be 5x+ slower

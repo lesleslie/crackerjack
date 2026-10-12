@@ -211,13 +211,13 @@ class TestFixPlan:
             rationale="test",
             risk_level="low",
             validated_by="test",
-            issue_message="zuban: missing type annotation",
-            issue_stage="zuban",
+            issue_message="mypy: missing type annotation",
+            issue_stage="mypy",
             issue_details=["code: var-annotated"],
         )
 
-        assert plan.issue_message == "zuban: missing type annotation"
-        assert plan.issue_stage == "zuban"
+        assert plan.issue_message == "mypy: missing type annotation"
+        assert plan.issue_stage == "mypy"
         assert plan.issue_details == ["code: var-annotated"]
 
     def test_create_fix_plan_preserves_metadata(self) -> None:

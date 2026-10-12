@@ -167,15 +167,15 @@ Found 2 errors in 1 file
         count = count_issues_from_output(output, tool_name="mypy")
         assert count == 2  # Two error lines, note and summary filtered
 
-    def test_filters_zuban_style_output(self):
-        """Should correctly count zuban-style type errors."""
+    def test_filters_mypy_style_output(self):
+        """Should correctly count mypy-style type errors."""
         output = """
 src/file.py:25: error: Type annotation mismatch for 'x'
 src/file.py:30: note: Expected 'int' but got 'str'
 src/file.py:35: error: Missing type annotation
 === Errors found: 2 ===
 """
-        count = count_issues_from_output(output, tool_name="zuban")
+        count = count_issues_from_output(output, tool_name="mypy")
         assert count == 2  # Two error lines, note and separator filtered
 
 
@@ -229,7 +229,7 @@ src/utils.py:5: error: Undefined name
 ─────────────────
 Summary: 3 errors found
 """
-        issues = extract_issue_lines(output, tool_name="zuban")
+        issues = extract_issue_lines(output, tool_name="mypy")
         assert len(issues) == 3
         assert all("error:" in issue for issue in issues)
         assert not any("note:" in issue for issue in issues)
@@ -278,7 +278,7 @@ class TestIntegrationWithHookExecution:
         This is the core test for the bug fix: both layers should count
         the same number of issues from the same output.
         """
-        # Simulated zuban output with 10 lines where 1 is a note
+        # Simulated mypy output with 10 lines where 1 is a note
         output = """
 src/file1.py:10: error: Type mismatch for 'x'
 src/file1.py:20: error: Missing type annotation
@@ -293,8 +293,8 @@ src/file5.py:18: error: Type checker found issue
 """
 
         # Both methods should return 9 (10 - 1 note)
-        issue_lines = extract_issue_lines(output, tool_name="zuban")
-        count = count_issues_from_output(output, tool_name="zuban")
+        issue_lines = extract_issue_lines(output, tool_name="mypy")
+        count = count_issues_from_output(output, tool_name="mypy")
 
         assert count == 9, f"Expected 9 issues, got {count}"
         assert len(issue_lines) == 9, f"Expected 9 issue lines, got {len(issue_lines)}"

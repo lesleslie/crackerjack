@@ -376,7 +376,7 @@ class TestBuildToolCommand:
         cases: list[tuple[str, list[str]]] = [
             ("refurb", ["refurb"]),
             ("complexipy", ["complexipy", "--path", "."]),
-            ("skylos", ["skylos"]),
+            ("vulture", ["vulture"]),
             ("vulture", ["vulture"]),
             ("ruff", ["ruff", "check"]),
             ("mypy", ["mypy"]),

@@ -28,12 +28,12 @@ class TestPyreflyModuleId:
 
     @pytest.mark.unit
     def test_all_type_adapter_module_ids_are_unique(self) -> None:
-        from crackerjack.adapters.type.zuban import ZubanAdapter
+        from crackerjack.adapters.type.pyrefly import PyreflyAdapter
 
         ids = [
             TyAdapter().module_id,
             PyreflyAdapter().module_id,
-            ZubanAdapter().module_id,
+            MypyAdapter().module_id,
         ]
         assert len(ids) == len(set(ids)), f"Duplicate MODULE_IDs detected: {ids}"
 

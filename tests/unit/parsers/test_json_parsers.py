@@ -636,7 +636,7 @@ class TestPyscnJSONParser:
 
     pyscn writes to ``.pyscn/reports/analyze_*.json`` with two sections:
     ``complexity`` (functions with cyclomatic complexity) and ``dead_code``
-    (CFG-based findings, replaces skylos).
+    (CFG-based findings, replaces vulture).
     """
 
     @pytest.fixture

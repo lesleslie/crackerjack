@@ -97,11 +97,11 @@ class TestFormatRich:
         assert panel.border_style == "red"
 
     def test_panel_content_includes_tool_and_exit_code(self) -> None:
-        error = ToolExecutionError(tool="zuban", exit_code=7, stderr="E")
+        error = ToolExecutionError(tool="mypy", exit_code=7, stderr="E")
         panel = error.format_rich(Console())
         assert panel.renderable is not None
         rendered = str(panel.renderable)
-        assert "zuban" in rendered
+        assert "mypy" in rendered
         assert "7" in rendered
 
     def test_duration_added_when_provided(self) -> None:
@@ -493,9 +493,9 @@ class TestRepr:
         )
 
     def test_repr_with_none_duration(self) -> None:
-        error = ToolExecutionError(tool="zuban", exit_code=0)
+        error = ToolExecutionError(tool="mypy", exit_code=0)
         assert repr(error) == (
-            "ToolExecutionError(tool='zuban', exit_code=0, duration=None)"
+            "ToolExecutionError(tool='mypy', exit_code=0, duration=None)"
         )
 
     def test_repr_escapes_special_characters_in_tool(self) -> None:

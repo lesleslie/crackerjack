@@ -108,11 +108,11 @@ class TestToolFilter:
         config = FilterConfig()
         filter_obj = ToolFilter(config=config)
 
-        available_tools = ["ruff-check", "bandit", "zuban"]
+        available_tools = ["ruff-check", "bandit", "mypy"]
         result = filter_obj.filter_tools(available_tools)
 
         assert result.total_tools == 3
-        assert result.filtered_tools == ["ruff-check", "bandit", "zuban"]
+        assert result.filtered_tools == ["ruff-check", "bandit", "mypy"]
         assert result.skipped_tools == []
         assert result.filter_effectiveness == 0.0
 
@@ -121,11 +121,11 @@ class TestToolFilter:
         config = FilterConfig(tool_name="bandit")
         filter_obj = ToolFilter(config=config)
 
-        available_tools = ["ruff-check", "bandit", "zuban"]
+        available_tools = ["ruff-check", "bandit", "mypy"]
         result = filter_obj.filter_tools(available_tools)
 
         assert result.filtered_tools == ["bandit"]
-        assert result.skipped_tools == ["ruff-check", "zuban"]
+        assert result.skipped_tools == ["ruff-check", "mypy"]
         assert result.filter_effectiveness == pytest.approx(66.67, abs=0.01)
 
     def test_filter_tools_nonexistent_tool(self) -> None:
@@ -133,7 +133,7 @@ class TestToolFilter:
         config = FilterConfig(tool_name="nonexistent")
         filter_obj = ToolFilter(config=config)
 
-        available_tools = ["ruff-check", "bandit", "zuban"]
+        available_tools = ["ruff-check", "bandit", "mypy"]
         result = filter_obj.filter_tools(available_tools)
 
         assert result.filtered_tools == []
@@ -262,7 +262,7 @@ class TestToolFilter:
         tool_times = {
             "ruff-check": 2.0,
             "bandit": 3.0,
-            "zuban": 5.0,
+            "mypy": 5.0,
         }
 
         savings = filter_obj.estimate_time_savings(tool_times)
@@ -280,7 +280,7 @@ class TestToolFilter:
         tool_times = {
             "ruff-check": 2.0,
             "bandit": 3.0,
-            "zuban": 5.0,
+            "mypy": 5.0,
         }
 
         savings = filter_obj.estimate_time_savings(tool_times)
@@ -298,7 +298,7 @@ class TestToolFilter:
         tool_result = FilterResult(
             total_tools=3,
             filtered_tools=["ruff-check"],
-            skipped_tools=["bandit", "zuban"],
+            skipped_tools=["bandit", "mypy"],
             total_files=0,
             filtered_files=[],
             skipped_files=[],
@@ -392,7 +392,7 @@ class TestFilterIntegration:
         filter_obj = create_combined_filter("ruff-check", executor)
 
         # Filter tools
-        available_tools = ["ruff-check", "bandit", "zuban"]
+        available_tools = ["ruff-check", "bandit", "mypy"]
         tool_result = filter_obj.filter_tools(available_tools)
 
         assert tool_result.filtered_tools == ["ruff-check"]
@@ -417,7 +417,7 @@ class TestFilterIntegration:
             "ruff-format": 0.5,
             "ruff-isort": 0.3,
             "ruff-check": 1.2,
-            "zuban": 8.5,
+            "mypy": 8.5,
             "bandit": 3.2,
             "complexipy": 2.1,
         }
