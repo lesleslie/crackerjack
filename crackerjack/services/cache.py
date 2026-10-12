@@ -46,8 +46,6 @@ def get_cache() -> Any:
 class CrackerjackCache:
     EXPENSIVE_HOOKS = {
         "pyright",
-        "zuban",
-        "skylos",
         "bandit",
         "gitleaks",
         "semgrep",
@@ -64,8 +62,6 @@ class CrackerjackCache:
 
     HOOK_DISK_TTLS = {
         "pyright": 86400,
-        "zuban": 86400,
-        "skylos": 86400 * 2,
         "bandit": 86400 * 3,
         "gitleaks": 86400 * 7,
         "semgrep": 86400 * 3,

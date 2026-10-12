@@ -54,13 +54,6 @@ TOOL_CONFIGS: dict[str, ToolConfig] = {
         output_format=OutputFormat.JSON,
         required_json_fields=frozenset({"file", "line", "message"}),
     ),
-    "zuban": ToolConfig(
-        name="zuban",
-        supports_json=True,
-        json_flag="--output=json",
-        output_format=OutputFormat.JSON,
-        required_json_fields=frozenset({"file", "line", "message"}),
-    ),
     "bandit": ToolConfig(
         name="bandit",
         supports_json=True,

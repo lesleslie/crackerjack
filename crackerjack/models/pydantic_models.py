@@ -253,24 +253,6 @@ class MCPServerConfig(BaseModel):
         )
 
 
-class ZubanLSPConfig(BaseModel):
-    enabled: bool = False
-    auto_start: bool = False
-    port: int = 8685
-    mode: str = "stdio"
-    timeout: int = 30
-
-    @classmethod
-    def from_settings(cls, settings: Any) -> ZubanLSPConfig:
-        return cls(
-            enabled=getattr(settings, "enabled", True),
-            auto_start=getattr(settings, "auto_start", True),
-            port=getattr(settings, "port", 8685),
-            mode=getattr(settings, "mode", "stdio"),
-            timeout=getattr(settings, "timeout", 30),
-        )
-
-
 class WorkflowOptions(BaseModel):
     cleaning: CleaningConfig = Field(default_factory=CleaningConfig)
     hooks: HookConfig = Field(default_factory=HookConfig)
@@ -283,7 +265,6 @@ class WorkflowOptions(BaseModel):
     cleanup: CleanupConfig = Field(default_factory=CleanupConfig)
     advanced: AdvancedConfig = Field(default_factory=AdvancedConfig)
     mcp_server: MCPServerConfig = Field(default_factory=MCPServerConfig)
-    zuban_lsp: ZubanLSPConfig = Field(default_factory=ZubanLSPConfig)
 
     @property
     def clean(self) -> bool:
@@ -357,7 +338,6 @@ class WorkflowOptions(BaseModel):
             mcp_server=MCPServerConfig.from_settings(
                 getattr(settings, "mcp_server", {}),
             ),
-            zuban_lsp=ZubanLSPConfig.from_settings(getattr(settings, "zuban_lsp", {})),
         )
 
     def to_dict(self) -> dict[str, Any]:

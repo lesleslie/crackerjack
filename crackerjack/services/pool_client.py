@@ -163,7 +163,6 @@ class CrackerjackPoolClient:
         commands = {
             "refurb": ["refurb", *map(str, files)],
             "complexipy": ["complexipy", *map(str, files), "--path", "."],
-            "skylos": ["skylos", *map(str, files)],
             "vulture": ["vulture", *map(str, files)],
             "ruff": ["ruff", "check", *map(str, files)],
             "mypy": ["mypy", *map(str, files)],

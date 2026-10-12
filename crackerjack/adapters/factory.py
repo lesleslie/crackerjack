@@ -16,8 +16,6 @@ class DefaultAdapterFactory(AdapterFactoryProtocol):
         "bandit": "Bandit",
         "semgrep": "Semgrep",
         "refurb": "Refurb",
-        "skylos": "Skylos",
-        "zuban": "Zuban",
         "pyrefly": "Pyrefly",
         "ty": "Ty",
     }
@@ -65,14 +63,6 @@ class DefaultAdapterFactory(AdapterFactoryProtocol):
             from crackerjack.adapters._tool_adapter_base import ToolAdapterSettings
 
             return ToolAdapterSettings(tool_name="refurb")
-        if adapter_name == "Skylos":
-            from crackerjack.adapters._tool_adapter_base import ToolAdapterSettings
-
-            return ToolAdapterSettings(tool_name="skylos")
-        if adapter_name == "Zuban":
-            from crackerjack.adapters._tool_adapter_base import ToolAdapterSettings
-
-            return ToolAdapterSettings(tool_name="zuban")
         if adapter_name == "Pyrefly":
             from crackerjack.adapters.type.pyrefly import PyreflySettings
 
@@ -129,8 +119,6 @@ class DefaultAdapterFactory(AdapterFactoryProtocol):
             "Bandit": ("sast.bandit", "BanditAdapter"),
             "Semgrep": ("sast.semgrep", "SemgrepAdapter"),
             "Refurb": ("refactor.refurb", "RefurbAdapter"),
-            "Skylos": ("refactor.skylos", "SkylosAdapter"),
-            "Zuban": ("type.zuban", "ZubanAdapter"),
             "Pyrefly": ("type.pyrefly", "PyreflyAdapter"),
             "Ty": ("type.ty", "TyAdapter"),
         }

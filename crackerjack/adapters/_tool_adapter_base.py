@@ -563,7 +563,7 @@ class BaseToolAdapter(QAAdapterBase):
             return QACheckType.FORMAT
         if any(
             x in tool_lower
-            for x in ("type", "pyright", "mypy", "zuban", "pyrefly", "ty")
+            for x in ("type", "pyright", "mypy", "pyrefly", "ty")
         ):
             return QACheckType.TYPE
         if any(x in tool_lower for x in ("bandit", "safety", "gitleaks", "semgrep")):

@@ -99,7 +99,7 @@ class ToolProfiler:
 
     def compare_phases(self) -> ComparisonReport:
         fast_tools = ["ruff-format", "ruff-isort"]
-        comp_tools = ["zuban", "bandit", "complexipy"]
+        comp_tools = ["bandit", "complexipy"]
 
         fast_time = sum(
             self.results[t].mean_time for t in fast_tools if t in self.results

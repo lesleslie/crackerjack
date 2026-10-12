@@ -15,7 +15,6 @@ from crackerjack.config.settings import (
     ProgressSettings,
     PublishSettings,
     TestSettings,
-    ZubanLSPSettings,
 )
 from crackerjack.config.settings import (
     CleanupSettings as CleanupSettingsModel,
@@ -301,25 +300,6 @@ class MCPServerConfig:
         )
 
 
-@dataclass
-class ZubanLSPConfig:
-    enabled: bool = False
-    auto_start: bool = False
-    port: int = 8685
-    mode: str = "stdio"
-    timeout: int = 30
-
-    @classmethod
-    def from_settings(cls, settings: ZubanLSPSettings) -> ZubanLSPConfig:
-        return cls(
-            enabled=settings.enabled,
-            auto_start=settings.auto_start,
-            port=settings.port,
-            mode=settings.mode,
-            timeout=settings.timeout,
-        )
-
-
 @dataclass(init=False)
 class WorkflowOptions:
     cleaning: CleaningConfig
@@ -333,7 +313,6 @@ class WorkflowOptions:
     cleanup: CleanupConfig
     advanced: AdvancedConfig
     mcp_server: MCPServerConfig
-    zuban_lsp: ZubanLSPConfig
 
     _DEFAULT_OVERRIDES: dict[str, Any] = field(
         default_factory=lambda: {
@@ -362,7 +341,6 @@ class WorkflowOptions:
         cleanup: CleanupConfig | None,
         advanced: AdvancedConfig | None,
         mcp_server: MCPServerConfig | None,
-        zuban_lsp: ZubanLSPConfig | None,
     ) -> None:
         self.cleaning = cleaning or CleaningConfig()
         self.hooks = hooks or HookConfig()
@@ -375,7 +353,6 @@ class WorkflowOptions:
         self.cleanup = cleanup or CleanupConfig()
         self.advanced = advanced or AdvancedConfig()
         self.mcp_server = mcp_server or MCPServerConfig()
-        self.zuban_lsp = zuban_lsp or ZubanLSPConfig()
 
     def _set_default_overrides(self, kwargs: dict[str, Any]) -> None:
         self._DEFAULT_OVERRIDES = {
@@ -425,7 +402,6 @@ class WorkflowOptions:
         cleanup: CleanupConfig | None = None,
         advanced: AdvancedConfig | None = None,
         mcp_server: MCPServerConfig | None = None,
-        zuban_lsp: ZubanLSPConfig | None = None,
         **kwargs: Any,
     ) -> None:
         self.cleaning = cleaning or CleaningConfig(clean=False)
@@ -467,13 +443,6 @@ class WorkflowOptions:
             http_host="127.0.0.1",
             websocket_port=8696,
             http_enabled=False,
-        )
-        self.zuban_lsp = zuban_lsp or ZubanLSPConfig(
-            enabled=True,
-            auto_start=True,
-            port=8685,
-            mode="stdio",
-            timeout=30,
         )
 
         for attr, value in kwargs.items():
@@ -766,7 +735,6 @@ class WorkflowOptions:
             cleanup=CleanupConfig.from_settings(settings.cleanup),
             advanced=AdvancedConfig.from_settings(settings.advanced),
             mcp_server=MCPServerConfig.from_settings(settings.mcp_server),
-            zuban_lsp=ZubanLSPConfig.from_settings(settings.zuban_lsp),
         )
 
     def to_settings(self) -> CrackerjackSettings:
@@ -782,7 +750,6 @@ class WorkflowOptions:
             cleanup=CleanupSettingsModel(**self.cleanup.__dict__),
             advanced=AdvancedSettings(**self.advanced.__dict__),
             mcp_server=MCPServerSettings(**self.mcp_server.__dict__),
-            zuban_lsp=ZubanLSPSettings(**self.zuban_lsp.__dict__),
         )
 
     @classmethod
@@ -849,7 +816,6 @@ class WorkflowOptions:
             "cleanup": self.cleanup.__dict__,
             "advanced": self.advanced.__dict__,
             "mcp_server": self.mcp_server.__dict__,
-            "zuban_lsp": self.zuban_lsp.__dict__,
         }
 
 
@@ -872,6 +838,5 @@ __all__ = [
     "PublishConfig",
     "TestConfig",
     "WorkflowOptions",
-    "ZubanLSPConfig",
     "get_workflow_options",
 ]

@@ -56,14 +56,6 @@ def _is_mcp_server_process(line: str) -> bool:
     )
 
 
-def _is_zuban_lsp_process(line: str) -> bool:
-    return (
-        "zuban" in line
-        and "server" in line
-        and ("uv" in line.lower() or "python" in line.lower())
-    )
-
-
 def _extract_process_info(line: str) -> dict[str, t.Any] | None:
     parts = line.split()
     if len(parts) < 11:
@@ -92,41 +84,6 @@ def _find_command_start_index(parts: list[str]) -> int:
             command_start_index = i
             break
     return command_start_index
-
-
-def find_zuban_lsp_processes() -> list[dict[str, t.Any]]:
-    security_logger = get_security_logger()
-
-    try:
-        result = execute_secure_subprocess(
-            command=["ps", "aux"],
-            capture_output=True,
-            text=True,
-            check=True,
-            timeout=10.0,
-        )
-
-        return _parse_zuban_lsp_processes(result.stdout)
-
-    except Exception as e:
-        security_logger.log_subprocess_failure(
-            command=["ps", "aux"],
-            exit_code=-1,
-            error_output=str(e),
-        )
-        return []
-
-
-def _parse_zuban_lsp_processes(stdout: str) -> list[dict[str, t.Any]]:
-    processes: list[dict[str, t.Any]] = []
-
-    for line in stdout.splitlines():
-        if _is_zuban_lsp_process(line):
-            process_info = _extract_process_info(line)
-            if process_info:
-                processes.append(process_info)
-
-    return processes
 
 
 def stop_process(pid: int, force: bool = False) -> bool:
@@ -183,30 +140,8 @@ def stop_mcp_server() -> bool:
     return success
 
 
-def stop_zuban_lsp() -> bool:
-    processes = find_zuban_lsp_processes()
-
-    if not processes:
-        console.print("[yellow]⚠️ No Zuban LSP server processes found[/yellow]")
-        return True
-
-    success = True
-    for proc in processes:
-        console.print(f"🛑 Stopping Zuban LSP server process {proc['pid']}")
-        if stop_process(proc["pid"]):
-            console.print(f"✅ Stopped process {proc['pid']}")
-        else:
-            console.print(f"❌ Failed to stop process {proc['pid']}")
-            success = False
-
-    return success
-
-
 def stop_all_servers() -> bool:
-    mcp_success = stop_mcp_server()
-    zuban_lsp_success = stop_zuban_lsp()
-
-    return mcp_success and zuban_lsp_success
+    return stop_mcp_server()
 
 
 def restart_mcp_server() -> bool:
@@ -255,47 +190,10 @@ def restart_mcp_server() -> bool:
         return False
 
 
-def restart_zuban_lsp() -> bool:
-    console.print("[bold cyan]🔄 Restarting Zuban LSP server...[/bold cyan]")
-
-    stop_zuban_lsp()
-
-    console.print("⏳ Waiting for cleanup")
-    time.sleep(2)
-
-    console.print("🚀 Starting new Zuban LSP server")
-    try:
-        cmd = [sys.executable, "-m", "crackerjack", "--start-zuban-lsp"]
-
-        import subprocess
-
-        subprocess.Popen(
-            cmd,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            start_new_session=True,
-        )
-
-        security_logger = get_security_logger()
-        security_logger.log_subprocess_execution(
-            command=cmd,
-            purpose="zuban_lsp_restart",
-        )
-
-        console.print("✅ Zuban LSP server restart initiated")
-        return True
-
-    except Exception as e:
-        console.print(f"❌ Failed to restart Zuban LSP server: {e}")
-        return False
-
-
 def list_server_status() -> None:
     console.print("[bold cyan]📊 Crackerjack Server Status[/bold cyan]")
 
     mcp_processes = find_mcp_server_processes()
-
-    zuban_lsp_processes = find_zuban_lsp_processes()
 
     if mcp_processes:
         console.print("\n[bold green]MCP Servers: [/bold green]")
@@ -307,15 +205,5 @@ def list_server_status() -> None:
     else:
         console.print("\n[yellow]MCP Servers: None running[/yellow]")
 
-    if zuban_lsp_processes:
-        console.print("\n[bold green]Zuban LSP Servers: [/bold green]")
-        for proc in zuban_lsp_processes:
-            console.print(
-                f" • PID {proc['pid']} - CPU: {proc['cpu']}%-Memory: {proc['mem']}%",
-            )
-            console.print(f" Command: {proc['command']}")
-    else:
-        console.print("\n[yellow]Zuban LSP Servers: None running[/yellow]")
-
-    if not mcp_processes and not zuban_lsp_processes:
+    if not mcp_processes:
         console.print("\n[dim]No crackerjack servers currently running[/dim]")

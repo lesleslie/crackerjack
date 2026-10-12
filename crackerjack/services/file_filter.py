@@ -84,8 +84,6 @@ class SmartFileFilter(SmartFileFilterProtocol, ServiceProtocol):
         tool_patterns = {
             "ruff-check": ["*.py"],
             "ruff-format": ["*.py"],
-            "zuban": ["*.py"],
-            "skylos": ["*.py"],
             "bandit": ["*.py"],
             "refurb": ["*.py"],
             "complexipy": ["*.py"],

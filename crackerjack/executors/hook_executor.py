@@ -467,7 +467,6 @@ class HookExecutor:
             "ruff-format": [".py"],
             "mdformat": [".md"],
             "refurb": [".py"],
-            "skylos": [".py"],
             "complexipy": [".py"],
             "semgrep": [".py"],
             "check-yaml": [".yaml", ".yml"],
@@ -2201,11 +2200,9 @@ class HookExecutor:
 
         tools_with_adapters = {
             "complexipy",
-            "skylos",
             "ruff",
             "ruff-format",
             "mypy",
-            "zuban",
             "pyright",
             "pylint",
             "bandit",

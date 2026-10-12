@@ -59,16 +59,12 @@ class ToolProxy:
         self.fallback_tools: dict[str, list[str]] = {}
 
         self.tool_adapters = {
-            "zuban": self._create_zuban_adapter,
-            "skylos": self._create_skylos_adapter,
             "ruff": self._create_ruff_adapter,
             "bandit": self._create_bandit_adapter,
         }
 
         self.fallback_tools.update(
             {
-                "zuban": ["pyright", "mypy"],
-                "skylos": ["vulture"],
                 "ruff": [],
                 "bandit": [],
             }
@@ -131,11 +127,6 @@ class ToolProxy:
                 if adapter and hasattr(adapter, "check_tool_health"):
                     return bool(adapter.check_tool_health())
 
-            if tool_name == "zuban":
-                return self._check_zuban_health()
-            if tool_name == "skylos":
-                return self._check_skylos_health()
-
             import subprocess
 
             result = subprocess.run(
@@ -147,56 +138,6 @@ class ToolProxy:
             )
             return result.returncode == 0
 
-        except Exception:
-            return False
-
-    def _check_zuban_health(self) -> bool:
-        import subprocess
-        import tempfile
-
-        try:
-            result = subprocess.run(
-                ["uv", "run", "zuban", "--version"],
-                check=False,
-                capture_output=True,
-                timeout=10,
-                text=True,
-            )
-            if result.returncode != 0:
-                return False
-
-            with tempfile.TemporaryDirectory() as temp_dir:
-                temp_file = Path(temp_dir) / "test.py"
-                temp_file.write_text("x: int = 1\n")
-
-                result = subprocess.run(
-                    ["uv", "run", "zuban", "check", str(temp_file)],
-                    check=False,
-                    capture_output=True,
-                    timeout=5,
-                    text=True,
-                    cwd=Path.cwd(),
-                )
-
-                return result.returncode in (0, 1)
-
-        except subprocess.TimeoutExpired, subprocess.CalledProcessError:
-            return False
-        except Exception:
-            return False
-
-    def _check_skylos_health(self) -> bool:
-        import subprocess
-
-        try:
-            result = subprocess.run(
-                ["uv", "run", "skylos", "--version"],
-                check=False,
-                capture_output=True,
-                timeout=10,
-                text=True,
-            )
-            return result.returncode == 0
         except Exception:
             return False
 
@@ -293,38 +234,6 @@ class ToolProxy:
         self.console.print(
             f"[yellow]Tool {tool_name} is unhealthy. Trying fallbacks...[/yellow]",
         )
-
-    def _create_zuban_adapter(self) -> t.Any | None:
-        try:
-            from crackerjack.adapters.lsp._base import ExecutionContext
-            from crackerjack.adapters.lsp.zuban import ZubanAdapter
-            from crackerjack.config import CrackerjackSettings, load_settings
-
-            settings = load_settings(CrackerjackSettings)
-
-            from crackerjack.mcp.tools.core_tools import _adapt_settings_to_protocol
-
-            options = _adapt_settings_to_protocol(settings)
-            context = ExecutionContext(pkg_path=Path.cwd(), options=options)
-            return ZubanAdapter(context)
-        except ImportError, Exception:
-            return None
-
-    def _create_skylos_adapter(self) -> t.Any | None:
-        try:
-            from crackerjack.adapters.lsp._base import ExecutionContext
-            from crackerjack.adapters.lsp.skylos import SkylosAdapter
-            from crackerjack.config import CrackerjackSettings, load_settings
-
-            settings = load_settings(CrackerjackSettings)
-
-            from crackerjack.mcp.tools.core_tools import _adapt_settings_to_protocol
-
-            options = _adapt_settings_to_protocol(settings)
-            context = ExecutionContext(pkg_path=Path.cwd(), options=options)
-            return SkylosAdapter(context)
-        except ImportError, Exception:
-            return None
 
     def _create_ruff_adapter(self) -> t.Any | None:
         return None
