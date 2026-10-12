@@ -149,9 +149,6 @@ This document shows where API components are used throughout the codebase.
 
 **Referenced in:**
 
-- ZubanAdapter base class
-- SkylsAdapter base class
-
 ## BenchmarkResult
 
 **Referenced in:**
@@ -399,11 +396,9 @@ This document shows where API components are used throughout the codebase.
 
 **Referenced in:**
 
-- ZubanAdapter.__init__() parameter
 - RustToolHookManager.__init__() parameter
 - RustToolAdapter.__init__() parameter
 - BaseRustToolAdapter.__init__() parameter
-- SkylsAdapter.__init__() parameter
 - StrategySelector.select_strategy() parameter
 - StrategySelector.\_select_adaptive_strategy() parameter
 - StrategySelector.select_hook_subset() parameter

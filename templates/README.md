@@ -61,7 +61,7 @@ ______________________________________________________________________
 - ✅ All library template features
 - ✅ Extended test markers (16 types including AI-generated, chaos, mutation)
 - ✅ MCP server configuration section
-- ✅ AI agent timeout settings (skylos, refurb)
+- ✅ AI agent timeout settings (refurb)
 - ✅ Test parallelization settings (workers, memory limits)
 - ✅ Mdformat markdown formatting
 - ✅ Terminal width customization

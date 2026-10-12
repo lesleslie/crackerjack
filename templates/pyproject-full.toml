@@ -161,7 +161,6 @@ mcp_websocket_port = "<MCP_WEBSOCKET_PORT>"
 mcp_http_enabled = true
 
 # Quality tool timeout settings (in seconds)
-skylos_timeout = 600  # Dead code detection (10 minutes)
 refurb_timeout = 600  # Modern Python suggestions (10 minutes)
 
 # Test parallelization settings

@@ -21,8 +21,6 @@ def estimate_hook_execution_times() -> dict[str, dict[str, float]]:
         "mdformat": (0.6, 0.12),
         "codespell": (1.0, 0.2),
         "gitleaks": (3.0, 0.5),
-        "zuban": (8.5, 1.5),
-        "skylos": (2.1, 0.4),
         "bandit": (5.2, 0.8),
         "refurb": (4.0, 0.7),
         "complexipy": (3.5, 0.6),

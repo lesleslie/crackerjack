@@ -191,10 +191,8 @@ def main():
         ("security", "gitleaks_adapter", "GitleaksAdapter"),
         ("lint", "codespell_adapter", "CodespellAdapter"),
         ("complexity", "complexipy_adapter", "ComplexipyAdapter"),
-        ("type", "zuban_adapter", "ZubanAdapter"),
         ("refactor", "refurb_adapter", "RefurbAdapter"),
         ("refactor", "creosote_adapter", "CreosoteAdapter"),
-        ("refactor", "skylos_adapter", "SkylosAdapter"),
     ]
 
     agents = [
