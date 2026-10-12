@@ -90,9 +90,9 @@ class ImprovementGenerator:
 
         self._daily_count += 1
 
-        from uuid_utils import uuid4  # type: ignore[import-not-found]
+        from uuid import uuid7
 
-        job_id = str(uuid4())
+        job_id = uuid7().hex
 
         priority = (
             "high" if (trend is not None and trend.has_abrupt_trend) else "normal"

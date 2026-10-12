@@ -6,8 +6,7 @@ import logging
 from contextlib import suppress
 from datetime import UTC
 from typing import Protocol
-
-from uuid_utils import uuid4 as _uuid4
+from uuid import uuid7 as _uuid7
 
 from .ai_fix_events import AIFixEvent
 
@@ -52,4 +51,4 @@ class AIFixEventBus:
     @staticmethod
     def new_run_id() -> str:
         ts = datetime.datetime.now(UTC).strftime("%Y-%m-%d-%H%M")
-        return f"{ts}-{_uuid4().hex[:4]}"
+        return f"{ts}-{_uuid7().hex[:4]}"

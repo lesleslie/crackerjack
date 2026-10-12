@@ -3,9 +3,9 @@ from __future__ import annotations
 import typing as t
 from dataclasses import dataclass, field
 from enum import Enum
+from uuid import uuid7
 
 from pydantic import BaseModel
-from uuid_utils import uuid4
 
 
 class Priority(Enum):
@@ -40,7 +40,7 @@ class Issue:
     type: IssueType
     severity: Priority
     message: str
-    id: str = field(default_factory=lambda: f"issue_{uuid4().hex}")
+    id: str = field(default_factory=lambda: f"issue_{uuid7().hex}")
     file_path: str | None = None
     line_number: int | None = None
     details: list[str] = field(default_factory=list)
