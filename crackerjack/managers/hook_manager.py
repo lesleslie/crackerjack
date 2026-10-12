@@ -51,67 +51,40 @@ class HookManagerImpl:
         verbose: bool,
         quiet: bool,
         debug: bool,
-        enable_lsp_optimization: bool,
         enable_tool_proxy: bool,
         use_incremental: bool,
         git_service: t.Any,
         file_filter: t.Any | None = None,
         enable_hooks: list[str] | None = None,
     ) -> None:
-        if enable_lsp_optimization:
-            from crackerjack.executors.lsp_aware_hook_executor import (
-                LSPAwareHookExecutor,
-            )
+        from crackerjack.executors.hook_executor import HookExecutor
 
-            self.executor = LSPAwareHookExecutor(
-                self.console,
-                pkg_path,
-                verbose,
-                quiet,
-                debug,
-                use_tool_proxy=enable_tool_proxy,
-                use_incremental=use_incremental,
-                git_service=git_service,
-                file_filter=file_filter,
-                enable_hooks=enable_hooks,
-                skip_offline_osv_scanner=getattr(
-                    self._settings.hooks,
-                    "skip_offline_osv_scanner",
-                    True,
-                )
-                if self._settings
-                else True,
-                adapter_learner_integration=self._adapter_learner_integration,
+        self.executor = HookExecutor(
+            self.console,
+            pkg_path,
+            verbose,
+            quiet,
+            debug=debug,
+            use_incremental=use_incremental,
+            git_service=git_service,
+            file_filter=file_filter,
+            enable_hooks=enable_hooks,
+            skip_offline_osv_scanner=getattr(
+                self._settings.hooks,
+                "skip_offline_osv_scanner",
+                True,
             )
-        else:
-            from crackerjack.executors.hook_executor import HookExecutor
-
-            self.executor = HookExecutor(
-                self.console,
-                pkg_path,
-                verbose,
-                quiet,
-                debug=debug,
-                use_incremental=use_incremental,
-                git_service=git_service,
-                file_filter=file_filter,
-                enable_hooks=enable_hooks,
-                skip_offline_osv_scanner=getattr(
-                    self._settings.hooks,
-                    "skip_offline_osv_scanner",
-                    True,
-                )
-                if self._settings
-                else True,
-                adapter_learner_integration=self._adapter_learner_integration,
-                test_dir=getattr(
-                    self._settings.hooks,
-                    "test_dir",
-                    "tests",
-                )
-                if self._settings
-                else "tests",
+            if self._settings
+            else True,
+            adapter_learner_integration=self._adapter_learner_integration,
+            test_dir=getattr(
+                self._settings.hooks,
+                "test_dir",
+                "tests",
             )
+            if self._settings
+            else "tests",
+        )
 
     def _load_from_project_config(
         self,
@@ -241,7 +214,6 @@ class HookManagerImpl:
         verbose: bool = False,
         quiet: bool = False,
         debug: bool = False,
-        enable_lsp_optimization: bool = False,
         enable_tool_proxy: bool = True,
         use_incremental: bool = False,
         orchestration_config: t.Any = None,
@@ -277,7 +249,6 @@ class HookManagerImpl:
             verbose,
             quiet,
             debug,
-            enable_lsp_optimization,
             enable_tool_proxy,
             use_incremental,
             git_service,
@@ -287,7 +258,6 @@ class HookManagerImpl:
 
         self.config_loader = HookConfigLoader()
         self._config_path: Path | None = None
-        self.lsp_optimization_enabled = enable_lsp_optimization
         self.tool_proxy_enabled = enable_tool_proxy
 
         self._load_orchestration_config(
@@ -492,63 +462,11 @@ class HookManagerImpl:
         comprehensive_results = self.run_comprehensive_hooks()
         return fast_results + comprehensive_results
 
-    def configure_lsp_optimization(self, enable: bool) -> None:
-        if enable == self.lsp_optimization_enabled:
-            return
-
-        if enable:
-            from crackerjack.executors.lsp_aware_hook_executor import (
-                LSPAwareHookExecutor,
-            )
-
-            self.executor = LSPAwareHookExecutor(  # type: ignore[assignment]
-                self.console,
-                self.pkg_path,
-                verbose=getattr(self.executor, "verbose", False),
-                quiet=getattr(self.executor, "quiet", True),
-                use_tool_proxy=self.tool_proxy_enabled,
-            )
-        else:
-            from crackerjack.executors.hook_executor import HookExecutor
-
-            self.executor = HookExecutor(  # type: ignore[assignment]
-                self.console,
-                self.pkg_path,
-                verbose=getattr(self.executor, "verbose", False),
-                quiet=getattr(self.executor, "quiet", True),
-            )
-
-        self.lsp_optimization_enabled = enable
-
-        if self._config_path:
-            pass
-
     def configure_tool_proxy(self, enable: bool) -> None:
         if enable == self.tool_proxy_enabled:
             return
 
         self.tool_proxy_enabled = enable
-
-        try:
-            from crackerjack.executors.lsp_aware_hook_executor import (
-                LSPAwareHookExecutor,
-            )
-
-            is_lsp_executor = isinstance(self.executor, LSPAwareHookExecutor)
-        except ImportError:
-            is_lsp_executor = False
-
-        if is_lsp_executor:
-            self.executor = LSPAwareHookExecutor(
-                self.console,
-                self.pkg_path,
-                verbose=getattr(self.executor, "verbose", False),
-                quiet=getattr(self.executor, "quiet", True),
-                use_tool_proxy=enable,
-            )
-
-            if self._config_path:
-                pass
 
     async def get_orchestration_stats(self) -> dict[str, t.Any] | None:
         if not self.orchestration_enabled or self._orchestrator is None:
@@ -558,7 +476,6 @@ class HookManagerImpl:
 
     def get_execution_info(self) -> dict[str, t.Any]:
         info = {
-            "lsp_optimization_enabled": self.lsp_optimization_enabled,
             "tool_proxy_enabled": self.tool_proxy_enabled,
             "executor_type": type(self.executor).__name__,
             "orchestration_enabled": self.orchestration_enabled,

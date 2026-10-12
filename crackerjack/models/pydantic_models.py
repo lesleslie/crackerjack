@@ -38,7 +38,6 @@ class HookConfig(BaseModel):
     experimental_hooks: bool = False
     enable_pyrefly: bool = False
     enable_ty: bool = False
-    enable_lsp_optimization: bool = False
 
     @classmethod
     def from_settings(cls, settings: Any) -> HookConfig:
@@ -47,7 +46,6 @@ class HookConfig(BaseModel):
             experimental_hooks=getattr(settings, "experimental_hooks", False),
             enable_pyrefly=getattr(settings, "enable_pyrefly", False),
             enable_ty=getattr(settings, "enable_ty", False),
-            enable_lsp_optimization=getattr(settings, "enable_lsp_optimization", False),
         )
 
     @field_validator(
@@ -55,7 +53,6 @@ class HookConfig(BaseModel):
         "experimental_hooks",
         "enable_pyrefly",
         "enable_ty",
-        "enable_lsp_optimization",
         mode="before",
     )
     @classmethod

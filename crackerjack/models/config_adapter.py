@@ -57,7 +57,6 @@ class OptionsAdapter:
                 experimental_hooks=getattr(options, "experimental_hooks", False),
                 enable_pyrefly=getattr(options, "enable_pyrefly", False),
                 enable_ty=getattr(options, "enable_ty", False),
-                enable_lsp_optimization=getattr(options, "enable_lsp_hooks", False),
             ),
             testing=TestConfig(
                 test=getattr(

@@ -63,7 +63,6 @@ class HookConfig:
     experimental_hooks: bool = False
     enable_pyrefly: bool = False
     enable_ty: bool = False
-    enable_lsp_optimization: bool = False
     skip_offline_osv_scanner: bool = True
 
     @classmethod
@@ -73,7 +72,6 @@ class HookConfig:
             experimental_hooks=settings.experimental_hooks,
             enable_pyrefly=settings.enable_pyrefly,
             enable_ty=settings.enable_ty,
-            enable_lsp_optimization=settings.enable_lsp_optimization,
             skip_offline_osv_scanner=getattr(
                 settings,
                 "skip_offline_osv_scanner",
@@ -688,14 +686,6 @@ class WorkflowOptions:
     @enable_ty.setter
     def enable_ty(self, value: bool) -> None:
         self.hooks.enable_ty = value
-
-    @property
-    def enable_lsp_optimization(self) -> bool:
-        return self.hooks.enable_lsp_optimization
-
-    @enable_lsp_optimization.setter
-    def enable_lsp_optimization(self, value: bool) -> None:
-        self.hooks.enable_lsp_optimization = value
 
     @property
     def track_progress(self) -> bool:
