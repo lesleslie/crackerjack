@@ -16,7 +16,6 @@ from crackerjack.parsers.regex_parsers import (
     RefurbRegexParser,
     RuffFormatRegexParser,
     RuffRegexParser,
-    SkylosRegexParser,
     StructuredDataParser,
     TyRegexParser,
     CohesionRegexParser,
@@ -707,43 +706,6 @@ class TestJsonSchemaRegexParser:
         issues = parser.parse_text(output)
 
         assert issues == []
-
-
-class TestSkylosRegexParser:
-    """Test Skylos regex parser."""
-
-    @pytest.fixture
-    def parser(self):
-        return SkylosRegexParser()
-
-    def test_parse_valid_error(self, parser):
-        """Test parsing valid vulture error."""
-        output = "module.py - ERROR - file.py:10: Unused function 'foo'"
-
-        issues = parser.parse_text(output)
-
-        assert len(issues) == 1
-        assert issues[0].file_path == "module.py"
-        assert "foo" in issues[0].message
-        assert issues[0].type == IssueType.DEAD_CODE
-
-    def test_parse_with_line_number_in_message(self, parser):
-        """Test parsing when message contains 'line X'."""
-        output = "module - ERROR - file.py: error at line 42"
-
-        issues = parser.parse_text(output)
-
-        assert len(issues) == 1
-        assert issues[0].line_number == 42
-
-    def test_parse_no_line_in_message(self, parser):
-        """Test parsing when message doesn't contain line info."""
-        output = "module - ERROR - file.py: Some error"
-
-        issues = parser.parse_text(output)
-
-        assert len(issues) == 1
-        assert issues[0].line_number is None
 
 
 class TestRuffRegexParser:
