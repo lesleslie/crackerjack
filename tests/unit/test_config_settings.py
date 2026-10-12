@@ -71,7 +71,6 @@ class TestHookSettings:
         assert settings.experimental_hooks is False
         assert settings.enable_pyrefly is False
         assert settings.enable_ty is True
-        assert settings.enable_lsp_optimization is False
 
     def test_enable_pyrefly(self):
         """Test enabling pyrefly."""

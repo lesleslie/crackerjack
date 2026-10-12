@@ -157,11 +157,9 @@ class TestHookManagerExecutionInfo:
         """Test getting basic execution info."""
         info = manager.get_execution_info()
 
-        assert "lsp_optimization_enabled" in info
         assert "tool_proxy_enabled" in info
         assert "executor_type" in info
         assert "orchestration_enabled" in info
-        assert info["lsp_optimization_enabled"] is False
         assert info["tool_proxy_enabled"] is True
 
     def test_get_execution_info_with_orchestration(self, manager) -> None:
@@ -474,7 +472,6 @@ class TestHookManagerToolProxyConfiguration:
         with patch("crackerjack.executors.hook_executor.HookExecutor"):
             with patch("crackerjack.config.hooks.HookConfigLoader"):
                 manager = HookManagerImpl(pkg_path=tmp_path)
-                manager.lsp_optimization_enabled = False  # Not using LSP
                 return manager
 
     def test_configure_tool_proxy_enable(self, manager) -> None:
@@ -484,7 +481,6 @@ class TestHookManagerToolProxyConfiguration:
         manager.executor.verbose = False
         manager.executor.quiet = True
 
-        # Since lsp_optimization_enabled is False, isinstance check won't happen
         manager.configure_tool_proxy(True)
 
         assert manager.tool_proxy_enabled is True
@@ -501,12 +497,11 @@ class TestHookManagerToolProxyConfiguration:
     def test_configure_tool_proxy_non_lsp_executor(self, manager) -> None:
         """Test tool proxy configuration with non-LSP executor."""
         manager.tool_proxy_enabled = False
-        manager.lsp_optimization_enabled = False  # Not using LSP
-        # Use non-LSP executor (HookExecutor spec)
+        # Use HookExecutor spec (the only surviving executor)
         from crackerjack.executors.hook_executor import HookExecutor
         manager.executor = Mock(spec=HookExecutor)
 
-        # Should not raise even though executor isn't LSP-aware
+        # Should not raise
         manager.configure_tool_proxy(True)
 
 

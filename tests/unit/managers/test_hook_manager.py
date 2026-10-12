@@ -33,21 +33,9 @@ class TestHookManagerInitialization:
 
             assert manager.pkg_path == tmp_path
             assert manager.debug is False
-            assert manager.lsp_optimization_enabled is False
             assert manager.tool_proxy_enabled is True
             assert manager._config_path is None
             mock_executor.assert_called_once()
-
-    def test_initialization_with_lsp_optimization(self, mock_dependencies, tmp_path) -> None:
-        """Test HookManager initializes with LSP optimization."""
-        with patch("crackerjack.executors.lsp_aware_hook_executor.LSPAwareHookExecutor") as mock_lsp_exec:
-            manager = HookManagerImpl(
-                pkg_path=tmp_path,
-                enable_lsp_optimization=True,
-            )
-
-            assert manager.lsp_optimization_enabled is True
-            mock_lsp_exec.assert_called_once()
 
     def test_initialization_with_incremental_mode(self, mock_dependencies, tmp_path) -> None:
         """Test HookManager initializes with incremental execution."""
@@ -107,39 +95,10 @@ class TestHookManagerConfiguration:
 
         assert manager._config_path == config_path
 
-    def test_configure_lsp_optimization_enable(self, manager) -> None:
-        """Test enabling LSP optimization."""
-        manager.console = Mock()
-        manager.lsp_optimization_enabled = False
-
-        with patch("crackerjack.executors.lsp_aware_hook_executor.LSPAwareHookExecutor"):
-            manager.configure_lsp_optimization(True)
-
-            assert manager.lsp_optimization_enabled is True
-
-    def test_configure_lsp_optimization_disable(self, manager) -> None:
-        """Test disabling LSP optimization."""
-        manager.console = Mock()
-        manager.lsp_optimization_enabled = True
-
-        with patch("crackerjack.executors.hook_executor.HookExecutor"):
-            manager.configure_lsp_optimization(False)
-
-            assert manager.lsp_optimization_enabled is False
-
-    def test_configure_lsp_optimization_already_enabled(self, manager) -> None:
-        """Test configure LSP optimization when already in correct state."""
-        manager.lsp_optimization_enabled = True
-
-        manager.configure_lsp_optimization(True)
-
-            # Should not recreate executor - no exception raised
-
     def test_configure_tool_proxy_enable(self, manager) -> None:
         """Test enabling tool proxy."""
         manager.console = Mock()
         manager.tool_proxy_enabled = False
-        manager.lsp_optimization_enabled = False  # Not using LSP
         manager.executor = Mock(spec=["verbose", "quiet"])
         manager.executor.verbose = False
         manager.executor.quiet = True
@@ -285,13 +244,11 @@ class TestHookManagerInformation:
 
     def test_get_execution_info_basic(self, manager) -> None:
         """Test getting basic execution information."""
-        manager.lsp_optimization_enabled = False
         manager.tool_proxy_enabled = True
         manager.orchestration_enabled = False
 
         info = manager.get_execution_info()
 
-        assert info["lsp_optimization_enabled"] is False
         assert info["tool_proxy_enabled"] is True
         assert info["orchestration_enabled"] is False
         assert "executor_type" in info
@@ -491,9 +448,8 @@ class TestHookManagerOrchestrationConfig:
                 assert manager._orchestration_config == explicit_config
 
     # NOTE: test_load_config_from_project_file removed 2026-08-31.
-    # The test was xfail-marked with a misleading reason
-    # ("LSPAwareHookExecutor only imported in TYPE_CHECKING block").
-    # Actual root cause: the test patches
+    # The test was xfail-marked with a misleading reason (a deleted
+    # executor was referenced). Actual root cause: the test patches
     # `crackerjack.orchestration.config.OrchestrationConfig`, but that
     # module does not exist (crackerjack.orchestration was removed in a
     # prior refactor). The patch raises AttributeError before any test
