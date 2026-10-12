@@ -270,7 +270,7 @@ COMPREHENSIVE_HOOKS = [
         security_level=SecurityLevel.HIGH,
         accepts_file_paths=True,
         description=(
-            "Primary type checker (replaced zuban). Active by default via "
+            "Primary type checker. Active by default via "
             "settings.hooks.enable_ty; the runnable entry is appended by "
             "_build_opt_in_type_hooks(), so this entry stays auto_run=False."
         ),
@@ -288,16 +288,6 @@ COMPREHENSIVE_HOOKS = [
             "`# type: ignore[<code>]` directives (ty does not interpret them). "
             "Opt-in via `hooks.enable_ty_ignore_syntax: true`."
         ),
-    ),
-    HookDefinition(
-        name="zuban",
-        command=[],
-        timeout=60,
-        stage=HookStage.COMPREHENSIVE,
-        auto_run=False,
-        security_level=SecurityLevel.HIGH,
-        accepts_file_paths=True,
-        description="Legacy type checker (opt-in via enable_zuban flag)",
     ),
     HookDefinition(
         name="semgrep",
@@ -341,22 +331,6 @@ COMPREHENSIVE_HOOKS = [
         description=(
             "Secrets detection (FALLBACK: only enable if betterleaks is unavailable; "
             "see betterleaks entry for the install-then-activate flow)"
-        ),
-    ),
-    HookDefinition(
-        name="skylos",
-        command=[],
-        timeout=900,
-        stage=HookStage.COMPREHENSIVE,
-        auto_run=True,
-        security_level=SecurityLevel.MEDIUM,
-        accepts_file_paths=True,
-        run_schedule="weekly",
-        disabled=True,
-        description=(
-            "Dead code detection (DISABLED 2026-06-29 — replaced by pyscn's "
-            "CFG-based dead-code detection. Re-enable if pyscn misses findings "
-            "skylos would catch, or if you specifically need Rust-speed.)"
         ),
     ),
     HookDefinition(
@@ -466,20 +440,6 @@ def _build_opt_in_type_hooks() -> list[HookDefinition]:
                 )
             )
 
-        if getattr(settings.hooks, "enable_zuban", False):
-            optional_hooks.append(
-                HookDefinition(
-                    name="zuban",
-                    command=[],
-                    timeout=getattr(adapter_timeouts, "zuban_timeout", 60),
-                    stage=HookStage.COMPREHENSIVE,
-                    auto_run=True,
-                    security_level=SecurityLevel.HIGH,
-                    accepts_file_paths=True,
-                    description="Opt-in Zuban type checking (legacy, alongside ty)",
-                )
-            )
-
         if getattr(settings.hooks, "enable_ty", False):
             optional_hooks.append(
                 HookDefinition(
@@ -490,7 +450,7 @@ def _build_opt_in_type_hooks() -> list[HookDefinition]:
                     auto_run=True,
                     security_level=SecurityLevel.HIGH,
                     accepts_file_paths=True,
-                    description="Primary ty type checking (default-on, replaced zuban)",
+                    description="Primary ty type checking (default-on)",
                 )
             )
 

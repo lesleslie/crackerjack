@@ -41,50 +41,6 @@ def _detect_package_name_cached(pkg_path_str: str) -> str:
     return pkg_path.name.replace("-", "_")
 
 
-_SKYLOS_EXCLUDE_FOLDERS = [
-    "tests",
-    "docs",
-    "scripts",
-    "examples",
-    "archive",
-    "assets",
-    "templates",
-    "tools",
-    "worktrees",
-    "settings",
-    ".venv",
-    "venv",
-    "build",
-    "dist",
-    "htmlcov",
-    "logs",
-    "node_modules",
-]
-
-
-def _build_skylos_command(package_name: str) -> list[str]:
-
-    venv_skylos = Path.cwd() / ".venv" / "bin" / "skylos"
-    if venv_skylos.exists():
-        cmd = [str(venv_skylos)]
-    else:
-        cmd = ["uv", "run", "skylos"]
-
-    for folder in _SKYLOS_EXCLUDE_FOLDERS:
-        cmd.extend(["--exclude-folder", folder])
-
-    cmd.extend(["--confidence", "70"])
-
-    cmd.extend(["--limit", "50"])
-
-    diff_base = os.environ.get("PRE_COMMIT_FROM_REF", "HEAD~1")
-    cmd.extend(["--diff-base", diff_base])
-
-    cmd.append(f"./{package_name}")
-
-    return cmd
-
-
 def _python_module_command(module: str, *args: str) -> list[str]:
     return [sys.executable, "-m", module, *args]
 
@@ -147,15 +103,6 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             "crackerjack.tools.ty_ignore_syntax",
             "--exclude",
             "tools",
-        ),
-        "skylos": _build_skylos_command(package_name),
-        "zuban": _preferred_binary_command(
-            "zuban",
-            "mypy",
-            "--config-file",
-            "mypy.ini",
-            "--no-error-summary",
-            f"./{package_name}",
         ),
         "ty": _preferred_binary_command(
             "uv",
