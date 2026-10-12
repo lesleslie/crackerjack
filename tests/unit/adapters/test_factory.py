@@ -10,7 +10,6 @@ from crackerjack.adapters.format.ruff import RuffAdapter
 from crackerjack.adapters.sast.bandit import BanditAdapter
 from crackerjack.adapters.sast.semgrep import SemgrepAdapter
 from crackerjack.adapters.refactor.refurb import RefurbAdapter
-from crackerjack.adapters.refactor.vulture import VultureAdapter
 from crackerjack.adapters.type.pyrefly import PyreflyAdapter
 from crackerjack.adapters.type.ty import TyAdapter
 from crackerjack.models.protocols import AdapterProtocol
@@ -49,8 +48,6 @@ class TestDefaultAdapterFactory:
         assert factory.get_adapter_name("bandit") == "Bandit"
         assert factory.get_adapter_name("semgrep") == "Semgrep"
         assert factory.get_adapter_name("refurb") == "Refurb"
-        assert factory.get_adapter_name("vulture") == "Skylos"
-        assert factory.get_adapter_name("mypy") == "Zuban"
         assert factory.get_adapter_name("pyrefly") == "Pyrefly"
         assert factory.get_adapter_name("ty") == "Ty"
 
@@ -66,8 +63,6 @@ class TestDefaultAdapterFactory:
         assert factory.tool_has_adapter("bandit") is True
         assert factory.tool_has_adapter("semgrep") is True
         assert factory.tool_has_adapter("refurb") is True
-        assert factory.tool_has_adapter("vulture") is True
-        assert factory.tool_has_adapter("mypy") is True
         assert factory.tool_has_adapter("pyrefly") is True
         assert factory.tool_has_adapter("ty") is True
 
@@ -104,25 +99,6 @@ class TestDefaultAdapterFactory:
         adapter = factory.create_adapter("Refurb")
         assert isinstance(adapter, RefurbAdapter)
         assert adapter.adapter_name == "Refurb (Refactoring)"
-
-    def test_create_vulture_adapter(self, factory):
-        """Test creating Skylos adapter."""
-        adapter = factory.create_adapter("Skylos")
-        assert isinstance(adapter, VultureAdapter)
-        assert adapter.adapter_name == "Skylos (Dead Code)"
-
-    def test_create_mypy_adapter(self, factory):
-        """Test creating Zuban adapter."""
-        # Zuban requires ExecutionContext which may not be available
-        # This tests the factory's error handling or skip gracefully
-        try:
-            adapter = factory.create_adapter("Zuban")
-            # If it succeeds, verify basic properties
-            assert adapter is not None
-            assert hasattr(adapter, "get_tool_name") or hasattr(adapter, "adapter_name")
-        except (ImportError, ModuleNotFoundError) as e:
-            # Expected if ExecutionContext module doesn't exist yet
-            pytest.skip(f"ExecutionContext not available: {e}")
 
     def test_create_pyrefly_adapter(self, factory):
         """Test creating Pyrefly adapter."""

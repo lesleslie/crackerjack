@@ -247,13 +247,6 @@ class Options(BaseModel):
                 msg,
             )
 
-    @classmethod
-    @field_validator("enable_lsp_hooks", mode="before")
-    def validate_enable_lsp_hooks(cls, value: t.Any) -> bool:
-        if value is None:
-            return True
-        return bool(value)
-
 
 allow_unsafe_fixes: bool = False
 safe_only: bool = False
@@ -483,11 +476,6 @@ CLI_OPTIONS = {
         help=(
             "Skip version consistency verification between pyproject.toml and git tags."
         ),
-    ),
-    "enable_lsp_hooks": typer.Option(
-        True,
-        "--enable-lsp-hooks/--no-lsp-hooks",
-        help="Enable LSP-optimized hook execution for faster type checking (default: enabled).",
     ),
     "enable_hooks": typer.Option(
         None,

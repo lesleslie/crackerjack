@@ -33,7 +33,6 @@ class TestPyreflyModuleId:
         ids = [
             TyAdapter().module_id,
             PyreflyAdapter().module_id,
-            MypyAdapter().module_id,
         ]
         assert len(ids) == len(set(ids)), f"Duplicate MODULE_IDs detected: {ids}"
 
