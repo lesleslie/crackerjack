@@ -45,6 +45,7 @@ _Regenerated 2026-10-11 by `crackerjack.tools.plan_index_sync` (fast-hook)._
 | [`docs/plans/2026-09-07-crackerjack-multi-language-phase3.md`](2026-09-07-crackerjack-multi-language-phase3.md) | 2026-09-09 | `shipped` | `implementation` | `architecture` | Crackerjack Multi-Language Extension — Phase 3 (Kotlin/Gradle) Plan |
 | [`docs/plans/2026-09-07-crackerjack-multi-language-phase4.md`](2026-09-07-crackerjack-multi-language-phase4.md) | 2026-09-09 | `shipped` | `implementation` | `architecture` | Crackerjack Multi-Language Extension — Phase 4 (Web/CSS/HTML/JS/TS) Plan |
 | [`docs/plans/2026-10-10-crackerjack-oneiric-loader-migration.md`](2026-10-10-crackerjack-oneiric-loader-migration.md) | 2026-10-10 | `draft` | `implementation` | `settings-resolution` | Crackerjack Settings Loader — Migration to Oneiric — Implementation Plan |
+| [`docs/plans/2026-10-11-remove-zuban-skylos-lsp-from-crackerjack.md`](2026-10-11-remove-zuban-skylos-lsp-from-crackerjack.md) | 2026-10-11 | `active` | `implementation` | `architecture` | Remove Zuban + Skylos LSP Adapters from Crackerjack — Implementation Plan |
 | [`docs/plans/AI_FIX_IMPROVEMENT_PLAN.md`](AI_FIX_IMPROVEMENT_PLAN.md) | 2026-07-17 | `complete` | `historical` | `lifecycle` | AI-Fix Improvement Plan |
 
 ### Docs: specs
@@ -99,6 +100,7 @@ _Regenerated 2026-10-11 by `crackerjack.tools.plan_index_sync` (fast-hook)._
 | [`docs/plans/2026-09-07-crackerjack-multi-language-phase3.md`](2026-09-07-crackerjack-multi-language-phase3.md) | 2026-09-09 | `shipped` | `implementation` | `architecture` | Crackerjack Multi-Language Extension — Phase 3 (Kotlin/Gradle) Plan |
 | [`docs/plans/2026-09-07-crackerjack-multi-language-phase4.md`](2026-09-07-crackerjack-multi-language-phase4.md) | 2026-09-09 | `shipped` | `implementation` | `architecture` | Crackerjack Multi-Language Extension — Phase 4 (Web/CSS/HTML/JS/TS) Plan |
 | [`docs/plans/2026-10-10-crackerjack-oneiric-loader-migration.md`](2026-10-10-crackerjack-oneiric-loader-migration.md) | 2026-10-10 | `draft` | `implementation` | `settings-resolution` | Crackerjack Settings Loader — Migration to Oneiric — Implementation Plan |
+| [`docs/plans/2026-10-11-remove-zuban-skylos-lsp-from-crackerjack.md`](2026-10-11-remove-zuban-skylos-lsp-from-crackerjack.md) | 2026-10-11 | `active` | `implementation` | `architecture` | Remove Zuban + Skylos LSP Adapters from Crackerjack — Implementation Plan |
 | [`docs/plans/AI_FIX_IMPROVEMENT_PLAN.md`](AI_FIX_IMPROVEMENT_PLAN.md) | 2026-07-17 | `complete` | `historical` | `lifecycle` | AI-Fix Improvement Plan |
 
 ### .claude/decisions
