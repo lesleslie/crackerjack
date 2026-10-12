@@ -149,7 +149,6 @@ class DocumentationCategorizer:
                 r"FINAL_.*\.md",
                 r".*_CONQUEST.*\.md",
                 r".*_AGENT_.*\.md",
-                r"ZUBAN_.*\.md",
                 r"PHASE_.*_PLAN\.md",
                 r"PHASE_.*_STATUS\.md",
                 r"PHASE_.*_COMPLETE.*\.md",
