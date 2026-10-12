@@ -295,10 +295,9 @@ class TestComprehensiveHookInvariants:
         # COMPREHENSIVE_STRATEGY.hooks reflects the static filter applied at
         # module load (auto_run=True and not disabled).
         names = {h.name for h in COMPREHENSIVE_STRATEGY.hooks}
-        # gitleaks / skylos / complexipy are explicitly disabled in the
+        # gitleaks / complexipy are explicitly disabled in the
         # COMPREHENSIVE_HOOKS list — they should NOT be in the active strategy.
         assert "gitleaks" not in names
-        assert "skylos" not in names
         assert "complexipy" not in names
         # semgrep is enabled and should appear.
         assert "semgrep" in names
@@ -310,13 +309,12 @@ class TestComprehensiveHookInvariants:
         assert COMPREHENSIVE_STRATEGY.max_workers == 6
         assert COMPREHENSIVE_STRATEGY.retry_policy is RetryPolicy.NONE
 
-    def test_comprehensive_strategy_excludes_ty_and_zuban(self) -> None:
-        # ty and zuban are opt-in via _build_opt_in_type_hooks(), so they
+    def test_comprehensive_strategy_excludes_ty_and_pyrefly(self) -> None:
+        # ty and pyrefly are opt-in via _build_opt_in_type_hooks(), so they
         # should not appear in COMPREHENSIVE_STRATEGY (which is built from
         # COMPREHENSIVE_HOOKS only).
         names = {h.name for h in COMPREHENSIVE_STRATEGY.hooks}
         assert "ty" not in names
-        assert "zuban" not in names
         assert "pyrefly" not in names
 
 
@@ -354,7 +352,6 @@ class TestBuildOptInTypeHooks:
                 "hooks": HookSettings(
                     enable_pyrefly=False,
                     enable_ty=False,
-                    enable_zuban=False,
                     enable_ty_ignore_syntax=False,
                 )
             }
@@ -390,35 +387,6 @@ class TestBuildOptInTypeHooks:
         hooks = _build_opt_in_type_hooks()
         pyrefly = next(h for h in hooks if h.name == "pyrefly")
         assert pyrefly.timeout == 999
-
-    def test_zuban_branch(self, patched_load_settings) -> None:
-        from crackerjack.config.settings import HookSettings
-
-        patched_load_settings["settings"] = patched_load_settings["settings"].model_copy(
-            update={"hooks": HookSettings(enable_zuban=True)}
-        )
-        hooks = _build_opt_in_type_hooks()
-        names = [h.name for h in hooks]
-        assert "zuban" in names
-        zuban = next(h for h in hooks if h.name == "zuban")
-        assert zuban.timeout == 60  # default zuban_timeout
-        assert zuban.stage is HookStage.COMPREHENSIVE
-        assert zuban.auto_run is True
-        assert zuban.accepts_file_paths is True
-        assert zuban.security_level is SecurityLevel.HIGH
-
-    def test_zuban_branch_uses_configured_timeout(self, patched_load_settings) -> None:
-        from crackerjack.config.settings import AdapterTimeouts, HookSettings
-
-        patched_load_settings["settings"] = patched_load_settings["settings"].model_copy(
-            update={
-                "hooks": HookSettings(enable_zuban=True),
-                "adapter_timeouts": AdapterTimeouts(zuban_timeout=42),
-            }
-        )
-        hooks = _build_opt_in_type_hooks()
-        zuban = next(h for h in hooks if h.name == "zuban")
-        assert zuban.timeout == 42
 
     def test_ty_branch(self, patched_load_settings) -> None:
         from crackerjack.config.settings import HookSettings
@@ -474,15 +442,14 @@ class TestBuildOptInTypeHooks:
                 "hooks": HookSettings(
                     enable_pyrefly=True,
                     enable_ty=True,
-                    enable_zuban=True,
                     enable_ty_ignore_syntax=True,
                 )
             }
         )
         hooks = _build_opt_in_type_hooks()
         names = {h.name for h in hooks}
-        assert {"pyrefly", "ty", "zuban", "ty-ignore-syntax"} <= names
-        assert len(hooks) == 4
+        assert {"pyrefly", "ty", "ty-ignore-syntax"} <= names
+        assert len(hooks) == 3
 
     def test_suppress_swallows_load_failure(self) -> None:
         # ``with suppress(Exception)`` around the load_settings call — if the
@@ -526,7 +493,6 @@ class TestBuildComprehensiveHooks:
         assert "check-jsonschema" in names
         # disabled entries stay out.
         assert "gitleaks" not in names
-        assert "skylos" not in names
         assert "complexipy" not in names
         # Opt-in ty shows up because settings enable it.
         assert "ty" in names
@@ -546,11 +512,10 @@ class TestBuildComprehensiveHooks:
 
     def test_excludes_disabled_hooks(self) -> None:
         # Even with no opt-ins enabled, the factory still filters out
-        # disabled entries (gitleaks / skylos / complexipy).
+        # disabled entries (gitleaks / complexipy).
         hooks = _build_comprehensive_hooks()
         names = {h.name for h in hooks}
         assert "gitleaks" not in names
-        assert "skylos" not in names
         assert "complexipy" not in names
 
 
@@ -664,7 +629,6 @@ class TestHookConfigLoaderLoadStrategy:
         strategy = HookConfigLoader.load_strategy("comprehensive")
         names = {h.name for h in strategy.hooks}
         assert "gitleaks" not in names
-        assert "skylos" not in names
         assert "complexipy" not in names
 
     def test_unknown_strategy_raises_value_error(self) -> None:
