@@ -1,8 +1,8 @@
 """Integration tests for QA tool adapters.
 
-Tests cover RuffAdapter, BanditAdapter, GitleaksAdapter, ZubanAdapter,
-RefurbAdapter, ComplexipyAdapter, CreosoteAdapter, CodespellAdapter,
-and MdformatAdapter with synchronous configuration validation.
+Tests cover RuffAdapter, BanditAdapter, GitleaksAdapter, RefurbAdapter,
+ComplexipyAdapter, CreosoteAdapter, CodespellAdapter, and MdformatAdapter
+with synchronous configuration validation.
 """
 
 from pathlib import Path
@@ -23,7 +23,6 @@ from crackerjack.adapters.refactor.creosote import CreosoteAdapter, CreosoteSett
 from crackerjack.adapters.refactor.refurb import RefurbAdapter, RefurbSettings
 from crackerjack.adapters.sast.bandit import BanditAdapter, BanditSettings
 from crackerjack.adapters.security.gitleaks import GitleaksAdapter, GitleaksSettings
-from crackerjack.adapters.type.zuban import ZubanAdapter, ZubanSettings
 from crackerjack.models.qa_config import QACheckConfig
 from crackerjack.models.qa_results import QACheckType
 
@@ -156,32 +155,6 @@ class TestGitleaksAdapter:
         """Test GitleaksAdapter tool name."""
         adapter = GitleaksAdapter()
         assert adapter.tool_name == "gitleaks"
-
-
-class TestZubanAdapter:
-    """Tests for ZubanAdapter (type checking)."""
-
-    def test_zuban_adapter_strict_mode(self) -> None:
-        """Test ZubanAdapter with strict mode."""
-        settings = ZubanSettings(strict_mode=True, incremental=True)
-        adapter = ZubanAdapter(settings=settings)
-
-        assert adapter.settings.strict_mode is True
-        assert adapter.settings.incremental is True
-
-    def test_zuban_adapter_default_config(self) -> None:
-        """Test ZubanAdapter default configuration."""
-        adapter = ZubanAdapter()
-        config = adapter.get_default_config()
-
-        assert isinstance(config, QACheckConfig)
-        assert config.check_type == QACheckType.TYPE
-        assert config.stage == "comprehensive"  # Type checking comprehensive
-
-    def test_zuban_adapter_tool_name(self) -> None:
-        """Test ZubanAdapter tool name."""
-        adapter = ZubanAdapter()
-        assert adapter.tool_name == "zuban"
 
 
 class TestRefurbAdapter:
@@ -367,7 +340,6 @@ class TestToolAdapterCommonPatterns:
             RuffAdapter,
             BanditAdapter,
             GitleaksAdapter,
-            ZubanAdapter,
             RefurbAdapter,
             ComplexipyAdapter,
             CreosoteAdapter,
@@ -454,7 +426,6 @@ class TestToolAdapterStageAssignment:
         # Bandit, Zuban, Refurb, Complexipy, Creosote
         comp_adapters = [
             BanditAdapter,
-            ZubanAdapter,
             RefurbAdapter,
             ComplexipyAdapter,
             CreosoteAdapter,
@@ -476,7 +447,6 @@ class TestToolAdapterFilePatterns:
         python_adapters = [
             RuffAdapter,
             BanditAdapter,
-            ZubanAdapter,
             RefurbAdapter,
             ComplexipyAdapter,
         ]
@@ -517,7 +487,6 @@ class TestToolAdapterParallelSafety:
         # Read-only checks should be parallel safe
         read_only_adapters = [
             BanditAdapter,
-            ZubanAdapter,
             ComplexipyAdapter,
             CreosoteAdapter,
         ]

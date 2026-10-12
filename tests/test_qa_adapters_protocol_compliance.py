@@ -19,7 +19,6 @@ from crackerjack.adapters.refactor.creosote import CreosoteAdapter
 from crackerjack.adapters.refactor.refurb import RefurbAdapter
 from crackerjack.adapters.sast.bandit import BanditAdapter
 from crackerjack.adapters.security.gitleaks import GitleaksAdapter
-from crackerjack.adapters.type.zuban import ZubanAdapter
 from crackerjack.adapters.utility.checks import UtilityCheckAdapter
 from crackerjack.models.protocols import QAAdapterProtocol as ProtocolDef
 
@@ -35,7 +34,6 @@ class TestQAAdapterProtocolCompliance:
             RuffAdapter,
             BanditAdapter,
             GitleaksAdapter,
-            ZubanAdapter,
             RefurbAdapter,
             ComplexipyAdapter,
             CreosoteAdapter,
@@ -212,7 +210,6 @@ class TestQAAdapterConfiguration:
             RuffAdapter(),
             BanditAdapter(),
             GitleaksAdapter(),
-            ZubanAdapter(),
             RefurbAdapter(),
             ComplexipyAdapter(),
             CreosoteAdapter(),
