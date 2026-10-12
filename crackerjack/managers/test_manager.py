@@ -23,8 +23,6 @@ from crackerjack.models.protocols import (
     CoverageRatchetProtocol,
     OptionsProtocol,
 )
-from crackerjack.services.lsp_client import LSPClient
-from crackerjack.services.testing.coverage_manager import CoverageManager
 from crackerjack.services.testing.test_result_parser import TestResultParser
 from crackerjack.services.testing.test_result_renderer import TestResultRenderer
 
@@ -56,7 +54,7 @@ class TestManager:
         coverage_ratchet: CoverageRatchetProtocol | None = None,
         coverage_badge: CoverageBadgeServiceProtocol | None = None,
         command_builder: TestCommandBuilder | None = None,
-        lsp_client: LSPClient | None = None,
+        lsp_client: t.Any | None = None,
         result_parser: TestResultParser | None = None,
         result_renderer: TestResultRenderer | None = None,
         coverage_manager: CoverageManager | None = None,
