@@ -47,21 +47,58 @@ def get_download_trend_warning(trend_class: DownloadTrendClass) -> str:
 # fields, or env-var values — better to truncate + redact than to ship the
 # raw blob to console / log handlers / Loki.
 _SANITIZE_OUTPUT_TAIL_BYTES = 2048
+# Cap on a single matched value: 400 chars covers the longest realistic
+# credential (GitHub App installation tokens ≈ 240, AWS STS session
+# tokens ≈ 140, JWTs ≈ 200-300). Bounds over-redaction if the value
+# class is too greedy on a benign long line.
+_SANITIZE_VALUE_MAX_CHARS = 400
 _SANITIZE_REDACT_PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = (
-    # key=value / key: "value" — common credential shapes (best-effort,
-    # not exhaustive; aimed at accidental leaks, not adversarial input)
-    (re.compile(r"(?i)\b(token|secret|password|passwd|api[_-]?key|access[_-]?key)\b\s*[=:]\s*['\"]?[\w\-./+=]{6,}"), "<REDACTED>"),
-    # GitHub / GitLab / Google / Slack token prefixes (prefix match, value trimmed)
-    (re.compile(r"\b(ghp_|gho_|ghu_|ghs_|ghr_|github_pat_|glpat-|xox[abprs]-|ya29\.)[A-Za-z0-9_\-]+"), "<REDACTED>"),
+    # Order matters: patterns run sequentially on the same string. The
+    # prefix pattern fires FIRST so a `ghp_…` token is consumed before
+    # the key=value pattern can match it as the value of a generic
+    # `Token:` line (which would leave the rest of the line unredacted).
+    #
+    # GitHub / GitLab / Google / Slack token prefixes. Value class
+    # includes `\s` because a token can wrap across a line break in
+    # Python `repr()` output or curl verbose errors. The 400-char cap
+    # bounds the cross-line reach. The token shape itself
+    # (`ghp_`/`ya29.`/etc.) is specific enough that false positives
+    # are negligible.
+    (
+        re.compile(
+            r"\b(ghp_|gho_|ghu_|ghs_|ghr_|github_pat_|glpat-|xox[abprs]-|ya29\.)"
+            r"[\w\-\s]{6," + str(_SANITIZE_VALUE_MAX_CHARS) + r"}"
+        ),
+        "<REDACTED>",
+    ),
+    # key=value / key: "value" — common credential shapes. Value class
+    # is a single token (no whitespace): wrapping a `key=value`
+    # credential across a line break is rare in stderr (credentials
+    # are typically <80 chars and the line break would land mid-key,
+    # not mid-value), and a permissive value class here would over-
+    # match by consuming the next line's `key=` as part of THIS
+    # line's value. Best-effort, not exhaustive; aimed at accidental
+    # leaks, not adversarial input. Cap `{6,400}` bounds any single
+    # value length.
+    (
+        re.compile(
+            r"(?i)\b(token|secret|password|passwd|api[_-]?key|access[_-]?key)\b"
+            r"\s*[=:]\s*['\"]?"
+            r"[\w\-./+=]{6," + str(_SANITIZE_VALUE_MAX_CHARS) + r"}"
+        ),
+        "<REDACTED>",
+    ),
     # Authorization header values — consume the rest of the line
     # because the value is typically `Bearer <token>` / `Basic <b64>`
     # (multiple whitespace-separated tokens). (?im) = IGNORECASE +
-    # MULTILINE so `$` matches end-of-line.
+    # MULTILINE so `$` matches end-of-line. Already newline-tolerant.
     (re.compile(r"(?im)\bauthorization\b\s*[=:].*$"), "authorization: <REDACTED>"),
 )
 
 
-def _sanitize_subprocess_output(text: str | None, *, tail_bytes: int = _SANITIZE_OUTPUT_TAIL_BYTES) -> str:
+def _sanitize_subprocess_output(
+    text: str | None, *, tail_bytes: int = _SANITIZE_OUTPUT_TAIL_BYTES
+) -> str:
     """Sanitize subprocess stderr/stdout for observability.
 
     Truncates to the last `tail_bytes` (keeps the failure tail where the

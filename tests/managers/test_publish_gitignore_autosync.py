@@ -511,3 +511,165 @@ def test_sync_failure_passes_sanitized_stderr_to_console(
         assert "ghp_abcdefghijklmnopqrstuvwx" not in rendered, (
             f"Raw token leaked to console: {rendered!r}"
         )
+
+
+# ---------------------------------------------------------------------------
+# Cases: parser-differential redaction (wrapped-line tokens)
+# ---------------------------------------------------------------------------
+
+
+def test_sanitize_redacts_github_token_wrapped_across_newline() -> None:
+    """A GitHub token wrapped across a line break is still fully redacted.
+
+    Python ``repr()`` and curl verbose output commonly wrap long values
+    at column 80. A line-anchored regex pattern misses the wrapped
+    continuation, leaking the rest of the token. The value class in
+    this sanitizer includes ``\\s`` so a single match consumes the
+    full wrapped shape.
+    """
+    text = (
+        "Traceback (most recent call last):\n"
+        "  File 'x.py', line 5, in <module>\n"
+        "    raise ValueError(token)\n"
+        "ValueError: ghp_abcdefghijklmnopqrstuvwxyz012345\n"
+        "6789ABCDEFGHIJ\n"
+    )
+    out = _sanitize_subprocess_output(text)
+    assert "ghp_abcdefghijklmnopqrstuvwxyz012345" not in out
+    assert "6789ABCDEFGHIJ" not in out
+    assert "<REDACTED>" in out
+
+
+def test_sanitize_redacts_long_github_token_wrapped_mid_value() -> None:
+    """A 40-char GitHub token (ghp_ + 36 chars) wrapped mid-value.
+
+    Realistic: GitHub's classic PAT is exactly 40 chars, and Python
+    ``repr()`` wraps at 80 chars — so the token's third character
+    can land on the wrap. The 400-char cap with ``\\s`` in the
+    value class catches the full wrapped shape.
+    """
+    text = (
+        "Token: ghp_abcdefghijklmnopqrstuvwxyz0123456789\n"
+        "tail_garbage_that_should_also_be_swept_in\n"
+    )
+    out = _sanitize_subprocess_output(text)
+    assert "ghp_abcdefghijklmnopqrstuvwxyz0123456789" not in out
+    assert "tail_garbage" not in out  # within 400 char reach from prefix
+
+
+def test_sanitize_caps_value_length_at_400_chars() -> None:
+    """The value class cap is 400 chars, bounding over-redaction.
+
+    With a 1000-char tail of unrelated text, the cap stops the
+    match before consuming the whole blob — operator context past
+    400 chars is preserved.
+    """
+    long_tail = "x" * 1000
+    text = f"ghp_a{'b' * 100}{long_tail}\n"
+    out = _sanitize_subprocess_output(text, tail_bytes=10_000)
+    # The token's first 100 'b' chars are within the 400 cap and
+    # are redacted. Most of the 1000 x's (the ones past the 400
+    # cap) are preserved.
+    assert "ghp_a" not in out
+    # The cap is value-class length (6-400). With prefix `ghp_a`
+    # (5 chars) + 100 b's + 1000 x's + 1 \n = 1106 chars total,
+    # the regex consumes the first 400 chars of the value
+    # (`a` + 100 b's + 299 x's). The remaining 701 x's + \n are
+    # preserved. (299 x's consumed is a one-off from the \n being
+    # in the value class — fine, the cap still bounds over-match.)
+    assert out.count("x") == 701, (
+        f"expected 701 x's preserved, got {out.count('x')}"
+    )
+
+
+def test_sanitize_key_value_pattern_is_line_scoped() -> None:
+    """`key=value` pattern does NOT span newlines (over-match risk).
+
+    A permissive value class that includes whitespace lets a single
+    match consume the next line's `key=` as part of THIS line's
+    value, missing the second key. The key=value pattern keeps its
+    value class to a single token (no whitespace) to prevent that
+    false-negative. Wrap-case coverage comes from the prefix pattern
+    in the next test.
+    """
+    text = (
+        "config error: token=supersecretvalue12345\n"
+        "api_key: \"AKIAIOSFODNN7EXAMPLE\"\n"
+        "password=hunter2hunter2hunter2hunter2\n"
+    )
+    out = _sanitize_subprocess_output(text)
+    # All three values redacted (line-scoped, one per line).
+    assert "supersecretvalue12345" not in out
+    assert "AKIAIOSFODNN7EXAMPLE" not in out
+    assert "hunter2hunter2hunter2hunter2" not in out
+    assert out.count("<REDACTED>") >= 3
+
+
+def test_sanitize_redacts_authorization_with_wrapped_token() -> None:
+    """An Authorization: Bearer line where the token wraps is fully redacted."""
+    text = (
+        "request failed: Authorization: Bearer\n"
+        "  ghp_abcdefghijklmnopqrstuvwxyz012345\n"
+    )
+    out = _sanitize_subprocess_output(text)
+    assert "ghp_abcdefghijklmnopqrstuvwxyz012345" not in out
+
+
+def test_sanitize_caps_value_length_to_bound_over_redaction() -> None:
+    """Value class is capped at 400 chars to prevent runaway over-redaction.
+
+    A benign log line with a 1000-char value following ``token=`` must
+    not consume the whole blob — the cap forces a finite match.
+    """
+    text = "token=" + "a" * 1000 + "\n"
+    out = _sanitize_subprocess_output(text, tail_bytes=10_000)
+    # Most of the 'a's should survive the cap (only up to 400 are
+    # consumed by the value class).
+    surviving_a_count = out.count("a")
+    assert surviving_a_count >= 600, (
+        f"cap under-matched: only {surviving_a_count} 'a' chars survived "
+        f"(expected >= 600)"
+    )
+
+
+def test_sanitize_end_to_end_wrapped_token_does_not_reach_console(
+    tmp_path: Path, mock_console: MagicMock,
+) -> None:
+    """End-to-end: a wrapped token in sync stderr must not reach console."""
+    pm = _make_publish_manager(tmp_path, mock_console)
+    conform = _make_conform_result(
+        is_fleet_member=True,
+        snippet_present=False,
+        missing_patterns=[".claude/*"],
+    )
+
+    leak = (
+        "Traceback:\n"
+        "  ghp_abcdefghijklmnopqrstuvwxyz012345\n"
+        "  6789ABCDEFGHIJKLMNOPQRSTUVWXYZ\n"
+    )
+    fake_sync = _completed(returncode=2, stderr=leak)
+
+    with (
+        patch(
+            "crackerjack.managers.publish_manager.check_repo_gitignore",
+            return_value=conform,
+        ),
+        patch(
+            "crackerjack.managers.publish_manager.subprocess.run",
+            return_value=fake_sync,
+        ),
+    ):
+        result = pm._validate_gitignore_conformance()
+
+    assert result is False
+    leaked_substrings = (
+        "ghp_abcdefghijklmnopqrstuvwxyz012345",
+        "6789ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+    )
+    for call in mock_console.print.call_args_list:
+        rendered = " ".join(str(arg) for arg in call.args)
+        for sub in leaked_substrings:
+            assert sub not in rendered, (
+                f"Wrapped token leaked to console: {sub!r} in {rendered!r}"
+            )
