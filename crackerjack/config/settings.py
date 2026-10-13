@@ -468,6 +468,27 @@ _KNOWN_PYPROJECT_SUBTABLES: frozenset[str] = frozenset(
 )
 
 
+class AsyncTaskSettings(OneiricMCPConfig):
+    """AsyncTaskManager persistence settings (C-WIRE Task 6)."""
+
+    storage_path: Path = Field(
+        default_factory=lambda: Path("~/.crackerjack/state/async_tasks.db").expanduser(),
+        description="SQLite database file for AsyncTaskStore",
+    )
+    reap_zombies_interval_seconds: int = Field(
+        default=3600,
+        ge=60,
+        le=86400,
+        description="How often to reap zombie tasks (60s-24h)",
+    )
+    zombie_age_seconds: int = Field(
+        default=604800,  # 7 days
+        ge=3600,
+        le=2592000,
+        description="Tasks with registered_at older than this AND status in {pending, running} are reaped",
+    )
+
+
 class CrackerjackSettings(OneiricMCPConfig):
     pkg_path: Path | None = None
 
@@ -508,6 +529,7 @@ class CrackerjackSettings(OneiricMCPConfig):
     mahavishnu: MahavishnuSettings = MahavishnuSettings()
     eventbridge: EventBridgeSettings = EventBridgeSettings()
     review_pr: ReviewPRSettings = ReviewPRSettings()
+    async_task: AsyncTaskSettings = AsyncTaskSettings()
     enable_orchestration: bool = True
     orchestration_mode: str = "oneiric"
     enable_caching: bool = True

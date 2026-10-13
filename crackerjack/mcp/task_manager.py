@@ -6,8 +6,11 @@ import time
 import typing as t
 from contextlib import asynccontextmanager, suppress
 from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
 
 from rich.console import Console
+
+from .persistence import AsyncTaskRecord, AsyncTaskStore
 
 console = Console()
 
@@ -24,16 +27,33 @@ class TaskInfo:
 
 
 class AsyncTaskManager:
-    def __init__(self, max_concurrent_tasks: int = 10) -> None:
+    def __init__(
+        self,
+        max_concurrent_tasks: int = 10,
+        *,
+        store: AsyncTaskStore | None = None,
+        settings: t.Any | None = None,
+    ) -> None:
         self.max_concurrent_tasks = max_concurrent_tasks
         self._tasks: dict[str, TaskInfo] = {}
         self._task_semaphore = asyncio.Semaphore(max_concurrent_tasks)
         self._cleanup_task: asyncio.Task[t.Any] | None = None
+        self._reaper_task: asyncio.Task[t.Any] | None = None
         self._running = False
         self._lock = asyncio.Lock()
+        self._store = store
+        self._settings = settings
+
+    @property
+    def store(self) -> AsyncTaskStore | None:
+        return self._store
 
     async def start(self) -> None:
         self._running = True
+        if self._store is not None:
+            await self._store.init_schema()
+            self._reaper_task = asyncio.create_task(self._reap_zombies_loop())
+            logger.info("crackerjack_async_task_manager_started")
         self._cleanup_task = asyncio.create_task(self._cleanup_loop())
         try:
             console.print(
@@ -47,12 +67,19 @@ class AsyncTaskManager:
     async def stop(self) -> None:
         self._running = False
 
+        if self._reaper_task:
+            self._reaper_task.cancel()
+            with suppress(asyncio.CancelledError):
+                await self._reaper_task
+            self._reaper_task = None
+
         if self._cleanup_task:
             self._cleanup_task.cancel()
             with suppress(asyncio.CancelledError):
                 await self._cleanup_task
 
         await self._cancel_all_tasks()
+        logger.info("crackerjack_async_task_manager_stopped")
         try:
             console.print("[yellow]🎯 Task Manager stopped[ / yellow]")
         except ValueError, OSError:
@@ -248,6 +275,115 @@ class AsyncTaskManager:
 
         if completed_tasks:
             logger.info(f"Cleaned up {len(completed_tasks)} completed tasks")
+
+    # ------------------------------------------------------------------
+    # Persistent task records (C-WIRE Task 6: SQLite-backed)
+    #
+    # These methods operate on a separate persistence layer (AsyncTaskStore)
+    # from the in-memory ``self._tasks`` dict. The in-memory dict tracks
+    # *running* asyncio.Task objects (so they can be cancelled), while the
+    # store tracks *durable* status records that survive process restart.
+    # Both layers coexist; nothing in the existing in-memory method surface
+    # was changed.
+    # ------------------------------------------------------------------
+
+    async def register_task(
+        self,
+        task_id: str,
+        status: str,
+        metadata: dict[str, t.Any] | None = None,
+    ) -> AsyncTaskRecord | None:
+        """Register (or upsert) a durable task record.
+
+        Returns the persisted record, or ``None`` if no store is wired.
+        """
+        if self._store is None:
+            logger.debug(
+                "register_task called without a wired store; task_id=%s",
+                task_id,
+            )
+            return None
+        return await self._store.register(task_id, status, metadata)
+
+    async def update_task_status(self, task_id: str, new_status: str) -> None:
+        """Update the status of a persisted task record."""
+        if self._store is None:
+            logger.debug(
+                "update_task_status called without a wired store; task_id=%s",
+                task_id,
+            )
+            return
+        await self._store.update_status(task_id, new_status)
+
+    async def get_task(self, task_id: str) -> AsyncTaskRecord | None:
+        """Look up a persisted task record by id. ``None`` on miss or when
+        no store is wired."""
+        if self._store is None:
+            return None
+        return await self._store.get(task_id)
+
+    async def _reap_zombies(self) -> int:
+        """Delete zombie entries (pending/running older than ``zombie_age_seconds``).
+
+        Returns the count of deleted entries.
+        """
+        if self._store is None or self._settings is None:
+            return 0
+        zombie_age = int(
+            getattr(
+                getattr(self._settings, "async_task", None),
+                "zombie_age_seconds",
+                604800,
+            ),
+        )
+        keys = await self._store.list_keys()
+        now = datetime.now(UTC)
+        threshold = now - timedelta(seconds=zombie_age)
+        deleted = 0
+        candidates = 0
+        for key in keys:
+            record = await self._store.get(key)
+            if record is None:
+                continue
+            if record.status not in {"pending", "running"}:
+                continue
+            candidates += 1
+            if record.registered_at < threshold:
+                removed = await self._store.delete(key)
+                if removed:
+                    deleted += 1
+                    logger.warning(
+                        "crackerjack_async_task_zombie_reaped task_id=%s "
+                        "registered_at=%s",
+                        key,
+                        record.registered_at.isoformat(),
+                    )
+        logger.info(
+            "crackerjack_async_task_reaper_status candidates=%d reaped=%d",
+            candidates,
+            deleted,
+        )
+        return deleted
+
+    async def _reap_zombies_loop(self) -> None:
+        interval = int(
+            getattr(
+                getattr(self._settings, "async_task", None),
+                "reap_zombies_interval_seconds",
+                3600,
+            ),
+        )
+        while self._running:
+            try:
+                await self._reap_zombies()
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                logger.exception(f"Error in reap_zombies: {e}")
+            try:
+                await asyncio.sleep(interval)
+            except asyncio.CancelledError:
+                break
 
     def get_stats(self) -> dict[str, t.Any]:
         return {

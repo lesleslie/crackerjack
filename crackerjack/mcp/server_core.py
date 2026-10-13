@@ -149,6 +149,41 @@ async def create_mcp_server(config: dict[str, t.Any] | None = None) -> t.Any | N
             f"[yellow]Warning: skills_signer init failed: {e}[/yellow]",
         )
 
+    # Wire the AsyncTaskManager (C-WIRE Task 6). The crackerjack MCP
+    # server has no async lifespan hook (it follows the no-lifespan
+    # singleton pattern, same as the skills_signer feed above), so
+    # the manager is constructed and started at create_mcp_server()
+    # time, before tool registration runs. The constructed manager
+    # is published via ``set_task_manager`` so the async_task_tools
+    # registrar's tool closure can reach it (mcp_common's
+    # _apply_tool_profile only forwards ``(server,)``, so the tool
+    # cannot receive kwargs directly — the module-level holder is
+    # the documented escape hatch).
+    try:
+        from crackerjack.config import CrackerjackSettings, load_settings
+        from crackerjack.mcp.persistence import AsyncTaskStore
+        from crackerjack.mcp.task_manager import AsyncTaskManager
+        from crackerjack.mcp.tools.async_task_tools import (
+            set_task_manager,
+        )
+
+        settings = load_settings(CrackerjackSettings)
+        store = AsyncTaskStore(settings.async_task.storage_path)
+        task_manager = AsyncTaskManager(
+            max_concurrent_tasks=10,
+            store=store,
+            settings=settings,
+        )
+        await task_manager.start()
+        set_task_manager(task_manager)
+        console.print(
+            f"[green]🎯 AsyncTaskManager wired (storage_path={settings.async_task.storage_path})[/green]",
+        )
+    except Exception as e:
+        console.print(
+            f"[yellow]Warning: AsyncTaskManager init failed: {e}[/yellow]",
+        )
+
     mcp_app = FastMCP("crackerjack-mcp-server", version=__version__)
 
     @mcp_app.custom_route("/health", methods=["GET"])

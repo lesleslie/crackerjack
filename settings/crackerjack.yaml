@@ -302,3 +302,12 @@ eventbridge:
   enabled: false
   endpoint: ""    # Optional: external EventBridge ingestion URL (not used yet)
   dry_run: true   # When true, envelopes are logged but not transmitted
+
+# === Async Task Persistence (C-WIRE Task 6) ===
+# SQLite-backed state for AsyncTaskManager: durable records survive
+# `crackerjack` process restarts. Operators running in MINIMAL profile
+# still benefit (cleanup tasks run regardless of profile tier).
+async_task:
+  storage_path: "~/.crackerjack/state/async_tasks.db"
+  reap_zombies_interval_seconds: 3600  # 60s-24h
+  zombie_age_seconds: 604800           # 7 days (3600s-30d)

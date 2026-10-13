@@ -64,6 +64,7 @@ STANDARD_REGISTRATIONS: list[str | Callable[[FastMCP], Awaitable[None] | None]] 
     "utility_tools",
     "doc_tools",
     "skill_registry",
+    "async_task_tools",
 ]
 
 FULL_REGISTRATIONS: list[str | Callable[[FastMCP], Awaitable[None] | None]] = [
@@ -106,6 +107,7 @@ def _build_registration_map() -> dict[str, Callable[[FastMCP], Awaitable[None] |
     forcing every per-group register module to load at import time.
     """
     from crackerjack.mcp.tools.agent_registry import register_agent_registry
+    from crackerjack.mcp.tools.async_task_tools import register_async_task_tools
     from crackerjack.mcp.tools.core_tools import register_core_tools
     from crackerjack.mcp.tools.doc_tools import register_doc_tools
     from crackerjack.mcp.tools.eventbridge_tools_wrapper import (
@@ -127,6 +129,7 @@ def _build_registration_map() -> dict[str, Callable[[FastMCP], Awaitable[None] |
 
     return {
         "agent_registry": register_agent_registry,
+        "async_task_tools": register_async_task_tools,
         "core_tools": register_core_tools,
         "doc_tools": register_doc_tools,
         "eventbridge_tools": register_crackerjack_eventbridge,
