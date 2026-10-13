@@ -28,6 +28,12 @@ class MockOptions:
         self.cleanup_docs: bool = kwargs.get("cleanup_docs", False)
         self.cleanup_git: bool = kwargs.get("cleanup_git", False)
         self.update_docs: bool = kwargs.get("update_docs", False)
+        # Publishing/commit are gated on these flags in
+        # ``_build_workflow_steps``; default both to truthy so the existing
+        # DAG-shape assertions (which expect ``publishing`` and ``commit`` in
+        # the node list) keep working without forcing every test to opt in.
+        self.publish: str | None = kwargs.get("publish", "pypi")
+        self.commit: bool = kwargs.get("commit", True)
 
 
 def test_sequential_execution_default():

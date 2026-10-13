@@ -330,9 +330,6 @@ def _build_dag_nodes(options: t.Any) -> list[dict[str, t.Any]]:
 def _build_workflow_steps(options: t.Any) -> list[str]:
     steps: list[str] = []
 
-    if _should_run_config_cleanup(options):
-        steps.append("config_cleanup")
-
     if not getattr(options, "no_config_updates", False):
         steps.append("configuration")
 
@@ -352,11 +349,10 @@ def _build_workflow_steps(options: t.Any) -> list[str]:
         steps.append("snob_tests")
 
     if _should_run_tests(options) and _should_run_comprehensive_hooks(options):
-        enable_parallel = getattr(options, "enable_parallel_phases", False)
-        if enable_parallel:
-            steps.extend(("tests", "comprehensive_hooks"))
-        else:
-            steps.extend(("tests", "comprehensive_hooks"))
+        # ``enable_parallel_phases`` only changes DAG wiring downstream (see
+        # ``_build_nodes_with_dependencies``); the step list itself is the
+        # same in both modes — tests first, then comprehensive_hooks.
+        steps.extend(("tests", "comprehensive_hooks"))
     elif _should_run_tests(options):
         steps.append("tests")
     elif _should_run_comprehensive_hooks(options):
@@ -371,8 +367,45 @@ def _build_workflow_steps(options: t.Any) -> list[str]:
     if _should_run_doc_updates(options):
         steps.append("doc_updates")
 
-    steps.extend(("publishing", "commit"))
+    # Gate publish/commit on the CLI flags so plain ``crackerjack run`` and
+    # ``crackerjack run -f`` (fast hooks) don't accidentally push a release.
+    # Both phases are opt-in: ``--publish`` enables publishing, ``--commit``
+    # enables the git-commit step that records the release artifact.
+    if bool(getattr(options, "publish", None)):
+        steps.append("publishing")
+    if bool(getattr(options, "commit", False)):
+        steps.append("commit")
+
     return steps
+
+
+# Explicit per-phase ``depends_on`` overrides for DAG construction.
+#
+# Phases listed here get explicit predecessor names. Phases NOT listed here
+# fall back to depending on the immediately preceding step in the workflow
+# order. Use this map to encode:
+#
+# - **Parallel branches**: two phases sharing a common predecessor so they
+#   can overlap. Today this is the ``tests`` + ``comprehensive_hooks`` pair;
+#   when ``enable_parallel_phases=True`` both depend on the last step before
+#   the pair (typically ``fast_hooks`` or ``snob_tests``). The empty tuple
+#   here is the signal for ``_build_nodes_with_dependencies`` to apply that
+#   parallel-branch logic.
+# - **Sequential re-ordering**: any non-linear DAG edge (a phase that joins
+#   on a non-immediate predecessor, or skips ahead). The
+#   ``comprehensive_hooks`` entry captures the sequential-mode default where
+#   comprehensive hooks run *after* tests.
+#
+# Adding a phase? Either add it here with explicit deps or let it fall
+# through to the default predecessor chain.
+PHASE_DEPENDENCIES: dict[str, tuple[str, ...]] = {
+    # Sequential mode: comprehensive_hooks runs after tests.
+    # Parallel mode: both tests and comprehensive_hooks share the same
+    # predecessor (the last step before the pair). The empty tuple signals
+    # the parallel-branch logic in ``_build_nodes_with_dependencies``.
+    "tests": (),
+    "comprehensive_hooks": (),
+}
 
 
 def _build_nodes_with_dependencies(
@@ -380,27 +413,28 @@ def _build_nodes_with_dependencies(
 ) -> list[dict[str, t.Any]]:
     nodes: list[dict[str, t.Any]] = []
     previous: str | None = None
-    parallel_start_index: int | None = None
     parallel_predecessor: str | None = None
 
-    for idx, step in enumerate(steps):
+    for step in steps:
         node: dict[str, t.Any] = {"id": step, "task": step}
 
-        if enable_parallel:
-            node = _handle_parallel_step(
-                node, step, previous, parallel_start_index, parallel_predecessor
-            )
-
-            if step in ("tests", "comprehensive_hooks"):
-                if parallel_start_index is None:
-                    parallel_start_index = idx
-                    parallel_predecessor = previous
-            else:
-                parallel_start_index = None
-                parallel_predecessor = None
-        else:
-            if previous:
-                node["depends_on"] = [previous]
+        explicit = PHASE_DEPENDENCIES.get(step)
+        if explicit:
+            # Caller-supplied dependencies always win over the default
+            # predecessor chain.
+            node["depends_on"] = list(explicit)
+        elif step in ("tests", "comprehensive_hooks") and enable_parallel:
+            # Parallel branch: the first of the pair establishes the shared
+            # predecessor (the last non-parallel step); the second reuses
+            # it. Both phases then run side-by-side instead of sequentially.
+            if parallel_predecessor is None:
+                parallel_predecessor = previous
+            if parallel_predecessor is not None:
+                node["depends_on"] = [parallel_predecessor]
+        elif previous:
+            # Default predecessor chain: depend on the immediately
+            # preceding step.
+            node["depends_on"] = [previous]
 
         nodes.append(node)
         previous = step
@@ -408,35 +442,10 @@ def _build_nodes_with_dependencies(
     return nodes
 
 
-def _handle_parallel_step(
-    node: dict[str, t.Any],
-    step: str,
-    previous: str | None,
-    parallel_start_index: int | None,
-    parallel_predecessor: str | None,
-) -> dict[str, t.Any]:
-    if step in ("tests", "comprehensive_hooks"):
-        if parallel_start_index is None:
-            if previous:
-                node["depends_on"] = [previous]
-        elif parallel_predecessor is not None:
-            node["depends_on"] = [parallel_predecessor]
-    else:
-        if previous:
-            node["depends_on"] = [previous]
-
-    return node
-
-
 def _should_clean(options: t.Any) -> bool:
     return bool(
         getattr(options, "strip_code", False) or getattr(options, "clean", False),
     )
-
-
-def _should_run_config_cleanup(_options: t.Any) -> bool:
-    # TODO: Revert this temporary fix after config_cleanup debugging
-    return False
 
 
 def _should_run_tests(options: t.Any) -> bool:
