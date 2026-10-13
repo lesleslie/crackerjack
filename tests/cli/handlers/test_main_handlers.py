@@ -104,7 +104,9 @@ def test_handle_standard_mode_no_publish_no_cleanup(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Without ``publish``, the cleanup_docs flag stays untouched."""
-    options = SimpleNamespace(publish=False, cleanup_docs=False)
+    options = SimpleNamespace(
+        publish=False, cleanup_docs=False, plan_index_sync=False,
+    )
 
     fake_runner = MagicMock()
     fake_facade = MagicMock(return_value=fake_runner)
@@ -119,7 +121,9 @@ def test_handle_standard_mode_publish_sets_cleanup_docs(
 ) -> None:
     """When ``publish=True`` and ``cleanup_docs=False`` but
     ``auto_cleanup_on_publish=True``, the handler flips ``cleanup_docs=True``."""
-    options = SimpleNamespace(publish=True, cleanup_docs=False)
+    options = SimpleNamespace(
+        publish=True, cleanup_docs=False, plan_index_sync=False,
+    )
 
     # Patch load_settings to return a settings stub.
     fake_settings = MagicMock()
@@ -141,7 +145,9 @@ def test_handle_standard_mode_publish_existing_cleanup_unchanged(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """When ``cleanup_docs`` is already True, the handler doesn't touch it."""
-    options = SimpleNamespace(publish=True, cleanup_docs=True)
+    options = SimpleNamespace(
+        publish=True, cleanup_docs=True, plan_index_sync=False,
+    )
 
     # No load_settings patch needed — `if options.publish and not options.cleanup_docs:` is False.
 
@@ -156,7 +162,7 @@ def test_handle_standard_mode_publish_no_auto_cleanup(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """When ``auto_cleanup_on_publish=False``, the flag is NOT flipped."""
-    options = SimpleNamespace(publish=True, cleanup_docs=False)
+    options = SimpleNamespace(publish=True, cleanup_docs=False, plan_index_sync=False)
 
     fake_settings = MagicMock()
     fake_settings.documentation.auto_cleanup_on_publish = False
@@ -170,6 +176,131 @@ def test_handle_standard_mode_publish_no_auto_cleanup(
     monkeypatch.setattr("crackerjack.cli.facade.CrackerjackCLIFacade", fake_facade)
     handle_standard_mode(options)  # type: ignore[arg-type]
     assert options.cleanup_docs is False
+
+
+def test_handle_standard_mode_publish_sets_plan_index_sync(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """When ``publish=True`` and ``plan_index_sync=False`` but
+    ``auto_plan_index_sync_on_publish=True``, the handler flips
+    ``plan_index_sync=True``."""
+    options = SimpleNamespace(
+        publish=True, cleanup_docs=True, plan_index_sync=False,
+    )
+
+    fake_settings = MagicMock()
+    fake_settings.documentation.auto_cleanup_on_publish = True
+    fake_settings.documentation.auto_plan_index_sync_on_publish = True
+
+    fake_runner = MagicMock()
+    fake_facade = MagicMock(return_value=fake_runner)
+
+    monkeypatch.setattr(
+        "crackerjack.config.load_settings", lambda _cls: fake_settings
+    )
+    monkeypatch.setattr("crackerjack.cli.facade.CrackerjackCLIFacade", fake_facade)
+    handle_standard_mode(options)  # type: ignore[arg-type]
+    assert options.plan_index_sync is True
+    fake_runner.process.assert_called_once()
+
+
+def test_handle_standard_mode_publish_existing_plan_index_unchanged(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """When ``plan_index_sync`` is already True, the handler doesn't touch it."""
+    options = SimpleNamespace(
+        publish=True, cleanup_docs=True, plan_index_sync=True,
+    )
+
+    # No load_settings patch needed — the publish branch is skipped because
+    # both flags are already True.
+
+    fake_runner = MagicMock()
+    fake_facade = MagicMock(return_value=fake_runner)
+    monkeypatch.setattr("crackerjack.cli.facade.CrackerjackCLIFacade", fake_facade)
+    handle_standard_mode(options)  # type: ignore[arg-type]
+    assert options.plan_index_sync is True
+
+
+def test_handle_standard_mode_publish_no_auto_plan_index_sync(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """When ``auto_plan_index_sync_on_publish=False``, the flag is NOT flipped.
+
+    Asymmetric mirror of ``test_handle_standard_mode_publish_no_auto_cleanup``:
+    the cleanup_docs auto-flip is allowed (default-on) but plan_index_sync
+    is suppressed via the matching settings key.
+    """
+    options = SimpleNamespace(
+        publish=True, cleanup_docs=False, plan_index_sync=False,
+    )
+
+    fake_settings = MagicMock()
+    fake_settings.documentation.auto_cleanup_on_publish = True
+    fake_settings.documentation.auto_plan_index_sync_on_publish = False
+
+    fake_runner = MagicMock()
+    fake_facade = MagicMock(return_value=fake_runner)
+
+    monkeypatch.setattr(
+        "crackerjack.config.load_settings", lambda _cls: fake_settings
+    )
+    monkeypatch.setattr("crackerjack.cli.facade.CrackerjackCLIFacade", fake_facade)
+    handle_standard_mode(options)  # type: ignore[arg-type]
+    assert options.cleanup_docs is True
+    assert options.plan_index_sync is False
+
+
+def test_handle_standard_mode_publish_dual_auto_enable(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Both cleanup_docs and plan_index_sync flip in publish mode when both
+    auto-enable settings are true."""
+    options = SimpleNamespace(
+        publish=True, cleanup_docs=False, plan_index_sync=False,
+    )
+
+    fake_settings = MagicMock()
+    fake_settings.documentation.auto_cleanup_on_publish = True
+    fake_settings.documentation.auto_plan_index_sync_on_publish = True
+
+    fake_runner = MagicMock()
+    fake_facade = MagicMock(return_value=fake_runner)
+
+    monkeypatch.setattr(
+        "crackerjack.config.load_settings", lambda _cls: fake_settings
+    )
+    monkeypatch.setattr("crackerjack.cli.facade.CrackerjackCLIFacade", fake_facade)
+    handle_standard_mode(options)  # type: ignore[arg-type]
+    assert options.cleanup_docs is True
+    assert options.plan_index_sync is True
+
+
+def test_handle_standard_mode_simple_namespace_missing_attrs() -> None:
+    """Regression: a SimpleNamespace without ``cleanup_docs``/``plan_index_sync``
+    must not raise AttributeError on the auto-flip branch.
+
+    Matches the now-defensive ``getattr(options, "...", False)`` pattern in
+    ``main_handlers.handle_standard_mode`` — pins the assertion that legacy
+    callers (or downstream test fixtures) may pass through partial namespaces.
+    """
+    # No auto-flip branch executes because publish=False.
+    options = SimpleNamespace(publish=False)
+
+    fake_runner = MagicMock()
+    fake_facade = MagicMock(return_value=fake_runner)
+    # No load_settings patch needed — the publish branch is skipped entirely.
+    import pytest as _pytest
+
+    monkeypatch_obj = _pytest.MonkeyPatch()  # type: ignore[func-returns-value]
+    try:
+        monkeypatch_obj.setattr(
+            "crackerjack.cli.facade.CrackerjackCLIFacade", fake_facade
+        )
+        handle_standard_mode(options)  # type: ignore[arg-type]
+    finally:
+        monkeypatch_obj.undo()
+    fake_runner.process.assert_called_once()
 
 
 # ---------------------------------------------------------------------------

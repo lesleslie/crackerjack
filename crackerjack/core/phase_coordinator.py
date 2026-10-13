@@ -835,6 +835,40 @@ class PhaseCoordinator:
         return header + "\n".join(lines)
 
     @handle_errors
+    def run_plan_index_sync_phase(self, options: OptionsProtocol) -> bool:
+        if not getattr(options, "plan_index_sync", False):
+            return True
+
+        self.session.track_task("plan_index_sync", "Plan index sync")
+        self._display_phase_header("PLAN INDEX SYNC", "🗂️")
+
+        from crackerjack.tools import plan_index_sync as _plan_index_sync
+
+        dry_run = bool(getattr(options, "docs_dry_run", False))
+        try:
+            exit_code = _plan_index_sync.main(
+                ["--repo-root", str(self.pkg_path), "--out", str(
+                    self.pkg_path / "docs" / "plans" / "PLAN_INDEX.md"
+                )]
+                + (["--dry-run"] if dry_run else [])
+            )
+        except SystemExit as exc:
+            exit_code = exc.code if isinstance(exc.code, int) else 1
+
+        if exit_code == 0:
+            self.session.complete_task(
+                "plan_index_sync",
+                details="Plan index up-to-date" if not dry_run else "Dry-run complete",
+            )
+            return True
+
+        self.session.fail_task(
+            "plan_index_sync",
+            f"plan_index_sync exited with code {exit_code}",
+        )
+        return False
+
+    @handle_errors
     def run_git_cleanup_phase(self, options: OptionsProtocol) -> bool:
         if not getattr(options, "cleanup_git", False):
             return True
@@ -1882,6 +1916,17 @@ class PhaseCoordinator:
         self.console.print(
             "[bold bright_cyan]🧹 DOCUMENTATION CLEANUP[/bold bright_cyan]"
         )
+        self.console.print(sep + "\n")
+
+    def _display_phase_header(self, title: str, icon: str) -> None:
+        """Render a phase banner with the given title and icon.
+
+        :param title: All-caps banner text (e.g. ``"PLAN INDEX SYNC"``).
+        :param icon: Leading emoji glyph (e.g. ``"🗂️"``).
+        """
+        sep = make_separator("-")
+        self.console.print("\n" + sep)
+        self.console.print(f"[bold bright_cyan]{icon} {title}[/bold bright_cyan]")
         self.console.print(sep + "\n")
 
     def _handle_no_changes_to_commit(self) -> bool:

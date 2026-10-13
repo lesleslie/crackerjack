@@ -106,19 +106,6 @@ class HookStrategy:
 
 FAST_HOOKS = [
     HookDefinition(
-        name="plan-index-sync",
-        command=[],
-        is_formatting=True,
-        timeout=60,
-        retry_on_failure=True,
-        security_level=SecurityLevel.LOW,
-        description=(
-            "Regenerate docs/plans/PLAN_INDEX.md from per-store frontmatter so "
-            "a fresh plan file is reflected in the index without a manual "
-            "regenerate run."
-        ),
-    ),
-    HookDefinition(
         name="validate-regex-patterns",
         command=[],
         is_formatting=True,

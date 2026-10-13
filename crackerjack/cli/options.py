@@ -130,6 +130,7 @@ class Options(BaseModel):
     clear_cache: bool = False
     cleanup_docs: bool = False
     docs_dry_run: bool = False
+    plan_index_sync: bool = False
     cleanup_configs: bool = False
     configs_dry_run: bool = False
     cleanup_git: bool = False
@@ -901,6 +902,15 @@ CLI_OPTIONS = {
         "--docs-dry-run",
         help="Preview documentation cleanup without making actual changes.",
     ),
+    "plan_index_sync": typer.Option(
+        False,
+        "--plan-index-sync",
+        help=(
+            "Regenerate docs/plans/PLAN_INDEX.md from per-store frontmatter. "
+            "Auto-enabled on --publish when settings.documentation."
+            "auto_plan_index_sync_on_publish is true (default)."
+        ),
+    ),
     "cleanup_configs": typer.Option(
         False,
         "--cleanup-configs",
@@ -1006,6 +1016,7 @@ def create_options(
     clear_cache: bool = False,
     cleanup_docs: bool = False,
     docs_dry_run: bool = False,
+    plan_index_sync: bool = False,
     cleanup_configs: bool = False,
     configs_dry_run: bool = False,
     cleanup_git: bool = False,

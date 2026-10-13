@@ -239,6 +239,167 @@ def test_run_fast_hooks_phase(mock_phase_coord, mock_session_coord, mock_load_se
     pipeline.phases.run_fast_hooks_only.assert_called_once_with(options)
 
 
+# ---------------------------------------------------------------------------
+# Regression tests for the ratchet bug fix.
+#
+# Bug: ``_clear_oneiric_cache`` hardcoded a sqlite path under
+# ``pkg_path/.oneiric_cache/workflow_checkpoints.sqlite`` that oneiric never
+# reads (oneiric stores at ``Path.cwd()/.crackerjack/oneiric_cache/...``).
+# Consequence: a partial workflow failure left a checkpoint on disk; the
+# next invocation skipped already-completed phases silently.
+#
+# Fix: delegate to ``runtime.workflow_bridge._checkpoint_store.clear(...)``
+# so the same database oneiric actually consults is wiped. The tests below
+# pin (a) the new signature, (b) the absence of the hardcoded path, and
+# (c) the runtime handshake wiring in ``run_complete_workflow``.
+# ---------------------------------------------------------------------------
+
+
+def test_clear_oneiric_cache_delegates_to_checkpoint_store() -> None:
+    """``_clear_oneiric_cache`` must wipe the store oneiric actually reads.
+
+    Regression for the ratchet bug: a hard-coded sqlite path under
+    ``pkg_path/.oneiric_cache`` silently diverged from oneiric's real
+    checkpoint location. The fix is to call
+    ``runtime.workflow_bridge._checkpoint_store.clear("crackerjack")``
+    instead.
+    """
+    with (
+        patch('crackerjack.core.workflow_orchestrator.SessionCoordinator'),
+        patch('crackerjack.core.workflow_orchestrator.PhaseCoordinator'),
+    ):
+        from crackerjack.config import CrackerjackSettings
+
+        pipeline = WorkflowPipeline(settings=CrackerjackSettings())
+
+    mock_runtime = Mock()
+    mock_store = Mock()
+    mock_runtime.workflow_bridge._checkpoint_store = mock_store
+
+    pipeline._clear_oneiric_cache(mock_runtime)
+
+    mock_store.clear.assert_called_once_with("crackerjack")
+
+
+def test_clear_oneiric_cache_does_not_target_hardcoded_path(tmp_path) -> None:
+    """The hardcoded ``.oneiric_cache`` path must NOT be touched.
+
+    Pin the source-level absence of the old path string so a future
+    regression cannot reintroduce the ratchet by rewriting the body.
+    """
+    from pathlib import Path
+
+    source = (
+        Path(__file__).resolve().parent.parent.parent
+        / "crackerjack" / "core" / "workflow_orchestrator.py"
+    ).read_text()
+
+    # The old implementation connected to this exact sqlite file. If a
+    # contributor reverts the fix, the test fails immediately.
+    assert ".oneiric_cache" not in source
+    assert (
+        "workflow_checkpoints.sqlite" not in source
+    ), "hard-coded oneiric checkpoint path should not appear in orchestrator"
+
+    # ..and the new delegate must be present. The body aliases the bridge
+    # attribute through ``checkpoint_store``, so grep for that, not the
+    # attribute name itself.
+    assert (
+        "_checkpoint_store" in source
+    ), "orchestrator must read checkpoint store from the runtime bridge"
+    assert (
+        'clear("crackerjack")' in source
+    ), "orchestrator must clear the crackerjack workflow key"
+
+
+def test_clear_oneiric_cache_returns_silently_when_store_is_none() -> None:
+    """A missing ``_checkpoint_store`` (checkpointing disabled) is a no-op.
+
+    Oneiric sets ``_checkpoint_store = None`` when checkpointing is
+    disabled. The previous implementation opened sqlite unconditionally; the
+    new path must no-op cleanly.
+    """
+    with (
+        patch('crackerjack.core.workflow_orchestrator.SessionCoordinator'),
+        patch('crackerjack.core.workflow_orchestrator.PhaseCoordinator'),
+    ):
+        from crackerjack.config import CrackerjackSettings
+
+        pipeline = WorkflowPipeline(settings=CrackerjackSettings())
+
+    mock_runtime = Mock()
+    mock_runtime.workflow_bridge._checkpoint_store = None
+
+    # Must not raise.
+    pipeline._clear_oneiric_cache(mock_runtime)
+
+
+def test_clear_oneiric_cache_swallows_store_errors() -> None:
+    """Clear-store failures must log a warning, not crash the run."""
+    with (
+        patch('crackerjack.core.workflow_orchestrator.SessionCoordinator'),
+        patch('crackerjack.core.workflow_orchestrator.PhaseCoordinator'),
+    ):
+        from crackerjack.config import CrackerjackSettings
+
+        pipeline = WorkflowPipeline(settings=CrackerjackSettings())
+
+    mock_runtime = Mock()
+    mock_store = Mock()
+    mock_store.clear.side_effect = RuntimeError("store down")
+    mock_runtime.workflow_bridge._checkpoint_store = mock_store
+
+    # Should not raise even though the underlying store blew up.
+    pipeline._clear_oneiric_cache(mock_runtime)
+    mock_store.clear.assert_called_once_with("crackerjack")
+
+
+@patch('crackerjack.core.workflow_orchestrator.load_settings')
+@patch('crackerjack.core.workflow_orchestrator.SessionCoordinator')
+@patch('crackerjack.core.workflow_orchestrator.PhaseCoordinator')
+@patch('crackerjack.core.workflow_orchestrator.build_oneiric_runtime')
+@patch('crackerjack.core.workflow_orchestrator.register_crackerjack_workflow')
+@pytest.mark.asyncio
+async def test_run_complete_workflow_clears_cache_via_runtime(
+    mock_register_wf,
+    mock_build_runtime,
+    mock_phase_coord,
+    mock_session_coord,
+    mock_load_settings,
+) -> None:
+    """``run_complete_workflow`` must wire the runtime into the clear call.
+
+    The ratchet fix introduced ``_clear_oneiric_cache(runtime)``. This test
+    ensures the handshake stays intact: every public workflow entrypoint
+    passes the freshly-built runtime through to the clear step, so there is
+    exactly one path the developer can break without immediate noise.
+    """
+    from crackerjack.config import CrackerjackSettings
+
+    mock_settings = CrackerjackSettings()
+    mock_load_settings.return_value = mock_settings
+
+    mock_runtime = Mock()
+    mock_runtime.workflow_bridge = Mock()
+    mock_runtime.workflow_bridge._checkpoint_store = None
+    mock_runtime.workflow_bridge.execute_dag = AsyncMock(
+        return_value={"results": {"hook1": True}}
+    )
+    mock_build_runtime.return_value = mock_runtime
+
+    pipeline = WorkflowPipeline(settings=mock_settings)
+    pipeline.session.initialize_session_tracking = Mock()
+    pipeline.session.finalize_session = Mock()
+    pipeline._clear_oneiric_cache = Mock()
+
+    await pipeline.run_complete_workflow({"test": "options"})
+
+    # The fix calls _clear_oneiric_cache with the runtime as its sole
+    # non-self argument so the checkpoint store wire-up can see the same
+    # database oneiric reads.
+    pipeline._clear_oneiric_cache.assert_called_once_with(mock_runtime)
+
+
 # Define AsyncMock for older Python versions if needed
 class AsyncMock(Mock):
     async def __call__(self, *args, **kwargs):

@@ -41,10 +41,19 @@ def handle_standard_mode(
     from crackerjack.config import load_settings
     from crackerjack.config.settings import CrackerjackSettings
 
-    if options.publish and not options.cleanup_docs:
+    if options.publish and (
+        not getattr(options, "cleanup_docs", False)
+        or not getattr(options, "plan_index_sync", False)
+    ):
         settings = load_settings(CrackerjackSettings)
-        if getattr(settings.documentation, "auto_cleanup_on_publish", True):
+        if not getattr(options, "cleanup_docs", False) and getattr(
+            settings.documentation, "auto_cleanup_on_publish", True
+        ):
             options.cleanup_docs = True
+        if not getattr(options, "plan_index_sync", False) and getattr(
+            settings.documentation, "auto_plan_index_sync_on_publish", True
+        ):
+            options.plan_index_sync = True
 
     runner = CrackerjackCLIFacade()
     runner.process(t.cast("OptionsProtocol", options))

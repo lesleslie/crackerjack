@@ -113,10 +113,11 @@ hooks:
 
 ```yaml
 documentation:
-  enabled: true                 # Documentation enabled
-  auto_cleanup_on_publish: true # Auto cleanup on publish
-  dry_run_by_default: false     # Dry run mode
-  backup_before_cleanup: true   # Backup before cleanup
+  enabled: true                          # Documentation enabled
+  auto_cleanup_on_publish: true          # Auto cleanup on publish
+  auto_plan_index_sync_on_publish: true  # Regenerate docs/plans/PLAN_INDEX.md on publish
+  dry_run_by_default: false              # Dry run mode
+  backup_before_cleanup: true            # Backup before cleanup
 ```
 
 ### Essential Documentation Files

@@ -261,6 +261,12 @@ def _register_tasks(
             verbose=verbose,
             error_provider=_make_error_provider("documentation_cleanup"),
         ),
+        "plan_index_sync": lambda: _PhaseTask(
+            "plan_index_sync",
+            lambda: phases.run_plan_index_sync_phase(options),
+            verbose=verbose,
+            error_provider=_make_error_provider("plan_index_sync"),
+        ),
         "git_cleanup": lambda: _PhaseTask(
             "git_cleanup",
             lambda: phases.run_git_cleanup_phase(options),
@@ -350,6 +356,9 @@ def _build_workflow_steps(options: t.Any) -> list[str]:
 
     if _should_run_documentation_cleanup(options):
         steps.append("documentation_cleanup")
+
+    if _should_run_plan_index_sync(options):
+        steps.append("plan_index_sync")
 
     if _should_run_fast_hooks(options):
         steps.append("fast_hooks")
@@ -474,6 +483,10 @@ def _should_run_coverage_ratchet(options: t.Any) -> bool:
 
 def _should_run_documentation_cleanup(options: t.Any) -> bool:
     return bool(getattr(options, "cleanup_docs", False))
+
+
+def _should_run_plan_index_sync(options: t.Any) -> bool:
+    return bool(getattr(options, "plan_index_sync", False))
 
 
 def _should_run_git_cleanup(options: t.Any) -> bool:
