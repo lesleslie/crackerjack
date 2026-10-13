@@ -287,5 +287,3 @@ class TestPyreflyAdapter:
             execution_time_ms=0.0,
             exit_code=0,
         )
-
-

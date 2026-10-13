@@ -894,7 +894,7 @@ class OsvScannerJSONParser(JSONParser):
     def _parse_entry(self, entry: object) -> list[Issue]:
         if not isinstance(entry, dict):
             return []
-        source_path = self._extract_source_path(entry)
+        source_path = self._extract_source_path(entry)  # ty: ignore[invalid-argument-type]
         packages = entry.get("packages")
         if not isinstance(packages, list):
             return []
@@ -932,7 +932,7 @@ class OsvScannerJSONParser(JSONParser):
                 OsvScannerJSONParser._create_vulnerability_issue(
                     name,
                     version,
-                    vuln,
+                    vuln,  # ty: ignore[invalid-argument-type]
                     source_path,
                 ),
             )

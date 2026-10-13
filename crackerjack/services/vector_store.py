@@ -83,7 +83,7 @@ class VectorStore:
             conn.commit()
 
     @contextmanager
-    def _get_connection(self) -> t.Iterator[sqlite3.Connection]:
+    def _get_connection(self) -> t.Generator[sqlite3.Connection]:
         conn = None
         try:
             conn = sqlite3.connect(self.db_path)

@@ -1,6 +1,6 @@
 # Plan Index
 
-_Regenerated 2026-10-11 by `crackerjack.tools.plan_index_sync` (fast-hook)._
+_Regenerated 2026-10-13 by `crackerjack.tools.plan_index_sync` (fast-hook)._
 
 ### Docs: adr
 
@@ -45,7 +45,7 @@ _Regenerated 2026-10-11 by `crackerjack.tools.plan_index_sync` (fast-hook)._
 | [`docs/plans/2026-09-07-crackerjack-multi-language-phase3.md`](2026-09-07-crackerjack-multi-language-phase3.md) | 2026-09-09 | `shipped` | `implementation` | `architecture` | Crackerjack Multi-Language Extension — Phase 3 (Kotlin/Gradle) Plan |
 | [`docs/plans/2026-09-07-crackerjack-multi-language-phase4.md`](2026-09-07-crackerjack-multi-language-phase4.md) | 2026-09-09 | `shipped` | `implementation` | `architecture` | Crackerjack Multi-Language Extension — Phase 4 (Web/CSS/HTML/JS/TS) Plan |
 | [`docs/plans/2026-10-10-crackerjack-oneiric-loader-migration.md`](2026-10-10-crackerjack-oneiric-loader-migration.md) | 2026-10-10 | `draft` | `implementation` | `settings-resolution` | Crackerjack Settings Loader — Migration to Oneiric — Implementation Plan |
-| [`docs/plans/2026-10-11-remove-zuban-skylos-lsp-from-crackerjack.md`](2026-10-11-remove-zuban-skylos-lsp-from-crackerjack.md) | 2026-10-11 | `active` | `implementation` | `architecture` | Remove Zuban + Skylos LSP Adapters from Crackerjack — Implementation Plan |
+| [`docs/plans/2026-10-11-remove-zuban-skylos-lsp-from-crackerjack.md`](2026-10-11-remove-zuban-skylos-lsp-from-crackerjack.md) | 2026-10-11 | `active` | `implementation` | `architecture` | Remove Zuban + Skylos LSP Adapters from Crackerjack |
 | [`docs/plans/AI_FIX_IMPROVEMENT_PLAN.md`](AI_FIX_IMPROVEMENT_PLAN.md) | 2026-07-17 | `complete` | `historical` | `lifecycle` | AI-Fix Improvement Plan |
 
 ### Docs: specs
@@ -100,7 +100,7 @@ _Regenerated 2026-10-11 by `crackerjack.tools.plan_index_sync` (fast-hook)._
 | [`docs/plans/2026-09-07-crackerjack-multi-language-phase3.md`](2026-09-07-crackerjack-multi-language-phase3.md) | 2026-09-09 | `shipped` | `implementation` | `architecture` | Crackerjack Multi-Language Extension — Phase 3 (Kotlin/Gradle) Plan |
 | [`docs/plans/2026-09-07-crackerjack-multi-language-phase4.md`](2026-09-07-crackerjack-multi-language-phase4.md) | 2026-09-09 | `shipped` | `implementation` | `architecture` | Crackerjack Multi-Language Extension — Phase 4 (Web/CSS/HTML/JS/TS) Plan |
 | [`docs/plans/2026-10-10-crackerjack-oneiric-loader-migration.md`](2026-10-10-crackerjack-oneiric-loader-migration.md) | 2026-10-10 | `draft` | `implementation` | `settings-resolution` | Crackerjack Settings Loader — Migration to Oneiric — Implementation Plan |
-| [`docs/plans/2026-10-11-remove-zuban-skylos-lsp-from-crackerjack.md`](2026-10-11-remove-zuban-skylos-lsp-from-crackerjack.md) | 2026-10-11 | `active` | `implementation` | `architecture` | Remove Zuban + Skylos LSP Adapters from Crackerjack — Implementation Plan |
+| [`docs/plans/2026-10-11-remove-zuban-skylos-lsp-from-crackerjack.md`](2026-10-11-remove-zuban-skylos-lsp-from-crackerjack.md) | 2026-10-11 | `active` | `implementation` | `architecture` | Remove Zuban + Skylos LSP Adapters from Crackerjack |
 | [`docs/plans/AI_FIX_IMPROVEMENT_PLAN.md`](AI_FIX_IMPROVEMENT_PLAN.md) | 2026-07-17 | `complete` | `historical` | `lifecycle` | AI-Fix Improvement Plan |
 
 ### .claude/decisions
@@ -108,6 +108,12 @@ _Regenerated 2026-10-11 by `crackerjack.tools.plan_index_sync` (fast-hook)._
 | Path | Date | Status | Role | Topic | Title |
 |---|---|---|---|---|---|
 | [`.claude/decisions/2026-09-26-mcp-launcher-migration.md`](../../.claude/decisions/2026-09-26-mcp-launcher-migration.md) | 2026-09-26 | `active` | `implementation` | `mcp-launcher-migration` | Crackerjack MCP Launcher Migration (Phase 4a, Task 4a.2) |
+| [`.claude/decisions/2026-10-12-canonical-claude-gitignore-policy.md`](../../.claude/decisions/2026-10-12-canonical-claude-gitignore-policy.md) | 2026-10-12 | `active` | `implementation` | `crackerjack-infrastructure` | Canonical `.claude/` policy in `templates/GITIGNORE_BODAI.md` |
+| [`.claude/decisions/2026-10-12-hook-stage-documentary-vs-enforced.md`](../../.claude/decisions/2026-10-12-hook-stage-documentary-vs-enforced.md) | 2026-10-12 | `active` | `canonical` | `hook-architecture` | 2026 10 12 hook stage documentary vs enforced |
+| [`.claude/decisions/2026-10-12-publish-auto-sync-gitignore.md`](../../.claude/decisions/2026-10-12-publish-auto-sync-gitignore.md) | 2026-10-12 | `active` | `implementation` | `crackerjack-infrastructure` | Auto-sync gitignore on pre-publish gate failure |
+| [`.claude/decisions/2026-10-13-checkpoint-disabled.md`](../../.claude/decisions/2026-10-13-checkpoint-disabled.md) | 2026-10-13 | `active` | `canonical` | `workflow-architecture` | 2026 10 13 checkpoint disabled |
+| [`.claude/decisions/2026-10-13-ratchet-publish-only-gate.md`](../../.claude/decisions/2026-10-13-ratchet-publish-only-gate.md) | 2026-10-13 | `active` | `canonical` | `workflow-architecture` | 2026 10 13 ratchet publish only gate |
+| [`.claude/decisions/2026-10-13-ratchet-staleness.md`](../../.claude/decisions/2026-10-13-ratchet-staleness.md) | 2026-10-13 | `active` | `canonical` | `ratchet-integrity` | 2026 10 13 ratchet staleness |
 | [`.claude/decisions/README.md`](../../.claude/decisions/README.md) | 2026-07-20 | `active` | `canonical` | `lifecycle` | Repo-local Decisions Index |
 | [`.claude/decisions/deployability-discipline.md`](../../.claude/decisions/deployability-discipline.md) | 2026-09-26 | `active` | `canonical` | `deployability-discipline` | deployability discipline |
 
@@ -126,9 +132,9 @@ _Regenerated 2026-10-11 by `crackerjack.tools.plan_index_sync` (fast-hook)._
 
 | Role \\ Lifecycle | draft | active | partial | shipped | complete | Total |
 |---|---|---|---|---|---|---|
-| `canonical` | · | 6 | · | · | 2 | **8** |
-| `implementation` | 21 | 30 | · | 16 | 1 | **68** |
+| `canonical` | · | 10 | · | · | 2 | **12** |
+| `implementation` | 21 | 34 | · | 16 | 1 | **72** |
 | `umbrella` | · | · | · | · | · | **0** |
 | `historical` | · | · | · | · | 12 | **12** |
 | `superseded` | · | · | · | · | · | **0** |
-| **Total** | **21** | **36** | **·** | **16** | **15** | **88** |
+| **Total** | **21** | **44** | **·** | **16** | **15** | **96** |

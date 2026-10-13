@@ -321,7 +321,7 @@ async def cleanup_all_global_resources() -> None:
 
 
 @contextlib.asynccontextmanager
-async def with_resource_cleanup() -> t.AsyncIterator[ResourceContext]:
+async def with_resource_cleanup() -> t.AsyncGenerator[ResourceContext]:
     async with ResourceContext() as ctx:
         yield ctx
 
@@ -330,7 +330,7 @@ async def with_resource_cleanup() -> t.AsyncIterator[ResourceContext]:
 async def with_temp_file(
     suffix: str = "",
     prefix: str = "crackerjack-",
-) -> t.AsyncIterator[ManagedTemporaryFile]:
+) -> t.AsyncGenerator[ManagedTemporaryFile]:
     async with ResourceContext() as ctx:
         temp_file = ctx.managed_temp_file(suffix, prefix)
         try:
@@ -343,7 +343,7 @@ async def with_temp_file(
 async def with_temp_dir(
     suffix: str = "",
     prefix: str = "crackerjack-",
-) -> t.AsyncIterator[ManagedTemporaryDirectory]:
+) -> t.AsyncGenerator[ManagedTemporaryDirectory]:
     async with ResourceContext() as ctx:
         temp_dir = ctx.managed_temp_dir(suffix, prefix)
         try:
@@ -356,7 +356,7 @@ async def with_temp_dir(
 async def with_managed_process(
     process: asyncio.subprocess.Process,
     timeout: float = 30.0,
-) -> t.AsyncIterator[asyncio.subprocess.Process]:
+) -> t.AsyncGenerator[asyncio.subprocess.Process]:
     async with ResourceContext() as ctx:
         managed_proc = ctx.managed_process(process, timeout)
         try:

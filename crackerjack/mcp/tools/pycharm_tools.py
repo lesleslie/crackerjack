@@ -117,6 +117,33 @@ def _register_get_ide_diagnostics_tool(mcp_app: t.Any) -> None:
         )
 
 
+def _format_search_result(r: t.Any) -> dict[str, t.Any]:
+    """Normalize a search result (dict or SearchResult) to the public dict shape.
+
+    The upstream code may return either form depending on the adapter
+    path (PyCharmMCPAdapter.search_regex returns ``list[SearchResult]``,
+    while the local-regex fallback returns ``list[dict[str, t.Any]]``).
+    Callers always consume the dict shape.
+    """
+    if isinstance(r, dict):
+        return {
+            "file_path": r.get("file_path", ""),
+            "line": r.get("line", 0),
+            "column": r.get("column", 0),
+            "match": r.get("match", ""),
+            "context_before": r.get("context_before"),
+            "context_after": r.get("context_after"),
+        }
+    return {
+        "file_path": r.file_path,
+        "line": r.line_number,
+        "column": r.column,
+        "match": r.match_text,
+        "context_before": r.context_before,
+        "context_after": r.context_after,
+    }
+
+
 def _local_regex_search(
     pattern: str,
     file_pattern: str | None,
@@ -202,7 +229,7 @@ def _register_search_code_tool(mcp_app: t.Any) -> None:
     ) -> str:
         adapter = _get_adapter()
 
-        results: list = []
+        results: list[t.Any] = []
         adapter_used: bool = False
         adapter_error: str | None = None
 
@@ -223,21 +250,7 @@ def _register_search_code_tool(mcp_app: t.Any) -> None:
             except Exception as e:
                 logger.debug(f"Local search fallback failed: {e}")
 
-        formatted_results = [
-            {
-                "file_path": r["file_path"] if isinstance(r, dict) else r.file_path,
-                "line": r["line"] if isinstance(r, dict) else r.line_number,
-                "column": r["column"] if isinstance(r, dict) else r.column,
-                "match": r["match"] if isinstance(r, dict) else r.match_text,
-                "context_before": r["context_before"]
-                if isinstance(r, dict)
-                else r.context_before,
-                "context_after": r["context_after"]
-                if isinstance(r, dict)
-                else r.context_after,
-            }
-            for r in results
-        ]
+        formatted_results = [_format_search_result(r) for r in results]
 
         if formatted_results:
             status = "ok"

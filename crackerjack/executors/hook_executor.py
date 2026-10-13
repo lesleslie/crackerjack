@@ -1389,21 +1389,128 @@ class HookExecutor:
         ]
 
     def _parse_creosote_issues(self, output: str) -> list[str]:
-        if "No unused dependencies found" in output:
+        """Extract one bullet per creosote finding from raw output.
+
+        Modern creosote (post-1.x) emits up to five distinct finding
+        categories; each is reported as a single panel bullet so the
+        count matches the actual issue count rather than the raw line
+        count:
+
+            - "Excluded dependencies not found in virtual environment: X, Y"
+            - "Redundant exclusion 'X': <reason>"   (one per exclusion)
+            - "Unused dependencies found: A, B, C, D"
+
+        Two informational lines are filtered — they look like findings
+        but aren't:
+
+            - "Found dependencies in pyproject.toml: ..."  (header)
+            - "Oh no, bloated venv! \U0001f922 \U0001faa3"          (status banner)
+
+        Supports the legacy format (``"unused dependencies found:"``
+        followed by a ``- pkg`` bullet list or bare dep names) for
+        back-compat with older creosote versions and existing test
+        fixtures.
+
+        The previous implementation set ``parsing_unused = True`` on
+        any line containing ``"dependenc"`` — so ``"Found
+        dependencies"``, ``"Excluded dependencies"``, and the
+        ``"Redundant exclusion 'pytest-snob'"`` lines all flipped the
+        state, and the real ``"Unused dependencies found:"`` line was
+        then skipped instead of parsed. Result: zero issues, which
+        triggered ``_handle_no_issues_for_failed_hook``'s fallback and
+        surfaced all 7 raw lines (5 real + 2 noise) as panel bullets.
+        """
+        if not output:
             return []
-        issues = []
-        parsing_unused = False
+
+        issues: list[str] = []
+        legacy_unused_mode = False
+
         for line in output.split("\n"):
-            if "unused" in line.lower() and "dependenc" in line.lower():
-                parsing_unused = True
+            stripped = line.strip()
+            if not stripped:
+                legacy_unused_mode = False
                 continue
-            if parsing_unused and line.strip() and not line.strip().startswith("["):
-                dep_name = line.strip().lstrip("- ")
-                if dep_name:
-                    issues.append(f"Unused dependency: {dep_name}")
-            if not line.strip():
-                parsing_unused = False
+
+            if self._is_creosote_noise_line(stripped):
+                continue
+
+            category_issue = self._parse_creosote_modern_line(stripped)
+            if category_issue is not None:
+                issues.append(category_issue)
+                continue
+
+            if stripped.lower() == "unused dependencies found:":
+                legacy_unused_mode = True
+                continue
+
+            if legacy_unused_mode:
+                dep = self._strip_legacy_dep_bullet(stripped)
+                if dep:
+                    issues.append(f"Unused dependency: {dep}")
+                continue
+
         return issues
+
+    @staticmethod
+    def _is_creosote_noise_line(stripped: str) -> bool:
+        """True for creosote's informational header + summary banner.
+
+        Both lines look like findings to a naive line-counter but
+        carry no concrete issue — they describe what creosote saw and
+        emit an emoji-laden summary.
+        """
+        return (
+            "Found dependencies in pyproject.toml" in stripped
+            or "Oh no, bloated venv" in stripped
+        )
+
+    @staticmethod
+    def _parse_creosote_modern_line(stripped: str) -> str | None:
+        """Return a one-line summary for one modern creosote finding, or
+        ``None`` if the line isn't a known modern category.
+
+        Categories handled:
+
+            - ``"Excluded dependencies not found in virtual environment: X, Y"``
+            - ``"Redundant exclusion 'X': <reason>"``  (one per exclusion)
+            - ``"Unused dependencies found: A, B, C, D"``
+        """
+        if "Excluded dependencies not found in virtual environment:" in stripped:
+            tail = stripped.split(":", 1)[1].strip()
+            deps = [d.strip() for d in tail.split(",") if d.strip()]
+            if deps:
+                return (
+                    "Excluded dependencies not found in virtual environment: "
+                    + ", ".join(deps)
+                )
+            return ""
+
+        m = re.search(r"[Rr]edundant exclusion\s+['\"]([^'\"]+)['\"]", stripped)
+        if m:
+            return f"Redundant exclusion '{m.group(1)}'"
+
+        if "Unused dependencies found:" in stripped:
+            tail = stripped.split(":", 1)[1].strip()
+            deps = [d.strip() for d in tail.split(",") if d.strip()]
+            if deps:
+                return f"Unused dependencies found: {', '.join(deps)}"
+            return ""
+
+        return None
+
+    @staticmethod
+    def _strip_legacy_dep_bullet(stripped: str) -> str:
+        """Accept either ``- pkg`` bullets or bare dep names; return dep.
+
+        Legacy creosote sometimes emitted bullets (``- pkg``), sometimes
+        bare names (``pkg``). The original implementation handled both
+        via ``lstrip("- ")``; we preserve that here so existing tests
+        still pin the legacy behaviour.
+        """
+        if stripped.startswith("- "):
+            return stripped[2:].strip()
+        return stripped
 
     def _parse_semgrep_issues(self, output: str) -> list[str]:
         import json

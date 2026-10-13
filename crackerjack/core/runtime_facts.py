@@ -57,7 +57,7 @@ class RuntimeFactsBuilder:
 
     CATEGORY_UNKNOWN = "unknown"
 
-    def __init__(self, app: "FastMCP") -> None:
+    def __init__(self, app: FastMCP) -> None:
         self._app = app
 
     def build_all(self) -> dict[str, Any]:

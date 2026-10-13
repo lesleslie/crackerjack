@@ -554,6 +554,49 @@ class TestHookExecutorOutputParsing:
 
         assert issues == []
 
+    def test_parse_creosote_modern_output(self, executor: HookExecutor) -> None:
+        """Test modern creosote output (post-1.x) returns one bullet per finding.
+
+        Regression for the bug where the parser returned ``[]`` for the
+        modern creosote format — a broken state machine set
+        ``parsing_unused = True`` on any line containing ``"dependenc"``
+        (``"Found dependencies"``, ``"Excluded dependencies"``,
+        ``"Redundant exclusion 'pytest-snob'"``, etc.), so when it
+        finally reached the real ``"Unused dependencies found:"`` line
+        it ``continue``-d past the dep names instead of parsing them.
+        That triggered the ``_handle_no_issues_for_failed_hook``
+        fallback, which surfaced all 7 raw creosote lines (5 real
+        findings + 2 noise lines) as panel bullets instead of 5.
+        """
+        output = (
+            "\x1b[1mFound dependencies in pyproject.toml: aiofiles, creosote\x1b[0m\n"
+            "\x1b[33m\x1b[1mExcluded dependencies not found in virtual environment: "
+            "scipy_stubs, pytest_snob\x1b[0m\n"
+            "\x1b[33m\x1b[1mRedundant exclusion 'pytest': import detected in source code\x1b[0m\n"
+            "\x1b[33m\x1b[1mRedundant exclusion 'pytest-snob': not found in pyproject.toml\x1b[0m\n"
+            "\x1b[33m\x1b[1mRedundant exclusion 'scipy-stubs': not found in pyproject.toml\x1b[0m\n"
+            "\x1b[31m\x1b[1mOh no, bloated venv! \U0001f922 \U0001faa3\n"
+            "Unused dependencies found: pypistats, redbaron, transformers, uuid-utils\x1b[0m\n"
+        )
+
+        issues = executor._parse_creosote_issues(output)
+
+        # Five distinct findings: 1 excluded-not-found, 3 redundant exclusions,
+        # 1 unused-dependencies group. The two noise lines
+        # ("Found dependencies..." and "Oh no, bloated venv!") must be filtered.
+        assert len(issues) == 5
+        assert any("Excluded dependencies not found" in i for i in issues)
+        assert any("scipy_stubs, pytest_snob" in i for i in issues)
+        assert sum(1 for i in issues if "Redundant exclusion" in i) == 3
+        assert any("'pytest'" in i for i in issues)
+        assert any("'pytest-snob'" in i for i in issues)
+        assert any("'scipy-stubs'" in i for i in issues)
+        assert any("Unused dependencies found:" in i for i in issues)
+        assert any("uuid-utils" in i for i in issues)
+        # Noise lines must not appear
+        assert not any("Found dependencies in pyproject.toml" in i for i in issues)
+        assert not any("bloated venv" in i for i in issues)
+
     def test_parse_pyscn_issues(self, executor: HookExecutor) -> None:
         """Bug: ``extract_issue_lines`` was being used for pyscn (no
         specific dispatch in the executor), and its generic filter

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import typing as t
+from contextlib import suppress
 from datetime import datetime
 from pathlib import Path
 
@@ -86,8 +87,7 @@ class CoverageRatchetService(CoverageRatchetProtocol):
             ],
             "milestones_achieved": [],
             "next_milestone": self._get_next_milestone(initial_coverage),
-            **self._ratchet_metadata(),
-        }
+        } | self._ratchet_metadata()
 
         self.ratchet_file.write_text(json.dumps(ratchet_data, indent=2))
         self.console.print(
@@ -118,14 +118,12 @@ class CoverageRatchetService(CoverageRatchetProtocol):
         }
         coverage_file = self.pkg_path / "coverage.json"
         if coverage_file.exists():
-            try:
-                metadata["coverage_data_path"] = str(coverage_file.resolve())
-                metadata["coverage_data_mtime"] = coverage_file.stat().st_mtime
-            except OSError:
-                # coverage.json disappeared between exists() and stat()
+            with suppress(OSError):
+                # coverage.json may disappear between exists() and stat()
                 # — treat as no-data and let the ratchet carry only
                 # the timestamp.
-                pass
+                metadata["coverage_data_path"] = str(coverage_file.resolve())
+                metadata["coverage_data_mtime"] = coverage_file.stat().st_mtime
         return metadata
 
     def get_ratchet_data(self) -> dict[str, t.Any]:

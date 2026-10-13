@@ -142,7 +142,7 @@ class AIAgentDebugger:
         self.console.print()
 
     @contextmanager
-    def debug_operation(self, operation: str, **kwargs: Any) -> t.Iterator[str]:
+    def debug_operation(self, operation: str, **kwargs: Any) -> t.Generator[str]:
         if not self.enabled:
             yield ""
             return
@@ -713,7 +713,7 @@ class NoOpDebugger:
     def reset_deduplicator(self) -> None:
         pass
 
-    def debug_operation(self, operation: str, **kwargs: Any) -> t.Iterator[str]:
+    def debug_operation(self, operation: str, **kwargs: Any) -> t.Generator[str]:
         yield ""
 
     def log_mcp_operation(

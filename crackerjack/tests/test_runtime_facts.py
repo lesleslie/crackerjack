@@ -28,17 +28,22 @@ NEW_FILE_PATHS = (
 
 def _make_fake_tool(
     name: str, description: str = "", parameters: dict[str, Any] | None = None
-) -> Any:
+) -> _FakeTool:
     """Build a minimal object that quacks like a FastMCP ``Tool``."""
-
-    class _FakeTool:
-        pass
 
     tool = _FakeTool()
     tool.name = name
     tool.description = description
     tool.parameters = parameters or {"type": "object", "properties": {}}
     return tool
+
+
+class _FakeTool:
+    """Minimal stand-in for a FastMCP ``Tool`` used by runtime-facts tests."""
+
+    name: str
+    description: str
+    parameters: dict[str, Any]
 
 
 def _make_fake_app(tools: dict[str, Any] | None = None) -> Any:

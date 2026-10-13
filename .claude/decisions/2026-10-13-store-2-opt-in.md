@@ -9,7 +9,7 @@ Oneiric's `RuntimeOrchestrator` previously exposed a single
    phase from a known-fresh state. Persistent task-resume state would
    create a "write-then-wipe" no-op hazard, a concurrent-process
    TOCTOU, and is not serverless-durable.
-2. The file-based SQLite store backing Store 1 is not durable on
+1. The file-based SQLite store backing Store 1 is not durable on
    serverless runtimes, which the Bodai ecosystem is moving toward.
 
 In practice, however, Store 2 (execution tracing) IS useful to crackerjack

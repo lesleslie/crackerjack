@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import fcntl
 import json
-from collections.abc import Iterator
+from collections.abc import Generator
 from contextlib import contextmanager
 from datetime import UTC, datetime
 from pathlib import Path
@@ -63,7 +63,7 @@ class DurableQueue:
             self._lock_path.touch()
 
     @contextmanager
-    def _process_lock(self, mode: str = "r+") -> Iterator[None]:
+    def _process_lock(self, mode: str = "r+") -> Generator[None]:
         """Cross-process fcntl.flock wrapper for the SQL writer path."""
         with self._lock_path.open(mode) as f:
             fcntl.flock(f.fileno(), fcntl.LOCK_EX)

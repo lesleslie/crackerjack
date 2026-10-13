@@ -307,7 +307,7 @@ class AsyncTimeoutManager:
         operation: str,
         timeout: float | None = None,
         strategy: TimeoutStrategy = TimeoutStrategy.FAIL_FAST,
-    ) -> t.AsyncIterator[None]:
+    ) -> t.AsyncGenerator[None]:
         timeout_value = timeout or self.get_timeout(operation)
         start_time = self.performance_monitor.record_operation_start(operation)
 

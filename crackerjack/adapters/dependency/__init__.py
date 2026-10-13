@@ -6,7 +6,7 @@ __all__ = ["OsvScannerAdapter", "PipAuditAdapter"]
 try:
     from .pip_audit import OsvScannerAdapter
 except ImportError:
-    OsvScannerAdapter = None  # type: ignore[assignment, misc, no-redef]
+    OsvScannerAdapter = None  # type: ignore[assignment, misc, no-redef]  # ty: ignore[invalid-assignment]
 
 
 # Backwards-compat alias for callers that still reference the pre-rename

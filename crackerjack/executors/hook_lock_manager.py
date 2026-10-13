@@ -67,7 +67,7 @@ class HookLockManager:
         return hook_name in self._hooks_requiring_locks
 
     @asynccontextmanager
-    async def acquire_hook_lock(self, hook_name: str) -> t.AsyncIterator[None]:
+    async def acquire_hook_lock(self, hook_name: str) -> t.AsyncGenerator[None]:
         if not self.requires_lock(hook_name):
             yield
             return
@@ -85,7 +85,7 @@ class HookLockManager:
     async def _acquire_existing_hook_lock(
         self,
         hook_name: str,
-    ) -> t.AsyncIterator[None]:
+    ) -> t.AsyncGenerator[None]:
         lock = self._hook_locks[hook_name]
         timeout = self._lock_timeouts.get(hook_name, self._default_lock_timeout)
         start_time = time.time()
@@ -145,7 +145,7 @@ class HookLockManager:
     async def _acquire_global_coordination_lock(
         self,
         hook_name: str,
-    ) -> t.AsyncIterator[None]:
+    ) -> t.AsyncGenerator[None]:
         lock_path = self._global_config.get_lock_path(hook_name)
         start_time = time.time()
 

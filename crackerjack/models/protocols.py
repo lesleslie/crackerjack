@@ -704,7 +704,7 @@ class DebuggerProtocol(t.Protocol):
     enabled: bool
 
     @contextlib.contextmanager
-    def debug_operation(self, operation: str, **kwargs: t.Any) -> t.Iterator[str]: ...
+    def debug_operation(self, operation: str, **kwargs: t.Any) -> t.Generator[str]: ...
 
     def log_agent_activity(
         self,

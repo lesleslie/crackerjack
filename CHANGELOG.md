@@ -10,6 +10,67 @@ blocks_on: []
 topic: changelog
 ---
 
+## [0.88.0] - 2026-10-13
+
+### Added
+
+- Auto-sync gitignore on pre-publish gate failure
+- crackerjack: Opt in to execution tracing (Store 2) on oneiric orchestrator
+- crackerjack: Phase 3 — tool-registry runtime facts push to Oneiric (Plan 1)
+- crackerjack: UUID7-only substrate (Phase 3 of cross-repo migration)
+- gitignore: Promote canonical .claude/ policy into fleet template
+
+### Fixed
+
+- config: Remove duplicate enable_lsp_hooks; restore async on pycharm_diagnostics_context
+- crackerjack: Clean up 4 workflow architecture observations
+- crackerjack: Ratchet path + plan-index-sync to phase
+- crackerjack: Ratchet publish-only + checkpoint disabled + staleness
+- managers: Drop LSPClient dep from test_manager
+- phase-5d: Delete enable_lsp_optimization feature wiring
+- plan_index_sync: Strip local path prefix, format bytes in KB
+- publish: Newline-tolerant value classes in subprocess-output sanitizer
+- publish: Sanitize subprocess stderr and reduce exception-log surface
+- tests+cli: Remove leftover enable_lsp_hooks + zuban/skylos test refs
+
+### Removed
+
+- docs+chore(phase-5d): remove the dead LSP-optimization surface from docs and .gitignore
+- docs+chore(phase-5d): remove the dead LSP-optimization surface from docs, .gitignore, and the plan-file
+
+### Documentation
+
+- phase-5b: Complete zuban/skylos README cleanup (Phase 1+2+3)
+- plans: Add plan to remove zuban + skylos LSP adapters from crackerjack
+- Remove zuban/skylos active references from README + CHANGELOG + docs index
+- subdir: Remove zuban/skylos refs from subpackage READMEs
+
+### Testing
+
+- phase-5d: Drop tests for the deleted enable_lsp_optimization feature
+- phase-5e: Drop lsp_aware_hook_executor.py from semgrep test fixtures
+
+### Internal
+
+- adapters: Delete zuban + skylos LSP adapter modules
+- config: Drop zuban/skylos Hook entries + CLI command surface
+- config: Drop zuban/skylos settings fields + ZubanLSPSettings class
+- crackerjack: Archive obsolete migrate_ulids_v2.py
+- deps: Drop zuban from uv.lock
+- deps: Drop zuban runtime dep from pyproject.toml
+- gitignore: Apply canonical .claude/ policy (sync)
+- phase-5b: Remove dead zuban constant + regex
+- phase-5c: Remove zuban/skylos refs from scripts, templates, generated docs
+- phase-5f: Remove the last LSP-server residue (DEFAULT_LSP_PORT/MODE)
+- prod: Strip zuban/skylos from CLI/coordinators/parsers/server
+- prod: Strip zuban/skylos refs from adapters/models/services
+- Strip zuban/skylos from config + remaining adapters tests
+- tests: Delete pure-zuban/skylos/lsp test files
+- tests: Delete tool_proxy/server_manager/tool_commands test files
+- tests: Remove SkylosRegexParser + ZubanLSPSettings test references
+- tests: Strip zuban from QA adapter test suites
+- tests: Strip zuban/skylos refs from all remaining test files
+
 ## [Unreleased]
 
 ### Removed

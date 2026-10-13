@@ -57,8 +57,7 @@ Each branch is documented at its call site.
 ### Observation 4 — drop dead `config_cleanup` gate
 
 **Before**: `_should_run_config_cleanup` had returned `False` with a
-6-month-old `TODO: Revert this temporary fix after config_cleanup
-debugging` comment since the config_cleanup debugging stalled. The
+6-month-old `TODO: Revert this temporary fix after config_cleanup debugging` comment since the config_cleanup debugging stalled. The
 escape hatch was either going to be reverted (the phase re-enabled) or
 removed. The debugging never resumed, so the gate was dead code that
 misled readers into thinking the phase was on a temporary off-ramp.

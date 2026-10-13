@@ -401,7 +401,7 @@ def _read_ratchet_floor(path: Path) -> float | None:
 
     try:
         data = json.loads(path.read_text())
-    except (FileNotFoundError, json.JSONDecodeError):
+    except FileNotFoundError, json.JSONDecodeError:
         return None
 
     if not isinstance(data, dict) or "current_minimum" not in data:
@@ -468,7 +468,10 @@ def _is_ratchet_stale(
 
     coverage_data_path_str = data.get("coverage_data_path")
     coverage_data_mtime = data.get("coverage_data_mtime")
-    if not (isinstance(coverage_data_path_str, str) and isinstance(coverage_data_mtime, (int, float))):
+    if not (
+        isinstance(coverage_data_path_str, str)
+        and isinstance(coverage_data_mtime, (int, float))
+    ):
         return False  # No coverage data tracked; time-stale is the only gate.
 
     coverage_data_path = Path(coverage_data_path_str)
@@ -477,7 +480,9 @@ def _is_ratchet_stale(
     # the on-disk candidate as ``project_root / coverage.json`` and
     # compare against either path.
     on_disk_candidate = project_root / "coverage.json"
-    target_path = coverage_data_path if coverage_data_path.exists() else on_disk_candidate
+    target_path = (
+        coverage_data_path if coverage_data_path.exists() else on_disk_candidate
+    )
     if not target_path.exists():
         return False  # coverage.json was deleted; trust the ratchet's recorded mtime
 

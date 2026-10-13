@@ -36,9 +36,7 @@ PUSH_TIMEOUT_SECONDS = 5.0
 DAEMON_THREAD_NAME = "crackerjack-oneiric-runtime-push"
 
 
-def _build_envelope(
-    component: str, runtime_facts: dict[str, Any]
-) -> dict[str, Any]:
+def _build_envelope(component: str, runtime_facts: dict[str, Any]) -> dict[str, Any]:
     """Wrap a runtime-facts payload in the Oneiric envelope.
 
     The envelope mirrors the structure produced by the equivalent
@@ -63,9 +61,7 @@ def _build_envelope(
     }
 
 
-def _build_jsonrpc_payload(
-    envelope: dict[str, Any], tool_name: str
-) -> dict[str, Any]:
+def _build_jsonrpc_payload(envelope: dict[str, Any], tool_name: str) -> dict[str, Any]:
     """Wrap an envelope in a JSON-RPC 2.0 ``tools/call`` request body."""
     return {
         "jsonrpc": "2.0",
@@ -78,9 +74,7 @@ def _build_jsonrpc_payload(
     }
 
 
-async def _post_to_oneiric(
-    payload: dict[str, Any], url: str, tool_name: str
-) -> None:
+async def _post_to_oneiric(payload: dict[str, Any], url: str, tool_name: str) -> None:
     """POST the JSON-RPC payload to Oneiric and validate the response.
 
     Raises on transport errors, non-2xx responses, or malformed JSON
@@ -98,13 +92,11 @@ async def _post_to_oneiric(
                 f"oneiric returned non-JSON body (tool={tool_name}): {exc}"
             ) from exc
         if isinstance(body, dict) and body.get("error"):
-            raise RuntimeError(
-                f"oneiric rpc error: {body.get('error')!r}"
-            )
+            raise RuntimeError(f"oneiric rpc error: {body.get('error')!r}")
 
 
 async def _push_async(
-    app: "FastMCP",
+    app: FastMCP,
     url: str,
     tool_name: str,
 ) -> bool:
@@ -119,7 +111,7 @@ async def _push_async(
 
 
 def report_runtime_to_oneiric(
-    app: "FastMCP",
+    app: FastMCP,
     *,
     url: str = ONEIRIC_DEFAULT_URL,
     tool_name: str = ONEIRIC_DEFAULT_TOOL,
@@ -142,9 +134,7 @@ def report_runtime_to_oneiric(
     thread.start()
 
 
-def _run_in_thread(
-    app: "FastMCP", url: str, tool_name: str
-) -> None:
+def _run_in_thread(app: FastMCP, url: str, tool_name: str) -> None:
     """Thread entry point: run the async push and swallow all errors."""
     try:
         asyncio.run(_push_async(app, url=url, tool_name=tool_name))

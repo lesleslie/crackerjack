@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "crackerjack"
-version = "0.87.1"
+version = "0.88.0"
 description = "Crackerjack Python project management tool"
 readme = "README.md"
 authors = [
@@ -48,7 +48,7 @@ dependencies = [
     "mdformat>=1.0.0",
     "mdformat-ruff>=0.1.3",
     "numpy>=2.5.3",
-    "oneiric>=0.27.0",
+    "oneiric>=0.29.2",
     "pyleak>=0.2.0",
     "pyscn==1.5.0",
     "pydantic>=2.13.5",
@@ -67,7 +67,6 @@ dependencies = [
     "structlog>=26.1.0",
     "tomli-w>=1.2.0",
     "typer>=0.27.2",
-    "uuid-utils>=1.0.0",
     "types-aiofiles>=25.1.0.20260518",
     "types-psutil>=7.2.2.20260906",
     "types-pyyaml>=6.0.12.20260906",
@@ -618,13 +617,11 @@ deps-file = "pyproject.toml"
 exclude-deps = [
     "aiosqlite",
     "hatchling",
-    "pytest",
     "pytest-asyncio",
     "pytest-cov",
     "pytest-mock",
     "pytest-xdist",
     "pytest-benchmark",
-    "pytest-snob",
     "uv",
     "uv-bump",
     "pytest-timeout",
@@ -635,7 +632,6 @@ exclude-deps = [
     "types-pyyaml",
     "types-psutil",
     "types-aiofiles",
-    "scipy-stubs",
     "mdformat",
     "ipython",
     # Lazy-import false positives (used via import inside function bodies):
