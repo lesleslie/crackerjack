@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import os
 import subprocess
+import sys
 import typing as t
 from contextlib import suppress
 from pathlib import Path
@@ -690,8 +691,19 @@ class PublishManagerImpl:
         """Verify the Bodai canonical `.gitignore` snippet is installed.
 
         Pre-publish gate mirroring `_validate_release_audit`. Non-Bodai
-        repos return True silently; missing/drifted snippets return False
-        with a clear error so the caller can refuse to publish.
+        repos return True silently; missing/drifted snippets trigger an
+        auto-repair attempt via `_attempt_gitignore_sync` before failing.
+
+        Behavior contract:
+          - snippet present, no missing patterns  -> PASS
+          - snippet missing or patterns missing    -> auto-sync attempt
+              - sync succeeds, re-check passes      -> PASS, continue
+              - sync subprocess fails               -> FAIL, abort
+              - sync succeeds, patterns still missing -> FAIL, abort
+          - tracked-but-should-be-untracked files   -> not auto-fixed
+              (gate passes after sync, but operator must
+              `git rm --cached` separately — see companion decision
+              .claude/decisions/2026-10-12-publish-auto-sync-gitignore.md)
         """
         result = check_repo_gitignore(self.pkg_path)
         if not result.is_fleet_member:
@@ -703,20 +715,116 @@ class PublishManagerImpl:
             )
             return True
 
-        if not result.snippet_present:
+        # Drift detected — attempt auto-repair before failing.
+        drift_kind = (
+            "snippet is missing"
+            if not result.snippet_present
+            else f"{len(result.missing_patterns)} pattern(s) missing"
+        )
+        self.console.print(
+            f"[yellow]⚠️[/yellow] Gitignore drift in {result.repo_path} "
+            f"({drift_kind}); attempting auto-sync…"
+        )
+
+        if not self._attempt_gitignore_sync():
             self.console.print(
-                f"[red]❌[/red] Bodai `.gitignore` snippet is missing in "
-                f"{result.repo_path}. Run `crackerjack gitignore sync` to install."
+                f"[red]❌[/red] Auto-sync failed for {result.repo_path}; "
+                f"aborting publish. Run `crackerjack gitignore sync` "
+                f"manually to inspect."
             )
             return False
 
+        # Re-verify after sync. If still missing patterns, surface them
+        # and abort — likely a stale backup blocking the sync, or a
+        # template bug.
+        post = check_repo_gitignore(self.pkg_path)
+        if not (post.snippet_present and not post.missing_patterns):
+            self.console.print(
+                f"[red]❌[/red] Gitignore still drifting after auto-sync "
+                f"in {result.repo_path} "
+                f"({len(post.missing_patterns)} missing pattern(s)):"
+            )
+            for p in post.missing_patterns:
+                self.console.print(f"  - {p}")
+            return False
+
         self.console.print(
-            f"[red]❌[/red] Bodai `.gitignore` snippet is present but "
-            f"missing {len(result.missing_patterns)} pattern(s) in "
-            f"{result.repo_path}:"
+            f"[green]✅[/green] Gitignore auto-sync succeeded for "
+            f"{result.repo_path}; continuing publish."
         )
-        for pattern in result.missing_patterns:
-            self.console.print(f"  - {pattern}")
+        return True
+
+    def _attempt_gitignore_sync(self) -> bool:
+        """Run `crackerjack gitignore sync --pkg-path <self.pkg_path>`.
+
+        Pre-flight guard: refuses to clobber uncommitted `.gitignore`
+        edits in the working tree (sync writes the canonical block
+        directly; operator WIP would be lost — though sync also writes a
+        `.gitignore.bak.<timestamp>` backup). Returns True on sync
+        success, False on any subprocess failure, timeout, or pre-flight
+        guard trip.
+        """
+        gitignore_path = self.pkg_path / ".gitignore"
+        if gitignore_path.exists():
+            try:
+                result = subprocess.run(
+                    ["git", "status", "--porcelain", "--", str(gitignore_path)],
+                    cwd=self.pkg_path,
+                    capture_output=True,
+                    text=True,
+                    timeout=10,
+                    check=False,
+                )
+                if result.stdout.strip():
+                    self.console.print(
+                        f"[yellow]⚠️[/yellow] `.gitignore` has uncommitted "
+                        f"edits in {self.pkg_path}; refusing to auto-sync. "
+                        f"Commit or stash, then re-run."
+                    )
+                    return False
+            except subprocess.TimeoutExpired:
+                self.console.print(
+                    "[yellow]⚠️[/yellow] `git status` timed out; refusing to "
+                    "auto-sync to avoid clobbering untracked edits."
+                )
+                return False
+            except subprocess.SubprocessError as exc:
+                # Not a git repo, or git unavailable; let sync try anyway.
+                logger.debug(
+                    "`git status` failed in %s (continuing): %s",
+                    self.pkg_path,
+                    exc,
+                )
+
+        try:
+            proc = subprocess.run(
+                [sys.executable, "-m", "crackerjack", "gitignore", "sync",
+                 "--pkg-path", str(self.pkg_path)],
+                capture_output=True,
+                text=True,
+                timeout=60,
+                check=False,
+            )
+        except subprocess.TimeoutExpired:
+            self.console.print(
+                "[red]❌[/red] `crackerjack gitignore sync` timed out "
+                "after 60s; aborting auto-repair."
+            )
+            return False
+        except subprocess.SubprocessError as exc:
+            self.console.print(
+                f"[red]❌[/red] `crackerjack gitignore sync` raised: {exc}"
+            )
+            logger.exception("gitignore sync subprocess failed")
+            return False
+
+        if proc.returncode == 0:
+            return True
+
+        self.console.print(
+            f"[red]❌[/red] `crackerjack gitignore sync` exited "
+            f"{proc.returncode}:\n{proc.stderr}"
+        )
         return False
 
     def _detect_source_root(self, project_root: Path) -> Path | None:
