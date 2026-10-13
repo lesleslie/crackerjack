@@ -386,4 +386,50 @@ test-results/
 # at docs/plans/ and docs/specs/ — committed under their canonical
 # paths, never under .superpowers/.
 .superpowers/
+
+# === Bodai `.claude/` policy ===
+# Default-deny the entire .claude/ tree, then narrow allowlist for the
+# canonical durable subtrees. Settings.local.json + runtime artifacts
+# stay untracked. Converges the fleet on a single shape (was divergent:
+# oneiric/mcp-common used blanket+allowlist, mahavishnu used targeted
+# blocks, akosha/session-buddy/crackerjack used .claude/* + allowlist).
+#
+# After `crackerjack gitignore sync` runs fleet-wide, per-repo cleanup
+# is still required for files already tracked that this block would
+# un-track (most notably mahavishnu's .claude/settings.local.json) —
+# gitignore changes don't un-track existing entries. Those require
+# `git rm --cached <path>` per file per repo.
+.claude/*
+!.claude/CLAUDE.md
+!.claude/settings.json
+# Canonical durable subtrees — track everywhere (empty dirs allowed
+# so future content lands without a gitignore edit):
+!.claude/decisions/
+!.claude/decisions/**
+!.claude/agents/
+!.claude/agents/**
+!.claude/commands/
+!.claude/commands/**
+!.claude/hooks/
+!.claude/hooks/**
+!.claude/skills/
+!.claude/skills/**
+!.claude/workflows/
+!.claude/workflows/**
+# Runtime artifacts — never track. Surface as first-class rules so
+# every contributor sees the policy at a glance:
+.claude/settings.local.json
+.claude/agents/.a2a_enrollment/
+.claude/agents/.archive/
+.claude/skills/*/.archive/
+.claude/workflows/.archive/
+.claude/backups/
+.claude/handoff/
+.claude/worktrees/
+.claude/worktree-snapshots/
+.claude/__pycache__/
+.claude/**/__pycache__/
+.claude/**/*~.tmp
+.claude/**/test_hook_*.txt
+.claude/**/hook_test_marker.txt
 # <<< bodai-shared-gitignore <<<
