@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 import subprocess
 import sys
 import typing as t
@@ -38,6 +39,42 @@ def get_download_trend_warning(trend_class: DownloadTrendClass) -> str:
     if trend_class == DTC.GRADUAL_DECAY:
         return "Gradual adoption decline — investigate user retention or docs"
     return ""
+
+
+# _sanitize_subprocess_output: redact and truncate subprocess stderr/stdout
+# before any observability surface. A failing Python CLI commonly dumps a
+# traceback whose local-variable reprs include pyproject contents, .git/config
+# fields, or env-var values — better to truncate + redact than to ship the
+# raw blob to console / log handlers / Loki.
+_SANITIZE_OUTPUT_TAIL_BYTES = 2048
+_SANITIZE_REDACT_PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = (
+    # key=value / key: "value" — common credential shapes (best-effort,
+    # not exhaustive; aimed at accidental leaks, not adversarial input)
+    (re.compile(r"(?i)\b(token|secret|password|passwd|api[_-]?key|access[_-]?key)\b\s*[=:]\s*['\"]?[\w\-./+=]{6,}"), "<REDACTED>"),
+    # GitHub / GitLab / Google / Slack token prefixes (prefix match, value trimmed)
+    (re.compile(r"\b(ghp_|gho_|ghu_|ghs_|ghr_|github_pat_|glpat-|xox[abprs]-|ya29\.)[A-Za-z0-9_\-]+"), "<REDACTED>"),
+    # Authorization header values — consume the rest of the line
+    # because the value is typically `Bearer <token>` / `Basic <b64>`
+    # (multiple whitespace-separated tokens). (?im) = IGNORECASE +
+    # MULTILINE so `$` matches end-of-line.
+    (re.compile(r"(?im)\bauthorization\b\s*[=:].*$"), "authorization: <REDACTED>"),
+)
+
+
+def _sanitize_subprocess_output(text: str | None, *, tail_bytes: int = _SANITIZE_OUTPUT_TAIL_BYTES) -> str:
+    """Sanitize subprocess stderr/stdout for observability.
+
+    Truncates to the last `tail_bytes` (keeps the failure tail where the
+    traceback root cause usually lives) and redacts common credential-
+    shaped patterns. Returns an empty string for empty/None input.
+    """
+    if not text:
+        return ""
+    if len(text) > tail_bytes:
+        text = "…<truncated>…\n" + text[-tail_bytes:]
+    for pattern, replacement in _SANITIZE_REDACT_PATTERNS:
+        text = pattern.sub(replacement, text)
+    return text
 
 
 class _NullGitService:
@@ -790,16 +827,24 @@ class PublishManagerImpl:
                 return False
             except subprocess.SubprocessError as exc:
                 # Not a git repo, or git unavailable; let sync try anyway.
+                # Avoid logging the exception object directly — its
+                # __str__ can include cwd / env fragments; emit type only.
                 logger.debug(
-                    "`git status` failed in %s (continuing): %s",
-                    self.pkg_path,
-                    exc,
+                    "`git status` pre-flight failed (%s); continuing",
+                    type(exc).__name__,
                 )
 
         try:
             proc = subprocess.run(
-                [sys.executable, "-m", "crackerjack", "gitignore", "sync",
-                 "--pkg-path", str(self.pkg_path)],
+                [
+                    sys.executable,
+                    "-m",
+                    "crackerjack",
+                    "gitignore",
+                    "sync",
+                    "--pkg-path",
+                    str(self.pkg_path),
+                ],
                 capture_output=True,
                 text=True,
                 timeout=60,
@@ -812,18 +857,35 @@ class PublishManagerImpl:
             )
             return False
         except subprocess.SubprocessError as exc:
+            # Avoid `logger.exception` (dumps full traceback + exc.args,
+            # which include the full command line) and avoid embedding
+            # `exc` in console output (its __str__ can leak cwd/env).
+            # Surface the exception type only; full context is in the
+            # test suite, not in operator-facing or observability logs.
             self.console.print(
-                f"[red]❌[/red] `crackerjack gitignore sync` raised: {exc}"
+                f"[red]❌[/red] `crackerjack gitignore sync` raised "
+                f"{type(exc).__name__}; aborting auto-repair."
             )
-            logger.exception("gitignore sync subprocess failed")
+            logger.debug(
+                "gitignore sync subprocess raised: %s",
+                type(exc).__name__,
+            )
             return False
 
         if proc.returncode == 0:
             return True
 
+        # Sanitize subprocess stderr before any observability surface.
+        # A failing `crackerjack gitignore sync` can emit a Python
+        # traceback whose local-variable reprs contain pyproject
+        # contents, .git/config fields, or env-var fragments — the
+        # raw blob is too risky to ship to console or log handlers.
+        # Truncates to the failure tail and redacts common credential
+        # shapes; see _sanitize_subprocess_output for the policy.
+        sanitized_stderr = _sanitize_subprocess_output(proc.stderr)
         self.console.print(
             f"[red]❌[/red] `crackerjack gitignore sync` exited "
-            f"{proc.returncode}:\n{proc.stderr}"
+            f"{proc.returncode}:\n{sanitized_stderr}"
         )
         return False
 

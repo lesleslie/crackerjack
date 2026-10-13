@@ -22,7 +22,10 @@ import pytest
 from rich.console import Console
 
 from crackerjack.checks.gitignore_conformance import GitignoreConformanceResult
-from crackerjack.managers.publish_manager import PublishManagerImpl
+from crackerjack.managers.publish_manager import (
+    PublishManagerImpl,
+    _sanitize_subprocess_output,
+)
 
 
 def _completed(
@@ -383,3 +386,128 @@ def test_sync_subprocess_uses_correct_args(tmp_path: Path, mock_console: MagicMo
     assert sync_call[4] == "sync"
     assert sync_call[5] == "--pkg-path"
     assert sync_call[6] == str(tmp_path)
+
+
+# ---------------------------------------------------------------------------
+# Cases: _sanitize_subprocess_output (observability safety)
+# ---------------------------------------------------------------------------
+
+
+def test_sanitize_returns_empty_for_empty_input() -> None:
+    """None and empty strings yield empty output (defensive default)."""
+    assert _sanitize_subprocess_output(None) == ""
+    assert _sanitize_subprocess_output("") == ""
+
+
+def test_sanitize_passes_short_text_through() -> None:
+    """Text shorter than the truncation limit is returned unchanged."""
+    text = "ERROR: missing canonical snippet\n"
+    assert _sanitize_subprocess_output(text) == text
+
+
+def test_sanitize_truncates_long_text_with_marker() -> None:
+    """Text longer than the tail limit is truncated and marked."""
+    text = "X" * 4096
+    out = _sanitize_subprocess_output(text)
+    assert "…<truncated>…" in out
+    # Tail of original is preserved.
+    assert out.endswith("X" * 32)
+    # No prefix from the head survives.
+    assert not out.startswith("X" * 4096)
+
+
+def test_sanitize_truncation_respects_tail_bytes_kwarg() -> None:
+    """Custom tail_bytes is honored for tests of small inputs."""
+    text = "A" * 100 + "B" * 100
+    out = _sanitize_subprocess_output(text, tail_bytes=50)
+    assert "…<truncated>…" in out
+    # The B-tail is the only thing kept.
+    assert "B" * 50 in out
+    assert "A" not in out
+
+
+def test_sanitize_redacts_github_token() -> None:
+    """GitHub PAT prefixes are redacted (gho_, ghp_, etc.)."""
+    text = "Traceback: ghp_abc123def456ghi789jkl012mno\n"
+    out = _sanitize_subprocess_output(text)
+    assert "ghp_abc123def456ghi789jkl012mno" not in out
+    assert "<REDACTED>" in out
+
+
+def test_sanitize_redacts_google_token() -> None:
+    """Google OAuth token prefix (ya29.) is redacted."""
+    text = "leaked ya29.A0ARrdaM-abcdefghijklmnopqrstuvwxyz\n"
+    out = _sanitize_subprocess_output(text)
+    assert "ya29.A0ARrdaM" not in out
+    assert "<REDACTED>" in out
+
+
+def test_sanitize_redacts_key_value_credentials() -> None:
+    """`token=...`, `api_key: ...`, `password=...` patterns are redacted."""
+    text = (
+        "config error: token=supersecretvalue12345\n"
+        'api_key: "AKIAIOSFODNN7EXAMPLE"\n'
+        "password=hunter2hunter2hunter2hunter2\n"
+    )
+    out = _sanitize_subprocess_output(text)
+    assert "supersecretvalue12345" not in out
+    assert "AKIAIOSFODNN7EXAMPLE" not in out
+    assert "hunter2hunter2hunter2hunter2" not in out
+    assert out.count("<REDACTED>") >= 3
+
+
+def test_sanitize_redacts_authorization_header() -> None:
+    """`Authorization: ...` values are redacted."""
+    text = "request: Authorization: Bearer abcdef1234567890abcdef\n"
+    out = _sanitize_subprocess_output(text)
+    assert "abcdef1234567890abcdef" not in out
+    assert "authorization: <REDACTED>" in out
+
+
+def test_sanitize_preserves_non_sensitive_context() -> None:
+    """Sanitization keeps normal log lines untouched (no over-redaction)."""
+    text = (
+        "Traceback (most recent call last):\n"
+        '  File "/usr/lib/python3.12/json/__init__.py", line 354, in loads\n'
+        "    raise JSONDecodeError(\"Expecting value\", s, err.value) from None\n"
+        "json.decoder.JSONDecodeError: Expecting value: line 1 column 1\n"
+    )
+    out = _sanitize_subprocess_output(text)
+    # Path and message are preserved (no credential-shaped content).
+    assert "json/__init__.py" in out
+    assert "JSONDecodeError" in out
+
+
+def test_sync_failure_passes_sanitized_stderr_to_console(
+    tmp_path: Path, mock_console: MagicMock,
+) -> None:
+    """End-to-end: sync subprocess emits a token in stderr; only <REDACTED> reaches console."""
+    pm = _make_publish_manager(tmp_path, mock_console)
+    conform = _make_conform_result(
+        is_fleet_member=True,
+        snippet_present=False,
+        missing_patterns=[".claude/*"],
+    )
+
+    leak = "Traceback:\n  ghp_abcdefghijklmnopqrstuvwx\n"
+    fake_sync = _completed(returncode=2, stderr=leak)
+
+    with (
+        patch(
+            "crackerjack.managers.publish_manager.check_repo_gitignore",
+            return_value=conform,
+        ),
+        patch(
+            "crackerjack.managers.publish_manager.subprocess.run",
+            return_value=fake_sync,
+        ),
+    ):
+        result = pm._validate_gitignore_conformance()
+
+    assert result is False
+    # The raw token must NEVER appear in any console.print call.
+    for call in mock_console.print.call_args_list:
+        rendered = " ".join(str(arg) for arg in call.args)
+        assert "ghp_abcdefghijklmnopqrstuvwx" not in rendered, (
+            f"Raw token leaked to console: {rendered!r}"
+        )
