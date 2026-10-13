@@ -46,6 +46,43 @@ except ImportError as exc:  # pragma: no cover - import guard
 
 
 # ---------------------------------------------------------------------------
+# Output formatting — local-only helpers for console lines below.
+# ---------------------------------------------------------------------------
+
+
+def _display_path(p: Path) -> str:
+    """Return a console-friendly representation of `p`.
+
+    If `p` is under the current working directory, return the relative
+    form so we don't leak the local filesystem layout (e.g.
+    `/Users/les/Projects/<repo>/...` on macOS) into shared logs or
+    terminals. Otherwise, return the path unchanged — the absolute
+    form is more informative when operating outside a repo.
+    """
+    try:
+        return str(p.relative_to(Path.cwd()))
+    except ValueError:
+        return str(p)
+
+
+def _format_bytes(n: int) -> str:
+    """Format a byte count for human-readable output.
+
+    Sub-KB values render as plain bytes (`"742 B"`); KB and above
+    render with one decimal place (`"21.3 KB"`, `"1.4 MB"`). Mirrors
+    the convention used by `git`, `du -h`, and `crackerjack` core
+    console helpers.
+    """
+    if n < 1024:
+        return f"{n} B"
+    kib = n / 1024
+    if kib < 1024:
+        return f"{kib:.1f} KB"
+    mib = kib / 1024
+    return f"{mib:.1f} MB"
+
+
+# ---------------------------------------------------------------------------
 # Constants — mirror crackerjack.services.frontmatter where it exists.
 # ---------------------------------------------------------------------------
 
@@ -358,18 +395,21 @@ def main(argv: list[str] | None = None) -> int:
     if args.dry_run:
         existing = args.out.read_text(encoding="utf-8") if args.out.exists() else ""
         if existing == new_content:
-            print(f"no change → {args.out}")
+            print(f"no change → {_display_path(args.out)}")
             return 0
-        print(f"would rewrite {args.out} ({len(existing)} → {len(new_content)} bytes)")
+        print(
+            f"would rewrite {_display_path(args.out)} "
+            f"({_format_bytes(len(existing))} → {_format_bytes(len(new_content))})"
+        )
         return 1
 
     args.out.parent.mkdir(parents=True, exist_ok=True)
     existing = args.out.read_text(encoding="utf-8") if args.out.exists() else ""
     if existing == new_content:
-        print(f"up-to-date → {args.out}")
+        print(f"up-to-date → {_display_path(args.out)}")
         return 0
     args.out.write_text(new_content, encoding="utf-8")
-    print(f"wrote {args.out} ({len(new_content)} bytes)")
+    print(f"wrote {_display_path(args.out)} ({_format_bytes(len(new_content))})")
     return 0
 
 

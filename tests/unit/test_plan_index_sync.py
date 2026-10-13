@@ -224,3 +224,121 @@ def test_entry_link_is_dr_branchless() -> None:
         f"_entry_link should not have hand-rolled prefix branches; "
         f"found one in:\n{source}"
     )
+
+
+# ---------------------------------------------------------------------------
+# Output formatting helpers — _display_path and _format_bytes
+# ---------------------------------------------------------------------------
+
+
+def test_display_path_strips_cwd_prefix() -> None:
+    """An absolute path under cwd renders as the repo-relative form.
+
+    Prevents leaking the local filesystem layout (e.g.
+    ``/Users/les/Projects/<repo>/...``) into shared logs and terminals.
+    """
+    from crackerjack.tools import plan_index_sync as pis
+
+    inside = REPO_ROOT / "docs" / "plans" / "PLAN_INDEX.md"
+    out = pis._display_path(inside)
+    assert out == "docs/plans/PLAN_INDEX.md"
+    assert "/Users/les" not in out
+    assert str(REPO_ROOT) not in out
+
+
+def test_display_path_falls_back_to_absolute_outside_cwd(tmp_path: Path) -> None:
+    """A path outside cwd falls back to the absolute form (no crash)."""
+    from crackerjack.tools import plan_index_sync as pis
+
+    outside = tmp_path / "elsewhere.md"
+    out = pis._display_path(outside)
+    assert out == str(outside)
+
+
+def test_display_path_already_relative_passes_through() -> None:
+    """A path already relative to cwd is returned unchanged."""
+    from crackerjack.tools import plan_index_sync as pis
+
+    rel = Path("docs/plans/PLAN_INDEX.md")
+    out = pis._display_path(rel)
+    assert out == "docs/plans/PLAN_INDEX.md"
+
+
+def test_format_bytes_below_one_kib() -> None:
+    """Sub-KiB values render as plain bytes."""
+    from crackerjack.tools import plan_index_sync as pis
+
+    for n, expected in [(0, "0 B"), (1, "1 B"), (742, "742 B"), (1023, "1023 B")]:
+        assert pis._format_bytes(n) == expected, f"failed for {n}"
+
+
+def test_format_bytes_kib_boundary() -> None:
+    """KiB boundary: 1024 bytes renders as '1.0 KB'."""
+    from crackerjack.tools import plan_index_sync as pis
+
+    assert pis._format_bytes(1024) == "1.0 KB"
+
+
+def test_format_bytes_realistic_plan_index_size() -> None:
+    """21800 bytes (the size from the user's report) renders as '21.3 KB'."""
+    from crackerjack.tools import plan_index_sync as pis
+
+    assert pis._format_bytes(21800) == "21.3 KB"
+
+
+def test_format_bytes_mib_and_above() -> None:
+    """Values >= 1 MiB render with one decimal in MB."""
+    from crackerjack.tools import plan_index_sync as pis
+
+    assert pis._format_bytes(1024 * 1024) == "1.0 MB"
+    assert pis._format_bytes(int(1.5 * 1024 * 1024)) == "1.5 MB"
+    assert pis._format_bytes(5 * 1024 * 1024) == "5.0 MB"
+
+
+def test_dry_run_output_uses_relative_path_and_kb(capsys: pytest.CaptureFixture[str]) -> None:
+    """End-to-end: dry-run output line strips cwd prefix and shows KB units.
+
+    Mirrors the user's report (``wrote /Users/les/Projects/<repo>/docs/plans/
+    PLAN_INDEX.md (21800 bytes)``) — verify the new format omits the local
+    path prefix and expresses bytes in KB.
+    """
+    from crackerjack.tools import plan_index_sync as pis
+
+    # Force a non-empty change to trigger the `would rewrite` branch.
+    rendered = pis.render_plan_index(REPO_ROOT)
+
+    tampered = rendered + "\n<!-- tampered for test -->\n"
+    target = REPO_ROOT / "docs" / "plans" / "PLAN_INDEX.md"
+    original = target.read_text(encoding="utf-8")
+    target.write_text(tampered, encoding="utf-8")
+    try:
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                TOOL_MODULE,
+                "--repo-root",
+                str(REPO_ROOT),
+                "--out",
+                str(target),
+                "--dry-run",
+            ],
+            check=False,
+            capture_output=True,
+            text=True,
+            cwd=REPO_ROOT,
+        )
+    finally:
+        target.write_text(original, encoding="utf-8")
+
+    assert result.returncode == 1, f"expected drift exit, got {result.returncode}"
+    out = result.stdout
+    assert "would rewrite" in out
+    # Local path prefix must NOT appear.
+    assert "/Users/les" not in out
+    assert str(REPO_ROOT) + "/" not in out
+    # Path should be the repo-relative form.
+    assert "docs/plans/PLAN_INDEX.md" in out
+    # Raw byte counts should be replaced by KB.
+    assert "bytes" not in out
+    assert "KB" in out
