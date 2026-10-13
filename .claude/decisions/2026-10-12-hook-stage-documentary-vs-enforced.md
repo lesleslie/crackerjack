@@ -39,7 +39,21 @@ Option 1 catches drift at definition time (faster feedback, but requires care to
 
 ## Follow-ups filed as part of this work
 
-- Add a public `clear_checkpoint(workflow_key)` method to oneiric's `WorkflowBridge` so `crackerjack/core/workflow_orchestrator.py:_clear_oneiric_cache` does not have to reach into the private `_checkpoint_store` attribute. Track in oneiric's repo (separate decision).
+- **Resolved 2026-10-13** (not by adding a public `clear_checkpoint` to
+  oneiric, but by opting the consumer out of the cache entirely):
+  `crackerjack/runtime/oneiric_workflow.py:build_oneiric_runtime` now
+  constructs the `RuntimeOrchestrator` with
+  `enable_workflow_checkpoints=False`. The
+  `_clear_oneiric_cache(runtime)` workaround and the
+  `_resolve_workflow_checkpoints_path` helper are both deleted. The
+  bridge's `_checkpoint_store` and `_execution_store` are both `None`
+  and all load/save/clear paths in
+  `oneiric/domains/workflows.py:205-245` short-circuit. See
+  `.claude/decisions/2026-10-13-checkpoint-disabled.md` for the policy
+  rationale. This is a better outcome than the originally proposed
+  upstream public API: one less surface to maintain, and a class of
+  bugs (path mismatch, concurrent-process TOCTOU, serverless
+  incompatibility) goes away rather than being patched.
 
 ## Status
 

@@ -44,6 +44,7 @@ def handle_standard_mode(
     if options.publish and (
         not getattr(options, "cleanup_docs", False)
         or not getattr(options, "plan_index_sync", False)
+        or not getattr(options, "coverage_ratchet", False)
     ):
         settings = load_settings(CrackerjackSettings)
         if not getattr(options, "cleanup_docs", False) and getattr(
@@ -54,6 +55,10 @@ def handle_standard_mode(
             settings.documentation, "auto_plan_index_sync_on_publish", True
         ):
             options.plan_index_sync = True
+        if not getattr(options, "coverage_ratchet", False) and getattr(
+            settings.documentation, "auto_coverage_ratchet_on_publish", True
+        ):
+            options.coverage_ratchet = True
 
     runner = CrackerjackCLIFacade()
     runner.process(t.cast("OptionsProtocol", options))

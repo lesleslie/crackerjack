@@ -1,14 +1,9 @@
-"""Tests for the Oneiric workflow runtime helpers."""
+"""Tests for the oneiric workflow runtime helpers.
 
-from crackerjack.runtime.oneiric_workflow import (
-    _resolve_workflow_checkpoints_path,
-)
-
-
-def test_resolve_workflow_checkpoints_path_prefers_repo_local(tmp_path, monkeypatch) -> None:
-    monkeypatch.chdir(tmp_path)
-
-    path = _resolve_workflow_checkpoints_path()
-
-    assert path == tmp_path / ".crackerjack" / "oneiric_cache" / "workflow_checkpoints.sqlite"
-    assert path.parent.exists()
+The path-resolver helper was removed in 2026-10-13 along with the
+persistent task checkpoint store (see
+.claude/decisions/2026-10-13-checkpoint-disabled.md). This file is kept
+as a marker for future runtime-helper tests; the policy test for the
+disabled checkpointing lives in
+tests/core/test_workflow_orchestrator.py.
+"""

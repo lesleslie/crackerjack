@@ -86,12 +86,47 @@ class CoverageRatchetService(CoverageRatchetProtocol):
             ],
             "milestones_achieved": [],
             "next_milestone": self._get_next_milestone(initial_coverage),
+            **self._ratchet_metadata(),
         }
 
         self.ratchet_file.write_text(json.dumps(ratchet_data, indent=2))
         self.console.print(
             f"[cyan]📊[/cyan] Coverage ratchet initialized at {initial_coverage:.0f}% baseline",
         )
+
+    def _ratchet_metadata(self) -> dict[str, t.Any]:
+        """Build the staleness metadata block for a ratchet write.
+
+        Every ratchet write gets a ``generated_at`` ISO-8601 timestamp and,
+        when a ``coverage.json`` exists at the project root, the absolute
+        path and mtime of the file the ratchet was derived from. Readers
+        use these to detect two distinct failure modes:
+
+        - **time-stale**: ``generated_at`` is older than
+          ``DEFAULT_RATCHET_MAX_AGE_DAYS`` days. The ratchet is from a
+          long-ago run; the code may have shifted.
+        - **data-stale**: ``coverage_data_mtime`` does not equal the
+          current ``coverage.json`` mtime. The ratchet was rewritten
+          without a corresponding test run, or the test run was deleted.
+
+        Both conditions must hold for a ratchet to be trustworthy. The
+        ratchet itself does not enforce this — readers do. See
+        ``.claude/decisions/2026-10-13-ratchet-staleness.md``.
+        """
+        metadata: dict[str, t.Any] = {
+            "generated_at": datetime.now().isoformat(),
+        }
+        coverage_file = self.pkg_path / "coverage.json"
+        if coverage_file.exists():
+            try:
+                metadata["coverage_data_path"] = str(coverage_file.resolve())
+                metadata["coverage_data_mtime"] = coverage_file.stat().st_mtime
+            except OSError:
+                # coverage.json disappeared between exists() and stat()
+                # — treat as no-data and let the ratchet carry only
+                # the timestamp.
+                pass
+        return metadata
 
     def get_ratchet_data(self) -> dict[str, t.Any]:
         if not self.ratchet_file.exists():
@@ -233,6 +268,8 @@ class CoverageRatchetService(CoverageRatchetProtocol):
 
         if len(data["history"]) > 50:
             data["history"] = data["history"][-50:]
+
+        data.update(self._ratchet_metadata())
 
         self.ratchet_file.write_text(json.dumps(data, indent=2))
 
@@ -409,6 +446,7 @@ class CoverageRatchetService(CoverageRatchetProtocol):
                 "reason": reason,
             }
         )
+        data.update(self._ratchet_metadata())
         self.ratchet_file.write_text(json.dumps(data, indent=2))
 
     def mirror_to_pyproject(self, coverage: float) -> None:

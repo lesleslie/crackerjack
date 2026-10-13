@@ -60,7 +60,6 @@ def test_run_complete_workflow_does_not_set_publisher_when_disabled() -> None:
 
     pipeline.phases.run_configuration_phase = _run_no_phase_returns_true
     pipeline._initialize_workflow_session = MagicMock()
-    pipeline._clear_oneiric_cache = MagicMock()
     pipeline.session.finalize_session = MagicMock()
 
     import asyncio
@@ -79,7 +78,6 @@ def test_run_complete_workflow_does_not_set_publisher_when_dry_run() -> None:
 
     pipeline.phases.run_configuration_phase = _run
     pipeline._initialize_workflow_session = MagicMock()
-    pipeline._clear_oneiric_cache = MagicMock()
     pipeline.session.finalize_session = MagicMock()
 
     import asyncio
@@ -99,7 +97,6 @@ def test_run_complete_workflow_sets_publisher_when_enabled_and_bridge_provided()
 
     pipeline.phases.run_configuration_phase = _run
     pipeline._initialize_workflow_session = MagicMock()
-    pipeline._clear_oneiric_cache = MagicMock()
     pipeline.session.finalize_session = MagicMock()
 
     import asyncio
@@ -121,7 +118,6 @@ def test_run_complete_workflow_does_not_set_publisher_when_bridge_resolver_retur
 
     pipeline.phases.run_configuration_phase = _run
     pipeline._initialize_workflow_session = MagicMock()
-    pipeline._clear_oneiric_cache = MagicMock()
     pipeline.session.finalize_session = MagicMock()
 
     import asyncio

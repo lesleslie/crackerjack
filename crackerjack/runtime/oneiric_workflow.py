@@ -2,10 +2,8 @@ from __future__ import annotations
 
 import inspect
 import logging
-import tempfile
 import typing as t
 from dataclasses import dataclass
-from pathlib import Path
 
 from oneiric.core.config import OneiricSettings, resolver_settings_from_config
 from oneiric.core.lifecycle import LifecycleManager
@@ -122,9 +120,6 @@ def build_oneiric_runtime() -> OneiricWorkflowRuntime:
     oneiric_settings.profile.watchers_enabled = False
     oneiric_settings.profile.remote_enabled = False
     oneiric_settings.remote.enabled = False
-    oneiric_settings.runtime_paths.workflow_checkpoints_path = str(
-        _resolve_workflow_checkpoints_path()
-    )
 
     import os
 
@@ -149,37 +144,27 @@ def build_oneiric_runtime() -> OneiricWorkflowRuntime:
 
     resolver = Resolver(settings=resolver_settings_from_config(oneiric_settings))
     lifecycle = LifecycleManager(resolver)
+    # Crackerjack is a quality-gate workflow: every run re-executes every
+    # phase from a known-fresh state. Oneiric's persistent task
+    # checkpointing (Store 1) would create a "write-then-wipe" no-op
+    # hazard, a concurrent-process TOCTOU, and a serverless-incompatibility
+    # (the SQLite file is not durable). Disable it at the orchestrator;
+    # the bridge's _checkpoint_store and _execution_store both become None
+    # and all load/save/clear paths short-circuit. See
+    # .claude/decisions/2026-10-13-checkpoint-disabled.md for the policy.
     orchestrator = RuntimeOrchestrator(
         oneiric_settings,
         resolver,
         lifecycle,
         secrets=_build_secrets_hook(oneiric_settings, lifecycle),
         health_path=None,
+        enable_workflow_checkpoints=False,
     )
     return OneiricWorkflowRuntime(
         resolver=resolver,
         lifecycle=lifecycle,
         orchestrator=orchestrator,
     )
-
-
-def _resolve_workflow_checkpoints_path() -> Path:
-    candidates = [
-        Path.cwd() / ".crackerjack" / "oneiric_cache" / "workflow_checkpoints.sqlite",
-        Path(tempfile.gettempdir())
-        / "crackerjack"
-        / "oneiric_cache"
-        / "workflow_checkpoints.sqlite",
-    ]
-
-    for candidate in candidates:
-        try:
-            candidate.parent.mkdir(parents=True, exist_ok=True)
-            return candidate
-        except OSError:
-            continue
-
-    return candidates[-1]
 
 
 def _build_secrets_hook(
@@ -477,8 +462,7 @@ def _should_run_comprehensive_hooks(options: t.Any) -> bool:
 
 
 def _should_run_coverage_ratchet(options: t.Any) -> bool:
-
-    return not getattr(options, "no_coverage_ratchet", False)
+    return bool(getattr(options, "coverage_ratchet", False))
 
 
 def _should_run_documentation_cleanup(options: t.Any) -> bool:

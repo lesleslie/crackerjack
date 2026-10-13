@@ -27,6 +27,7 @@ from crackerjack.checks.release_audit import (
     ReleaseAuditReport,
     VerifyResult,
     _count_tests,
+    _is_ratchet_stale,
     _parse_changelog,
     _parse_claude_md,
     _read_pyproject_version,
@@ -407,9 +408,28 @@ def test_read_pyproject_version_no_version_key(tmp_path: Path) -> None:
 # ---------------------------------------------------------------------------
 
 
+def _write_fresh_ratchet(path: Path, current_minimum: float) -> None:
+    """Write a ratchet file with a current ``generated_at``.
+
+    Ratchets without ``generated_at`` (or with an old one) are
+    treated as missing by the staleness check; tests that need a
+    trustworthy ratchet should use this helper.
+    """
+    import datetime
+
+    path.write_text(
+        json.dumps(
+            {
+                "current_minimum": current_minimum,
+                "generated_at": datetime.datetime.now().isoformat(),
+            }
+        )
+    )
+
+
 def test_read_ratchet_floor_valid(tmp_path: Path) -> None:
     p = tmp_path / "ratchet.json"
-    p.write_text(json.dumps({"current_minimum": 89.5}))
+    _write_fresh_ratchet(p, 89.5)
     assert _read_ratchet_floor(p) == 89.5
 
 
@@ -422,6 +442,92 @@ def test_read_ratchet_floor_no_current_minimum_key(tmp_path: Path) -> None:
     """No 'current_minimum' key → None (does not raise)."""
     p = tmp_path / "ratchet.json"
     p.write_text(json.dumps({"other": 1.0}))
+    assert _read_ratchet_floor(p) is None
+
+
+# ---------------------------------------------------------------------------
+# _read_ratchet_floor staleness (RATCHET_MAX_AGE_DAYS window)
+# ---------------------------------------------------------------------------
+
+
+def test_read_ratchet_floor_fresh_with_timestamp(tmp_path: Path) -> None:
+    """Fresh ratchet with ``generated_at`` returns the floor."""
+    import datetime
+
+    p = tmp_path / "ratchet.json"
+    p.write_text(
+        json.dumps(
+            {
+                "current_minimum": 89.5,
+                "generated_at": datetime.datetime.now().isoformat(),
+            }
+        )
+    )
+    assert _read_ratchet_floor(p) == 89.5
+
+
+def test_read_ratchet_floor_old_timestamp_returns_none(tmp_path: Path) -> None:
+    """Ratchet older than ``RATCHET_MAX_AGE_DAYS`` is treated as missing."""
+    import datetime
+
+    p = tmp_path / "ratchet.json"
+    p.write_text(
+        json.dumps(
+            {
+                "current_minimum": 89.5,
+                "generated_at": (
+                    datetime.datetime.now() - datetime.timedelta(days=60)
+                ).isoformat(),
+            }
+        )
+    )
+    assert _read_ratchet_floor(p) is None
+
+
+def test_read_ratchet_floor_legacy_no_generated_at_returns_none(
+    tmp_path: Path,
+) -> None:
+    """Legacy ratchet without ``generated_at`` is treated as stale.
+
+    Pre-2026-10-13 ratchets have no staleness metadata. They must be
+    regenerated so the new metadata block gets written; otherwise
+    they cannot certify a coverage claim.
+    """
+    p = tmp_path / "ratchet.json"
+    p.write_text(json.dumps({"current_minimum": 89.5}))
+    assert _read_ratchet_floor(p) is None
+
+
+def test_read_ratchet_floor_coverage_data_mtime_drift_returns_none(
+    tmp_path: Path,
+) -> None:
+    """Ratchet whose ``coverage_data_mtime`` does not match on-disk mtime is stale.
+
+    This catches the case where the ratchet was rewritten by hand or
+    by a pre-staleness-aware crackerjack that did not update the
+    ``coverage_data_mtime`` field. The on-disk coverage.json has
+    changed (different mtime), so the ratchet's floor does not
+    reflect the current code.
+    """
+    import datetime
+    import time
+
+    coverage_json = tmp_path / "coverage.json"
+    coverage_json.write_text("{}")  # contents don't matter; only mtime
+
+    p = tmp_path / "ratchet.json"
+    p.write_text(
+        json.dumps(
+            {
+                "current_minimum": 89.5,
+                "generated_at": datetime.datetime.now().isoformat(),
+                "coverage_data_path": str(coverage_json),
+                # Set a recorded mtime that's deliberately different
+                # from the actual file mtime.
+                "coverage_data_mtime": coverage_json.stat().st_mtime - 100.0,
+            }
+        )
+    )
     assert _read_ratchet_floor(p) is None
 
 
@@ -458,21 +564,21 @@ def test_verify_version_unreadable(tmp_path: Path) -> None:
 
 
 def test_verify_coverage_meets_baseline(tmp_path: Path) -> None:
-    (tmp_path / "ratchet.json").write_text(json.dumps({"current_minimum": 89.0}))
+    _write_fresh_ratchet(tmp_path / "ratchet.json", 89.0)
     claim = ClaudeClaim(kind="coverage", value="92")
     r = _verify_coverage(claim, tmp_path / "ratchet.json")
     assert r.passed is True
 
 
 def test_verify_coverage_equals_baseline(tmp_path: Path) -> None:
-    (tmp_path / "ratchet.json").write_text(json.dumps({"current_minimum": 92.0}))
+    _write_fresh_ratchet(tmp_path / "ratchet.json", 92.0)
     claim = ClaudeClaim(kind="coverage", value="92")
     r = _verify_coverage(claim, tmp_path / "ratchet.json")
     assert r.passed is True
 
 
 def test_verify_coverage_below_baseline(tmp_path: Path) -> None:
-    (tmp_path / "ratchet.json").write_text(json.dumps({"current_minimum": 95.0}))
+    _write_fresh_ratchet(tmp_path / "ratchet.json", 95.0)
     claim = ClaudeClaim(kind="coverage", value="80")
     r = _verify_coverage(claim, tmp_path / "ratchet.json")
     assert r.passed is False
@@ -678,7 +784,7 @@ def _make_minimal_project(tmp_path: Path) -> dict[str, Path]:
     )
     (tmp_path / "pyproject.toml").write_text('version = "1.0.0"\n')
     ratchet = tmp_path / "ratchet.json"
-    ratchet.write_text(json.dumps({"current_minimum": 90.0}))
+    _write_fresh_ratchet(ratchet, 90.0)
     return {
         "project_root": tmp_path,
         "changelog": tmp_path / "CHANGELOG.md",

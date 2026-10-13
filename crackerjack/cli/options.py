@@ -118,7 +118,7 @@ class Options(BaseModel):
     monitor_dashboard: str | None = None
     coverage_status: bool = False
     coverage_goal: float | None = None
-    no_coverage_ratchet: bool = False
+    coverage_ratchet: bool = False
     skip_config_merge: bool = False
     enable_hooks: list[str] | None = None
     disable_global_locks: bool = False
@@ -539,10 +539,14 @@ CLI_OPTIONS = {
         "--coverage-goal",
         help="Set explicit coverage target for this session (e.g., 15.0).",
     ),
-    "no_coverage_ratchet": typer.Option(
+    "coverage_ratchet": typer.Option(
         False,
-        "--no-coverage-ratchet",
-        help="Disable coverage ratchet system temporarily (for experiments).",
+        "--coverage-ratchet",
+        help=(
+            "Refresh .coverage-ratchet.json from coverage.json. "
+            "Default off; auto-enabled on --publish when "
+            "settings.documentation.auto_coverage_ratchet_on_publish is true."
+        ),
     ),
     "boost_coverage": typer.Option(
         True,
@@ -1005,7 +1009,7 @@ def create_options(
     coverage_status: bool = False,
     track_progress: bool | None = None,
     coverage_goal: float | None = None,
-    no_coverage_ratchet: bool = False,
+    coverage_ratchet: bool = False,
     boost_coverage: bool = True,
     disable_global_locks: bool = False,
     global_lock_timeout: int = 1800,

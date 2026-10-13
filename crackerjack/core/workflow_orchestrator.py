@@ -13,7 +13,6 @@ from crackerjack.core.phase_coordinator import PhaseCoordinator
 from crackerjack.core.session_coordinator import SessionCoordinator
 from crackerjack.models.protocols import ConsoleInterface
 from crackerjack.runtime.oneiric_workflow import (
-    OneiricWorkflowRuntime,
     build_oneiric_runtime,
     register_crackerjack_workflow,
 )
@@ -60,12 +59,10 @@ class WorkflowPipeline:
     async def run_complete_workflow(self, options: t.Any) -> bool:
         self._initialize_workflow_session(options)
         runtime = build_oneiric_runtime()
-        # Clear stale checkpoint before each run so completed phases re-execute
-        # rather than being silently skipped (the "ratchet"). The previous
-        # implementation targeted a hard-coded path that oneiric never read;
-        # this delegates to oneiric's own WorkflowCheckpointStore so we wipe
-        # the same database the workflow engine actually consults.
-        self._clear_oneiric_cache(runtime)
+        # The orchestrator is built with enable_workflow_checkpoints=False
+        # (see build_oneiric_runtime), so there is no persistent task
+        # state to invalidate at run start. Every run re-executes every
+        # phase from a known-fresh state.
         self._wire_event_publisher(runtime)
         register_crackerjack_workflow(
             runtime,
@@ -115,36 +112,6 @@ class WorkflowPipeline:
 
     def _initialize_workflow_session(self, options: t.Any) -> None:
         self.session.initialize_session_tracking(options)
-
-    def _clear_oneiric_cache(self, runtime: OneiricWorkflowRuntime) -> None:
-        # UPSTREAM GAP: oneiric's WorkflowBridge exposes no public
-        # ``clear_checkpoint`` (or equivalent) method on the bridge itself.
-        # Its public surface is ``__init__``, ``update_settings``,
-        # ``refresh_dags``, ``dag_specs``, ``execute_dag``,
-        # ``enqueue_workflow``; the only ``_checkpoint_store.clear(...)``
-        # call sits inside the private ``_execute_with_checkpoint`` at
-        # oneiric/domains/workflows.py:244. Reaching the private
-        # ``_checkpoint_store`` attribute is the only external seam
-        # available to wipe a workflow key by name. TODO(upstream): add
-        # ``WorkflowBridge.clear_checkpoint(workflow_key)`` to oneiric and
-        # call that here instead.
-        #
-        # We delegate to oneiric's WorkflowCheckpointStore.clear so we wipe
-        # the same database the workflow engine reads. The bridge's
-        # ``_checkpoint_store`` is the canonical store wired up in
-        # ``RuntimeOrchestrator.__init__``; if it is None the orchestrator
-        # is running with checkpointing disabled and there is nothing to
-        # clear.
-        checkpoint_store = runtime.workflow_bridge._checkpoint_store
-        if checkpoint_store is None:
-            return
-        try:
-            checkpoint_store.clear("crackerjack")
-            self.logger.debug(
-                "Cleared Oneiric checkpoint cache for crackerjack workflow",
-            )
-        except Exception as exc:
-            self.logger.warning(f"Failed to clear Oneiric cache: {exc}")
 
     def _run_fast_hooks_phase(self, options: t.Any) -> bool:
         return self.phases.run_fast_hooks_only(options)  # type: ignore

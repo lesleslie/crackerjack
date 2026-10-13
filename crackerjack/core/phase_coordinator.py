@@ -690,9 +690,6 @@ class PhaseCoordinator:
 
     @handle_errors
     def run_coverage_ratchet_phase(self, options: OptionsProtocol) -> bool:
-
-        if getattr(options, "no_coverage_ratchet", False):
-            return True
         self.session.track_task("coverage_ratchet", "Coverage ratchet refresh")
         self.console.print(
             "\n" + make_separator("-"),
@@ -847,9 +844,12 @@ class PhaseCoordinator:
         dry_run = bool(getattr(options, "docs_dry_run", False))
         try:
             exit_code = _plan_index_sync.main(
-                ["--repo-root", str(self.pkg_path), "--out", str(
-                    self.pkg_path / "docs" / "plans" / "PLAN_INDEX.md"
-                )]
+                [
+                    "--repo-root",
+                    str(self.pkg_path),
+                    "--out",
+                    str(self.pkg_path / "docs" / "plans" / "PLAN_INDEX.md"),
+                ]
                 + (["--dry-run"] if dry_run else [])
             )
         except SystemExit as exc:

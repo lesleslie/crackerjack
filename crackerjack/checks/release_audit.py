@@ -386,14 +386,107 @@ def _read_pyproject_version(path: Path) -> str | None:
 
 
 def _read_ratchet_floor(path: Path) -> float | None:
-    """Extract `current_minimum` from .coverage-ratchet.json."""
+    """Extract `current_minimum` from .coverage-ratchet.json.
+
+    Returns ``None`` if the ratchet file is missing, malformed, or
+    **stale** (older than ``RATCHET_MAX_AGE_DAYS`` days, or its recorded
+    ``coverage_data_mtime`` no longer matches the on-disk
+    ``coverage.json``). A stale ratchet is treated as missing so the
+    operator must regenerate it via ``crackerjack run --publish``
+    before the release audit can certify a coverage claim. See
+    ``.claude/decisions/2026-10-13-ratchet-staleness.md`` for the
+    policy.
+    """
     import json
 
     try:
         data = json.loads(path.read_text())
-    except FileNotFoundError, json.JSONDecodeError:
+    except (FileNotFoundError, json.JSONDecodeError):
         return None
-    return float(data.get("current_minimum")) if "current_minimum" in data else None
+
+    if not isinstance(data, dict) or "current_minimum" not in data:
+        return None
+
+    if _is_ratchet_stale(data, project_root=path.parent):
+        return None
+
+    return float(data["current_minimum"])
+
+
+# Maximum age for a ratchet file to be considered trustworthy. After
+# this window, a fresh `crackerjack run --publish` is required. The
+# value is conservative (30 days) because a coverage floor older than
+# the code's last release is more likely to be a stale claim than a
+# trustworthy one. Configurable per-repo (TODO: surface in
+# settings.documentation.coverage_ratchet_max_age_days).
+RATCHET_MAX_AGE_DAYS = 30
+
+
+def _is_ratchet_stale(
+    data: dict[str, object],
+    project_root: Path,
+) -> bool:
+    """Return True if the ratchet should be treated as missing.
+
+    A ratchet is stale if any of the following holds:
+
+    1. **No ``generated_at``** — the ratchet was written before the
+       staleness-metadata block was added (pre-2026-10-13). Treated
+       as stale so operators regenerate it once and pick up the new
+       metadata.
+    2. **Time-stale**: ``generated_at`` is older than
+       ``RATCHET_MAX_AGE_DAYS`` days.
+    3. **Data-stale**: the ratchet records a ``coverage_data_path``
+       and ``coverage_data_mtime``, the on-disk file at that path
+       still exists, and its mtime differs. This catches the case
+       where the ratchet was rewritten by hand or by an older
+       crackerjack that did not update ``coverage_data_mtime``.
+
+    A ratchet with no ``coverage_data_path`` (because no
+    ``coverage.json`` existed when it was written) is time-stale
+    only — the data-stale check is skipped.
+    """
+    from datetime import UTC, datetime, timedelta
+
+    generated_at = data.get("generated_at")
+    if not isinstance(generated_at, str):
+        return True
+
+    try:
+        generated_dt = datetime.fromisoformat(generated_at)
+    except ValueError:
+        return True
+
+    # Naive timestamps are treated as UTC. ``fromisoformat`` accepts
+    # both with and without a ``+HH:MM`` suffix; normalize so the
+    # subtraction below doesn't fail on mixed-aware/naive math.
+    if generated_dt.tzinfo is None:
+        generated_dt = generated_dt.replace(tzinfo=UTC)
+
+    if datetime.now(UTC) - generated_dt > timedelta(days=RATCHET_MAX_AGE_DAYS):
+        return True
+
+    coverage_data_path_str = data.get("coverage_data_path")
+    coverage_data_mtime = data.get("coverage_data_mtime")
+    if not (isinstance(coverage_data_path_str, str) and isinstance(coverage_data_mtime, (int, float))):
+        return False  # No coverage data tracked; time-stale is the only gate.
+
+    coverage_data_path = Path(coverage_data_path_str)
+    # The recorded path may point outside ``project_root`` (e.g., a
+    # shared /tmp location from a previous installer layout). Resolve
+    # the on-disk candidate as ``project_root / coverage.json`` and
+    # compare against either path.
+    on_disk_candidate = project_root / "coverage.json"
+    target_path = coverage_data_path if coverage_data_path.exists() else on_disk_candidate
+    if not target_path.exists():
+        return False  # coverage.json was deleted; trust the ratchet's recorded mtime
+
+    try:
+        on_disk_mtime = target_path.stat().st_mtime
+    except OSError:
+        return False
+
+    return on_disk_mtime != coverage_data_mtime
 
 
 def _count_tests(test_root: Path) -> int | None:

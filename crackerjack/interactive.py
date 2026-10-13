@@ -441,7 +441,7 @@ class InteractiveCLI:
             self._add_comprehensive_hooks_phase,
             partial(
                 self._add_coverage_ratchet_phase,
-                enabled=not getattr(options, "no_coverage_ratchet", False),
+                enabled=getattr(options, "coverage_ratchet", False),
             ),
             partial(
                 self._add_version_phase,

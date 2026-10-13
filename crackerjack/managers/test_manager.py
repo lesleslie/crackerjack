@@ -23,6 +23,7 @@ from crackerjack.models.protocols import (
     CoverageRatchetProtocol,
     OptionsProtocol,
 )
+from crackerjack.services.testing.coverage_manager import CoverageManager
 from crackerjack.services.testing.test_result_parser import TestResultParser
 from crackerjack.services.testing.test_result_renderer import TestResultRenderer
 

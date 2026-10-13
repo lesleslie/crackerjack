@@ -149,6 +149,7 @@ class DocumentationSettings(OneiricMCPConfig):
     enabled: bool = True
     auto_cleanup_on_publish: bool = True
     auto_plan_index_sync_on_publish: bool = True
+    auto_coverage_ratchet_on_publish: bool = True
     dry_run_by_default: bool = False
     backup_before_cleanup: bool = True
     essential_files: list[str] = [
