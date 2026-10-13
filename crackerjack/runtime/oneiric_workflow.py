@@ -158,7 +158,26 @@ def build_oneiric_runtime() -> OneiricWorkflowRuntime:
         lifecycle,
         secrets=_build_secrets_hook(oneiric_settings, lifecycle),
         health_path=None,
-        enable_workflow_checkpoints=False,
+        # Crackerjack is a quality-gate workflow: every run re-executes
+        # every phase from a known-fresh state. Oneiric's persistent task
+        # checkpointing (Store 1) would create a "write-then-wipe" no-op
+        # hazard, a concurrent-process TOCTOU, and a serverless-
+        # incompatibility (the SQLite file is not durable). Disable it at the
+        # orchestrator; the bridge's _checkpoint_store becomes None and
+        # all load/save/clear paths short-circuit. See
+        # .claude/decisions/2026-10-13-checkpoint-disabled.md for the
+        # policy.
+        #
+        # Opt in to execution tracing (Store 2) so we get fine-grained
+        # observability into which phase ran, when, and with what
+        # outcomes. Store 2 is adapter-pluggable in oneiric so this stays
+        # serverless-safe. With oneiric's flag split
+        # (enable_task_resume / enable_execution_tracing), the legacy
+        # `enable_workflow_checkpoints=False` keyword argument still
+        # maps to both flags off via the back-compat path; we set the
+        # new flags explicitly to make the per-store intent clear.
+        enable_task_resume=False,
+        enable_execution_tracing=True,
     )
     return OneiricWorkflowRuntime(
         resolver=resolver,

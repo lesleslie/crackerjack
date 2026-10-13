@@ -244,29 +244,34 @@ def test_run_fast_hooks_phase(mock_phase_coord, mock_session_coord, mock_load_se
 #
 # Crackerjack is a quality-gate workflow: every run re-executes every phase
 # from a known-fresh state. Oneiric's persistent task checkpointing (Store
-# 1) and execution tracing (Store 2) are gated by the same boolean; for
-# crackerjack's use case both are dead weight — the in-memory DAG checkpoint
-# in oneiric/runtime/dag.py is sufficient for within-run information flow,
-# and a file-based SQLite store is not serverless-durable.
+# 1) is disabled here — it would create a "write-then-wipe" no-op
+# hazard, a concurrent-process TOCTOU, and a serverless-incompatibility
+# (the SQLite file is not durable). The bridge's _checkpoint_store
+# becomes None and all load/save/clear paths short-circuit.
 #
-# The orchestrator is built with enable_workflow_checkpoints=False so
-# _checkpoint_store and _execution_store are both None and all load/save/
-# clear paths short-circuit. See
-# .claude/decisions/2026-10-13-checkpoint-disabled.md for the policy.
+# Execution tracing (Store 2) is *enabled* so we get fine-grained
+# observability into which phase ran, when, and with what outcomes.
+# Store 2 is adapter-pluggable in oneiric so this stays serverless-safe.
+#
+# The orchestrator is built with enable_task_resume=False and
+# enable_execution_tracing=True. See
+# .claude/decisions/2026-10-13-checkpoint-disabled.md and
+# .claude/decisions/2026-10-13-store-2-opt-in.md for the policy.
 # ---------------------------------------------------------------------------
 
 
 def test_build_oneiric_runtime_disables_workflow_checkpointing() -> None:
-    """Quality-gate workflow policy: orchestrator checkpointing is off.
+    """Quality-gate workflow policy: task resume is off, tracing is on.
 
     build_oneiric_runtime must construct the orchestrator with
-    enable_workflow_checkpoints=False so that the bridge's persistent
-    stores are both None. We mock the oneiric constructor chain so the
-    test does not depend on pydantic-settings validation of OneiricSettings
-    (which has a separate, pre-existing compatibility issue with
-    pydantic v2.14+, tracked independently); the policy we pin is the
-    kwarg passed to RuntimeOrchestrator, not the runtime's full
-    construction.
+    enable_task_resume=False (no Store 1) and enable_execution_tracing=True
+    (Store 2 enabled for observability) so that the bridge's persistent
+    checkpoint store is None while the execution tracing store remains
+    wired. We mock the oneiric constructor chain so the test does not
+    depend on pydantic-settings validation of OneiricSettings (which has
+    a separate, pre-existing compatibility issue with pydantic v2.14+,
+    tracked independently); the policy we pin is the kwargs passed to
+    RuntimeOrchestrator, not the runtime's full construction.
     """
     with (
         patch("crackerjack.runtime.oneiric_workflow.OneiricSettings"),
@@ -283,15 +288,16 @@ def test_build_oneiric_runtime_disables_workflow_checkpointing() -> None:
         build_oneiric_runtime()
 
     # Pin the policy at the constructor call site: a future contributor
-    # who removes enable_workflow_checkpoints=False (or flips it to True)
-    # fails this test. The companion decision note
-    # (.claude/decisions/2026-10-13-checkpoint-disabled.md) records why
-    # the default is False for crackerjack specifically; other Bodai
-    # consumers may differ.
-    assert (
-        mock_orchestrator.call_args.kwargs.get("enable_workflow_checkpoints")
-        is False
-    )
+    # who removes enable_task_resume=False (or flips it to True) fails
+    # this test, as does anyone who drops enable_execution_tracing=True.
+    # The companion decision notes
+    # (.claude/decisions/2026-10-13-checkpoint-disabled.md and
+    # .claude/decisions/2026-10-13-store-2-opt-in.md) record why
+    # the per-flag values are what they are for crackerjack specifically;
+    # other Bodai consumers may differ.
+    kwargs = mock_orchestrator.call_args.kwargs
+    assert kwargs.get("enable_task_resume") is False
+    assert kwargs.get("enable_execution_tracing") is True
 
 
 # Define AsyncMock for older Python versions if needed
