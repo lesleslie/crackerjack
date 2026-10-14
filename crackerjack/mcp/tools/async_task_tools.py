@@ -54,9 +54,7 @@ def register_async_task_tools(mcp_app: t.Any) -> None:
             {"found": false, "task_id": "..."} on miss
         """
         manager = get_task_manager()
-        record = (
-            await manager.get_task(task_id) if manager is not None else None
-        )
+        record = await manager.get_task(task_id) if manager is not None else None
         if record is None:
             logger.info(
                 "crackerjack_async_task_result_query task_id=%s found=false",

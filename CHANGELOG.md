@@ -10,6 +10,29 @@ blocks_on: []
 topic: changelog
 ---
 
+## [0.89.0] - 2026-10-14
+
+### Added
+
+- crackerjack: C-ASYNC-DURABILITY — AsyncTaskManager SQLite-backed persistence (C-WIRE Task 6)
+- gitignore-template: Add coverage + complexipy patterns
+- hooks: Add no-conflict-markers fast hook
+- Merge validator-move-2026-10-14 to main
+
+### Fixed
+
+- doc-cleanup: Per-area archives with git rm in sync
+- docs cleanup: Pass source path to git rm, not destination
+- gitignore-template: Drop blanket .archive exception — blanket ignore is the new policy
+- gitignore: Untrack coverage.json from docs archive + prevent re-tracking
+- hooks: Resolve BLE001 + reconcile docs cleanup state for link check
+- hooks: Resolve lychee, ty deprecation, and refurb FURB138
+
+### Internal
+
+- gitignore: General sibling-of-parent .archive exception in fleet template
+- Untrack 98 historical archive files
+
 ## [0.88.0] - 2026-10-13
 
 ### Added

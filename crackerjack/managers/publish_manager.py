@@ -799,8 +799,8 @@ class PublishManagerImpl:
             else f"{len(result.missing_patterns)} pattern(s) missing"
         )
         self.console.print(
-            f"[yellow]⚠️[/yellow] Gitignore drift in {result.repo_path} "
-            f"({drift_kind}); attempting auto-sync…"
+            f"[yellow]⚠️[/yellow] Gitignore drift in {result.repo_path.name} "
+            f"({drift_kind})"
         )
 
         if not self._attempt_gitignore_sync():
@@ -827,7 +827,7 @@ class PublishManagerImpl:
 
         self.console.print(
             f"[green]✅[/green] Gitignore auto-sync succeeded for "
-            f"{result.repo_path}; continuing publish."
+            f"{result.repo_path.name}"
         )
         return True
 

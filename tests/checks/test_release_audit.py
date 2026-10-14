@@ -427,6 +427,37 @@ def _write_fresh_ratchet(path: Path, current_minimum: float) -> None:
     )
 
 
+def _write_fresh_ratchet_with_measured(
+    path: Path,
+    current_minimum: float,
+    measured_pct: float,
+) -> None:
+    """Write a ratchet that points at a real ``coverage.json`` on disk.
+
+    Used by tests that need to exercise the tolerance check
+    (``|claim - measured| < COVERAGE_TOLERANCE_PP``) — the ratchet's
+    ``coverage_data_path`` and ``coverage_data_mtime`` are populated
+    to keep staleness happy.
+    """
+    import datetime
+
+    coverage_json = path.parent / "coverage.json"
+    coverage_json.write_text(
+        json.dumps({"totals": {"percent_covered": measured_pct}})
+    )
+
+    path.write_text(
+        json.dumps(
+            {
+                "current_minimum": current_minimum,
+                "generated_at": datetime.datetime.now().isoformat(),
+                "coverage_data_path": str(coverage_json),
+                "coverage_data_mtime": coverage_json.stat().st_mtime,
+            }
+        )
+    )
+
+
 def test_read_ratchet_floor_valid(tmp_path: Path) -> None:
     p = tmp_path / "ratchet.json"
     _write_fresh_ratchet(p, 89.5)
@@ -590,6 +621,56 @@ def test_verify_coverage_unreadable(tmp_path: Path) -> None:
     r = _verify_coverage(claim, tmp_path / "missing.json")
     assert r.passed is False
     assert "could not be read" in r.message
+
+
+def test_verify_coverage_within_tolerance(tmp_path: Path) -> None:
+    """Claim within COVERAGE_TOLERANCE_PP of measured passes the tolerance check.
+
+    Sets floor=80%, measured=95.6%, claim=96 — drift 0.4pp, well within
+    the 2.0pp band; should PASS with the new tolerance-aware message.
+    """
+    _write_fresh_ratchet_with_measured(
+        tmp_path / "ratchet.json", current_minimum=80.0, measured_pct=95.6
+    )
+    claim = ClaudeClaim(kind="coverage", value="96", context="test")
+    r = _verify_coverage(claim, tmp_path / "ratchet.json")
+    assert r.passed is True
+    assert "tolerance check" not in r.message or "matches measured" in r.message
+    assert "95" in r.message  # measured coverage surfaces in the message
+
+
+def test_verify_coverage_claim_exceeds_tolerance(tmp_path: Path) -> None:
+    """Claim that drifts too far from measured is flagged as a documentation lie.
+
+    floor=80%, measured=95.6%, claim=99 — drift 3.4pp > 2.0pp tolerance;
+    should FAIL with the drift message even though 99 > 80 (floor check
+    alone would have passed).
+    """
+    _write_fresh_ratchet_with_measured(
+        tmp_path / "ratchet.json", current_minimum=80.0, measured_pct=95.6
+    )
+    claim = ClaudeClaim(kind="coverage", value="99", context="test")
+    r = _verify_coverage(claim, tmp_path / "ratchet.json")
+    assert r.passed is False
+    assert "tolerance" in r.message
+    assert "measured" in r.message
+    assert "95" in r.message
+
+
+def test_verify_coverage_no_coverage_data_falls_back_to_floor(
+    tmp_path: Path,
+) -> None:
+    """Ratchet without ``coverage_data_path`` skips tolerance and falls back to floor.
+
+    The tolerance check is opt-in: ratchets without measured-coverage
+    pointers (e.g., regenerations that pre-date the 2026-10-13 schema)
+    still pass via the floor-only check.
+    """
+    _write_fresh_ratchet(tmp_path / "ratchet.json", current_minimum=89.0)
+    claim = ClaudeClaim(kind="coverage", value="92")
+    r = _verify_coverage(claim, tmp_path / "ratchet.json")
+    assert r.passed is True
+    assert "tolerance check skipped" in r.message
 
 
 # ---------------------------------------------------------------------------

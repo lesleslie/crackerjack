@@ -407,9 +407,7 @@ class DocumentationCleanup:
                         try:
                             self.git_service.rm_files([str(source_relative)])
                         except Exception as e:
-                            logger.warning(
-                                f"git rm skipped for {source_relative}: {e}"
-                            )
+                            logger.warning(f"git rm skipped for {source_relative}: {e}")
 
                     files_moved += 1
 

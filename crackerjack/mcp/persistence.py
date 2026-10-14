@@ -156,8 +156,7 @@ class AsyncTaskStore:
         conn = _connect(db_path)
         try:
             cursor = conn.execute(
-                "SELECT task_id FROM async_tasks WHERE task_id LIKE ? "
-                "ORDER BY task_id",
+                "SELECT task_id FROM async_tasks WHERE task_id LIKE ? ORDER BY task_id",
                 (f"{prefix}%",),
             )
             return [row[0] for row in cursor.fetchall()]

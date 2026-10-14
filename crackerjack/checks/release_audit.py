@@ -422,6 +422,15 @@ def _read_ratchet_floor(path: Path) -> float | None:
 RATCHET_MAX_AGE_DAYS = 30
 
 
+# Tolerance (in percentage points) for the CLAUDE.md coverage claim vs
+# the measured coverage in `coverage.json`. The audit permits the claim
+# to drift up to this many points from measured — this absorbs noise
+# from committing partial work or from small test suites skewing the
+# average — but flags anything more as a documentation lie. Sized so
+# ``+1pp`` slips but ``+5pp`` doesn't.
+COVERAGE_TOLERANCE_PP = 2.0
+
+
 def _is_ratchet_stale(
     data: dict[str, object],
     project_root: Path,
@@ -545,27 +554,81 @@ def _verify_version(claim: ClaudeClaim, pyproject_path: Path) -> VerifyResult:
 
 
 def _verify_coverage(claim: ClaudeClaim, ratchet_path: Path) -> VerifyResult:
-    actual = _read_ratchet_floor(ratchet_path)
-    if actual is None:
+    floor = _read_ratchet_floor(ratchet_path)
+    if floor is None:
         return VerifyResult(
             False,
             "claude_md",
             claim,
             f"CLAUDE.md claims {claim.value}% coverage but ratchet file could not be read",
         )
-    if float(claim.value) >= actual:
+    claim_value = float(claim.value)
+    if claim_value < floor:
+        return VerifyResult(
+            False,
+            "claude_md",
+            claim,
+            f"CLAUDE.md claims {claim.value}% coverage but ratchet baseline is {floor}%",
+        )
+    # Tolerance check: the claim must also be within COVERAGE_TOLERANCE_PP of
+    # the measured coverage recorded in `coverage.json` (the path that the
+    # ratchet's `coverage_data_path` points to). This catches overclaims —
+    # bragging in CLAUDE.md about coverage you don't actually have — that
+    # the floor check alone misses (because any claim >= floor passes).
+    measured = _read_measured_coverage(ratchet_path)
+    if measured is None:
         return VerifyResult(
             True,
             "claude_md",
             claim,
-            f"CLAUDE.md: coverage '{claim.value}%' meets ratchet baseline {actual}%",
+            f"CLAUDE.md: coverage '{claim.value}%' meets ratchet baseline {floor}% "
+            f"(measured coverage unavailable; tolerance check skipped)",
+        )
+    drift = abs(claim_value - measured)
+    if drift >= COVERAGE_TOLERANCE_PP:
+        return VerifyResult(
+            False,
+            "claude_md",
+            claim,
+            f"CLAUDE.md claims {claim.value}% coverage but measured is "
+            f"{measured:.2f}% (drift {drift:.2f}pp exceeds "
+            f"{COVERAGE_TOLERANCE_PP}pp tolerance)",
         )
     return VerifyResult(
-        False,
+        True,
         "claude_md",
         claim,
-        f"CLAUDE.md claims {claim.value}% coverage but ratchet baseline is {actual}%",
+        f"CLAUDE.md: coverage '{claim.value}%' matches measured "
+        f"{measured:.2f}% (drift {drift:.2f}pp within "
+        f"{COVERAGE_TOLERANCE_PP}pp; floor {floor}%)",
     )
+
+
+def _read_measured_coverage(ratchet_path: Path) -> float | None:
+    """Read `totals.percent_covered` from the coverage.json that the ratchet
+    points at via `coverage_data_path`. Returns None if the ratchet has no
+    such field, the file is missing, or it can't be parsed.
+    """
+    import json
+
+    try:
+        ratchet = json.loads(ratchet_path.read_text())
+    except FileNotFoundError, json.JSONDecodeError:
+        return None
+
+    cov_path_str = ratchet.get("coverage_data_path")
+    if not isinstance(cov_path_str, str):
+        return None
+
+    cov_path = (ratchet_path.parent / cov_path_str).resolve()
+    if not cov_path.exists():
+        return None
+
+    try:
+        cov_data = json.loads(cov_path.read_text())
+        return float(cov_data["totals"]["percent_covered"])
+    except json.JSONDecodeError, KeyError, ValueError, OSError:
+        return None
 
 
 def _verify_test_count(claim: ClaudeClaim, test_root: Path) -> VerifyResult:

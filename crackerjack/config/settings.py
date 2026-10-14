@@ -472,7 +472,9 @@ class AsyncTaskSettings(OneiricMCPConfig):
     """AsyncTaskManager persistence settings (C-WIRE Task 6)."""
 
     storage_path: Path = Field(
-        default_factory=lambda: Path("~/.crackerjack/state/async_tasks.db").expanduser(),
+        default_factory=lambda: Path(
+            "~/.crackerjack/state/async_tasks.db"
+        ).expanduser(),
         description="SQLite database file for AsyncTaskStore",
     )
     reap_zombies_interval_seconds: int = Field(
