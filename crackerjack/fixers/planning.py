@@ -2176,7 +2176,10 @@ def _resolve_link_target(
         and ".git" not in candidate.parts
         and ".venv" not in candidate.parts
         and ".crackerjack" not in candidate.parts
-        and "docs/archive" not in str(candidate)
+        # Skip the per-area archive directories (`docs/.archive/`,
+        # `docs/plans/.archive/`, …) and the legacy `docs/archive/` path
+        # for content that pre-dated the per-area scheme.
+        and ".archive" not in candidate.parts
     ]
 
     if not candidates:

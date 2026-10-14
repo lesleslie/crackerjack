@@ -11,7 +11,11 @@ from ._git_utils import get_git_tracked_files
 
 def should_skip_file(file_path: Path) -> bool:
     skip_patterns = [
-        "docs/archive/**",
+        # Per-area archives land under `<area>/.archive/` — match any
+        # of them via a recursive glob (`**/.archive/**`) so the new
+        # `docs/plans/.archive/`, `docs/specs/.archive/`, etc. are
+        # excluded alongside the legacy `docs/archive/` location.
+        "**/.archive/**",
         "**/archives/**",
         "*COMPLETE.md",
         "*ANALYSIS.md",

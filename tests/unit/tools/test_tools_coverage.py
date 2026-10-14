@@ -485,7 +485,7 @@ class TestMdformatWrapper:
         from crackerjack.tools.mdformat_wrapper import should_skip_file
 
         # These match the fnmatch patterns exactly (asterisk is literal in filename)
-        assert should_skip_file(Path("docs/archive/old.md")) is True
+        assert should_skip_file(Path("docs/plans/.archive/old.md")) is True
         assert should_skip_file(Path("COMPLETE_report.md")) is False  # fnmatch *COMPLETE.md means ending with COMPLETE.md
         assert should_skip_file(Path("normal_file.md")) is False
         assert should_skip_file(Path("README.md")) is False

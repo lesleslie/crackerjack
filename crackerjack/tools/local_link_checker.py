@@ -175,7 +175,11 @@ def _list_markdown_via_git(repo_root: Path) -> list[Path]:
     return [
         repo_root / name
         for name in raw.split("\x00")
-        if name and not name.startswith("docs/archive/")
+        # Per-area archives live under `<area>/.archive/`; match any of
+        # the new locations via a suffix check on `/.archive/`. Also
+        # keep the legacy `docs/archive/` exclusion for backwards
+        # compatibility with content already archived under that path.
+        if name and not (name.startswith("docs/archive/") or "/.archive/" in name)
     ]
 
 

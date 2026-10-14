@@ -118,6 +118,9 @@ class _NullGitService:
     def is_git_repo(self) -> bool:
         return False
 
+    def rm_files(self, files: list[str]) -> bool:
+        return True
+
 
 class _NullVersionAnalyzer:
     async def recommend_version_bump(self) -> t.Any:

@@ -625,7 +625,8 @@ class TestValidatePreconditions:
         temp_pkg_path: Path,
     ):
         """Test cleanup archives duplicates without clobbering existing files."""
-        archive_dir = temp_pkg_path / "docs" / "archive"
+        # Per-area scheme: root files archive to `docs/.archive/<sub>/`.
+        archive_dir = temp_pkg_path / "docs" / ".archive"
         target_dir = archive_dir / "implementation-plans"
         target_dir.mkdir(parents=True)
 

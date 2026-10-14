@@ -249,7 +249,11 @@ crackerjack-*/
 # ============================================================================
 # Archived Documentation (excluded from quality checks)
 # ============================================================================
-docs/archive/
+# Per-area archives live at `<area>/.archive/<category>/` (e.g.
+# `docs/plans/.archive/implementation-plans/`). Each is re-included below
+# so the moved files stay tracked.
+# (Legacy `docs/archive/` was removed when the cleanup stage switched to
+# the per-area scheme.)
 
 # ============================================================================
 # Complexipy Results (temporary complexity analysis output)
@@ -329,6 +333,10 @@ test-results/
 !docs/plans/.archive/**
 !docs/specs/.archive/
 !docs/specs/.archive/**
+!docs/decisions/.archive/
+!docs/decisions/.archive/**
+!docs/.archive/
+!docs/.archive/**
 
 
 # >>> bodai-shared-gitignore >>>

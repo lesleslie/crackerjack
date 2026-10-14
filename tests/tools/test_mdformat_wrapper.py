@@ -8,8 +8,11 @@ from crackerjack.tools.mdformat_wrapper import main, should_skip_file
 
 def test_should_skip_file_archive_patterns():
     """Test should_skip_file with archive patterns."""
-    # Test archive patterns
-    assert should_skip_file(Path("docs/archive/test.md"))
+    # Per-area archives (`docs/.archive/`, `docs/plans/.archive/`, …)
+    # plus the rare plural variant should all be skipped.
+    assert should_skip_file(Path("docs/.archive/test.md"))
+    assert should_skip_file(Path("docs/plans/.archive/implementation-plans/PLAN.md"))
+    assert should_skip_file(Path("docs/specs/.archive/foo.md"))
     assert should_skip_file(Path("project/archives/old.md"))
     assert should_skip_file(Path("REMEDIATION_COMPLETE.md"))
     assert should_skip_file(Path("ANALYSIS_COMPLETE.md"))
@@ -52,8 +55,9 @@ def test_mdformat_no_files(monkeypatch):
 def test_mdformat_all_files_skipped(monkeypatch):
     """Test mdformat_wrapper when all files are skipped."""
     with patch('crackerjack.tools.mdformat_wrapper.get_git_tracked_files') as mock:
-        # Return files that should all be skipped
-        mock.return_value = [Path("ARCHIVE_COMPLETE.md"), Path("docs/archive/old.md")]
+        # Return files that should all be skipped — pattern matches
+        # plus the per-area archive location.
+        mock.return_value = [Path("ARCHIVE_COMPLETE.md"), Path("docs/plans/.archive/old.md")]
         result = main()
         assert result == 0, "Should return 0 when all files are skipped"
 

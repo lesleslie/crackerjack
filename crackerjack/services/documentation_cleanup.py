@@ -284,8 +284,11 @@ class DocumentationCleanup:
         self,
         archivable_files: list[Path] | None = None,
     ) -> tuple[bool, str | None]:
-        archive_dir = self.pkg_path / "docs" / "archive"
-        archive_dir.mkdir(parents=True, exist_ok=True)
+        # Per-area archive roots (docs/.archive/, docs/plans/.archive/, …).
+        # Each is created on demand by _move_files_to_archive, but we
+        # pre-create them here so a dry-run still surfaces the layout.
+        for area in self.categorizer.SCANNED_ARCHIVE_AREAS:
+            (self.pkg_path / area / ".archive").mkdir(parents=True, exist_ok=True)
 
         return True, None
 
@@ -369,18 +372,34 @@ class DocumentationCleanup:
             if subdirectory is None:
                 subdirectory = "uncategorized"
 
-            target_dir = self.pkg_path / "docs" / "archive" / subdirectory
-            target_path = self._resolve_archive_target_path(target_dir, file_path.name)
+            # The categorizer now composes the full path from the file's
+            # parent area plus the category subdir (per-area scheme:
+            # `<area>/.archive/<subdir>/<filename>`).
+            target_path = self.categorizer.archive_target_path(file_path, subdirectory)
+            target_path_relative = target_path.relative_to(self.pkg_path)
 
             if dry_run:
                 self.console.print(
-                    f"[yellow]Would move:[/yellow] {file_path.name} → {target_path.relative_to(self.pkg_path)}"
+                    f"[yellow]Would move:[/yellow] {file_path.name} → {target_path_relative}"
                 )
             else:
                 try:
-                    target_dir.mkdir(parents=True, exist_ok=True)
+                    target_path.parent.mkdir(parents=True, exist_ok=True)
 
                     file_path.replace(target_path)
+
+                    # Keep the git index in sync with the disk move —
+                    # without this, the archive leaves every moved file
+                    # flagged as `D` in `git status` until something else
+                    # `git rm`s it. We tolerate failure here because the
+                    # file is already on disk in the archive.
+                    if self.git_service is not None:
+                        try:
+                            self.git_service.rm_files([str(target_path_relative)])
+                        except Exception as e:
+                            logger.warning(
+                                f"git rm skipped for {target_path_relative}: {e}"
+                            )
 
                     files_moved += 1
 
@@ -395,23 +414,6 @@ class DocumentationCleanup:
             archived_files[subdirectory].append(file_path.name)
 
         return files_moved, archived_files
-
-    def _resolve_archive_target_path(self, target_dir: Path, filename: str) -> Path:
-        target_path = target_dir / filename
-        if not target_path.exists():
-            return target_path
-
-        suffixes = "".join(Path(filename).suffixes)
-        stem = filename[: -len(suffixes)] if suffixes else filename
-        timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-        candidate = target_dir / f"{stem}__{timestamp}{suffixes}"
-        counter = 1
-
-        while candidate.exists():
-            candidate = target_dir / f"{stem}__{timestamp}-{counter}{suffixes}"
-            counter += 1
-
-        return candidate
 
     def _count_essential_files(self) -> int:
         essential_files = self.settings.documentation.essential_files

@@ -10,8 +10,13 @@ class TestShouldSkipFile:
     """Test should_skip_file function."""
 
     def test_skip_archive_patterns(self):
-        """Test that archive patterns are skipped."""
-        assert should_skip_file(Path("docs/archive/file.md"))
+        """Test that per-area archive patterns are skipped."""
+        # Per-area archives (`docs/.archive/`, `docs/plans/.archive/`, …)
+        # and the rare plural variant should all be skipped. The legacy
+        # `docs/archive/` location is intentionally unsupported — the
+        # archive stage now writes to per-area `.archive/` directories.
+        assert should_skip_file(Path("docs/.archive/file.md"))
+        assert should_skip_file(Path("docs/plans/.archive/file.md"))
         assert should_skip_file(Path("docs/archives/file.md"))
 
     def test_skip_complete_markdown(self):
@@ -119,7 +124,7 @@ class TestMdformatMain:
         # Return mix of skipped and regular files
         mock_get_files.side_effect = lambda _: [
             Path("README.md"),
-            Path("docs/archive/old.md"),
+            Path("docs/plans/.archive/old.md"),
             Path("ANALYSIS.md"),
         ]
 

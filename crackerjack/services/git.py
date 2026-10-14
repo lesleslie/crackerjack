@@ -30,6 +30,7 @@ GIT_COMMANDS = {
     "staged_files_simple": ["diff", "--cached", "--name-only"],
     "add_file": ["add"],
     "add_all": ["add", "-A", "."],
+    "rm_file": ["rm"],
     "commit": ["commit", "-m"],
     "add_updated": ["add", "-u"],
     "push_porcelain": ["push", "--porcelain"],
@@ -655,6 +656,26 @@ class GitService(GitInterface):
             return False
         except Exception as e:
             self.console.print(f"[red]❌[/red] Error during checkout: {e}")
+            return False
+
+    def rm_files(self, files: list[str]) -> bool:
+        """Stage removals for ``files`` (paths relative to ``self.pkg_path``).
+
+        Mirrors :meth:`add_files`. Used by ``DocumentationCleanup`` so the
+        archive step leaves the index in sync with the disk move instead
+        of every moved file showing up as ``D`` in ``git status``.
+        """
+        if not files:
+            return True
+        try:
+            cmd = GIT_COMMANDS["rm_file"] + ["--"] + files
+            result = self._run_git_command(cmd)
+            if result.returncode == 0:
+                return True
+            self.console.print(f"[red]❌[/red] git rm failed: {result.stderr}")
+            return False
+        except Exception as e:
+            self.console.print(f"[red]❌[/red] Error during git rm: {e}")
             return False
 
     def get_changed_files_since(self, since: str, project_root: Path) -> list[str]:

@@ -16,7 +16,10 @@ def _should_skip_documentation(file_path: Path) -> bool:
     if filename.startswith("CLAUDE_") and filename.endswith(".md"):
         return True
 
-    if "docs/archive/" in str(file_path):
+    # Per-area archives land under `<area>/.archive/`; the legacy
+    # `docs/archive/` location is kept here so pre-existing content
+    # there is still excluded from the reference generator.
+    if ".archive/" in str(file_path) or "docs/archive/" in str(file_path):
         return True
 
     skip_patterns = [
