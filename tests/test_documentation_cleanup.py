@@ -646,3 +646,104 @@ class TestValidatePreconditions:
         archived_matches = list(target_dir.glob("SPRINT1_PLAN*.md"))
         assert len(archived_matches) == 2
         assert any(path.name != "SPRINT1_PLAN.md" for path in archived_matches)
+
+
+class TestGitIndexSync:
+    """Regression tests for git-index sync after the disk move. The cleanup
+    uses ``Path.replace`` (not ``git mv``) to physically move each file into
+    its archive subdirectory. After the move, ``git rm`` must be called on
+    the OLD/source path — the only one still tracked by git. Passing the
+    new archive path makes git reply ``did not match any files`` because
+    the archive path is untracked until the next ``git add``.
+    """
+
+    def test_rm_files_called_with_source_path_not_destination(
+        self,
+        temp_pkg_path: Path,
+        mock_console: Mock,
+        documentation_settings: DocumentationSettings,
+    ):
+        """Cleanup must pass ``file_path`` (source) to ``rm_files``, not the
+        new archive target path. ``git rm`` only operates on tracked paths,
+        so passing the untracked archive path is a no-op that surfaces as
+        ``fatal: pathspec ... did not match any files``.
+        """
+        settings = CrackerjackSettings()
+        settings.documentation = documentation_settings
+        mock_git_service = Mock()
+
+        service = DocumentationCleanup(
+            console=mock_console,
+            pkg_path=temp_pkg_path,
+            git_service=mock_git_service,
+            settings=settings,
+        )
+
+        source_file = temp_pkg_path / "SPRINT1_PLAN.md"
+        source_file.write_text("plan content")
+
+        result = service.cleanup_documentation(dry_run=False)
+
+        assert result.success
+        assert result.files_moved == 1
+
+        # The git index sync must reference the source path (relative to
+        # pkg_path), NOT the destination archive path. ``git rm`` can only
+        # act on tracked paths, and the source is what was tracked.
+        assert mock_git_service.rm_files.called
+        rm_calls = mock_git_service.rm_files.call_args_list
+        assert len(rm_calls) == 1
+        rm_paths = rm_calls[0].args[0]
+        assert rm_paths == ["SPRINT1_PLAN.md"]
+
+        # Sanity-check: the archive destination must NOT have been passed.
+        for call in rm_calls:
+            for path in call.args[0]:
+                assert ".archive" not in path, (
+                    f"rm_files was passed the archive destination "
+                    f"({path}); git rm cannot act on untracked paths"
+                )
+
+    def test_rm_files_called_for_per_area_source_path(
+        self,
+        temp_pkg_path: Path,
+        mock_console: Mock,
+        documentation_settings: DocumentationSettings,
+    ):
+        """Per-area archive scheme: a file in ``docs/plans/`` archives to
+        ``docs/plans/.archive/<subdir>/``. ``rm_files`` must still receive
+        the source (``docs/plans/...``), never the new archive path.
+        """
+        settings = CrackerjackSettings()
+        settings.documentation = documentation_settings
+        mock_git_service = Mock()
+
+        service = DocumentationCleanup(
+            console=mock_console,
+            pkg_path=temp_pkg_path,
+            git_service=mock_git_service,
+            settings=settings,
+        )
+
+        # File living in a per-area scan root.
+        plans_dir = temp_pkg_path / "docs" / "plans"
+        plans_dir.mkdir(parents=True)
+        source_file = plans_dir / "PROTOCOL_DOCUMENTATION_PLAN.md"
+        source_file.write_text("plan content")
+
+        result = service.cleanup_documentation(dry_run=False)
+
+        assert result.success
+        assert result.files_moved == 1
+
+        rm_calls = mock_git_service.rm_files.call_args_list
+        assert len(rm_calls) == 1
+        rm_paths = rm_calls[0].args[0]
+        assert rm_paths == ["docs/plans/PROTOCOL_DOCUMENTATION_PLAN.md"]
+
+        for call in rm_calls:
+            for path in call.args[0]:
+                assert ".archive" not in path, (
+                    f"rm_files was passed the archive destination "
+                    f"({path}); git rm cannot act on untracked paths"
+                )

@@ -372,6 +372,12 @@ class DocumentationCleanup:
             if subdirectory is None:
                 subdirectory = "uncategorized"
 
+            # Compute the source relative path BEFORE the move — once
+            # ``Path.replace`` runs, ``file_path`` no longer points at a
+            # file on disk (though the Path object itself is unchanged).
+            # We capture the path here for the git-index update below.
+            source_relative = file_path.relative_to(self.pkg_path)
+
             # The categorizer now composes the full path from the file's
             # parent area plus the category subdir (per-area scheme:
             # `<area>/.archive/<subdir>/<filename>`).
@@ -390,15 +396,19 @@ class DocumentationCleanup:
 
                     # Keep the git index in sync with the disk move —
                     # without this, the archive leaves every moved file
-                    # flagged as `D` in `git status` until something else
-                    # `git rm`s it. We tolerate failure here because the
+                    # flagged as `D`` in ``git status`` until something
+                    # else ``git rm``s it. We pass the OLD/source path
+                    # (not the new archive path): ``git rm`` can only act
+                    # on tracked paths, and the source is what was tracked;
+                    # the archive path is untracked until the next
+                    # ``git add``. We tolerate failure here because the
                     # file is already on disk in the archive.
                     if self.git_service is not None:
                         try:
-                            self.git_service.rm_files([str(target_path_relative)])
+                            self.git_service.rm_files([str(source_relative)])
                         except Exception as e:
                             logger.warning(
-                                f"git rm skipped for {target_path_relative}: {e}"
+                                f"git rm skipped for {source_relative}: {e}"
                             )
 
                     files_moved += 1
