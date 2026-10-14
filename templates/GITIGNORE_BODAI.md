@@ -39,6 +39,19 @@ settings/registry_metadata.local.yaml
 [{]XDG_DATA_HOME:-$HOME[}]
 # pytest-benchmark autosave cache (sibling of the tracked `benchmarks/` test suite)
 .benchmarks/
+
+# Coverage / complexity tool outputs (run artifacts — never track).
+# `.coverage*` matches the default coverage.py SQLite file plus any
+# variants a parallel runner or plugin writes (`.coverage.<host>.<pid>`,
+# `.coverage.<hash>`, etc.); `coverage.json` covers pytest-cov's JSON
+# report and Cracker's coverage snapshot; `complexipy*.json` covers
+# both legacy underscore (`complexipy_results_*.json`) and hyphen
+# (`complexipy-results.json`) variants — see crackerjack/.gitignore
+# lines around 58-62 and 256-262 for the per-repo provenance.
+.coverage*
+coverage.json
+complexipy*.json
+htmlcov/
 # Vitest config timestamp cache
 vitest.config.js.timestamp-*.mjs
 # Playwright output cruft
