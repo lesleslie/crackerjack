@@ -133,6 +133,7 @@ class FrontmatterValidator:
         validate_links: bool = True,
         store: str | None = None,
         skip_link_note: bool = True,
+        vocab_path: Path | None = None,
     ) -> FrontmatterValidationResult:
         try:
             stores = _resolve_stores(self.pkg_path, store)
@@ -144,7 +145,41 @@ class FrontmatterValidator:
             ) from exc
 
         known_files = {rel for _, rel in files}
-        known_topics = _validator.load_seed_topics(self.pkg_path)
+        try:
+            known_topics = _validator.load_seed_topics(
+                self.pkg_path,
+                vocab_path=vocab_path,
+            )
+        except _validator.VocabFileNotFoundError as exc:
+            # Surface the missing-vocab error as a synthetic result so
+            # callers see ``success=False`` with the exception class
+            # name in the issue text. We cannot continue without
+            # known_topics: returning an empty seed set would silently
+            # mark every topic as unknown, which is precisely the
+            # silent-degrade behavior the Tier 1 fix is designed to
+            # prevent.
+            default_vocab = (
+                vocab_path
+                if vocab_path is not None
+                else (self.pkg_path / "docs/schemas/topic-vocabulary-v1.md")
+            )
+            return FrontmatterValidationResult.from_payload(
+                [
+                    {
+                        "path": str(default_vocab),
+                        "status": "invalid",
+                        "errors": [
+                            {
+                                "rule": "vocab_missing",
+                                "message": f"{type(exc).__name__}: {exc}",
+                                "line": 0,
+                            }
+                        ],
+                        "warnings": [],
+                    }
+                ],
+                exit_success=False,
+            )
 
         results: list[t.Any] = []
         for abs_path, rel in files:

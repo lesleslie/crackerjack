@@ -200,6 +200,18 @@ def validate(
             "Use --strict-frontmatter to reject missing-frontmatter."
         ),
     ),
+    vocab_path: Path | None = typer.Option(
+        None,
+        "--vocab-path",
+        metavar="PATH",
+        help=(
+            "Override the topic vocabulary file location. Default: "
+            "docs/schemas/topic-vocabulary-v1.md under the repo root. "
+            "Use this to point at a non-default location when the "
+            "canonical path is empty (the most common symptom is "
+            "VocabFileNotFoundError causing the run to exit non-zero)."
+        ),
+    ),
 ) -> None:
     if repo_root and not repo_root.is_dir():
         raise typer.BadParameter(f"{repo_root} is not a directory")
@@ -211,6 +223,7 @@ def validate(
             allow_nonstandard=allow_nonstandard,
             validate_links=validate_links,
             store=store,
+            vocab_path=vocab_path,
         )
     except FrontmatterValidationError as exc:
         if json_output:

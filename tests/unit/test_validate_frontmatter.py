@@ -315,3 +315,135 @@ def test_exclude_known_path_parts_constant_includes_reviews() -> None:
     assert "reviews" in validator_module.ALWAYS_EXCLUDE_PATH_PARTS
     assert "archive" in validator_module.ALWAYS_EXCLUDE_PATH_PARTS
     assert ".archive" in validator_module.ALWAYS_EXCLUDE_PATH_PARTS
+
+
+def test_default_stores_have_no_duplicates_and_include_initiatives() -> None:
+    """The DEFAULT_STORES tuple should not list docs/plans/ twice and
+    should include docs/initiatives/ (now a canonical top-level dir).
+    """
+    from crackerjack.services.frontmatter import DEFAULT_STORES
+
+    stores_list = list(DEFAULT_STORES)
+    # No duplicates (set comparison; order preserved)
+    assert len(stores_list) == len(set(stores_list)), (
+        f"DEFAULT_STORES has duplicates: {stores_list}"
+    )
+    # docs/initiatives/ is now a real top-level dir per the
+    # 2026-10 pre-1.0 archive pass; it should be in the default scan.
+    assert "docs/initiatives/" in stores_list, (
+        f"DEFAULT_STORES missing docs/initiatives/: {stores_list}"
+    )
+    # The 6 expected stores (with docs/initiatives/ replacing the
+    # duplicate docs/plans/).
+    expected = {
+        "docs/adr/",
+        "docs/plans/",
+        "docs/specs/",
+        "docs/initiatives/",
+        ".claude/decisions/",
+        "docs/followups/",
+    }
+    assert set(stores_list) == expected, (
+        f"DEFAULT_STORES set mismatch.\n"
+        f"  got:      {set(stores_list)}\n"
+        f"  expected: {expected}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Tier 1 followup: VocabFileNotFoundError + --vocab-path
+# (ported from mcp-common commit 21223ee so the crackerjack-owned
+# validator ships parity before the mcp-common script is deleted).
+# ---------------------------------------------------------------------------
+
+
+def test_vocab_file_not_found_error_when_default_missing(tmp_path: Path) -> None:
+    """load_seed_topics raises VocabFileNotFoundError when the default
+    docs/schemas/topic-vocabulary-v1.md is missing under repo_root.
+
+    Replaces the prior silent-degrade-to-set() behavior so the operator
+    sees a clear, named error with the path the validator tried to read
+    and the two documented fixes.
+    """
+    from crackerjack.services.frontmatter import (
+        VocabFileNotFoundError,
+        load_seed_topics,
+    )
+
+    # tmp_path has no docs/schemas/ subdir, so the default path is missing
+    with pytest.raises(VocabFileNotFoundError) as exc_info:
+        load_seed_topics(tmp_path)
+    # Error names the default path so the operator can see where the
+    # validator tried to look.
+    assert "docs/schemas/topic-vocabulary-v1.md" in str(exc_info.value)
+    # And documents the two ways out: --vocab-path or --allow-nonstandard.
+    assert "--vocab-path" in str(exc_info.value)
+    assert "--allow-nonstandard" in str(exc_info.value)
+
+
+def test_load_seed_topics_allow_degrade_returns_empty_set(tmp_path: Path) -> None:
+    """load_seed_topics with allow_degrade=True returns empty set
+    instead of raising on missing vocab file.
+
+    This is the documented escape hatch for repos that don't carry
+    a topic vocabulary file: pass allow_degrade=True and the loader
+    yields an empty seed set so the rest of the validator sees
+    "every topic is unknown" warnings rather than a hard crash.
+    """
+    from crackerjack.services.frontmatter import load_seed_topics
+
+    seeds = load_seed_topics(tmp_path, allow_degrade=True)
+    assert seeds == set()
+
+
+def test_load_seed_topics_vocab_path_override(tmp_path: Path) -> None:
+    """load_seed_topics with vocab_path= uses the override path.
+
+    The override is what the new --vocab-path CLI flag and the
+    FrontmatterValidator(vocab_path=) wrapper surface to operators
+    who want to point at a non-default location without renaming
+    files in the repo.
+    """
+    from crackerjack.services.frontmatter import load_seed_topics
+
+    # Write a vocab at a non-default location
+    vocab = tmp_path / "custom-vocab.md"
+    vocab.write_text(
+        "## Seed List\n\n"
+        "| Slug | Definition |\n|------|------------|\n"
+        "| `alpha` | test |\n",
+        encoding="utf-8",
+    )
+    seeds = load_seed_topics(tmp_path, vocab_path=vocab)
+    assert seeds == {"alpha"}
+
+
+def test_wrapper_surfaces_vocab_file_not_found_error(tmp_path: Path) -> None:
+    """The FrontmatterValidator wrapper surfaces VocabFileNotFoundError
+    as a synthetic error in the result.
+
+    Per the pre-recorded ruling (Ruling 2026-10-14-1) the wrapper's
+    validate() is the canonical public API surface for crackerjack
+    consumers; the script entry point is implementation detail. A
+    missing vocab must surface as ``result.success is False`` with
+    the exception class name in an issue message — not be swallowed
+    into a no-op success.
+    """
+    from crackerjack.services.frontmatter_validator import (
+        FrontmatterValidator,
+    )
+
+    validator = FrontmatterValidator(pkg_path=tmp_path)
+    result = validator.validate(
+        strict=True,
+        vocab_path=tmp_path / "nope.md",
+    )
+    assert result.success is False
+    assert result.error_count >= 1
+    # And the error class name surfaces in the issue text
+    assert any(
+        "VocabFileNotFoundError" in issue.message for issue in result.errors
+    ), (
+        f"expected 'VocabFileNotFoundError' in errors; got "
+        f"{[i.message for i in result.errors]}"
+    )

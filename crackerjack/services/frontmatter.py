@@ -24,9 +24,9 @@ DEFAULT_STORES = (
     "docs/adr/",
     "docs/plans/",
     "docs/specs/",
-    "docs/plans/",
     ".claude/decisions/",
     "docs/followups/",
+    "docs/initiatives/",
 )
 
 
@@ -77,12 +77,59 @@ class FileResult:
             self.warnings.append(issue)
 
 
-def load_seed_topics(repo_root: Path) -> set[str]:
-    vocab_path = repo_root / "docs/schemas/topic-vocabulary-v1.md"
-    if not vocab_path.is_file():
-        return set()
+class VocabFileNotFoundError(Exception):
+    """The topic vocabulary file is missing from the configured location.
 
-    text = vocab_path.read_text(encoding="utf-8")
+    Raised by load_seed_topics() when the vocabulary file cannot be found
+    at the configured path. Replaces the prior silent-degrade-to-warnings
+    behavior so the operator sees a clear, named error with the path the
+    validator tried to read and the two documented fixes.
+    """
+
+
+def load_seed_topics(
+    repo_root: Path,
+    vocab_path: Path | None = None,
+    *,
+    allow_degrade: bool = False,
+) -> set[str]:
+    """Parse topic-vocabulary-v1.md and return the seed slug set.
+
+    Args:
+        repo_root: Repository root, used to resolve the default vocab path
+            when vocab_path is None.
+        vocab_path: Explicit vocabulary file path. When None, falls back to
+            the canonical ``docs/schemas/topic-vocabulary-v1.md`` under
+            ``repo_root``. Pass an explicit path to point at any other
+            location without renaming files in the repo.
+        allow_degrade: When True, return an empty set instead of raising
+            VocabFileNotFoundError. Caller is responsible for emitting the
+            visible warning. Defaults to False so silent failures are
+            impossible.
+
+    Returns:
+        Set of seed slug strings from the vocabulary's ## Seed List table.
+
+    Raises:
+        VocabFileNotFoundError: When the vocabulary file does not exist and
+            allow_degrade is False.
+    """
+    resolved = vocab_path or (repo_root / "docs/schemas/topic-vocabulary-v1.md")
+    if not resolved.is_file():
+        if allow_degrade:
+            return set()
+        raise VocabFileNotFoundError(
+            f"Topic vocabulary file not found at {resolved!s}. "
+            f"The validator cannot verify topic: slugs without it. "
+            f"Either (a) move the vocabulary to {resolved!s} and ensure "
+            f"the repo_root argument points at the right tree, (b) pass "
+            f"--vocab-path=PATH to point at the canonical location "
+            f"(e.g. docs/schemas/topic-vocabulary-v1.md), or "
+            f"(c) pass --allow-nonstandard to opt into the legacy "
+            f"silent-degrade behavior (NOT recommended for new code)."
+        )
+
+    text = resolved.read_text(encoding="utf-8")
     seeds: set[str] = set()
 
     in_seed_section = False
@@ -760,6 +807,18 @@ def build_parser() -> argparse.ArgumentParser:
         help="Repo root to validate. Defaults to first positional path or cwd.",
     )
     parser.add_argument(
+        "--vocab-path",
+        default=None,
+        metavar="PATH",
+        help=(
+            "Override the topic vocabulary file location. Default: "
+            "docs/schemas/topic-vocabulary-v1.md under the repo root. "
+            "Use this to point at a non-default location when the "
+            "canonical path is empty (the most common symptom is "
+            "VocabFileNotFoundError causing the run to exit non-zero)."
+        ),
+    )
+    parser.add_argument(
         "paths",
         nargs="*",
         help="Optional extra file or directory paths to include in the scan.",
@@ -823,7 +882,36 @@ def main(argv: list[str] | None = None) -> int:
         sys.stderr.write("No candidate files found for the given inputs.\n")
         return 0
 
-    known_topics = load_seed_topics(repo_root)
+    # Resolve vocabulary path: explicit --vocab-path wins, else default.
+    vocab_path = Path(args.vocab_path).resolve() if args.vocab_path else None
+    try:
+        known_topics = load_seed_topics(
+            repo_root,
+            vocab_path=vocab_path,
+            allow_degrade=args.allow_nonstandard,
+        )
+    except VocabFileNotFoundError as exc:
+        # Hard failure: operator must fix the config (move the file or
+        # pass --vocab-path). --allow-nonstandard is the documented escape
+        # hatch; if the user wanted it, allow_degrade would have swallowed
+        # the error above. Exit 2 = "broken CLI args / config" per the
+        # script's existing exit code convention.
+        sys.stderr.write(f"{type(exc).__name__}: {exc}\n")
+        return 2
+
+    if args.allow_nonstandard and vocab_path is None:
+        # Visible warning: the legacy degrade was opted into AND the
+        # canonical vocab file was not found. Without this warning, the
+        # operator sees only the report summary and may miss the fact
+        # that every topic was treated as unknown.
+        default_vocab = repo_root / "docs/schemas/topic-vocabulary-v1.md"
+        if not default_vocab.is_file():
+            sys.stderr.write(
+                f"warning: topic vocabulary file not found at {default_vocab!s}; "
+                f"degrading to unknown-topic warnings per --allow-nonstandard. "
+                f"Pass --vocab-path=PATH to point at the canonical location.\n"
+            )
+
     known_files = {rel for _, rel in files}
     known_files.update(_index_extra(repo_root))
 

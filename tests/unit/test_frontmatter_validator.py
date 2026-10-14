@@ -12,6 +12,29 @@ from crackerjack.services.frontmatter_validator import (
 )
 
 
+def _write_minimal_vocab(pkg_path: Path) -> Path:
+    """Write a minimal topic vocab file at the canonical location.
+
+    Required since the Tier 1 followup (commit 21223ee on
+    mcp-common's tier1-validator-patherror branch): the
+    FrontmatterValidator wrapper now surfaces VocabFileNotFoundError
+    as a hard error rather than silently degrading to an empty
+    seed set. Tests that exercise file-level behavior need a vocab
+    file so the load_seed_topics() call doesn't short-circuit
+    before file iteration begins.
+    """
+    schemas_dir = pkg_path / "docs" / "schemas"
+    schemas_dir.mkdir(parents=True, exist_ok=True)
+    vocab = schemas_dir / "topic-vocabulary-v1.md"
+    vocab.write_text(
+        "## Seed List\n\n"
+        "| Slug | Definition |\n|------|------------|\n"
+        "| `test-vocab` | test fixture |\n",
+        encoding="utf-8",
+    )
+    return vocab
+
+
 def test_validate_does_not_spawn_subprocess() -> None:
     """The wrapper must NOT spawn a subprocess when calling validate().
 
@@ -36,6 +59,9 @@ def test_validate_does_not_spawn_subprocess() -> None:
     with patch(
         "crackerjack.services.frontmatter.discover_files",
         return_value=[],
+    ), patch(
+        "crackerjack.services.frontmatter.load_seed_topics",
+        return_value=set(),
     ):
         result = v.validate()
     assert result.success is True
@@ -44,6 +70,7 @@ def test_validate_does_not_spawn_subprocess() -> None:
 def test_validate_parses_clean_json(tmp_path: Path) -> None:
     """Clean validator run returns success with zero errors."""
     (tmp_path / "docs" / "plans").mkdir(parents=True)
+    _write_minimal_vocab(tmp_path)
     v = FrontmatterValidator(pkg_path=tmp_path)
     result = v.validate()
     assert isinstance(result, FrontmatterValidationResult)
@@ -120,6 +147,7 @@ def test_validate_allow_nonstandard_false_emits_missing_frontmatter(
     plans = tmp_path / "docs" / "plans"
     plans.mkdir(parents=True)
     (plans / "legacy.md").write_text("# No frontmatter\n", encoding="utf-8")
+    _write_minimal_vocab(tmp_path)
     v = FrontmatterValidator(pkg_path=tmp_path)
     result = v.validate(allow_nonstandard=False)
     assert result.success is False
@@ -143,6 +171,7 @@ def test_validate_in_process_real_file_with_status_field(tmp_path: Path) -> None
         "# Hi\n",
         encoding="utf-8",
     )
+    _write_minimal_vocab(tmp_path)
     v = FrontmatterValidator(pkg_path=tmp_path)
     result = v.validate()
     assert result.success is True
@@ -166,6 +195,7 @@ def test_invalid_date_carries_field_line(tmp_path: Path) -> None:
         "# Hi\n",
         encoding="utf-8",
     )
+    _write_minimal_vocab(tmp_path)
     v = FrontmatterValidator(pkg_path=tmp_path)
     result = v.validate()
     assert result.success is False
@@ -195,6 +225,7 @@ def test_inline_status_heading_carries_text_line(tmp_path: Path) -> None:
         "extra content\n",
         encoding="utf-8",
     )
+    _write_minimal_vocab(tmp_path)
     v = FrontmatterValidator(pkg_path=tmp_path)
     result = v.validate(allow_nonstandard=False)
     assert result.warning_count >= 1
@@ -223,6 +254,7 @@ def test_yaml_parse_error_carries_problem_line(tmp_path: Path) -> None:
         "# Hi\n",
         encoding="utf-8",
     )
+    _write_minimal_vocab(tmp_path)
     v = FrontmatterValidator(pkg_path=tmp_path)
     result = v.validate()
     assert result.success is False

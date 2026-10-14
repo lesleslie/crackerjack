@@ -256,3 +256,74 @@ class TestDocsValidateNewFlags:
         assert expected_keys.issubset(set(payload.keys()))
         assert isinstance(payload["errors"], list)
         assert isinstance(payload["warnings"], list)
+
+    def test_validate_vocab_path_flag_accepted_in_help(
+        self, runner: CliRunner
+    ) -> None:
+        """`docs validate --help` advertises the new --vocab-path flag.
+
+        Mirrors the script-entry `frontmatter.main([... --vocab-path ...])`
+        flag added in commit 82bd70a1 — without this Typer Option, the user-
+        facing CLI silently drops the flag (Typer's default ``no_args_is_help``
+        + unknown-option behavior prints a usage error before the validator
+        ever sees the call).
+        """
+        from crackerjack.cli.docs_cli import app
+
+        result = runner.invoke(app, ["validate", "--help"])
+        assert result.exit_code == 0, result.output
+        assert "--vocab-path" in result.output
+
+    def test_validate_vocab_path_propagates_missing_file(
+        self, runner: CliRunner, tmp_path: Path
+    ) -> None:
+        """`docs validate --vocab-path <bogus>` surfaces VocabFileNotFoundError
+        via the wrapper's synthetic result and exits non-zero.
+
+        Companion to ``tests/unit/test_validate_frontmatter.py::
+        test_wrapper_surfaces_vocab_file_not_found_error`` — same
+        contract, exercised at the Typer level so a regression in the
+        CLI binding (e.g. dropping the keyword-arg forward) is caught
+        before the user sees a "no such option" error from Typer.
+
+        Uses substring assertions rather than ``json.loads(result.output)``
+        because the existing docs-CLI tests show that the Rich Console
+        wraps the JSON pretty-printer's lines (long tmp_path strings get
+        embedded newlines inside JSON values) — substring matching is the
+        same approach the operator takes on the terminal, so it stays
+        robust against the existing wrap artifact.
+        """
+        from crackerjack.cli.docs_cli import app
+
+        bogus = tmp_path / "does-not-exist-vocab.md"
+        result = runner.invoke(
+            app,
+            [
+                "validate",
+                "--repo-root",
+                str(tmp_path),
+                "--vocab-path",
+                str(bogus),
+                "--strict",
+                "--json",
+            ],
+        )
+        # CLI exits non-zero on validator failure (success=False or strict)
+        assert result.exit_code != 0, result.output
+        # Rich's Console wraps long string values mid-token in JSON output;
+        # normalize by stripping the embedded soft-wrap newlines so
+        # substring matches behave the way the operator sees them.
+        normalized = result.output.replace("\n", "")
+        # And the rendered output names the exception class via the
+        # wrapper's synthetic ``vocab_missing`` payload message.
+        assert "VocabFileNotFoundError" in normalized, (
+            f"expected 'VocabFileNotFoundError' in output; got {result.output!r}"
+        )
+        assert "vocab_missing" in normalized, (
+            f"expected 'vocab_missing' issue code in output; got {result.output!r}"
+        )
+        # And the bogus path that the operator passed surfaces in output
+        # so they can see what was tried.
+        assert str(bogus) in normalized, (
+            f"expected bogus vocab path in output; got {result.output!r}"
+        )
