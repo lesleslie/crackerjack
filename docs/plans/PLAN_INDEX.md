@@ -1,6 +1,6 @@
 # Plan Index
 
-_Regenerated 2026-10-13 by `crackerjack.tools.plan_index_sync` (fast-hook)._
+_Regenerated 2026-10-14 by `crackerjack.tools.plan_index_sync` (fast-hook)._
 
 ### Docs: adr
 
@@ -15,15 +15,10 @@ _Regenerated 2026-10-13 by `crackerjack.tools.plan_index_sync` (fast-hook)._
 
 | Path | Date | Status | Role | Topic | Title |
 |---|---|---|---|---|---|
-| [`docs/plans/2025-02-12-multi-agent-ai-fix-quality-system.md`](2025-02-12-multi-agent-ai-fix-quality-system.md) | 2026-07-17 | `complete` | `historical` | `lifecycle` | Multi-Agent AI Fix Quality System Implementation Plan |
-| [`docs/plans/2026-02-22-ast-transform-engine-design.md`](2026-02-22-ast-transform-engine-design.md) | 2026-07-17 | `complete` | `historical` | `lifecycle` | AST Transform Engine Design |
 | [`docs/plans/2026-05-20-phase-0-event-bus-plan.md`](2026-05-20-phase-0-event-bus-plan.md) | 2026-07-17 | `active` | `implementation` | `lifecycle` | Phase 0 Implementation Plan — AI-Fix Event Bus |
-| [`docs/plans/2026-05-30-ai-fix-dashboard-wiring.md`](2026-05-30-ai-fix-dashboard-wiring.md) | 2026-07-17 | `complete` | `historical` | `lifecycle` | Plan: Wire AIFixDashboard + Rich AI-Fix Progress |
 | [`docs/plans/2026-06-02-ai-fix-display-loop-bugs.md`](2026-06-02-ai-fix-display-loop-bugs.md) | 2026-07-17 | `active` | `implementation` | `lifecycle` | AI-Fix Display & Loop Bugs Implementation Plan |
 | [`docs/plans/2026-06-03-dhara-mcp-migration.md`](2026-06-03-dhara-mcp-migration.md) | 2026-07-17 | `active` | `implementation` | `lifecycle` | Dhara MCP Migration Implementation Plan |
-| [`docs/plans/2026-06-27-ty-cleanup-and-ai-fix.md`](2026-06-27-ty-cleanup-and-ai-fix.md) | 2026-07-17 | `complete` | `historical` | `lifecycle` | Plan: ty Type Checker Cleanup + AI-Fix Stage Alignment |
 | [`docs/plans/2026-06-29-ty-ratchet-cleanup.md`](2026-06-29-ty-ratchet-cleanup.md) | 2026-07-17 | `active` | `implementation` | `lifecycle` | ty-ratchet pipeline cleanup (E.3 + missing-dir) Implementation Plan |
-| [`docs/plans/2026-07-06-ai-fix-tier-architecture.md`](2026-07-06-ai-fix-tier-architecture.md) | 2026-07-17 | `shipped` | `implementation` | `lifecycle` | AI-Fix Tier Architecture |
 | [`docs/plans/2026-07-08-fix-sandbox-integration.md`](2026-07-08-fix-sandbox-integration.md) | 2026-07-17 | `active` | `implementation` | `lifecycle` | FixSandbox Production Integration Plan |
 | [`docs/plans/2026-07-10-libcst-surgeon-extract-method-fallback.md`](2026-07-10-libcst-surgeon-extract-method-fallback.md) | 2026-07-17 | `active` | `implementation` | `lifecycle` | W3 LibcstSurgeon Extract-Method Fallback Fix — Implementation Plan |
 | [`docs/plans/2026-07-10-output-validator-traceback-details.md`](2026-07-10-output-validator-traceback-details.md) | 2026-07-17 | `active` | `implementation` | `lifecycle` | OutputValidator Traceback Details Implementation Plan |
@@ -35,18 +30,10 @@ _Regenerated 2026-10-13 by `crackerjack.tools.plan_index_sync` (fast-hook)._
 | [`docs/plans/2026-08-06-ai-fix-external-loop.md`](2026-08-06-ai-fix-external-loop.md) | 2026-08-06 | `complete` | `historical` | `lifecycle` | AI-Fix External Loop + Akosha Hook Implementation Plan |
 | [`docs/plans/2026-08-06-crackerjack-ruff-fix-policy.md`](2026-08-06-crackerjack-ruff-fix-policy.md) | 2026-08-06 | `draft` | `implementation` | `lifecycle` | Crackerjack Ruff Fix Policy Implementation Plan |
 | [`docs/plans/2026-08-10-ai-fix-loop-task-1-kickoff.md`](2026-08-10-ai-fix-loop-task-1-kickoff.md) | 2026-08-10 | `draft` | `implementation` | `lifecycle` | AI-Fix Loop Plan — Task 1 Execution Kickoff |
-| [`docs/plans/2026-08-11-bodai-coverage-ratchet-followups.md`](2026-08-11-bodai-coverage-ratchet-followups.md) | 2026-08-11 | `shipped` | `implementation` | `lifecycle` | Coverage-Ratchet Follow-ups — Implementation Plan |
-| [`docs/plans/2026-08-11-bodai-coverage-ratchet-standard.md`](2026-08-11-bodai-coverage-ratchet-standard.md) | 2026-08-11 | `shipped` | `implementation` | `lifecycle` | Coverage-Ratchet Standardization Implementation Plan |
 | [`docs/plans/2026-08-11-darnlink-replaces-check-local-links.md`](2026-08-11-darnlink-replaces-check-local-links.md) | 2026-08-11 | `draft` | `implementation` | `lifecycle` | Replace `check-local-links` with `darnlink` across the Bodai ecosystem |
-| [`docs/plans/2026-08-11-skill-coverage-out-of-fast-hooks.md`](2026-08-11-skill-coverage-out-of-fast-hooks.md) | 2026-08-11 | `shipped` | `implementation` | `lifecycle` | Move Skill-Coverage Out of Fast Hooks Plan |
 | [`docs/plans/2026-09-07-bodai-shared-gitignore-snippet.md`](2026-09-07-bodai-shared-gitignore-snippet.md) | 2026-09-07 | `draft` | `implementation` | `gitignore-conformance` | Bodai Shared `.gitignore` Snippet — crackerjack-enforced |
-| [`docs/plans/2026-09-07-crackerjack-multi-language-phase1.md`](2026-09-07-crackerjack-multi-language-phase1.md) | 2026-09-07 | `shipped` | `implementation` | `architecture` | Crackerjack Multi-Language Extension — Phase 1 Plan |
-| [`docs/plans/2026-09-07-crackerjack-multi-language-phase2.md`](2026-09-07-crackerjack-multi-language-phase2.md) | 2026-09-08 | `shipped` | `implementation` | `architecture` | Crackerjack Multi-Language Extension — Phase 2 (Swift) Plan |
-| [`docs/plans/2026-09-07-crackerjack-multi-language-phase3.md`](2026-09-07-crackerjack-multi-language-phase3.md) | 2026-09-09 | `shipped` | `implementation` | `architecture` | Crackerjack Multi-Language Extension — Phase 3 (Kotlin/Gradle) Plan |
-| [`docs/plans/2026-09-07-crackerjack-multi-language-phase4.md`](2026-09-07-crackerjack-multi-language-phase4.md) | 2026-09-09 | `shipped` | `implementation` | `architecture` | Crackerjack Multi-Language Extension — Phase 4 (Web/CSS/HTML/JS/TS) Plan |
 | [`docs/plans/2026-10-10-crackerjack-oneiric-loader-migration.md`](2026-10-10-crackerjack-oneiric-loader-migration.md) | 2026-10-10 | `draft` | `implementation` | `settings-resolution` | Crackerjack Settings Loader — Migration to Oneiric — Implementation Plan |
 | [`docs/plans/2026-10-11-remove-zuban-skylos-lsp-from-crackerjack.md`](2026-10-11-remove-zuban-skylos-lsp-from-crackerjack.md) | 2026-10-11 | `active` | `implementation` | `architecture` | Remove Zuban + Skylos LSP Adapters from Crackerjack |
-| [`docs/plans/AI_FIX_IMPROVEMENT_PLAN.md`](AI_FIX_IMPROVEMENT_PLAN.md) | 2026-07-17 | `complete` | `historical` | `lifecycle` | AI-Fix Improvement Plan |
 
 ### Docs: specs
 
@@ -70,15 +57,10 @@ _Regenerated 2026-10-13 by `crackerjack.tools.plan_index_sync` (fast-hook)._
 
 | Path | Date | Status | Role | Topic | Title |
 |---|---|---|---|---|---|
-| [`docs/plans/2025-02-12-multi-agent-ai-fix-quality-system.md`](2025-02-12-multi-agent-ai-fix-quality-system.md) | 2026-07-17 | `complete` | `historical` | `lifecycle` | Multi-Agent AI Fix Quality System Implementation Plan |
-| [`docs/plans/2026-02-22-ast-transform-engine-design.md`](2026-02-22-ast-transform-engine-design.md) | 2026-07-17 | `complete` | `historical` | `lifecycle` | AST Transform Engine Design |
 | [`docs/plans/2026-05-20-phase-0-event-bus-plan.md`](2026-05-20-phase-0-event-bus-plan.md) | 2026-07-17 | `active` | `implementation` | `lifecycle` | Phase 0 Implementation Plan — AI-Fix Event Bus |
-| [`docs/plans/2026-05-30-ai-fix-dashboard-wiring.md`](2026-05-30-ai-fix-dashboard-wiring.md) | 2026-07-17 | `complete` | `historical` | `lifecycle` | Plan: Wire AIFixDashboard + Rich AI-Fix Progress |
 | [`docs/plans/2026-06-02-ai-fix-display-loop-bugs.md`](2026-06-02-ai-fix-display-loop-bugs.md) | 2026-07-17 | `active` | `implementation` | `lifecycle` | AI-Fix Display & Loop Bugs Implementation Plan |
 | [`docs/plans/2026-06-03-dhara-mcp-migration.md`](2026-06-03-dhara-mcp-migration.md) | 2026-07-17 | `active` | `implementation` | `lifecycle` | Dhara MCP Migration Implementation Plan |
-| [`docs/plans/2026-06-27-ty-cleanup-and-ai-fix.md`](2026-06-27-ty-cleanup-and-ai-fix.md) | 2026-07-17 | `complete` | `historical` | `lifecycle` | Plan: ty Type Checker Cleanup + AI-Fix Stage Alignment |
 | [`docs/plans/2026-06-29-ty-ratchet-cleanup.md`](2026-06-29-ty-ratchet-cleanup.md) | 2026-07-17 | `active` | `implementation` | `lifecycle` | ty-ratchet pipeline cleanup (E.3 + missing-dir) Implementation Plan |
-| [`docs/plans/2026-07-06-ai-fix-tier-architecture.md`](2026-07-06-ai-fix-tier-architecture.md) | 2026-07-17 | `shipped` | `implementation` | `lifecycle` | AI-Fix Tier Architecture |
 | [`docs/plans/2026-07-08-fix-sandbox-integration.md`](2026-07-08-fix-sandbox-integration.md) | 2026-07-17 | `active` | `implementation` | `lifecycle` | FixSandbox Production Integration Plan |
 | [`docs/plans/2026-07-10-libcst-surgeon-extract-method-fallback.md`](2026-07-10-libcst-surgeon-extract-method-fallback.md) | 2026-07-17 | `active` | `implementation` | `lifecycle` | W3 LibcstSurgeon Extract-Method Fallback Fix — Implementation Plan |
 | [`docs/plans/2026-07-10-output-validator-traceback-details.md`](2026-07-10-output-validator-traceback-details.md) | 2026-07-17 | `active` | `implementation` | `lifecycle` | OutputValidator Traceback Details Implementation Plan |
@@ -90,18 +72,10 @@ _Regenerated 2026-10-13 by `crackerjack.tools.plan_index_sync` (fast-hook)._
 | [`docs/plans/2026-08-06-ai-fix-external-loop.md`](2026-08-06-ai-fix-external-loop.md) | 2026-08-06 | `complete` | `historical` | `lifecycle` | AI-Fix External Loop + Akosha Hook Implementation Plan |
 | [`docs/plans/2026-08-06-crackerjack-ruff-fix-policy.md`](2026-08-06-crackerjack-ruff-fix-policy.md) | 2026-08-06 | `draft` | `implementation` | `lifecycle` | Crackerjack Ruff Fix Policy Implementation Plan |
 | [`docs/plans/2026-08-10-ai-fix-loop-task-1-kickoff.md`](2026-08-10-ai-fix-loop-task-1-kickoff.md) | 2026-08-10 | `draft` | `implementation` | `lifecycle` | AI-Fix Loop Plan — Task 1 Execution Kickoff |
-| [`docs/plans/2026-08-11-bodai-coverage-ratchet-followups.md`](2026-08-11-bodai-coverage-ratchet-followups.md) | 2026-08-11 | `shipped` | `implementation` | `lifecycle` | Coverage-Ratchet Follow-ups — Implementation Plan |
-| [`docs/plans/2026-08-11-bodai-coverage-ratchet-standard.md`](2026-08-11-bodai-coverage-ratchet-standard.md) | 2026-08-11 | `shipped` | `implementation` | `lifecycle` | Coverage-Ratchet Standardization Implementation Plan |
 | [`docs/plans/2026-08-11-darnlink-replaces-check-local-links.md`](2026-08-11-darnlink-replaces-check-local-links.md) | 2026-08-11 | `draft` | `implementation` | `lifecycle` | Replace `check-local-links` with `darnlink` across the Bodai ecosystem |
-| [`docs/plans/2026-08-11-skill-coverage-out-of-fast-hooks.md`](2026-08-11-skill-coverage-out-of-fast-hooks.md) | 2026-08-11 | `shipped` | `implementation` | `lifecycle` | Move Skill-Coverage Out of Fast Hooks Plan |
 | [`docs/plans/2026-09-07-bodai-shared-gitignore-snippet.md`](2026-09-07-bodai-shared-gitignore-snippet.md) | 2026-09-07 | `draft` | `implementation` | `gitignore-conformance` | Bodai Shared `.gitignore` Snippet — crackerjack-enforced |
-| [`docs/plans/2026-09-07-crackerjack-multi-language-phase1.md`](2026-09-07-crackerjack-multi-language-phase1.md) | 2026-09-07 | `shipped` | `implementation` | `architecture` | Crackerjack Multi-Language Extension — Phase 1 Plan |
-| [`docs/plans/2026-09-07-crackerjack-multi-language-phase2.md`](2026-09-07-crackerjack-multi-language-phase2.md) | 2026-09-08 | `shipped` | `implementation` | `architecture` | Crackerjack Multi-Language Extension — Phase 2 (Swift) Plan |
-| [`docs/plans/2026-09-07-crackerjack-multi-language-phase3.md`](2026-09-07-crackerjack-multi-language-phase3.md) | 2026-09-09 | `shipped` | `implementation` | `architecture` | Crackerjack Multi-Language Extension — Phase 3 (Kotlin/Gradle) Plan |
-| [`docs/plans/2026-09-07-crackerjack-multi-language-phase4.md`](2026-09-07-crackerjack-multi-language-phase4.md) | 2026-09-09 | `shipped` | `implementation` | `architecture` | Crackerjack Multi-Language Extension — Phase 4 (Web/CSS/HTML/JS/TS) Plan |
 | [`docs/plans/2026-10-10-crackerjack-oneiric-loader-migration.md`](2026-10-10-crackerjack-oneiric-loader-migration.md) | 2026-10-10 | `draft` | `implementation` | `settings-resolution` | Crackerjack Settings Loader — Migration to Oneiric — Implementation Plan |
 | [`docs/plans/2026-10-11-remove-zuban-skylos-lsp-from-crackerjack.md`](2026-10-11-remove-zuban-skylos-lsp-from-crackerjack.md) | 2026-10-11 | `active` | `implementation` | `architecture` | Remove Zuban + Skylos LSP Adapters from Crackerjack |
-| [`docs/plans/AI_FIX_IMPROVEMENT_PLAN.md`](AI_FIX_IMPROVEMENT_PLAN.md) | 2026-07-17 | `complete` | `historical` | `lifecycle` | AI-Fix Improvement Plan |
 
 ### .claude/decisions
 
@@ -130,11 +104,12 @@ _Regenerated 2026-10-13 by `crackerjack.tools.plan_index_sync` (fast-hook)._
 
 ## Lifecycle × Role Distribution
 
-| Role \\ Lifecycle | draft | active | partial | shipped | complete | Total |
+| Role \ Lifecycle | draft | active | partial | shipped | complete | Total |
 |---|---|---|---|---|---|---|
 | `canonical` | · | 10 | · | · | 2 | **12** |
-| `implementation` | 21 | 34 | · | 16 | 1 | **72** |
+| `implementation` | 21 | 34 | · | · | 1 | **56** |
 | `umbrella` | · | · | · | · | · | **0** |
-| `historical` | · | · | · | · | 12 | **12** |
+| `historical` | · | · | · | · | 2 | **2** |
 | `superseded` | · | · | · | · | · | **0** |
-| **Total** | **21** | **44** | **·** | **16** | **15** | **96** |
+| **Total** | **21** | **44** | **·** | **·** | **5** | **70** |
+

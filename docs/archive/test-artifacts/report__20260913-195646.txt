@@ -1,0 +1,27 @@
+======================================================================
+Crackerjack Test Selection Report
+======================================================================
+Strategy: fast
+Total Tests: 13825
+Selected: 54
+Skipped: 13771
+Reduction: 99.6%
+Selection Time: 0.00s
+Est. Time Saved: 0.0s
+
+Affected Files: 1
+ - docs/superpowers/plans/2026-09-07-crackerjack-multi-language-phase2.md
+
+Changed Tests: 54
+ - tests/test_fast_hooks_behavior.py
+ - tests/test_workflow_fast_hooks.py
+ - tests/test_fast_iteration_mode.py
+ - .venv/lib/python3.14/site-packages/scipy/stats/tests/test_fast_gen_inversion.py
+ - .venv/lib/python3.14/site-packages/sklearn/decomposition/tests/test_fastica.py
+ - .venv/lib/python3.14/site-packages/sklearn/utils/tests/test_fast_dict.py
+ - .claude/worktrees/multi-lang-phase1/tests/test_fast_hooks_behavior.py
+ - .claude/worktrees/multi-lang-phase1/tests/test_workflow_fast_hooks.py
+ - .claude/worktrees/multi-lang-phase1/tests/test_fast_iteration_mode.py
+ - .claude/worktrees/multi-lang-phase1/.venv/lib/python3.14/site-packages/scipy/stats/tests/test_fast_gen_inversion.py
+ ... and 44 more
+======================================================================

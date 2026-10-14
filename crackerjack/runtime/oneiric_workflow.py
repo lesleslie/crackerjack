@@ -73,7 +73,7 @@ class _PhaseTask:
         try:
             result = self._runner()
         except Exception as exc:
-            _logger.exception("Phase task %s raised", self._name)
+            _logger.error("Phase task %s raised: %s", self._name, exc)
             msg = f"workflow-task-failed: {self._name}: {type(exc).__name__}: {exc}"
             raise RuntimeError(msg) from exc
 
@@ -106,10 +106,15 @@ class _PhaseTask:
             return None, None
         try:
             return self._error_provider()
-        except Exception:
-            _logger.exception(
-                "Phase task %s error_provider raised; falling back to bare name",
+        except Exception as exc:  # noqa: BLE001 - intentional broad catch
+            # ``error_provider`` is a caller-supplied callback; a buggy
+            # provider must not crash the phase runtime. Log and fall
+            # back to ``(None, None)`` so the caller can render a
+            # placeholder name.
+            _logger.error(
+                "Phase task %s error_provider raised; falling back to bare name: %s",
                 self._name,
+                exc,
             )
             return None, None
 

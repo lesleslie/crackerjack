@@ -1,0 +1,37 @@
+======================================================================
+Crackerjack Test Selection Report
+======================================================================
+Strategy: fast
+Total Tests: 8722
+Selected: 18
+Skipped: 8704
+Reduction: 99.8%
+Selection Time: 0.04s
+Est. Time Saved: 0.0s
+
+Affected Files: 149
+ - crackerjack/agents/refactoring_agent.py
+ - crackerjack/agents/formatting_agent.py
+ - crackerjack/services/dependency_analyzer.py
+ - crackerjack/tools/check_ast.py
+ - crackerjack/decorators/error_handling.py
+ - crackerjack/services/ai/predictive_analytics.py
+ - crackerjack/runtime/oneiric_workflow.py
+ - crackerjack/mcp/tools/git_semantic_tools.py
+ - crackerjack/services/patterns/code/paths.py
+ - crackerjack/services/memory_optimizer.py
+ ... and 139 more
+
+Changed Tests: 18
+ - tests/test_fast_hooks_behavior.py
+ - tests/test_workflow_fast_hooks.py
+ - tests/test_fast_iteration_mode.py
+ - .venv.bak/lib/python3.13/site-packages/scipy/stats/tests/test_fast_gen_inversion.py
+ - .venv.bak/lib/python3.13/site-packages/sklearn/decomposition/tests/test_fastica.py
+ - .venv.bak/lib/python3.13/site-packages/sklearn/utils/tests/test_fast_dict.py
+ - .venv/lib/python3.13/site-packages/scipy/stats/tests/test_fast_gen_inversion.py
+ - .venv/lib/python3.13/site-packages/sklearn/decomposition/tests/test_fastica.py
+ - .venv/lib/python3.13/site-packages/sklearn/utils/tests/test_fast_dict.py
+ - tests/test_fast_hooks_behavior.py
+ ... and 8 more
+======================================================================

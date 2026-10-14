@@ -1,0 +1,30 @@
+======================================================================
+Crackerjack Test Selection Report
+======================================================================
+Strategy: fast
+Total Tests: 19309
+Selected: 3301
+Skipped: 16008
+Reduction: 82.9%
+Selection Time: 0.01s
+Est. Time Saved: 0.0s
+
+Affected Files: 4
+ - CHANGELOG.md
+ - tests/cli/test_base.py
+ - crackerjack/cli/base.py
+ - crackerjack/__main__.py
+
+Changed Tests: 3301
+ - tests/test_fast_hooks_behavior.py
+ - tests/test_workflow_fast_hooks.py
+ - tests/test_fast_iteration_mode.py
+ - .venv/lib/python3.14/site-packages/scipy/stats/tests/test_fast_gen_inversion.py
+ - .venv/lib/python3.14/site-packages/sklearn/decomposition/tests/test_fastica.py
+ - .venv/lib/python3.14/site-packages/sklearn/utils/tests/test_fast_dict.py
+ - .claude/worktrees/w4-claude-md-breadcrumb/tests/test_fast_hooks_behavior.py
+ - .claude/worktrees/w4-claude-md-breadcrumb/tests/test_workflow_fast_hooks.py
+ - .claude/worktrees/w4-claude-md-breadcrumb/tests/test_fast_iteration_mode.py
+ - .claude/worktrees/fix-doc-cleanup-verbose/tests/test_fast_hooks_behavior.py
+ ... and 3291 more
+======================================================================
