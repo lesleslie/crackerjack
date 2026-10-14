@@ -99,12 +99,4 @@ test-results/
 .claude/**/*~.tmp
 .claude/**/test_hook_*.txt
 .claude/**/hook_test_marker.txt
-# Sibling-of-parent archive dirs (`docs/<topic>/.archive/`,
-# `docs/.archive/`, `.claude/decisions/.archive/`, etc.) hold
-# resolved/superseded content that must remain reviewable from a clean
-# checkout. Default-ignored by the `.archive/` rule above; the general
-# `!.archive/` exception re-tracks them all. Runtime artifact paths
-# above (re-ignored with specific rules) take precedence.
-!.archive/
-!.archive/**
 # <<< bodai-shared-gitignore <<<
