@@ -122,7 +122,7 @@ class QAAdapterBase:
         return not matches_exclude
 
     @asynccontextmanager
-    async def _lifecycle(self) -> t.AsyncIterator[QAAdapterBase]:
+    async def _lifecycle(self) -> t.AsyncGenerator[QAAdapterBase]:
         try:
             if not self._initialized:
                 await self.init()

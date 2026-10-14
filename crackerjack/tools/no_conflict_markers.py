@@ -91,10 +91,11 @@ def scan_file(path: Path) -> list[MarkerHit]:
         sys.stderr.write(f"no-conflict-markers: cannot read {path}: {exc}\n")
         return []
 
-    hits: list[MarkerHit] = []
-    for line_no, line in enumerate(text.splitlines(), start=1):
-        if CONFLICT_MARKER_RE.match(line):
-            hits.append(MarkerHit(path=path, line=line_no, snippet=line))
+    hits: list[MarkerHit] = [
+        MarkerHit(path=path, line=line_no, snippet=line)
+        for line_no, line in enumerate(text.splitlines(), start=1)
+        if CONFLICT_MARKER_RE.match(line)
+    ]
     return hits
 
 

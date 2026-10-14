@@ -294,6 +294,16 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             "--cache",
             "--accept",
             "100..=103,200..=299,429",
+            # Archive directories (`<area>/.archive/` and the
+            # `docs/archive/` legacy tree) contain historical docs with
+            # cross-references to other archived files that no longer
+            # exist. Their broken internal links aren't a quality issue
+            # for active development — same exclusion the fast hook
+            # `local-link-checker` applies on line 182 of
+            # `crackerjack/tools/local_link_checker.py`. The substring
+            # `archive/` matches both `.archive/` and `archive/`.
+            "--exclude-path",
+            "archive/",
             "--verbose",
             ".",
         ],
