@@ -245,6 +245,24 @@ FAST_HOOKS = [
             "Promoted to fast hook 2026-08-31 — all Bodai repos pass cleanly."
         ),
     ),
+    HookDefinition(
+        name="no-conflict-markers",
+        timeout=120,
+        description=(
+            "Detects git merge conflict markers (`<<<<<<<`, `=======`, "
+            "`>>>>>>>`) in every tracked `*.md` / `*.markdown` file in the "
+            "current git repo. Fails the run (exit 1) if any marker line is "
+            "found. This is the belt for the procedural rule in "
+            "docs/decisions/2026-10-14-bypass-gate-parallel-sessions.md "
+            "Rule 2; that decision's Rule 1 is the operator-level "
+            "`--no-consolidation-gate` parallel-session pre-condition. "
+            "Trigger: the 2026-10-14 `fd9b61ed` commit landed 1.5K lines "
+            "of conflict markers on main because a parallel session's "
+            "stash was popped into a conflicting main tree. This hook "
+            "would have caught those markers on the first run. "
+            "See crackerjack.tools.no_conflict_markers."
+        ),
+    ),
 ]
 
 COMPREHENSIVE_HOOKS = [

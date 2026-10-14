@@ -228,6 +228,9 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             "crackerjack.tools.audit_type_checking_runtime_refs",
             *_build_targets(package_name),
         ),
+        "no-conflict-markers": _python_module_command(
+            "crackerjack.tools.no_conflict_markers"
+        ),
         "creosote": _preferred_binary_command(
             "creosote",
             "--venv",
