@@ -83,14 +83,30 @@ def test_mdformat_already_formatted(monkeypatch):
 
 
 def test_mdformat_needs_formatting(monkeypatch):
-    """Test mdformat_wrapper when files need formatting."""
+    """Test mdformat_wrapper when files need formatting.
+
+    The wrapper runs three subprocess calls in sequence when formatting
+    is needed:
+
+      1. ``mdformat --check`` — probes for needed changes (rc=1 ⇒ dirty).
+      2. ``mdformat`` — applies the fix.
+      3. ``git diff --name-only`` — lists changed files so the success
+         message can name them. The success message is required by
+         ``crackerjack/executors/hook_executor.py`` for any
+         ``is_formatting=True`` hook that exits 1.
+
+    Earlier versions of this test asserted ``call_count == 2``; the
+    git-diff call is the third. If you find yourself "fixing" the test
+    back to 2, you're deleting behavior — update the production code
+    instead.
+    """
     mock_file = Path("README.md")
 
     with patch('crackerjack.tools.mdformat_wrapper.get_git_tracked_files') as mock_files:
         mock_files.return_value = [mock_file]
 
         with patch('subprocess.run') as mock_run:
-            # First call (check) fails, second call (format) succeeds
+            # Three calls in order: check, format, git diff.
             mock_check = MagicMock()
             mock_check.returncode = 1  # Needs formatting
             mock_check.stdout = "Would format README.md"
@@ -100,11 +116,25 @@ def test_mdformat_needs_formatting(monkeypatch):
             mock_format.stdout = ""
             mock_format.stderr = ""
 
-            mock_run.side_effect = [mock_check, mock_format]
+            mock_diff = MagicMock()
+            mock_diff.returncode = 0
+            mock_diff.stdout = "README.md"
+
+            mock_run.side_effect = [mock_check, mock_format, mock_diff]
 
             result = main()
             assert result == 1, "Should return 1 when formatting was applied"
-            assert mock_run.call_count == 2  # Check + Format
+            # Three subprocess invocations: check + format + git diff.
+            assert mock_run.call_count == 3, (
+                f"expected 3 calls (check, format, git diff), got {mock_run.call_count}"
+            )
+            # First call must be the check.
+            assert "--check" in mock_run.call_args_list[0].args[0]
+            # Second call must NOT be the check (it's the format pass).
+            assert "--check" not in mock_run.call_args_list[1].args[0]
+            # Third call must be a git diff listing the changed files.
+            assert mock_run.call_args_list[2].args[0][0] == "git"
+            assert "diff" in mock_run.call_args_list[2].args[0]
 
 
 def test_mdformat_not_installed(monkeypatch):

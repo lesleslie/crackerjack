@@ -111,14 +111,30 @@ def scan_repo(repo_root: Path) -> list[MarkerHit]:
     return hits
 
 
-def _print_hits(hits: list[MarkerHit]) -> None:
-    """Render the hit list as a human-readable report on stderr."""
+def _print_hits(hits: list[MarkerHit], repo_root: Path) -> None:
+    """Render the hit list as a human-readable report on stderr.
+
+    Paths are rendered **relative to** ``repo_root`` so the report does
+    not leak the operator's local filesystem layout (e.g. ``/Users/...``
+    on a developer laptop). ``repo_root`` is resolved before
+    comparison so the relative form is stable across macOS's symlinked
+    paths (e.g. ``/var`` vs ``/private/var``) and across ``Path.cwd()``
+    variants.
+    """
+    resolved_root = repo_root.resolve()
     sys.stderr.write(
         f"no-conflict-markers: {len(hits)} conflict-marker line(s) found "
         f"in tracked markdown files\n"
     )
     for hit in hits:
-        sys.stderr.write(f"  {hit.path}:{hit.line}: {hit.snippet.strip()}\n")
+        try:
+            display = hit.path.relative_to(resolved_root)
+        except ValueError:
+            # Defensive: a hit outside the repo (shouldn't happen in
+            # current code paths) falls back to the absolute path with
+            # a marker so the operator can still locate it.
+            display = hit.path
+        sys.stderr.write(f"  {display}:{hit.line}: {hit.snippet.strip()}\n")
     sys.stderr.write(
         "Resolve all git merge conflict markers before committing. "
         "See docs/decisions/2026-10-14-bypass-gate-parallel-sessions.md.\n"
@@ -153,7 +169,7 @@ def main(argv: list[str] | None = None) -> int:
     if not hits:
         return EXIT_OK
 
-    _print_hits(hits)
+    _print_hits(hits, repo_root)
     return EXIT_MARKERS_FOUND
 
 

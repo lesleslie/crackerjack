@@ -296,6 +296,42 @@ def test_main_dirty(git_repo: Path, monkeypatch, capsys) -> None:
     assert "no-conflict-markers" in captured.err
 
 
+def test_main_dirty_paths_are_repo_relative(
+    git_repo: Path, monkeypatch, capsys
+) -> None:
+    """Rendered hit paths are repo-root-relative — never absolute.
+
+    Leaking the absolute path in console output exposes the operator's
+    local filesystem layout, which is fine on a single-user dev machine
+    but inappropriate in shared logs and CI artifacts. The hook must
+    report each hit as ``<path-from-repo-root>:<line>:`` so the output
+    is portable across hosts.
+    """
+    (git_repo / "dirty.md").write_text(
+        "<<<<<<< HEAD\n"
+        "x\n"
+        "=======\n"
+        "y\n"
+        ">>>>>>> branch\n",
+        encoding="utf-8",
+    )
+    _commit_all(git_repo)
+    monkeypatch.chdir(git_repo)
+    rc = main()
+    assert rc == EXIT_MARKERS_FOUND
+    captured = capsys.readouterr()
+    # The relative form must appear at least once. The exact line
+    # number depends on the seed file (here, line 1 — the first
+    # `<<<<<<<` marker); what we care about is that the path is
+    # rendered as `dirty.md:`, never as an absolute filesystem path.
+    assert "dirty.md:" in captured.err
+    # The absolute path must NOT appear in the report.
+    absolute = str((git_repo / "dirty.md").resolve())
+    assert absolute not in captured.err, (
+        f"absolute path leaked into no-conflict-markers output: {absolute!r}"
+    )
+
+
 def test_main_no_git_on_path(git_repo: Path, monkeypatch, capsys) -> None:
     """main() returns 2 and writes to stderr when git is not on PATH."""
     monkeypatch.chdir(git_repo)

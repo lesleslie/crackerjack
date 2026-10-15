@@ -26,7 +26,12 @@ if TYPE_CHECKING:
 @contextmanager
 def reset_hook_lock_manager():
     """Reset HookLockManager singleton."""
-    from crackerjack.executors.hook_lock_manager import HookLockManager
+    try:
+        from crackerjack.executors.hook_lock_manager import HookLockManager
+    except ImportError:
+        # Module not importable in this environment — no singleton to reset.
+        yield
+        return
 
     # Cancel heartbeat tasks and reset singleton
     try:
@@ -54,22 +59,28 @@ def reset_hook_lock_manager():
 
 def reset_timeout_manager() -> None:
     """Reset global AsyncTimeoutManager."""
-    from crackerjack.core import timeout_manager
-
+    try:
+        from crackerjack.core import timeout_manager
+    except ImportError:
+        return
     timeout_manager._global_timeout_manager = None
 
 
 def reset_service_watchdog() -> None:
     """Reset global ServiceWatchdog."""
-    from crackerjack.core import service_watchdog
-
+    try:
+        from crackerjack.core import service_watchdog
+    except ImportError:
+        return
     service_watchdog._global_watchdog = None
 
 
 def reset_metrics_collector() -> None:
     """Reset global MetricsCollector."""
-    from crackerjack.services import metrics
-
+    try:
+        from crackerjack.services import metrics
+    except ImportError:
+        return
     if metrics._metrics_collector is not None:
         try:
             metrics._metrics_collector.close()
@@ -80,15 +91,19 @@ def reset_metrics_collector() -> None:
 
 def reset_performance_monitor() -> None:
     """Reset global AsyncPerformanceMonitor via ContextVar."""
-    from crackerjack.core.performance_monitor import _performance_monitor_context
-
+    try:
+        from crackerjack.core.performance_monitor import _performance_monitor_context
+    except ImportError:
+        return
     _performance_monitor_context.set(None)
 
 
 def reset_connection_pool() -> None:
     """Reset global HTTPConnectionPool."""
-    from crackerjack.services import connection_pool
-
+    try:
+        from crackerjack.services import connection_pool
+    except ImportError:
+        return
     connection_pool._global_pool = None
 
 

@@ -4,11 +4,13 @@ import sys
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-# Add tools directory to path for importing
-tools_dir = Path(__file__).parent.parent.parent / "crackerjack" / "tools"
-sys.path.insert(0, str(tools_dir))
-
-from validate_input_validator_patterns import (
+# Import via the installed ``crackerjack`` package — the manual
+# ``sys.path.insert(0, ...)`` trick this used to do shadowed the
+# editable install in worktrees and made oneiric's transitive
+# ``from fastmcp import FastMCP`` fail. The package import is the
+# only way every other test in the suite does it, and it makes the
+# test hermetic.
+from crackerjack.tools.validate_input_validator_patterns import (
     test_code_injection_patterns,
     test_env_var_validation,
     test_integration_with_validator,
@@ -47,7 +49,9 @@ def test_integration_with_validator():
     # Full integration testing requires actual SecureInputValidator instance
 
     # Test that we can import and call the function
-    from validate_input_validator_patterns import test_integration_with_validator as test_func
+    from crackerjack.tools.validate_input_validator_patterns import (
+        test_integration_with_validator as test_func,
+    )
 
     # Verify it's a callable function
     assert callable(test_func), "test_integration_with_validator should be callable"

@@ -553,10 +553,20 @@ def test_group_by_age_empty_refs(tmp_path: Path) -> None:
 def test_group_by_age_recent(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
 ) -> None:
-    """A blame date within the last 30 days increments ``<30 days``."""
+    """A blame date within the last 30 days increments ``<30 days``.
+
+    The fixture date is computed relative to ``datetime.now(UTC)`` so
+    the assertion stays green regardless of when the test is run.
+    An earlier version of this test hardcoded ``2026-09-06`` and went
+    stale 30+ days later; using a relative offset (the same pattern
+    as ``test_group_by_age_mid`` and ``test_group_by_age_old``) keeps
+    it self-maintaining.
+    """
+    recent = datetime.now(UTC) - timedelta(days=1)
+    recent_line = f"abc123 (Author {recent.strftime('%Y-%m-%d %H:%M:%S')} +0000)"
     monkeypatch.setattr(
         ty_audit.subprocess, "run",
-        _make_fake_run(stdout="abc123 (Author 2026-09-06 10:00:00 +0000)"),
+        _make_fake_run(stdout=recent_line),
     )
     refs = [SuppressionRef(
         file=tmp_path / "a.py", line=1, code="e001", snippet="x",
