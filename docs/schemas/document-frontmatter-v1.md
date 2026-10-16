@@ -62,7 +62,7 @@ id: 014-honcho-peer-model-routing-precedence
 | `last_reviewed` | yes | ISO-8601 `YYYY-MM-DD` | When the frontmatter was last verified accurate. |
 | `superseded_by` | when `role: superseded` | repo-relative path or `ext:<id>` | Resolves to an existing file at validation time. |
 | `blocks_on` | optional | array of paths or `ext:<id>` | Each entry resolves to a file or external identifier. |
-| `topic` | yes | slug string | See [topic-vocabulary-v1.md](./topic-vocabulary-v1.md). |
+| `topic` | yes | slug string | See the oneiric.schemas packaged `topic-vocabulary-v1.md`. |
 | `decision_date` | ADR-only | ISO-8601 `YYYY-MM-DD` | The date the decision was ratified. |
 | `id` | optional | stable identifier string | Reserved for cross-repo referencing; not required for in-repo files. |
 
@@ -126,7 +126,7 @@ The 12-row minimum is satisfied by the rows above. Cases where body semantics di
 
 ## Topic Vocabulary
 
-Topics are slug strings applied to the `topic` field. The controlled list lives in [`docs/schemas/topic-vocabulary-v1.md`](./topic-vocabulary-v1.md). The initial seed list contains ten well-established topics: `mcp-design`, `storage-consolidation`, `adapter-architecture`, `terminal`, `routing-composition`, `learning-pipeline`, `observability`, `auth`, `convergence-control-plane`, `worktree-management`.
+Topics are slug strings applied to the `topic` field. The controlled list lives in the oneiric.schemas packaged `topic-vocabulary-v1.md` (loaded via `importlib.resources`). The initial seed list contains ten well-established topics: `mcp-design`, `storage-consolidation`, `adapter-architecture`, `terminal`, `routing-composition`, `learning-pipeline`, `observability`, `auth`, `convergence-control-plane`, `worktree-management`.
 
 The validator runs in **hybrid mode**: known topics pass without warning; unknown topics pass with a `--strict` warning so the maintainer can decide whether to expand the vocabulary or normalize the value. Editing the vocabulary file is a normal doc change requiring no plan amendment.
 
@@ -159,7 +159,7 @@ Two open questions were resolved before migration began. Both are binding for Ph
 
 ## Cross-References
 
-- [`docs/schemas/topic-vocabulary-v1.md`](./topic-vocabulary-v1.md) — controlled topic list (seed + amendment rule).
+- The oneiric.schemas packaged `topic-vocabulary-v1.md` — controlled topic list (seed + amendment rule).
 - [`docs/plans/PLAN_INDEX.md`](../plans/PLAN_INDEX.md) — the index regenerated from frontmatter in Phase P6.
 - [`.claude/decisions/README.md`](../../.claude/decisions/README.md) — the decision index; Status column re-derived from per-decision frontmatter in Phase P5.
 
