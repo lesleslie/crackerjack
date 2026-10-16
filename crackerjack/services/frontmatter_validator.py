@@ -158,10 +158,8 @@ class FrontmatterValidator:
             # mark every topic as unknown, which is precisely the
             # silent-degrade behavior the Tier 1 fix is designed to
             # prevent.
-            default_vocab = (
-                vocab_path
-                if vocab_path is not None
-                else (self.pkg_path / "docs/schemas/topic-vocabulary-v1.md")
+            default_vocab = _validator._resolve_vocab_path(
+                vocab_path, self.pkg_path
             )
             return FrontmatterValidationResult.from_payload(
                 [

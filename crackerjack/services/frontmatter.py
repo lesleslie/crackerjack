@@ -8,6 +8,7 @@ import json
 import re
 import sys
 from dataclasses import dataclass, field
+from importlib import resources
 from pathlib import Path
 from typing import Any
 
@@ -87,6 +88,54 @@ class VocabFileNotFoundError(Exception):
     """
 
 
+def _try_oneiric_schemas_vocab() -> Path | None:
+    """Return the canonical topic-vocabulary path packaged inside ``oneiric``.
+
+    The single source of truth for the topic slug list lives at
+    ``oneiric.schemas/topic-vocabulary-v1.md`` (shipped as wheel data via
+    hatchling ``artifacts``). Every Bodai consumer already declares
+    ``oneiric>=0.X`` as a direct dependency, so the packaged file is
+    universally reachable through ``importlib.resources``. Returns
+    ``None`` when oneiric is unavailable, doesn't ship the schema, or the
+    on-disk file is missing for any reason.
+    """
+    try:
+        traversable = resources.files("oneiric.schemas").joinpath(
+            "topic-vocabulary-v1.md"
+        )
+    except (ModuleNotFoundError, AttributeError):
+        return None
+    if traversable.exists():
+        # Wheel-installed packages back ``Traversable`` with a disk Path
+        # whose ``str()`` is the resolved file location. Read via Path so
+        # downstream ``is_file()`` / ``read_text()`` calls keep working.
+        return Path(str(traversable))
+    return None
+
+
+def _resolve_vocab_path(
+    vocab_path: Path | None,
+    repo_root: Path,
+) -> Path:
+    """Pick the best topic-vocabulary path in three steps:
+
+    1. Explicit ``vocab_path`` (e.g. via ``--vocab-path`` flag).
+    2. The packaged schema at ``oneiric.schemas/topic-vocabulary-v1.md``.
+    3. The legacy repo-local file at ``docs/schemas/topic-vocabulary-v1.md``
+       under ``repo_root``.
+
+    Steps 2 and 3 may both resolve — that's fine, step 2 wins. Returning a
+    real ``Path`` from every step means callers don't need to branch on
+    Traversable-vs-Path before reading.
+    """
+    if vocab_path is not None:
+        return vocab_path
+    packaged = _try_oneiric_schemas_vocab()
+    if packaged is not None:
+        return packaged
+    return repo_root / "docs/schemas/topic-vocabulary-v1.md"
+
+
 def load_seed_topics(
     repo_root: Path,
     vocab_path: Path | None = None,
@@ -114,18 +163,20 @@ def load_seed_topics(
         VocabFileNotFoundError: When the vocabulary file does not exist and
             allow_degrade is False.
     """
-    resolved = vocab_path or (repo_root / "docs/schemas/topic-vocabulary-v1.md")
+    resolved = _resolve_vocab_path(vocab_path, repo_root)
     if not resolved.is_file():
         if allow_degrade:
             return set()
         raise VocabFileNotFoundError(
             f"Topic vocabulary file not found at {resolved!s}. "
             f"The validator cannot verify topic: slugs without it. "
-            f"Either (a) move the vocabulary to {resolved!s} and ensure "
-            f"the repo_root argument points at the right tree, (b) pass "
-            f"--vocab-path=PATH to point at the canonical location "
-            f"(e.g. docs/schemas/topic-vocabulary-v1.md), or "
-            f"(c) pass --allow-nonstandard to opt into the legacy "
+            f"Either (a) upgrade ``oneiric`` so the packaged schema at "
+            f"``oneiric.schemas/topic-vocabulary-v1.md`` is reachable via "
+            f"importlib.resources, (b) copy the canonical schema from "
+            f"``oneiric``'s docs/schemas/ into {resolved!s} and ensure "
+            f"the repo_root argument points at the right tree, (c) pass "
+            f"--vocab-path=PATH to point at any location you control, or "
+            f"(d) pass --allow-nonstandard to opt into the legacy "
             f"silent-degrade behavior (NOT recommended for new code)."
         )
 
