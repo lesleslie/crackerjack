@@ -465,7 +465,6 @@ EXCLUDED_PATHS = {
 
 SCHEMA_PATHS = {
     "docs/schemas/document-frontmatter-v1.md",
-    "docs/schemas/topic-vocabulary-v1.md",
 }
 
 SCHEMA_FM = (
