@@ -1,47 +1,61 @@
 """Phase 1 server-published skills tools for Crackerjack (per plan §6).
 
 Exposes the ``mcp__crackerjack__crackerjack_list_skills`` and
-``mcp__crackerjack__crackerjack_get_skill`` MCP tools that advertise the
-server-defined skills to Phase 2's installer and the Claude Code picker.
-Skills live as markdown bodies under
-``crackerjack/mcp/skills_catalog/<name>.md``; this module reads them at
-request time and signs the metadata via the no-lifespan singleton
-populated at ``create_mcp_server()`` time.
+``mcp__crackerjack__crackerjack_get_skill`` MCP tools that advertise
+the server-defined skills to Phase 2's installer and the Claude Code
+picker. Skills live as markdown bodies under
+``crackerjack/mcp/skills_catalog/<name>.md``.
+
+This module is a thin server-specific wrapper around
+:func:`mcp_common.skills_tools.build_register_skills_tools`. The
+factory owns the mechanism — the B-4 allowlist, the B-6 body
+normalization + content-hash, the wire shape, the success/error
+envelope, and the registration plumbing. Crackerjack owns the
+policy: the catalog, where bodies live, the tool name prefix
+(``"crackerjack_"``), how the signer is acquired (the no-lifespan
+singleton populated at ``create_mcp_server()`` time and read via
+``signer_feed.get_signer_feed_state()``), and the signing function
+(canonicalization via crackerjack's local
+``canonical_payload_for_signing``).
 
 Security gates (per plan §11):
 
-- **B-1** — every ``get_skill`` response carries an ed25519 signature over
-  the canonicalized metadata (Phase 2's installer verifies this before
-  any write to ``~/.claude/skills/``).
-- **B-4** — path-traversal allowlist ``^[a-z0-9][a-z0-9._-]{0,62}$`` is
-  enforced on the ``name`` parameter at the API boundary BEFORE the
-  metadata model re-validates it. An unknown / forbidden ``name`` returns
-  an error envelope rather than raising past the MCP boundary.
-- **B-7** — each successful tool call bumps
-  ``SignerFeedState.cycles_total`` via :meth:`record_cycle` so the four
-  mandatory feed signals stay accurate.
+- **B-1** — every ``get_skill`` response carries an ed25519 signature
+  over the canonicalized metadata. The Phase 2 installer verifies
+  this before any write to ``~/.claude/skills/``.
+- **B-4** — the path-traversal allowlist
+  ``^[a-z0-9][a-z0-9._-]{0,62}$`` lives in
+  ``mcp_common.canonical_schemas._validators.NAME_OR_SERVER_RE``;
+  the factory enforces it at the API boundary. The per-server regex
+  copy that used to live here is gone.
+- **B-6** — ``content_hash`` is the lowercase hex SHA-256 of the
+  stripped body bytes. The factory computes it from the body so
+  clients can verify against the same canonical content.
+- **B-7** — each successful tool call invokes ``on_call``,
+  which bumps ``SignerFeedState.cycles_total`` via
+  :meth:`record_cycle` so the four mandatory feed signals stay
+  accurate.
 
-Crackerjack-specific: unlike the other 4 servers Crackerjack has no
-async lifespan. The SkillsSigner is built at
+Crackerjack-specific: unlike the other 4 servers, Crackerjack has
+no async lifespan. The :class:`SkillsSigner` is built at
 ``init_signer_feed_state()`` time and read by these tools via
-``get_signer_feed_state()``. If the signer has not been initialized (pre-
-``create_mcp_server`` or init failure), both tools return an informative
-error envelope rather than raising.
-"""
+``get_signer_feed_state()``. If the signer has not been initialized
+(pre-``create_mcp_server`` or init failure), the factory surfaces
+the exception as the standard error envelope rather than raising.
 
+This file is a structural mirror of
+``crackerjack.mcp.tools.agent_registry`` — same imports, same
+error envelope shape, same feed wiring; only the catalog
+directory, schema class, and tool names differ.
+"""
 from __future__ import annotations
 
-import hashlib
 import logging
-import re
-from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from pydantic import ValidationError
-
-from crackerjack.mcp.skill_schema import SkillMetadata
-from crackerjack.skills_signer import canonical_payload_for_signing
+from mcp_common.canonical_schemas.skill import SkillCanonicalSchema
+from mcp_common.skills_tools import build_register_skills_tools
 
 if TYPE_CHECKING:
     from fastmcp import FastMCP
@@ -49,22 +63,23 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-# Allowlist mirror — see B-4 / plan §5 task #4. Duplicated here so the
-# API boundary rejects forbidden ``name`` values BEFORE constructing the
-# Pydantic model (avoids letting a path-traversal payload reach the
-# validator).
-_NAME_ALLOWLIST_RE = re.compile(r"^[a-z0-9][a-z0-9._-]{0,62}$")
-
-
-# Catalog lives next to this module so deployment paths stay self-contained.
+# Catalog lives one level up from this module so the catalog dir
+# matches the project layout (other Bodai components also keep their
+# skills under ``<package>/skills_catalog/``). Mirrors the
+# ``agents/`` layout for Phase 3.
 _CATALOG_DIR = Path(__file__).parent.parent / "skills_catalog"
 
 
-# Phase 1: 3 starter skills with real Crackerjack-relevant content.
-# Each tuple is the body's filename, the semantic version, the
-# description that goes in both SkillMetadata AND the frontmatter,
-# the list of MCP tool names the skill may invoke, and the
-# dependency list (other skill names).
+# Phase 1: 4 starter skills with real Crackerjack-relevant content.
+# Each dict is the body's filename, the skill name, the semantic
+# version, the description that goes in both the picker description
+# AND the canonical SkillCanonicalSchema, the list of MCP tool names
+# the skill may invoke, and the dependency list (other skill names).
+#
+# Adding a new server-published skill: drop ``<name>.md`` under
+# ``skills_catalog/`` AND add an entry below. The factory's catalog
+# validation runs at module load — a missing file or duplicate
+# name fails fast.
 _STATIC_SKILLS: list[dict[str, Any]] = [
     {
         "name": "run-quality-checks",
@@ -151,68 +166,68 @@ _STATIC_SKILLS: list[dict[str, Any]] = [
 ]
 
 
-_SERVER_NAME = "crackerjack"
+_SERVER_KEY = "crackerjack"
 
 
-# Name-indexed view of the static catalog — built once at module load so
-# the tool handlers can do O(1) lookups instead of scanning the list.
+# Name-indexed view of the static catalog — built once at module load
+# so the body loader can do O(1) lookups instead of scanning the list.
 _STATIC_SKILLS_BY_NAME: dict[str, dict[str, Any]] = {
     entry["name"]: entry for entry in _STATIC_SKILLS
 }
+
+
+# --- Body source (server-specific) ----------------------------------
 
 
 def _read_body(filename: str) -> str:
     """Load a skill body from the catalog, asserting the file exists."""
     path = _CATALOG_DIR / filename
     if not path.is_file():
-        raise FileNotFoundError(
-            f"Skill body {filename!r} missing from catalog at {path}"
-        )
+        msg = f"Skill body {filename!r} missing from catalog at {path}"
+        raise FileNotFoundError(msg)
     return path.read_text(encoding="utf-8")
 
 
-def _build_unsigned_metadata(name: str) -> SkillMetadata:
-    """Build a :class:`SkillMetadata` for the named static skill.
+def _body_loader(name: str) -> str:
+    """Factory's body source: read the file from disk.
 
-    The metadata has ``signature=None`` and ``server_pubkey_id=None``;
-    those fields are populated by :func:`_sign_metadata` after signing.
-    Raises :class:`KeyError` if ``name`` is not a known static skill.
+    The factory's ``_build_unsigned_metadata`` calls this on demand
+    for any catalog entry that names a body. The factory strips the
+    returned string and computes the B-6 content_hash from the
+    stripped bytes.
     """
-    entry = _STATIC_SKILLS_BY_NAME.get(name)
-    if entry is None:
-        msg = f"unknown skill {name!r}"
-        raise KeyError(msg)
-    body = _read_body(entry["body_filename"])
-    body_bytes = body.encode("utf-8")
-    content_hash = hashlib.sha256(body_bytes).hexdigest()
-    version = entry["version"]
-    return SkillMetadata(
-        id=f"{_SERVER_NAME}:{name}:{version}",
-        server=_SERVER_NAME,
-        name=name,
-        description=entry["description"],
-        version=version,
-        tool_refs=list(entry["tool_refs"]),
-        dependencies=list(entry["dependencies"]),
-        content_type="skill",
-        content_hash=content_hash,
-        body_size=len(body_bytes),
-        body_format="yaml-frontmatter+markdown",
-        allowed_tools=list(entry["allowed_tools"]),
-        timestamp=datetime.now(UTC).timestamp(),
-    )
+    return _read_body(_STATIC_SKILLS_BY_NAME[name]["body_filename"])
 
 
-def _sign_metadata(metadata: SkillMetadata, signer: Any) -> SkillMetadata:
-    """Apply an ed25519 signature to a copy of ``metadata``.
+# --- Signing policy (server-specific) ---------------------------------
 
-    The canonical payload strips ``signature`` and ``server_pubkey_id``
-    BEFORE canonicalization so the signature doesn't cover itself (per
-    ``canonical_payload_for_signing`` docstring + plan §10.1.3).
+
+def _sign(metadata: SkillCanonicalSchema) -> SkillCanonicalSchema:
+    """Apply an ed25519 signature using the no-lifespan singleton signer.
+
+    The factory hands the unsigned metadata to this callable and
+    receives the signed copy. Acquires the signer via
+    :func:`crackerjack.mcp.signer_feed.get_signer_feed_state`
+    (no-lifespan singleton populated at
+    ``create_mcp_server()`` time), canonicalizes via crackerjack's
+    local :func:`canonical_payload_for_signing` (which strips the
+    ``signature`` + ``server_pubkey_id`` fields before signing so
+    the signature doesn't cover itself), and attaches the result.
+
+    Raises if the signer feed state isn't initialized (pre-
+    ``create_mcp_server`` or init failure). The factory converts
+    the exception into the standard error envelope.
     """
-    unsigned_dict = metadata.model_dump(mode="json")
-    canonical = canonical_payload_for_signing(unsigned_dict)
-    signed = signer.sign(canonical)
+    from crackerjack.mcp.signer_feed import get_signer_feed_state
+    from crackerjack.skills_signer import canonical_payload_for_signing
+
+    state = get_signer_feed_state()
+    if state is None:
+        msg = "signer not initialized (server may still be starting up)"
+        raise RuntimeError(msg)
+
+    canonical = canonical_payload_for_signing(metadata.to_dict())
+    signed = state.signer.sign(canonical)
     return metadata.model_copy(
         update={
             "signature": signed.signature_b64,
@@ -221,101 +236,56 @@ def _sign_metadata(metadata: SkillMetadata, signer: Any) -> SkillMetadata:
     )
 
 
-def _is_allowlisted(name: str) -> bool:
-    """B-4 API-boundary check on the ``name`` parameter."""
-    return bool(_NAME_ALLOWLIST_RE.fullmatch(name)) and ".." not in name
+# --- B-7 cycle bump (server-specific) ---------------------------------
+
+
+def _on_call() -> None:
+    """B-7: bump ``SignerFeedState.cycles_total`` on every tool call.
+
+    The factory invokes this at the start of every list_skills and
+    get_skill call so the four mandatory feed signals stay
+    accurate. No-op if the signer feed state isn't initialized
+    yet (matches the pre-refactor behavior).
+    """
+    from crackerjack.mcp.signer_feed import get_signer_feed_state
+
+    state = get_signer_feed_state()
+    if state is not None:
+        state.record_cycle()
+
+
+# --- Tool registration ------------------------------------------------
 
 
 def register_skill_registry(app: FastMCP) -> None:
     """Register ``crackerjack_list_skills`` and ``crackerjack_get_skill``.
 
     Idempotent at module level (the static catalog is loaded once at
-    import). Both tools access the no-lifespan singleton
-    :class:`SkillsSigner` via ``get_signer_feed_state()``; if the
-    signer has not been initialized (pre-``create_mcp_server`` or init
-    failure), the tools return an error envelope rather than raising.
+    import). Calling this twice is safe — FastMCP's
+    ``@app.tool`` decorator is idempotent within a single
+    ``app`` instance.
+
+    Delegates to :func:`mcp_common.skills_tools.build_register_skills_tools`
+    with crackerjack's catalog, body source, signing policy,
+    cycle-bump hook, and tool name prefix. The wire shape,
+    allowlist enforcement, and envelope contract all live in
+    the factory; crackerjack only owns the data, the signer, and
+    the prefix.
+
+    The function name is preserved as ``register_skill_registry``
+    (not ``register_skills_tools``) for backward compatibility with
+    the server registration call site.
     """
-
-    @app.tool(name="crackerjack_list_skills")
-    async def crackerjack_list_skills() -> list[dict[str, Any]]:
-        """Return metadata for skills this server publishes.
-
-        Returns at least 3 entries (one per static skill). The
-        ``signature`` and ``server_pubkey_id`` fields are ``None`` here
-        — those are populated by ``crackerjack_get_skill`` since the
-        signature is over the canonical payload WITHOUT the signing
-        fields themselves.
-        """
-        from crackerjack.mcp.signer_feed import get_signer_feed_state
-
-        state = get_signer_feed_state()
-        if state is not None:
-            state.record_cycle()
-
-        out: list[dict[str, Any]] = []
-        for entry in _STATIC_SKILLS:
-            try:
-                metadata = _build_unsigned_metadata(entry["name"])
-            except (FileNotFoundError, ValidationError, KeyError) as exc:
-                logger.exception(
-                    "crackerjack_list_skills: failed to build metadata for %s: %s",
-                    entry["name"],
-                    exc,
-                )
-                continue
-            out.append(metadata.model_dump(mode="json"))
-        return out
-
-    @app.tool(name="crackerjack_get_skill")
-    async def crackerjack_get_skill(name: str) -> dict[str, Any]:
-        """Return the signed metadata + body for one skill.
-
-        Validates ``name`` against the B-4 allowlist BEFORE constructing
-        the metadata. Signs the metadata via the no-lifespan singleton
-        :class:`SkillsSigner`. The body is the raw markdown text from
-        ``skills_catalog/<name>.md`` — the client (Phase 2 installer)
-        writes this verbatim to
-        ``~/.claude/skills/crackerjack-<name>/SKILL.md``.
-        """
-        from crackerjack.mcp.signer_feed import get_signer_feed_state
-
-        if not _is_allowlisted(name):
-            return {
-                "success": False,
-                "error": (
-                    f"name {name!r} violates path-traversal allowlist "
-                    "(B-4): must match ^[a-z0-9][a-z0-9._-]{0,62}$ "
-                    "with no '..' substring"
-                ),
-            }
-
-        state = get_signer_feed_state()
-        if state is None:
-            return {
-                "success": False,
-                "error": "signer not initialized (server may still be starting up)",
-            }
-        state.record_cycle()
-
-        try:
-            unsigned = _build_unsigned_metadata(name)
-        except KeyError:
-            return {
-                "success": False,
-                "error": f"skill {name!r} not found on this server",
-            }
-        except FileNotFoundError as exc:
-            return {"success": False, "error": str(exc)}
-        except ValidationError as exc:
-            return {"success": False, "error": f"metadata validation failed: {exc}"}
-
-        signed = _sign_metadata(unsigned, state.signer)
-        body = _read_body(_STATIC_SKILLS_BY_NAME[name]["body_filename"])
-        return {
-            "success": True,
-            "metadata": signed.model_dump(mode="json"),
-            "body": body,
-        }
+    build_register_skills_tools(
+        server_key=_SERVER_KEY,
+        catalog=_STATIC_SKILLS,
+        body_loader=_body_loader,
+        sign=_sign,
+        on_call=_on_call,
+        tool_name_prefix=f"{_SERVER_KEY}_",
+        # The hook and any in-flight clients expect the
+        # "crackerjack_" prefix on both tool names.
+    )(app)
 
 
-__all__ = ["register_skill_registry"]
+__all__ = ["register_skill_registry", "SkillCanonicalSchema"]
