@@ -9,7 +9,6 @@ from crackerjack.adapters.ai.base import BaseCodeFixer
 class ProviderID(StrEnum):
     MINIMAX = "minimax"
     LLAMA_SERVER = "llama_server"
-    OLLAMA = "ollama"
 
 
 @dataclass(frozen=True)
@@ -43,15 +42,6 @@ PROVIDER_INFO: dict[ProviderID, ProviderInfo] = {
         requires_api_key=False,
         default_model="qwen3.5",
         setup_url="https://github.com/ggerganov/llama.cpp",
-        cost_tier="free",
-    ),
-    ProviderID.OLLAMA: ProviderInfo(
-        id=ProviderID.OLLAMA,
-        name="Ollama (Local)",
-        description="Free local models, complete privacy, requires installation",
-        requires_api_key=False,
-        default_model="qwen2.5-coder: 7b",
-        setup_url="https://ollama.com/download",
         cost_tier="free",
     ),
 }

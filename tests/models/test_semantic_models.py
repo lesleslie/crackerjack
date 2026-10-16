@@ -354,13 +354,13 @@ class TestSemanticConfig:
     def test_custom_semantic_config(self) -> None:
         """Verify custom SemanticConfig."""
         config = SemanticConfig(
-            embedding_backend="ollama",
-            embedding_model="nomic-embed-text",
+            embedding_backend="onnxruntime",
+            embedding_model="all-MiniLM-L6-v2",
             chunk_size=1000,
             similarity_threshold=0.5,
         )
-        assert config.embedding_backend == "ollama"
-        assert config.embedding_model == "nomic-embed-text"
+        assert config.embedding_backend == "onnxruntime"
+        assert config.embedding_model == "all-MiniLM-L6-v2"
         assert config.chunk_size == 1000
         assert config.similarity_threshold == 0.5
 
@@ -382,7 +382,6 @@ class TestSemanticConfig:
         """Verify embedding_backend is literal type."""
         SemanticConfig(embedding_backend="auto")
         SemanticConfig(embedding_backend="onnxruntime")
-        SemanticConfig(embedding_backend="ollama")
         SemanticConfig(embedding_backend="fallback")
 
         with pytest.raises(ValidationError):

@@ -165,8 +165,6 @@ def _is_urllib_false_positive(issue: Issue) -> bool:
         "127.0.0.1",
         "http://localhost",
         "https://localhost",
-        "ollama_base_url",
-        "ollama",
         "embedding",
         "mcp",
         "api",
@@ -175,7 +173,6 @@ def _is_urllib_false_positive(issue: Issue) -> bool:
     safe_file_patterns = [
         "embeddings",
         "embedding",
-        "ollama",
         "mcp",
         "config",
         "settings",
@@ -200,8 +197,6 @@ def _is_urllib_false_positive(issue: Issue) -> bool:
                     if any(
                         indicator in line_lower for indicator in config_url_indicators
                     ):
-                        return True
-                    if "ollama_base_url" in content or "ollama" in line_lower:
                         return True
 
     return False

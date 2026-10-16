@@ -23,7 +23,6 @@ class TestProviderID:
     def test_provider_id_values(self):
         assert ProviderID.MINIMAX == "minimax"
         assert ProviderID.LLAMA_SERVER == "llama_server"
-        assert ProviderID.OLLAMA == "ollama"
 
 
 class TestProviderInfo:
@@ -48,18 +47,13 @@ class TestProviderInfo:
         assert info.default_model == "qwen3.5"
         assert info.cost_tier == "free"
 
-    def test_ollama_info(self):
-        info = PROVIDER_INFO[ProviderID.OLLAMA]
-        assert info.requires_api_key is False
-        assert info.cost_tier == "free"
-
 
 class TestListProviders:
     """Tests for list_providers function."""
 
     def test_returns_all_providers(self):
         providers = list_providers()
-        assert len(providers) == 3
+        assert len(providers) == 2
 
     def test_returns_provider_info_objects(self):
         providers = list_providers()
@@ -79,12 +73,12 @@ class TestGetProviderInfo:
         assert info.id == ProviderID.MINIMAX
 
     def test_get_by_string_lowercase(self):
-        info = get_provider_info("ollama")
-        assert info.id == ProviderID.OLLAMA
+        info = get_provider_info("llama_server")
+        assert info.id == ProviderID.LLAMA_SERVER
 
     def test_get_by_string_uppercase(self):
-        info = get_provider_info("OLLAMA")
-        assert info.id == ProviderID.OLLAMA
+        info = get_provider_info("LLAMA_SERVER")
+        assert info.id == ProviderID.LLAMA_SERVER
 
     def test_get_unknown_provider_raises(self):
         with pytest.raises(ValueError, match="Unknown provider"):

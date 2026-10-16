@@ -88,7 +88,7 @@ For AI auto-fix features, Crackerjack can integrate with external AI services. T
 # crackerjack.toml
 [ai_fix]
 enabled = true
-provider = "openai"  # or "anthropic" or "ollama"
+provider = "openai"  # or "anthropic"
 model = "gpt-4"
 api_key_env = "OPENAI_API_KEY"
 max_fixes = 10

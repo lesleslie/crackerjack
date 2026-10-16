@@ -100,7 +100,7 @@ class TestBuildLlmSettings:
 
     def test_default_fallback_chain(self):
         settings = _build_llm_settings()
-        assert settings.fallback_chain == ["minimax", "llama_server", "ollama"]
+        assert settings.fallback_chain == ["minimax", "llama_server"]
 
     def test_llama_server_url_from_env(self):
         with patch.dict(os.environ, {"LLAMA_SERVER_URL": "http://myserver:9000"}):
@@ -117,7 +117,6 @@ class TestBuildLlmSettings:
         settings = _build_llm_settings()
         assert "minimax" in settings.providers
         assert "llama_server" in settings.providers
-        assert "ollama" in settings.providers
 
     def test_minimax_requires_auth(self):
         settings = _build_llm_settings()
@@ -126,7 +125,6 @@ class TestBuildLlmSettings:
     def test_local_providers_no_auth(self):
         settings = _build_llm_settings()
         assert settings.providers["llama_server"]["require_auth"] is False
-        assert settings.providers["ollama"]["require_auth"] is False
 
 
 class TestBuildProviderConfig:
@@ -141,11 +139,6 @@ class TestBuildProviderConfig:
         config = build_provider_config("nonexistent")
         assert config is None
 
-    def test_ollama_config_no_auth(self):
-        config = build_provider_config("ollama")
-        assert config is not None
-        assert config.require_auth is False
-
 
 class TestProviderRegistry:
     """Tests for the simplified registry module."""
@@ -153,19 +146,16 @@ class TestProviderRegistry:
     def test_provider_ids_defined(self):
         assert ProviderID.MINIMAX == "minimax"
         assert ProviderID.LLAMA_SERVER == "llama_server"
-        assert ProviderID.OLLAMA == "ollama"
 
     def test_provider_info_populated(self):
         assert ProviderID.MINIMAX in PROVIDER_INFO
         assert ProviderID.LLAMA_SERVER in PROVIDER_INFO
-        assert ProviderID.OLLAMA in PROVIDER_INFO
 
     def test_list_providers_returns_all(self):
         infos = list_providers()
         ids = {info.id for info in infos}
         assert ProviderID.MINIMAX in ids
         assert ProviderID.LLAMA_SERVER in ids
-        assert ProviderID.OLLAMA in ids
 
     def test_get_provider_info_by_id(self):
         info = get_provider_info(ProviderID.MINIMAX)
@@ -173,7 +163,7 @@ class TestProviderRegistry:
         assert info.default_model == "MiniMax-M2.7"
 
     def test_get_provider_info_by_string(self):
-        info = get_provider_info("ollama")
+        info = get_provider_info("llama_server")
         assert info.requires_api_key is False
         assert info.cost_tier == "free"
 

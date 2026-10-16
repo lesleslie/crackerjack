@@ -41,17 +41,6 @@ _DEFAULT_PROVIDERS: dict[str, dict[str, t.Any]] = {
         },
         "timeout_seconds": 120,
     },
-    "ollama": {
-        "name": "ollama",
-        "base_url": "http://localhost: 11434/v1",
-        "require_auth": False,
-        "task_routing": {
-            "code_generation": "qwen2.5-coder: 7b",
-            "code_review": "qwen2.5-coder: 7b",
-            "debugging": "qwen2.5-coder: 7b",
-        },
-        "timeout_seconds": 120,
-    },
 }
 
 
@@ -68,7 +57,7 @@ def _build_llm_settings() -> LLMSettings:
     providers["llama_server"]["base_url"] = llama_url
     return LLMSettings(
         providers=providers,
-        fallback_chain=["minimax", "llama_server", "ollama"],
+        fallback_chain=["minimax", "llama_server"],
     )
 
 

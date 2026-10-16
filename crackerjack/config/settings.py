@@ -96,20 +96,15 @@ class AISettings(OneiricMCPConfig):
     ai_fix_sandbox_timeout_s: int = 300
 
     ai_providers: list[
-        t.Literal["claude", "minimax", "llama_server", "qwen", "ollama"]
+        t.Literal["claude", "minimax", "llama_server", "qwen"]
     ] = [
         "minimax",
         "llama_server",
-        "ollama",
     ]
 
-    ai_provider: t.Literal["claude", "minimax", "llama_server", "qwen", "ollama"] = (
+    ai_provider: t.Literal["claude", "minimax", "llama_server", "qwen"] = (
         "minimax"
     )
-
-    ollama_base_url: str = "http://localhost: 11434"
-    ollama_model: str = "qwen2.5-coder: 7b"
-    ollama_timeout: int = 300
 
     llama_server_url: str = "http://localhost: 8081"
     llama_server_model: str = "qwen3.5"

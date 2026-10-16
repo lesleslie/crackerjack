@@ -2,7 +2,7 @@
 
 # AI Adapter
 
-AI-powered code fixing helpers following the crackerjack adapter pattern. The built-in adapter focuses on safe, validated code fixes using the `mcp_common.FallbackChain` LLM gateway (defaults to MiniMax → llama_server → ollama).
+AI-powered code fixing helpers following the crackerjack adapter pattern. The built-in adapter focuses on safe, validated code fixes using the `mcp_common.FallbackChain` LLM gateway (defaults to MiniMax → llama_server).
 
 > **Note**: This README was rewritten 2026-09-09 to drop the obsolete `ClaudeCodeFixer` / `ClaudeCodeFixerSettings` references — those classes lived in the deleted `crackerjack.adapters.ai.claude` module and the pre-2026-08-06 multi-provider AI-fix chain. The current public surface is `BaseCodeFixer`, `FallbackChainCodeFixer`, `BaseCodeFixerSettings`, and `FallbackChainSettings` exported from `crackerjack.adapters.ai`.
 
@@ -30,7 +30,7 @@ Settings class: `FallbackChainSettings`
 - `llama_server_url` (str; default `http://localhost:8081`)
 - Inherited from `BaseCodeFixerSettings`: `max_tokens`, `temperature`, `confidence_threshold`, `max_retries`, `max_file_size_bytes`
 
-Provider routing (`minimax` → `llama_server` → `ollama`) is built inline by `crackerjack.adapters.ai.unified._build_llm_settings()` (no external `settings/llms.yaml`); the `FallbackChainCodeFixer` reads from `mcp_common.llm_settings` at `init()` time.
+Provider routing (`minimax` → `llama_server`) is built inline by `crackerjack.adapters.ai.unified._build_llm_settings()` (no external `settings/llms.yaml`); the `FallbackChainCodeFixer` reads from `mcp_common.llm_settings` at `init()` time.
 
 ## Basic Usage
 
@@ -59,7 +59,7 @@ async def fix_with_ai() -> None:
 - Keep `temperature` low for predictable refactors
 - Gate changes by `confidence_threshold` and validate diffs in CI
 - Provider keys live in env vars (`MINIMAX_API_KEY`, etc.) — never log secrets
-- The provider chain (MiniMax → llama_server → ollama) is built inline by `crackerjack.adapters.ai.unified._build_llm_settings()`, not via any external config file
+- The provider chain (MiniMax → llama_server) is built inline by `crackerjack.adapters.ai.unified._build_llm_settings()`, not via any external config file
 
 ## Related
 

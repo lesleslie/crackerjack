@@ -466,19 +466,6 @@ class TestAISettings:
         settings = AISettings(ai_provider="qwen")
         assert settings.ai_provider == "qwen"
 
-    def test_ollama_settings(self):
-        """Test Ollama configuration."""
-        settings = AISettings(
-            ai_provider="ollama",
-            ollama_base_url="http://localhost:11434",
-            ollama_model="qwen2.5-coder:7b",
-            ollama_timeout=600,
-        )
-        assert settings.ai_provider == "ollama"
-        assert settings.ollama_base_url == "http://localhost:11434"
-        assert settings.ollama_model == "qwen2.5-coder:7b"
-        assert settings.ollama_timeout == 600
-
 
 class TestDocumentationSettings:
     """Tests for DocumentationSettings."""
@@ -557,10 +544,10 @@ class TestCrackerjackSettings:
         to the parent CrackerjackSettings. Asserts that nested fields are
         preserved.
         """
-        ai = AISettings(ai_provider="ollama", max_iterations=15)
+        ai = AISettings(ai_provider="llama_server", max_iterations=15)
         testing = TestSettings(test_workers=8, coverage=True)
         settings = CrackerjackSettings(ai=ai, testing=testing)
-        assert settings.ai.ai_provider == "ollama"
+        assert settings.ai.ai_provider == "llama_server"
         assert settings.ai.max_iterations == 15
         assert settings.testing.test_workers == 8
         assert settings.testing.coverage is True

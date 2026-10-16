@@ -119,12 +119,12 @@ execution:
 
     def test_set_setting(self, config_service, temp_config_dir):
         """Test setting a configuration value."""
-        config_service.set_setting("ai.ai_provider", "ollama")
+        config_service.set_setting("ai.ai_provider", "llama_server")
         config_service.set_setting("test.test_workers", 6)
 
         # Verify settings were updated
         settings = config_service.load_settings()
-        assert settings.ai.ai_provider == "ollama"
+        assert settings.ai.ai_provider == "llama_server"
         assert settings.test.test_workers == 6
 
     def test_update_settings(self, config_service, temp_config_dir):
@@ -210,7 +210,7 @@ execution:
         """Test importing settings from JSON."""
         import_file = tmp_path / "settings_import.json"
         import_data = {
-            "ai": {"ai_provider": "ollama", "max_iterations": 20},
+            "ai": {"ai_provider": "llama_server", "max_iterations": 20},
             "test": {"test_workers": 6, "coverage": True},
         }
 
@@ -220,7 +220,7 @@ execution:
         config_service.import_settings(import_file, format="json")
 
         settings = config_service.load_settings()
-        assert settings.ai.ai_provider == "ollama"
+        assert settings.ai.ai_provider == "llama_server"
         assert settings.ai.max_iterations == 20
         assert settings.test.test_workers == 6
 
@@ -266,13 +266,13 @@ ai:
         sample_settings.write_text(
             """
 ai:
-  ai_provider: ollama
+  ai_provider: llama_server
 """,
         )
 
         # Load again - should get fresh data
         settings2 = config_service.load_settings()
-        assert settings2.ai.ai_provider == "ollama"
+        assert settings2.ai.ai_provider == "llama_server"
 
 
 @pytest.mark.skip(reason="ConfigService API mismatch - tests expect instance-based class but implementation is static-only")
