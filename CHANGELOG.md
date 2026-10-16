@@ -10,6 +10,12 @@ blocks_on: []
 topic: changelog
 ---
 
+## [0.89.1] - 2026-10-15
+
+### Changed
+
+- Fix/no-conflict-markers-relative-paths -> main
+
 ## [0.89.0] - 2026-10-14
 
 ### Added
