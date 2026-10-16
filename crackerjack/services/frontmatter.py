@@ -324,7 +324,10 @@ def _validate_topic(
                 severity,
                 "topic_unknown",
                 f"topic {value!r} not in seed vocabulary; add to "
-                f"docs/schemas/topic-vocabulary-v1.md to silence",
+                f"oneiric.schemas/topic-vocabulary-v1.md (the canonical, "
+                f"shipped as wheel data with oneiric>=0.28) or to a "
+                f"docs/schemas/topic-vocabulary-v1.md fallback at this "
+                f"repo's root to silence",
                 line=line,
             )
         )
