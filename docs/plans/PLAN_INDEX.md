@@ -104,7 +104,7 @@ _Regenerated 2026-10-16 by `crackerjack.tools.plan_index_sync` (fast-hook)._
 
 ## Lifecycle × Role Distribution
 
-| Role \\ Lifecycle | draft | active | partial | shipped | complete | Total |
+| Role \ Lifecycle | draft | active | partial | shipped | complete | Total |
 |---|---|---|---|---|---|---|
 | `canonical` | · | 10 | · | · | 2 | **12** |
 | `implementation` | 21 | 34 | · | · | 1 | **56** |
@@ -112,3 +112,4 @@ _Regenerated 2026-10-16 by `crackerjack.tools.plan_index_sync` (fast-hook)._
 | `historical` | · | · | · | · | 2 | **2** |
 | `superseded` | · | · | · | · | · | **0** |
 | **Total** | **21** | **44** | **·** | **·** | **5** | **70** |
+
