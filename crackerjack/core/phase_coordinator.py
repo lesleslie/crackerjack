@@ -376,6 +376,11 @@ class PhaseCoordinator:
         self._fast_hooks_started = True
         self.session.track_task("hooks_fast", "Fast quality checks")
 
+        # ``--tool <name>``: scope the phase to the named hook (or warn
+        # if absent). Pushed onto the hook manager before the run and
+        # cleared in the ``finally`` so subsequent phases aren't biased.
+        self.hook_manager.set_active_tool(getattr(options, "tool", None))
+
         run_id = getattr(options, "run_id", "unknown")
         await publish_test_started(
             run_id,
@@ -634,6 +639,11 @@ class PhaseCoordinator:
             return True
 
         self.session.track_task("hooks_comprehensive", "Comprehensive quality checks")
+
+        # ``--tool <name>``: see :meth:`run_fast_hooks_only` for the
+        # rationale. Pushed here so a single ``--tool ruff-check`` scope
+        # applies whether the hook lives in fast or comprehensive.
+        self.hook_manager.set_active_tool(getattr(options, "tool", None))
         self._display_hook_phase_header(
             "COMPREHENSIVE HOOKS",
             "Type, security, and complexity checking",

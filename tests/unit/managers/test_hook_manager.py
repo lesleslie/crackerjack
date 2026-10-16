@@ -116,6 +116,68 @@ class TestHookManagerConfiguration:
         # Should not recreate executor
         # No exception raised
 
+    def test_set_active_tool_default_none(self, manager) -> None:
+        """The ``--tool`` scope defaults to ``None`` (run all hooks)."""
+        assert manager._active_tool is None
+
+    def test_set_active_tool_round_trip(self, manager) -> None:
+        """``set_active_tool`` stores the value and ``None`` clears it."""
+        manager.set_active_tool("check-local-links")
+        assert manager._active_tool == "check-local-links"
+        manager.set_active_tool(None)
+        assert manager._active_tool is None
+
+    def test_filter_strategy_for_tool_keeps_all_when_unset(self, manager) -> None:
+        """When ``_active_tool`` is ``None`` the strategy is returned unchanged."""
+        from crackerjack.config.hooks import HookStrategy, HookDefinition
+
+        strategy = HookStrategy(
+            hooks=[
+                HookDefinition(name="ruff-check"),
+                HookDefinition(name="ruff-format"),
+            ],
+            name="fast",
+        )
+        out = manager._filter_strategy_for_tool(strategy, None)
+        assert out is strategy
+        assert [h.name for h in out.hooks] == ["ruff-check", "ruff-format"]
+
+    def test_filter_strategy_for_tool_keeps_only_named(self, manager) -> None:
+        """When ``_active_tool`` is set the strategy keeps only the matching hook."""
+        from crackerjack.config.hooks import HookStrategy, HookDefinition
+
+        strategy = HookStrategy(
+            hooks=[
+                HookDefinition(name="ruff-check"),
+                HookDefinition(name="ruff-format"),
+            ],
+            name="fast",
+        )
+        out = manager._filter_strategy_for_tool(strategy, "ruff-format")
+        assert [h.name for h in out.hooks] == ["ruff-format"]
+
+    def test_filter_strategy_for_tool_normalises_dash_underscore(self, manager) -> None:
+        """CLI ergonomics: ``--tool ruff-check`` matches a hook named ``ruff_check``."""
+        from crackerjack.config.hooks import HookStrategy, HookDefinition
+
+        strategy = HookStrategy(
+            hooks=[HookDefinition(name="ruff_check")],
+            name="fast",
+        )
+        out = manager._filter_strategy_for_tool(strategy, "ruff-check")
+        assert [h.name for h in out.hooks] == ["ruff_check"]
+
+    def test_filter_strategy_for_tool_empty_when_no_match(self, manager) -> None:
+        """An unknown tool name yields a zero-hook strategy (silent signal)."""
+        from crackerjack.config.hooks import HookStrategy, HookDefinition
+
+        strategy = HookStrategy(
+            hooks=[HookDefinition(name="ruff-check")],
+            name="fast",
+        )
+        out = manager._filter_strategy_for_tool(strategy, "nonexistent-tool")
+        assert out.hooks == []
+
 
 @pytest.mark.unit
 class TestHookManagerExecution:

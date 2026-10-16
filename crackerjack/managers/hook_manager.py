@@ -2,11 +2,12 @@ from __future__ import annotations
 
 import typing as t
 from contextlib import suppress
+from dataclasses import replace
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 from crackerjack.config import CrackerjackSettings
-from crackerjack.config.hooks import HookConfigLoader
+from crackerjack.config.hooks import HookConfigLoader, HookStrategy
 from crackerjack.core.console import CrackerjackConsole
 from crackerjack.models.protocols import (
     GitServiceProtocol,
@@ -274,8 +275,46 @@ class HookManagerImpl:
         self._progress_callback: t.Callable[[int, int], None] | None = None
         self._progress_start_callback: t.Callable[[int, int], None] | None = None
 
+        # ``--tool <name>`` scoping: when set, only the hook whose name
+        # matches (after ``-``/``_`` normalisation) runs in either
+        # phase. Phase coordinators push/pop the value via
+        # :meth:`set_active_tool` so concurrent phases in the same
+        # process see the right scope.
+        self._active_tool: str | None = None
+
     def set_config_path(self, config_path: Path) -> None:
         self._config_path = config_path
+
+    def set_active_tool(self, name: str | None) -> None:
+        """Set the ``--tool`` scope (or clear it with ``None``).
+
+        When ``name`` is non-``None``, :meth:`run_fast_hooks` and
+        :meth:`run_comprehensive_hooks` return only the hook whose
+        ``name`` matches after normalising ``-``/``_`` (CLI ergonomics:
+        ``--tool ruff-check`` matches ``ruff_check`` and vice versa).
+        When no hook in the strategy matches, the phase runs zero
+        hooks — the user gets a clear "no hook by that name" signal
+        rather than a silent full-suite run.
+        """
+        self._active_tool = name
+
+    def _filter_strategy_for_tool(
+        self, strategy: HookStrategy, active_tool: str | None
+    ) -> HookStrategy:
+        if not active_tool:
+            return strategy
+        target = active_tool.replace("-", "_")
+        matches = [
+            h for h in strategy.hooks if h.name.replace("-", "_") == target
+        ]
+        if not matches:
+            if getattr(self, "verbose", False):
+                self.console.print(
+                    f"[yellow]⚠️[/yellow] --tool {active_tool!r} matched no "
+                    f"hook in this phase; running zero hooks."
+                )
+            return replace(strategy, hooks=[])
+        return replace(strategy, hooks=matches)
 
     async def _init_orchestrator(self) -> None:
         if self._orchestrator is not None:
@@ -332,6 +371,7 @@ class HookManagerImpl:
         assert self._orchestrator is not None
 
         strategy = self.config_loader.load_strategy("fast")
+        strategy = self._filter_strategy_for_tool(strategy, self._active_tool)
 
         if self._config_path:
             for hook in strategy.hooks:
@@ -350,6 +390,7 @@ class HookManagerImpl:
         assert self._orchestrator is not None
 
         strategy = self.config_loader.load_strategy("comprehensive")
+        strategy = self._filter_strategy_for_tool(strategy, self._active_tool)
 
         if self._config_path:
             for hook in strategy.hooks:
@@ -382,6 +423,7 @@ class HookManagerImpl:
                 return asyncio.run(self._run_fast_hooks_orchestrated())
 
         strategy = self.config_loader.load_strategy("fast")
+        strategy = self._filter_strategy_for_tool(strategy, self._active_tool)
 
         if self._config_path:
             for hook in strategy.hooks:

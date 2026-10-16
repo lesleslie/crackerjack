@@ -30,6 +30,7 @@ import argparse
 import datetime
 import os
 import re
+import subprocess
 import sys
 from collections import Counter
 from dataclasses import dataclass
@@ -189,14 +190,55 @@ def _is_excluded(rel: str) -> bool:
     return any(p in {"archive", ".archive"} for p in parts)
 
 
+def _tracked_md_names(repo_root: Path, store_rel: str) -> set[str] | None:
+    """Return the set of git-tracked ``*.md`` paths under ``store_rel`` (relative
+    to ``repo_root``), or ``None`` if git is unavailable / not a repo.
+
+    The caller falls back to ``pathlib.rglob`` when this returns ``None``
+    so test fixtures and non-git invocations still see every file on
+    disk. In a real git repo, restricting to tracked paths mirrors the
+    ``local_link_checker._list_markdown_via_git`` pattern — untracked
+    files in a tracked store (e.g. a stray ``.claude/decisions/README.md``
+    leftover from a prior convention) get indexed into ``PLAN_INDEX.md``,
+    then the rendered link fails ``check-local-links`` on fresh clones
+    where the stale on-disk file is absent.
+    """
+    try:
+        result = subprocess.run(
+            [
+                "git",
+                "ls-files",
+                "-z",
+                "--",
+                store_rel.rstrip("/") + "/",
+            ],
+            capture_output=True,
+            check=True,
+            cwd=repo_root,
+        )
+    except (subprocess.CalledProcessError, FileNotFoundError, OSError):
+        return None
+    raw = result.stdout
+    if isinstance(raw, bytes):  # pragma: no cover - defensive
+        raw = raw.decode("utf-8", errors="replace")
+    return {
+        name
+        for name in raw.split("\x00")
+        if name and name.endswith((".md", ".markdown"))
+    }
+
+
 def _discover_files(repo_root: Path, store_rel: str) -> list[tuple[Path, str]]:
     root = repo_root / store_rel.rstrip("/")
     if not root.is_dir():
         return []
+    tracked = _tracked_md_names(repo_root, store_rel)
     out: list[tuple[Path, str]] = []
     for path in sorted(root.rglob("*.md")):
         rel = path.relative_to(repo_root).as_posix()
         if _is_excluded(rel):
+            continue
+        if tracked is not None and rel not in tracked:
             continue
         out.append((path, rel))
     return out

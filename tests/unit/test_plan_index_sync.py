@@ -342,3 +342,97 @@ def test_dry_run_output_uses_relative_path_and_kb(capsys: pytest.CaptureFixture[
     # Raw byte counts should be replaced by KB.
     assert "bytes" not in out
     assert "KB" in out
+
+
+# ---------------------------------------------------------------------------
+# Git-aware discovery — `_tracked_md_names` + `_discover_files`
+# ---------------------------------------------------------------------------
+
+
+def test_tracked_md_names_returns_none_when_git_missing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """``_tracked_md_names`` returns ``None`` when git is unavailable.
+
+    Lets the caller fall back to ``pathlib.rglob`` so non-git test
+    fixtures (and any future ad-hoc invocation outside a repo) still
+    see every file on disk. Pinned because the silent ``return None``
+    contract is the difference between "filter is active" and "filter
+    skipped — run everything".
+    """
+    from crackerjack.tools import plan_index_sync as pis
+
+    monkeypatch.setattr(
+        "crackerjack.tools.plan_index_sync.subprocess.run",
+        _raise_file_not_found,
+    )
+    assert pis._tracked_md_names(REPO_ROOT, "docs/plans/") is None
+
+
+def test_tracked_md_names_returns_set_of_tracked_paths() -> None:
+    """``_tracked_md_names`` returns a ``set[str]`` of repo-relative paths
+    ending in ``.md`` / ``.markdown`` for the scoped store."""
+    from crackerjack.tools import plan_index_sync as pis
+
+    out = pis._tracked_md_names(REPO_ROOT, "docs/plans/")
+    assert isinstance(out, set)
+    # All returned names are markdown files under the store.
+    for name in out:
+        assert name.startswith("docs/plans/"), name
+        assert name.endswith((".md", ".markdown")), name
+    # At least one tracked plan exists in this repo.
+    assert any(name.endswith(".md") for name in out)
+
+
+def test_discover_files_excludes_untracked_in_git_repo(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """``_discover_files`` excludes untracked ``.md`` files when git is
+    available. This is the root-cause fix for the latent bug where a
+    stray untracked ``.claude/decisions/README.md`` got indexed into
+    ``PLAN_INDEX.md``, then the rendered link failed
+    ``check-local-links`` on fresh clones.
+    """
+    from crackerjack.tools import plan_index_sync as pis
+
+    store = tmp_path / "store"
+    store.mkdir()
+    tracked = store / "tracked.md"
+    tracked.write_text("---\ntitle: T\n---\n# T\n", encoding="utf-8")
+    untracked = store / "untracked.md"
+    untracked.write_text("---\ntitle: U\n---\n# U\n", encoding="utf-8")
+
+    monkeypatch.setattr(
+        pis,
+        "_tracked_md_names",
+        lambda repo_root, store_rel: {str(tracked.relative_to(repo_root).as_posix())},
+    )
+
+    found = pis._discover_files(tmp_path, "store/")
+    rels = sorted(rel for _, rel in found)
+    assert rels == ["store/tracked.md"]
+
+
+def test_discover_files_falls_back_to_rglob_when_git_missing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """When ``_tracked_md_names`` returns ``None`` (git unavailable),
+    ``_discover_files`` falls back to ``pathlib.rglob`` and sees every
+    file. Keeps non-git test fixtures working.
+    """
+    from crackerjack.tools import plan_index_sync as pis
+
+    store = tmp_path / "store"
+    store.mkdir()
+    (store / "a.md").write_text("---\ntitle: A\n---\n# A\n", encoding="utf-8")
+    (store / "b.md").write_text("---\ntitle: B\n---\n# B\n", encoding="utf-8")
+
+    monkeypatch.setattr(pis, "_tracked_md_names", lambda *_: None)
+
+    found = pis._discover_files(tmp_path, "store/")
+    rels = sorted(rel for _, rel in found)
+    assert rels == ["store/a.md", "store/b.md"]
+
+
+def _raise_file_not_found(*_args: object, **_kwargs: object) -> object:
+    raise FileNotFoundError(2, "No such file or directory: 'git'")
