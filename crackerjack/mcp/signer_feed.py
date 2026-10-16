@@ -105,6 +105,13 @@ def init_signer_feed_state() -> SignerFeedState:
         new_state = SignerFeedState(manifest=manifest, signer=signer)
 
     _signer_feed_state = new_state
+
+    # Install-cycle credit per feedback-bodai-publisher-install-needs-cycle-credit.
+    # Without this bump, the mcp-common aggregator reports FAILED on
+    # cycles_total == 0 and ``/health`` returns 503 for a server that
+    # is in fact ready to serve.
+    new_state.record_cycle()
+
     logger.info(
         "skills_signer feed state initialized key_id=%s key_path=%s",
         keypair.key_id,
