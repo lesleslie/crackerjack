@@ -109,8 +109,7 @@ def test_rendered_contains_all_six_canonical_stores() -> None:
     expected_headings = {
         "Docs: adr",
         "Docs: plans",
-        "Docs: superpowers/specs",
-        "Docs: superpowers/plans",
+        "Docs: specs",
         ".claude/decisions",
         "Docs: followups",
     }
@@ -173,8 +172,7 @@ def test_entry_link_targets_resolve_from_plans_dir() -> None:
          "2026-09-27-pyproject-single-source-of-truth.md"),
         ("docs/adr/ADR-001-mcp-first-architecture.md",
          "../adr/ADR-001-mcp-first-architecture.md"),
-        ("docs/specs/foo.md", "../superpowers/specs/foo.md"),
-        ("docs/plans/foo.md", "../superpowers/plans/foo.md"),
+        ("docs/specs/foo.md", "../specs/foo.md"),
         (".claude/decisions/deployability-discipline.md",
          "../../.claude/decisions/deployability-discipline.md"),
     ]
@@ -193,7 +191,8 @@ def test_entry_link_targets_resolve_from_plans_dir() -> None:
     # Resolution cases — only real files. Same-dir cases use PLAN_INDEX's
     # actual neighbours; cross-tree cases use well-known canonical docs.
     resolution_cases = [
-        ("docs/plans/AI_FIX_IMPROVEMENT_PLAN.md", "AI_FIX_IMPROVEMENT_PLAN.md"),
+        ("docs/plans/2026-05-20-phase-0-event-bus-plan.md",
+         "2026-05-20-phase-0-event-bus-plan.md"),
         ("docs/adr/ADR-001-mcp-first-architecture.md",
          "../adr/ADR-001-mcp-first-architecture.md"),
         (".claude/decisions/deployability-discipline.md",
