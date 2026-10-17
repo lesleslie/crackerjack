@@ -10,6 +10,41 @@ blocks_on: []
 topic: changelog
 ---
 
+## [0.89.2] - 2026-10-16
+
+### Added
+
+- crackerjack: Discover topic-vocabulary via importlib.resources
+
+### Changed
+
+- crackerjack: Use mcp_common agents_tools factory
+- crackerjack: Use mcp_common skills_tools factory
+
+### Fixed
+
+- crackerjack/docs: Point topic-vocabulary references at oneiric package source
+- crackerjack: Bump cycles_total on init so /health reports HEALTHY
+- crackerjack: Drop ollama from AI provider chain and embedding backends
+- crackerjack: Update topic_unknown remediation to canonical location
+- crackerjack: Wire --tool flag and exclude untracked files from PLAN_INDEX
+
+### Documentation
+
+- crackerjack: Record plan_index_sync git-aware + --tool flag wiring decision
+
+### Testing
+
+- crackerjack: Drop obsolete docs/superpowers/{specs,plans} store references
+
+### Internal
+
+- crackerjack: Drop dead topic-vocabulary SCHEMA_PATHS entry
+- crackerjack: Drop redundant topic-vocabulary-v1.md
+- crackerjack: Untrack docs/archive/ and docs/.archive/, merge legacy content on disk, evict test-artifacts
+- gitignore-template: Add .archive catchall + **/.archive/ for fleet-wide ignore
+- Regenerate PLAN_INDEX.md via plan_index_sync (git-aware)
+
 ## [0.89.1] - 2026-10-15
 
 ### Changed

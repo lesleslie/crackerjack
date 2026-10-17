@@ -60,9 +60,6 @@ coverage/
 nosetests.xml
 coverage.xml
 coverage.json
-# Matches the historical offender pattern coverage__<date>-<time>.json
-# emitted by the test selector runtime.
-coverage*.json
 .hypothesis/
 .pytest_cache/
 
@@ -192,11 +189,6 @@ crackerjack-*/
 .archives/
 .archive/
 /archive/
-# Defensive ignore for legacy `docs/archive/` (no leading dot).
-# Per the 2026-10-15 archive-dir-canonical decision, the canonical location
-# is `docs/.archive/` (gitignored). `docs/archive/` was untracked in
-# crackerjack's migration commit.
-docs/archive/
 .backup/
 /.backups/
 .backup/
@@ -343,17 +335,18 @@ test-results/
 !docs/specs/.archive/**
 !docs/decisions/.archive/
 !docs/decisions/.archive/**
+!docs/.archive/
+!docs/.archive/**
 
-# Generated test/coverage artifacts reach the per-area archive via the
+# Generated test/coverage artifacts reach the archive via the
 # `test_artifacts` category (matches `coverage.json`, `report.txt`,
 # `test_*.{py,txt}`, `*.backup`, `TASK_*.txt`). The files themselves
 # are runtime outputs and must never be tracked — even inside
 # per-area archives, which the negation rules above re-include.
 # Without these overrides, `crackerjack check-added-large-files`
 # rejects the archives (e.g. a 15 MB coverage.json).
-# Note: `docs/.archive/` (the canonical archive) is blanket-ignored
-# per the 2026-10-15 archive-dir-canonical decision, so it has no
-# test-artifacts override — only the per-area archives do.
+docs/.archive/test-artifacts/
+docs/.archive/test-artifacts/**
 docs/plans/.archive/test-artifacts/
 docs/plans/.archive/test-artifacts/**
 docs/specs/.archive/test-artifacts/

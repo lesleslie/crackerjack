@@ -299,6 +299,10 @@ class HookManager(t.Protocol):
 
     def set_config_path(self, path: str | t.Any) -> None: ...
 
+    def set_active_tool(self, name: str | None) -> None:
+        """Scope the next hook run to a single ``--tool`` name (or clear it)."""
+        ...
+
     def get_hook_summary(
         self,
         results: t.Any,

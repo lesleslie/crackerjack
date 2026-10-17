@@ -216,7 +216,7 @@ def _tracked_md_names(repo_root: Path, store_rel: str) -> set[str] | None:
             check=True,
             cwd=repo_root,
         )
-    except (subprocess.CalledProcessError, FileNotFoundError, OSError):
+    except subprocess.CalledProcessError, FileNotFoundError, OSError:
         return None
     raw = result.stdout
     if isinstance(raw, bytes):  # pragma: no cover - defensive

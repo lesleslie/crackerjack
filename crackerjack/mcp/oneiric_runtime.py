@@ -80,7 +80,7 @@ async def _post_to_oneiric(payload: dict[str, Any], url: str, tool_name: str) ->
     Raises on transport errors, non-2xx responses, or malformed JSON
     so the caller's except-block can log ``status=fail`` cleanly.
     """
-    import httpx
+    import httpx2 as httpx
 
     async with httpx.AsyncClient(timeout=PUSH_TIMEOUT_SECONDS) as client:
         response = await client.post(url, json=payload)

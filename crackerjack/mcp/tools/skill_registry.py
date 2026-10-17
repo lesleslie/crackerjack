@@ -48,6 +48,7 @@ This file is a structural mirror of
 error envelope shape, same feed wiring; only the catalog
 directory, schema class, and tool names differ.
 """
+
 from __future__ import annotations
 
 import logging
@@ -222,7 +223,7 @@ def _sign(metadata: SkillCanonicalSchema) -> SkillCanonicalSchema:
     from crackerjack.skills_signer import canonical_payload_for_signing
 
     state = get_signer_feed_state()
-    if state is None:
+    if state is None or state.signer is None:
         msg = "signer not initialized (server may still be starting up)"
         raise RuntimeError(msg)
 
@@ -288,4 +289,4 @@ def register_skill_registry(app: FastMCP) -> None:
     )(app)
 
 
-__all__ = ["register_skill_registry", "SkillCanonicalSchema"]
+__all__ = ["SkillCanonicalSchema", "register_skill_registry"]

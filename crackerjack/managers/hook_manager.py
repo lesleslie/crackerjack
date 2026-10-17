@@ -304,9 +304,7 @@ class HookManagerImpl:
         if not active_tool:
             return strategy
         target = active_tool.replace("-", "_")
-        matches = [
-            h for h in strategy.hooks if h.name.replace("-", "_") == target
-        ]
+        matches = [h for h in strategy.hooks if h.name.replace("-", "_") == target]
         if not matches:
             if getattr(self, "verbose", False):
                 self.console.print(

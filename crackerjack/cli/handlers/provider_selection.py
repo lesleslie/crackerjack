@@ -191,7 +191,6 @@ class ProviderSelectionCLI:
         env_vars = {
             ProviderID.MINIMAX: "MINIMAX_API_KEY",
             ProviderID.LLAMA_SERVER: "",
-            ProviderID.OLLAMA: "",
         }
         return env_vars.get(provider_id, "")
 

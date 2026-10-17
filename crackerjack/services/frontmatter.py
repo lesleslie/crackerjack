@@ -103,9 +103,13 @@ def _try_oneiric_schemas_vocab() -> Path | None:
         traversable = resources.files("oneiric.schemas").joinpath(
             "topic-vocabulary-v1.md"
         )
-    except (ModuleNotFoundError, AttributeError):
+    except ModuleNotFoundError, AttributeError:
         return None
-    if traversable.exists():
+    # ``importlib.resources.Traversable`` does not define ``exists()``;
+    # concrete disk-backed impls do. Probe defensively so wheel installs
+    # whose root isn't a plain directory (zip, multiplexed) still resolve.
+    exists = getattr(traversable, "exists", None)
+    if exists is None or exists():
         # Wheel-installed packages back ``Traversable`` with a disk Path
         # whose ``str()`` is the resolved file location. Read via Path so
         # downstream ``is_file()`` / ``read_text()`` calls keep working.
