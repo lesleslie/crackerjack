@@ -34,11 +34,11 @@ def get_io_executor() -> ThreadPoolExecutor:
                     from crackerjack.config import CrackerjackSettings
 
                     settings = CrackerjackSettings()
-                    max_workers = settings.max_parallel_hooks
+                    max_workers = settings.substrate.pool__max_workers
                 except Exception:
                     max_workers = 4
                     logger.warning(
-                        "Could not load max_parallel_hooks from settings, using default: 4"
+                        "Could not load pool__max_workers from substrate, using default: 4"
                     )
 
                 _io_executor = ThreadPoolExecutor(

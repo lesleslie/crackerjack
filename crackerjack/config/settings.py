@@ -4,6 +4,7 @@ import typing as t
 from pathlib import Path
 
 from oneiric.core.config import OneiricMCPConfig
+from oneiric.core.substrate_settings import SubstrateSettings
 from pydantic import Field, model_validator
 
 from .validators import reshape_adapter_timeouts, warn_unknown_pyproject_subtables
@@ -485,6 +486,15 @@ class AsyncTaskSettings(OneiricMCPConfig):
 class CrackerjackSettings(OneiricMCPConfig):
     pkg_path: Path | None = None
 
+    substrate: SubstrateSettings = Field(
+        default_factory=SubstrateSettings,
+        description=(
+            "Shared Bodai substrate (Phase E1/E2): cache/warm/cold/embedding/"
+            "pool/retry/circuit-breaker/telemetry/auth. Owns the cache_* and "
+            "pool__* settings that were previously local to CrackerjackSettings."
+        ),
+    )
+
     @model_validator(mode="before")
     @classmethod
     def _reshape_adapter_timeouts(cls, data: t.Any) -> t.Any:  # REQ-004
@@ -526,10 +536,6 @@ class CrackerjackSettings(OneiricMCPConfig):
     enable_orchestration: bool = True
     orchestration_mode: str = "oneiric"
     enable_caching: bool = True
-    cache_backend: str = "memory"
-    cache_ttl: int = 3600
-    cache_max_entries: int = 100
-    max_parallel_hooks: int = 4
     default_timeout: int = 1800
     stop_on_critical_failure: bool = True
     enable_dependency_resolution: bool = True
