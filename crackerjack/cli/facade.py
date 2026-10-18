@@ -106,10 +106,17 @@ class CrackerjackCLIFacade:
     def _start_mcp_server(self) -> None:
         try:
             from crackerjack.mcp.server_core import main as start_mcp_main
+            from crackerjack.mcp.server_core import mcp_app
+            from crackerjack.mcp.oneiric_runtime import report_runtime_to_oneiric
 
             self.console.print(
                 "[bold cyan]🤖 Starting Crackerjack MCP Server...[/bold cyan]",
             )
+            # Phase 3 component-boot hook per the oneiric-substrate umbrella
+            # (2026-10-15): fire-and-forget push of runtime facts to Oneiric
+            # before the server starts. The helper spawns a daemon thread
+            # so this call returns immediately; the thread swallows all errors.
+            report_runtime_to_oneiric(mcp_app)
             start_mcp_main(str(self.pkg_path))
         except ImportError:
             self.console.print(
