@@ -767,7 +767,7 @@ wheels = [
 
 [[package]]
 name = "crackerjack"
-version = "0.89.1"
+version = "0.89.2"
 source = { editable = "." }
 dependencies = [
     { name = "aiofiles" },
@@ -860,7 +860,7 @@ requires-dist = [
     { name = "cryptography", specifier = ">=50.0.2" },
     { name = "docstring-to-markdown", specifier = ">=0.17" },
     { name = "fastapi", specifier = ">=0.142.2" },
-    { name = "fastmcp", specifier = ">=3.4.7" },
+    { name = "fastmcp", specifier = ">=4.0.0,<5" },
     { name = "hatchling", specifier = ">=1.32.4" },
     { name = "httpx2", specifier = ">=2.13.1" },
     { name = "hypothesis", specifier = ">=6.168.3" },
