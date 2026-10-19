@@ -53,7 +53,7 @@ dependencies = [
     # singleton (``oneiric.adapters.llm.bifrost.get_router()``) for
     # the OPENAI-compatible provider's ``base_url``. The 0.32+ floor
     # is the router module's home version.
-    "oneiric>=0.32",
+    "oneiric>=0.33",
     "pyleak>=0.2.0",
     "pyscn==1.5.0",
     "pydantic>=2.13.5",
