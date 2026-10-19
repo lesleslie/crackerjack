@@ -47,12 +47,12 @@ _DEFAULT_PROVIDERS: dict[str, dict[str, t.Any]] = {
 class FallbackChainSettings(BaseCodeFixerSettings):
     model: str = "MiniMax-M2.7"
     task_type: str = "code_generation"
-    llama_server_url: str = "http://localhost: 8081"
+    llama_server_url: str = "http://localhost:8081"
 
 
 def _build_llm_settings() -> LLMSettings:
     providers = _DEFAULT_PROVIDERS.copy()
-    llama_url = os.environ.get("LLAMA_SERVER_URL", "http://localhost: 8081")
+    llama_url = os.environ.get("LLAMA_SERVER_URL", "http://localhost:8081")
     providers["llama_server"] = providers["llama_server"].copy()
     providers["llama_server"]["base_url"] = llama_url
     return LLMSettings(

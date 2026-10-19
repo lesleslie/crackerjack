@@ -671,7 +671,7 @@ CLI_OPTIONS = {
         "--select-provider",
         help=(
             "Launch interactive provider selection menu. "
-            "Configure AI provider for code fixing (Claude, Qwen, Ollama). "
+            "Configure AI provider for code fixing (minimax, llama_server). "
             "Saves selection to settings/local.yaml."
         ),
     ),

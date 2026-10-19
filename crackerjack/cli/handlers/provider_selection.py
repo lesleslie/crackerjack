@@ -46,7 +46,7 @@ class ProviderSelectionCLI:
         header = Panel(
             "[bold cyan]AI Provider Selection[/bold cyan]\n\n"
             "Configure the AI provider for crackerjack's code fixing features.\n"
-            "Current options: MiniMax, llama-server, Ollama",
+            "Current options: MiniMax, llama-server",
             title="Crackerjack Configuration",
             border_style="cyan",
         )
