@@ -92,6 +92,7 @@ documentation:
   auto_cleanup_on_publish: true
   dry_run_by_default: false
   backup_before_cleanup: true
+  use_shared_regenerator: false  # NEW: opt-in per sibling; flip when oneiric.plan_index is available
 
   essential_files:
     - AGENTS.md

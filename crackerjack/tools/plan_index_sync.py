@@ -45,6 +45,9 @@ except ImportError as exc:  # pragma: no cover - import guard
     )
     raise SystemExit(2) from exc
 
+from crackerjack.config.loader import load_settings
+from crackerjack.config.settings import CrackerjackSettings
+
 
 # ---------------------------------------------------------------------------
 # Output formatting — local-only helpers for console lines below.
@@ -366,7 +369,7 @@ def _render_index(entries_by_store: dict[str, list[Entry]], generated_at: str) -
         (
             (
                 f"_Regenerated {generated_at} by "
-                f"`crackerjack.tools.plan_index_sync` (fast-hook)._"
+                f"`crackerjack.tools.plan_index_sync` (phase)._"
             ),
             "",
         )
@@ -410,7 +413,7 @@ def main(argv: list[str] | None = None) -> int:
         prog="plan_index_sync",
         description=(
             "Regenerate docs/plans/PLAN_INDEX.md from per-store frontmatter. "
-            "Used as a crackerjack fast-hook (plan-index-sync)."
+            "Used as a crackerjack phase (plan-index-sync)."
         ),
     )
     parser.add_argument(
@@ -432,6 +435,27 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
+    settings = load_settings(CrackerjackSettings)
+    use_shared = bool(settings.documentation.use_shared_regenerator)
+    if use_shared:
+        from oneiric.plan_index import regenerate as shared_regenerate
+
+        # --dry-run ≡ check=True (per spec acceptance criterion I-1)
+        return shared_regenerate(
+            repo_root=args.repo_root.resolve(),
+            out_path=(args.out.resolve() if args.out else None),
+            check=bool(args.dry_run),
+        )
+
+    # LEGACY BRANCH: inline the pre-dispatch body of main() (originally
+    # at crackerjack/tools/plan_index_sync.py:407-454 before this rewrite).
+    #
+    # Per crackerjack-specialist review C3: do NOT extract to
+    # ``_legacy_render(args)``. Inlining is preferable — fewer new
+    # symbols, tighter review diff, and the legacy branch is small
+    # once the shared import is removed. The CLI surface
+    # (``--repo-root``, ``--out``, ``--dry-run``) stays identical so the
+    # existing ``test_help_smoke`` continues to pass.
     new_content = render_plan_index(args.repo_root)
 
     if args.dry_run:

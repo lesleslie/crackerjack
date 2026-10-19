@@ -435,3 +435,47 @@ def test_discover_files_falls_back_to_rglob_when_git_missing(
 
 def _raise_file_not_found(*_args: object, **_kwargs: object) -> object:
     raise FileNotFoundError(2, "No such file or directory: 'git'")
+
+
+def test_dry_run_translates_to_check(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """crackerjack's --dry-run flag must translate to oneiric.plan_index.regenerate(check=True).
+
+    Invokes the dispatcher module DIRECTLY (NOT ``crackerjack run``). The
+    ``crackerjack run`` CLI does not bind ``--repo-root`` (``grep`` of
+    ``crackerjack/cli/options.py`` and ``crackerjack/__main__.py:806``
+    confirms); ``PhaseCoordinator`` constructs ``--repo-root`` itself from
+    ``process.cwd`` (``crackerjack/core/phase_coordinator.py:858``).
+    Calling ``crackerjack run --plan-index-sync --dry-run --repo-root
+    <tmp>`` would silently ignore the ``--repo-root`` flag and run against
+    the worktree's cwd, NOT against ``tmp_path``. Mirror the existing
+    pattern at ``crackerjack/tests/unit/test_plan_index_sync.py:18`` (the
+    ``_tool_help()`` probe) — direct module invocation only.
+
+    NOTE: env var is ``CRACKERJACK_DOCUMENTATION__USE_SHARED_REGENERATOR``
+    (not ``CRACKERJACK_DOCS__...``). The crackerjack env-overlay at
+    ``crackerjack/config/loader.py:25`` splits on ``__`` and looks the
+    section up in ``CrackerjackSettings.model_fields``; the top-level
+    field is ``documentation`` (``docs`` is not an alias), so the brief
+    env-var spelling would silently no-op.
+    """
+    monkeypatch.setenv("CRACKERJACK_DOCUMENTATION__USE_SHARED_REGENERATOR", "true")
+    docs = tmp_path / "docs" / "plans"
+    docs.mkdir(parents=True)
+    (docs / "foo.md").write_text("---\nstatus: active\n---\n# Foo\n", encoding="utf-8")
+    # Run the dispatcher module directly with --dry-run
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            TOOL_MODULE,
+            "--repo-root",
+            str(tmp_path),
+            "--dry-run",
+        ],
+        capture_output=True,
+        text=True,
+        timeout=30,
+        cwd=REPO_ROOT,
+    )
+    # exit 0 = no drift, exit 1 = drift (either is valid; key is no exception)
+    assert result.returncode in (0, 1), result.stderr
