@@ -436,7 +436,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     settings = load_settings(CrackerjackSettings)
-    use_shared = bool(settings.documentation.use_shared_regenerator)
+    use_shared = getattr(settings.documentation, "use_shared_regenerator", False)
     if use_shared:
         from oneiric.plan_index import regenerate as shared_regenerate
 
