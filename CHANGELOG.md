@@ -10,6 +10,19 @@ blocks_on: []
 topic: changelog
 ---
 
+## [0.90.0] - 2026-10-19
+
+### Added
+
+- crackerjack: Adopt OneiricSettings.substrate for cache + pool fields (Phase E2 substrate rollout)
+- crackerjack: FallbackChainCodeFixer uses oneiric BifrostLLMRouter (plan 6, phase 5)
+- crackerjack: Wire oneiric_report_runtime component-boot hook per oneiric-substrate umbrella Phase 3 (2026-10-18)
+
+### Internal
+
+- Crackerjack slice — finish residual ollama strings (plan 5)
+- deps: Bump fastmcp pin to >=4.0.0,<5 (operator correction 2026-10-18)
+
 ## [0.89.2] - 2026-10-16
 
 ### Added

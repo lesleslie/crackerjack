@@ -105,9 +105,9 @@ class CrackerjackCLIFacade:
 
     def _start_mcp_server(self) -> None:
         try:
-            from crackerjack.mcp.server_core import main as start_mcp_main
-            from crackerjack.mcp.server_core import mcp_app
             from crackerjack.mcp.oneiric_runtime import report_runtime_to_oneiric
+            from crackerjack.mcp.server_core import _get_default_mcp_app
+            from crackerjack.mcp.server_core import main as start_mcp_main
 
             self.console.print(
                 "[bold cyan]🤖 Starting Crackerjack MCP Server...[/bold cyan]",
@@ -116,7 +116,15 @@ class CrackerjackCLIFacade:
             # (2026-10-15): fire-and-forget push of runtime facts to Oneiric
             # before the server starts. The helper spawns a daemon thread
             # so this call returns immediately; the thread swallows all errors.
-            report_runtime_to_oneiric(mcp_app)
+            # The FastMCP app is built lazily via _get_default_mcp_app() so
+            # the asyncio.run() inside create_mcp_server() does not fire at
+            # module-import time (which would collide with test runners
+            # that start an event loop during collection). When FastMCP is
+            # unavailable the getter returns None and we skip the early push;
+            # main() also reports runtime once its own server is built.
+            mcp_app = _get_default_mcp_app()
+            if mcp_app is not None:
+                report_runtime_to_oneiric(mcp_app)
             start_mcp_main(str(self.pkg_path))
         except ImportError:
             self.console.print(
