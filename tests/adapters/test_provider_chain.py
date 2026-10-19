@@ -10,6 +10,7 @@ import os
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from oneiric.adapters.llm.bifrost import reset_router_for_tests
 
 from crackerjack.adapters.ai.base import BaseCodeFixer
 from crackerjack.adapters.ai.registry import (
@@ -25,6 +26,24 @@ from crackerjack.adapters.ai.unified import (
     _build_llm_settings,
     build_provider_config,
 )
+
+
+# Per-test oneiric router reset. The router is a process-cached
+# singleton; without this fixture, an earlier test that enabled
+# the router would leak its state into later tests. The fixture
+# also clears the oneiric env-var surface so tests are not
+# coupled to operator-shell state.
+@pytest.fixture(autouse=True)
+def _reset_bifrost_router(monkeypatch: pytest.MonkeyPatch) -> None:
+    for env_key in (
+        "ONEIRIC_BIFROST_ENABLED",
+        "ONEIRIC_BIFROST_BASE_URL",
+        "ONEIRIC_BIFROST_ROUTES",
+    ):
+        monkeypatch.delenv(env_key, raising=False)
+    reset_router_for_tests()
+    yield
+    reset_router_for_tests()
 
 
 class TestFallbackChainCodeFixer:
@@ -111,7 +130,7 @@ class TestBuildLlmSettings:
         env = {k: v for k, v in os.environ.items() if k != "LLAMA_SERVER_URL"}
         with patch.dict(os.environ, env, clear=True):
             settings = _build_llm_settings()
-        assert settings.providers["llama_server"]["base_url"] == "http://localhost: 8081"
+        assert settings.providers["llama_server"]["base_url"] == "http://localhost:8081"
 
     def test_all_three_providers_present(self):
         settings = _build_llm_settings()
@@ -125,6 +144,88 @@ class TestBuildLlmSettings:
     def test_local_providers_no_auth(self):
         settings = _build_llm_settings()
         assert settings.providers["llama_server"]["require_auth"] is False
+
+    def test_chain_uses_router(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """REQ-BIFROST-010 (bifrost plan §5 Phase 5): the OPENAI-
+        compatible provider in ``_build_llm_settings`` sources its
+        ``base_url`` from the oneiric ``BifrostLLMRouter`` singleton
+        when the router is enabled and the OPENAI route is
+        configured. Captures the ``LLMSettings`` instance and
+        asserts the ``minimax`` provider's ``base_url`` matches
+        the router's resolved URL.
+        """
+        monkeypatch.setenv("ONEIRIC_BIFROST_ENABLED", "true")
+        monkeypatch.setenv("ONEIRIC_BIFROST_ROUTES", "qwen_route")
+        monkeypatch.setenv("ONEIRIC_BIFROST_BASE_URL", "http://127.0.0.1:8471/v1")
+        reset_router_for_tests()
+
+        settings = _build_llm_settings()
+        assert (
+            settings.providers["minimax"]["base_url"] == "http://127.0.0.1:8471/v1"
+        ), "REQ-BIFROST-010: minimax's base_url must come from the oneiric router."
+
+    def test_chain_falls_back_to_direct_cloud_when_router_disabled(
+        self,
+    ) -> None:
+        """When the router is disabled, ``_build_llm_settings`` falls
+        through to the direct cloud URL. The pre-Phase-5
+        ``https://api.minimax.io/v1`` default must survive the
+        router integration (the gateway is opt-in).
+
+        Note: the autouse ``_reset_bifrost_router`` fixture handles
+        env-var cleanup; this test takes no ``monkeypatch`` parameter.
+        """
+        # Autouse fixture already cleared oneiric env vars; this
+        # explicit assert documents the contract.
+        assert "ONEIRIC_BIFROST_ENABLED" not in os.environ
+        reset_router_for_tests()
+
+        settings = _build_llm_settings()
+        assert settings.providers["minimax"]["base_url"] == "https://api.minimax.io/v1"
+
+    def test_chain_honors_minimax_base_url_env(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """General-purpose LOW-1: when the router is disabled, the
+        ``MINIMAX_BASE_URL`` env-var is honored (operator override).
+        Mirrors ``mahavishnu/workers/cloud_worker.py:86-96`` where
+        the precedence is router → env-var → hardcoded default.
+        """
+        monkeypatch.setenv("MINIMAX_BASE_URL", "http://custom-direct:9999/v1")
+        reset_router_for_tests()
+
+        settings = _build_llm_settings()
+        assert (
+            settings.providers["minimax"]["base_url"]
+            == "http://custom-direct:9999/v1"
+        )
+
+    def test_chain_keeps_llama_server_env_var_only(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """``llama_server`` is not in the router's ``_PROVIDER_ROUTE``
+        mapping; it keeps its env-var-only resolution. Pinning
+        this prevents a future refactor from accidentally
+        routing ``llama_server`` through the router (which would
+        raise ``KeyError`` at runtime per the oneiric router
+        contract).
+        """
+        monkeypatch.setenv("ONEIRIC_BIFROST_ENABLED", "true")
+        monkeypatch.setenv("ONEIRIC_BIFROST_ROUTES", "qwen_route")
+        monkeypatch.setenv("ONEIRIC_BIFROST_BASE_URL", "http://127.0.0.1:8471/v1")
+        monkeypatch.setenv("LLAMA_SERVER_URL", "http://local-llama:9999")
+        reset_router_for_tests()
+
+        settings = _build_llm_settings()
+        # ``llama_server`` keeps its env-var URL — never reads from the router.
+        assert settings.providers["llama_server"]["base_url"] == "http://local-llama:9999"
+        # ``minimax`` got the router's URL.
+        assert settings.providers["minimax"]["base_url"] == "http://127.0.0.1:8471/v1"
 
 
 class TestBuildProviderConfig:

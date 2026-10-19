@@ -2596,7 +2596,7 @@ wheels = [
 
 [[package]]
 name = "oneiric"
-version = "0.30.0"
+version = "0.32.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiobreaker" },
@@ -2619,9 +2619,9 @@ dependencies = [
     { name = "typer" },
     { name = "watchfiles" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/a7/cd/e2acdb1f29bdb058c69ce32ef488f2f629bda5e175900349f263cb566c4a/oneiric-0.30.0.tar.gz", hash = "sha256:85f478b36f2da57eefd303691fb5b8b211a2fc6a350d31c220d2fbd18cdf587b", size = 1748869, upload-time = "2026-10-17T05:40:43.617Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/54/f5/4968f3a74f371a07af1c4f6be0306bac9a4cb02f8d6a0d2c8118523770b1/oneiric-0.32.0.tar.gz", hash = "sha256:52add25ebbda96e00918d62db2efdc99840590c9fdacff7b4d94d6ef3ce5d47f", size = 1774433, upload-time = "2026-10-19T03:05:05.438Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/74/3b/4ec55c95cb8cee804c988d114c053769100e479b19e254aac1ff2af24fce/oneiric-0.30.0-py3-none-any.whl", hash = "sha256:dc7431aeac44a090891302aa3a4c19af4674e1c417aad3aa873d1c24efbbb015", size = 483199, upload-time = "2026-10-17T05:40:41.589Z" },
+    { url = "https://files.pythonhosted.org/packages/8a/3b/ded3f1f5c477439718b56628e6b716b3b7b08129b548b5c69eefa9e18e54/oneiric-0.32.0-py3-none-any.whl", hash = "sha256:9cd3ed7a6f16e3f1910c4b651f3ef25a69165563b0b0169f26b17e83a8627084", size = 491987, upload-time = "2026-10-19T03:05:03.869Z" },
 ]
 
 [[package]]

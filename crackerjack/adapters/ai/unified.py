@@ -7,6 +7,8 @@ from uuid import UUID
 
 from mcp_common.llm import FallbackChain
 from mcp_common.llm.config import LLMSettings, ProviderConfig
+from oneiric.adapters.llm.bifrost import get_router
+from oneiric.adapters.llm.llm_interface import LLMProvider
 
 from crackerjack.adapters.ai.base import BaseCodeFixer, BaseCodeFixerSettings
 from crackerjack.models.adapter_metadata import AdapterStatus
@@ -51,7 +53,31 @@ class FallbackChainSettings(BaseCodeFixerSettings):
 
 
 def _build_llm_settings() -> LLMSettings:
+    # Phase 5 (REQ-BIFROST-010, bifrost plan §5): the OPENAI-compatible
+    # ``minimax`` provider's ``base_url`` comes from the oneiric
+    # ``BifrostLLMRouter`` singleton. When the router is enabled and
+    # routes OPENAI, the provider transparently hits the local
+    # Bifrost gateway (which forwards to the upstream cloud);
+    # when the router returns ``None`` (gateway disabled or OPENAI
+    # route unconfigured), falls through to the ``MINIMAX_BASE_URL``
+    # env-var (operator override) and then to the public
+    # ``api.minimax.io`` default. The router → env-var → hardcoded
+    # precedence mirrors ``mahavishnu/workers/cloud_worker.py:86-96``.
+    # The ``llama_server`` provider keeps its env-var-only resolution
+    # (the router's ``_PROVIDER_ROUTE`` only maps ANTHROPIC + OPENAI).
+    bifrost_openai_url = get_router().resolve(LLMProvider.OPENAI)
     providers = _DEFAULT_PROVIDERS.copy()
+    providers["minimax"] = providers["minimax"].copy()
+    if bifrost_openai_url:
+        providers["minimax"]["base_url"] = str(bifrost_openai_url)
+    else:
+        # Router disabled — honor a ``MINIMAX_BASE_URL`` operator
+        # override (added in Phase 5 follow-up so the env var matches
+        # the comment that has been there since Phase 0). The default
+        # stays at the public ``api.minimax.io`` direct-cloud URL.
+        env_minimax_url = os.environ.get("MINIMAX_BASE_URL")
+        if env_minimax_url:
+            providers["minimax"]["base_url"] = env_minimax_url
     llama_url = os.environ.get("LLAMA_SERVER_URL", "http://localhost:8081")
     providers["llama_server"] = providers["llama_server"].copy()
     providers["llama_server"]["base_url"] = llama_url

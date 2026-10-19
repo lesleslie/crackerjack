@@ -48,7 +48,12 @@ dependencies = [
     "mdformat>=1.0.0",
     "mdformat-ruff>=0.1.3",
     "numpy>=2.5.3",
-    "oneiric>=0.29.2",
+    # REQ-BIFROST-010 (bifrost plan §5 Phase 5, 2026-10-17): the
+    # FallbackChainCodeFixer consults the oneiric BifrostLLMRouter
+    # singleton (``oneiric.adapters.llm.bifrost.get_router()``) for
+    # the OPENAI-compatible provider's ``base_url``. The 0.32+ floor
+    # is the router module's home version.
+    "oneiric>=0.32",
     "pyleak>=0.2.0",
     "pyscn==1.5.0",
     "pydantic>=2.13.5",
