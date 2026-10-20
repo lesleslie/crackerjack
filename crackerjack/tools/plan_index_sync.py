@@ -48,7 +48,6 @@ except ImportError as exc:  # pragma: no cover - import guard
 from crackerjack.config.loader import load_settings
 from crackerjack.config.settings import CrackerjackSettings
 
-
 # ---------------------------------------------------------------------------
 # Output formatting — local-only helpers for console lines below.
 # ---------------------------------------------------------------------------
@@ -110,7 +109,6 @@ DEFAULT_STORES: tuple[str, ...] = (
     "docs/adr/",
     "docs/plans/",
     "docs/specs/",
-    "docs/plans/",
     ".claude/decisions/",
     "docs/followups/",
 )

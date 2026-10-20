@@ -1,6 +1,6 @@
 # Plan Index
 
-_Regenerated 2026-10-19 by `crackerjack.tools.plan_index_sync` (fast-hook)._
+_Regenerated 2026-10-20 by `crackerjack.tools.plan_index_sync` (phase)._
 
 ### Docs: adr
 
@@ -53,30 +53,6 @@ _Regenerated 2026-10-19 by `crackerjack.tools.plan_index_sync` (fast-hook)._
 | [`docs/specs/2026-09-07-crackerjack-multi-language-design.md`](../specs/2026-09-07-crackerjack-multi-language-design.md) | 2026-09-07 | `complete` | `canonical` | `architecture` | Crackerjack Multi-Language Extension |
 | [`docs/specs/2026-10-10-crackerjack-oneiric-loader-migration-design.md`](../specs/2026-10-10-crackerjack-oneiric-loader-migration-design.md) | 2026-10-10 | `draft` | `implementation` | `settings-resolution` | Spec: Crackerjack Settings Loader — Migration to Oneiric |
 
-### Docs: plans
-
-| Path | Date | Status | Role | Topic | Title |
-|---|---|---|---|---|---|
-| [`docs/plans/2026-05-20-phase-0-event-bus-plan.md`](2026-05-20-phase-0-event-bus-plan.md) | 2026-07-17 | `active` | `implementation` | `lifecycle` | Phase 0 Implementation Plan — AI-Fix Event Bus |
-| [`docs/plans/2026-06-02-ai-fix-display-loop-bugs.md`](2026-06-02-ai-fix-display-loop-bugs.md) | 2026-07-17 | `active` | `implementation` | `lifecycle` | AI-Fix Display & Loop Bugs Implementation Plan |
-| [`docs/plans/2026-06-03-dhara-mcp-migration.md`](2026-06-03-dhara-mcp-migration.md) | 2026-07-17 | `active` | `implementation` | `lifecycle` | Dhara MCP Migration Implementation Plan |
-| [`docs/plans/2026-06-29-ty-ratchet-cleanup.md`](2026-06-29-ty-ratchet-cleanup.md) | 2026-07-17 | `active` | `implementation` | `lifecycle` | ty-ratchet pipeline cleanup (E.3 + missing-dir) Implementation Plan |
-| [`docs/plans/2026-07-08-fix-sandbox-integration.md`](2026-07-08-fix-sandbox-integration.md) | 2026-07-17 | `active` | `implementation` | `lifecycle` | FixSandbox Production Integration Plan |
-| [`docs/plans/2026-07-10-libcst-surgeon-extract-method-fallback.md`](2026-07-10-libcst-surgeon-extract-method-fallback.md) | 2026-07-17 | `active` | `implementation` | `lifecycle` | W3 LibcstSurgeon Extract-Method Fallback Fix — Implementation Plan |
-| [`docs/plans/2026-07-10-output-validator-traceback-details.md`](2026-07-10-output-validator-traceback-details.md) | 2026-07-17 | `active` | `implementation` | `lifecycle` | OutputValidator Traceback Details Implementation Plan |
-| [`docs/plans/2026-07-10-validation-coordinator-serialization.md`](2026-07-10-validation-coordinator-serialization.md) | 2026-07-17 | `active` | `implementation` | `lifecycle` | ValidationCoordinator Concurrency Serialization Implementation Plan |
-| [`docs/plans/2026-07-11-ai-fix-e501-post-processor.md`](2026-07-11-ai-fix-e501-post-processor.md) | 2026-07-17 | `active` | `implementation` | `lifecycle` | AI-fix ruff E501 line-length post-processor — Implementation Plan |
-| [`docs/plans/2026-07-11-ai-fix-no-op-circuit-breaker.md`](2026-07-11-ai-fix-no-op-circuit-breaker.md) | 2026-07-17 | `active` | `implementation` | `lifecycle` | AI-fix no-op circuit breaker — Implementation Plan |
-| [`docs/plans/2026-07-11-ai-fix-regen-timeout.md`](2026-07-11-ai-fix-regen-timeout.md) | 2026-07-17 | `active` | `implementation` | `lifecycle` | AI-fix plan-regeneration timeout — Implementation Plan |
-| [`docs/plans/2026-07-12-eventbridge-publisher.md`](2026-07-12-eventbridge-publisher.md) | 2026-07-17 | `active` | `implementation` | `lifecycle` | Crackerjack EventBridge Publisher Implementation Plan |
-| [`docs/plans/2026-08-06-ai-fix-external-loop.md`](2026-08-06-ai-fix-external-loop.md) | 2026-08-06 | `complete` | `historical` | `lifecycle` | AI-Fix External Loop + Akosha Hook Implementation Plan |
-| [`docs/plans/2026-08-06-crackerjack-ruff-fix-policy.md`](2026-08-06-crackerjack-ruff-fix-policy.md) | 2026-08-06 | `draft` | `implementation` | `lifecycle` | Crackerjack Ruff Fix Policy Implementation Plan |
-| [`docs/plans/2026-08-10-ai-fix-loop-task-1-kickoff.md`](2026-08-10-ai-fix-loop-task-1-kickoff.md) | 2026-08-10 | `draft` | `implementation` | `lifecycle` | AI-Fix Loop Plan — Task 1 Execution Kickoff |
-| [`docs/plans/2026-08-11-darnlink-replaces-check-local-links.md`](2026-08-11-darnlink-replaces-check-local-links.md) | 2026-08-11 | `draft` | `implementation` | `lifecycle` | Replace `check-local-links` with `darnlink` across the Bodai ecosystem |
-| [`docs/plans/2026-09-07-bodai-shared-gitignore-snippet.md`](2026-09-07-bodai-shared-gitignore-snippet.md) | 2026-09-07 | `draft` | `implementation` | `gitignore-conformance` | Bodai Shared `.gitignore` Snippet — crackerjack-enforced |
-| [`docs/plans/2026-10-10-crackerjack-oneiric-loader-migration.md`](2026-10-10-crackerjack-oneiric-loader-migration.md) | 2026-10-10 | `draft` | `implementation` | `settings-resolution` | Crackerjack Settings Loader — Migration to Oneiric — Implementation Plan |
-| [`docs/plans/2026-10-11-remove-zuban-skylos-lsp-from-crackerjack.md`](2026-10-11-remove-zuban-skylos-lsp-from-crackerjack.md) | 2026-10-11 | `active` | `implementation` | `architecture` | Remove Zuban + Skylos LSP Adapters from Crackerjack |
-
 ### .claude/decisions
 
 | Path | Date | Status | Role | Topic | Title |
@@ -107,8 +83,8 @@ _Regenerated 2026-10-19 by `crackerjack.tools.plan_index_sync` (fast-hook)._
 | Role \\ Lifecycle | draft | active | partial | shipped | complete | Total |
 |---|---|---|---|---|---|---|
 | `canonical` | · | 10 | · | · | 2 | **12** |
-| `implementation` | 21 | 34 | · | · | 1 | **56** |
+| `implementation` | 16 | 21 | · | · | 1 | **38** |
 | `umbrella` | · | · | · | · | · | **0** |
-| `historical` | · | · | · | · | 2 | **2** |
+| `historical` | · | · | · | · | 1 | **1** |
 | `superseded` | · | · | · | · | · | **0** |
-| **Total** | **21** | **44** | **·** | **·** | **5** | **70** |
+| **Total** | **16** | **31** | **·** | **·** | **4** | **51** |

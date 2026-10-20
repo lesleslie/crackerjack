@@ -460,6 +460,13 @@ test-results/
 .claude/agents/.archive/
 .claude/skills/*/.archive/
 .claude/workflows/.archive/
+# Generic .archive catchall — any directory named .archive (docs/plans/.archive,
+# session-buddy scratch dirs, etc.) should never be tracked. The bare
+# pattern matches at top level; the **/.archive/ form is explicit
+# deep matching as defense in depth. Both are needed because some
+# gitignore implementations short-circuit on the first match.
+.archive/
+**/.archive/
 .claude/backups/
 .claude/handoff/
 .claude/worktrees/

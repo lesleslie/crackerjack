@@ -10,6 +10,20 @@ blocks_on: []
 topic: changelog
 ---
 
+## [0.91.0] - 2026-10-20
+
+### Added
+
+- crackerjack: Dispatch plan_index_sync to oneiric.plan_index via feature flag
+
+### Fixed
+
+- crackerjack: Drop redundant bool() cast on already-Pydantic-bool setting
+
+### Internal
+
+- deps: Bump oneiric>= to 0.33 (plan_index library floor)
+
 ## [0.90.0] - 2026-10-19
 
 ### Added
