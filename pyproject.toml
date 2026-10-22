@@ -608,6 +608,21 @@ required-environments = [
 mcp-common = "2099-12-31T23:59:59Z"
 oneiric = "2099-12-31T23:59:59Z"
 session-buddy = "2099-12-31T23:59:59Z"
+# Class 2 — CVE fixes. Both fixes landed 2026-10-20, inside the 7-day
+# cooldown above, so without these entries `uv lock --upgrade` silently keeps
+# the vulnerable versions rather than erroring.
+#
+# uv 0.13.4 — PYSEC-2026-4321 / GHSA-hq85-5cpj-mr62 (CRITICAL, CWE-295).
+# uv's vendored webpki-root-certs bundle trusted an eSign root whose
+# intermediate CA keys were compromised. crackerjack is the origin of this
+# advisory for the whole fleet: it declares `uv>=0.12.22` as a RUNTIME
+# dependency and shells out to it (`core/autofix_coordinator.py`,
+# session-buddy's filesystem/session tools), so the vulnerable binary really
+# does execute.
+# certifi 2026.10.19 — PYSEC-2026-4320 / GHSA-6q48-6c7w-9gw2 (CRITICAL,
+# CWE-295). Transitive via requests/httpx; exposed at TLS handshake time.
+uv = "2099-12-31T23:59:59Z"
+certifi = "2099-12-31T23:59:59Z"
 
 [tool.pip-audit]
 ignore-vulns = [
