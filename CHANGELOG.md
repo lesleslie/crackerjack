@@ -10,6 +10,21 @@ blocks_on: []
 topic: changelog
 ---
 
+## [0.91.1] - 2026-10-24
+
+### Changed
+
+- Fix/hook-issue-rich-markup -> main
+
+### Fixed
+
+- deps: Uv 0.13.0 -> 0.13.5, certifi -> 2026.10.19 (fleet origin)
+- linkcheckmd: Raise aiohttp header limit so GitHub links are checkable
+
+### Internal
+
+- gitignore: Add data/ to the canonical template
+
 ## [0.91.0] - 2026-10-20
 
 ### Added
