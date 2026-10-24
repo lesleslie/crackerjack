@@ -16,8 +16,11 @@ def _get_scan_paths(files: list[Path], repo_root: Path) -> list[Path]:
 
 
 def _run_linkcheckmd(path: Path, repo_root: Path) -> subprocess.CompletedProcess:
+    # `_linkcheckmd_runner` is used instead of `linkcheckmd` directly: it
+    # raises aiohttp's response-header ceiling so GitHub's oversized
+    # Content-Security-Policy header cannot abort the whole scan.
     return subprocess.run(
-        [sys.executable, "-m", "linkcheckmd", path],
+        [sys.executable, "-m", "crackerjack.tools._linkcheckmd_runner", str(path)],
         cwd=repo_root,
         check=False,
         capture_output=True,

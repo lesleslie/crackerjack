@@ -102,13 +102,22 @@ class TestRunLinkcheckmd:
 
     @patch("subprocess.run")
     def test_run_uses_correct_python_module(self, mock_run, tmp_path: Path) -> None:
-        """Verify subprocess uses correct python -m command."""
+        """Verify subprocess uses the linkcheckmd runner module."""
         mock_run.return_value = MagicMock(returncode=0)
         _run_linkcheckmd(tmp_path / "docs", tmp_path)
 
         call_args = mock_run.call_args
         assert "-m" in call_args[0][0]
-        assert "linkcheckmd" in call_args[0][0]
+        assert "crackerjack.tools._linkcheckmd_runner" in call_args[0][0]
+
+    @patch("subprocess.run")
+    def test_run_passes_scan_path_as_argument(self, mock_run, tmp_path: Path) -> None:
+        """Verify the scan path is forwarded to the runner module."""
+        mock_run.return_value = MagicMock(returncode=0)
+        scan_path = tmp_path / "docs"
+        _run_linkcheckmd(scan_path, tmp_path)
+
+        assert str(scan_path) in mock_run.call_args[0][0]
 
     @patch("subprocess.run")
     def test_run_uses_correct_working_directory(self, mock_run, tmp_path: Path) -> None:
