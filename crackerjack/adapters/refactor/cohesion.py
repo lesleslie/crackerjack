@@ -36,7 +36,7 @@ class CohesionSettings(ToolAdapterSettings):
 
 
 class CohesionAdapter(BaseToolAdapter):
-    settings: CohesionSettings | None = None
+    settings: CohesionSettings | None = None  # ty: ignore[invalid-mutable-override]
 
     def __init__(self, settings: CohesionSettings | None = None) -> None:
         super().__init__(settings=settings)

@@ -945,7 +945,7 @@ class AsyncHookExecutor:
         if result.status != "passed" and result.issues_found:
             for issue in result.issues_found:
                 if issue and "raw_output" not in issue:
-                    self.console.print(issue)
+                    self.console.print(issue, markup=False)
 
     async def _handle_retries(
         self,

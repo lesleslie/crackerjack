@@ -36,7 +36,7 @@ class BetterleaksSettings(ToolAdapterSettings):
 
 
 class BetterleaksAdapter(BaseToolAdapter):
-    settings: BetterleaksSettings | None = None
+    settings: BetterleaksSettings | None = None  # ty: ignore[invalid-mutable-override]
 
     def __init__(self, settings: BetterleaksSettings | None = None) -> None:
         super().__init__(settings=settings)

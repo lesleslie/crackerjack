@@ -38,7 +38,7 @@ class PyrightSettings(ToolAdapterSettings):
 
 
 class PyrightAdapter(BaseToolAdapter):
-    settings: PyrightSettings | None = None
+    settings: PyrightSettings | None = None  # ty: ignore[invalid-mutable-override]
 
     def __init__(self, settings: PyrightSettings | None = None) -> None:
         super().__init__(settings=settings)

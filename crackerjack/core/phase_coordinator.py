@@ -1486,7 +1486,9 @@ class PhaseCoordinator:
             return
 
         for issue in result.issues_found:
-            self.console.print(f" - {self._strip_ansi(issue)}", highlight=False)
+            self.console.print(
+                f" - {self._strip_ansi(issue)}", highlight=False, markup=False
+            )
 
     def _display_timeout_info(self, result: HookResult) -> None:
         if result.is_timeout:
@@ -1507,7 +1509,9 @@ class PhaseCoordinator:
     def _display_error_message(self, result: HookResult) -> None:
         if result.error_message:
             error_preview = result.error_message.split("\n")[0][:200]
-            self.console.print(f" - Error: {error_preview}", highlight=False)
+            self.console.print(
+                f" - Error: {error_preview}", highlight=False, markup=False
+            )
 
     def _display_generic_failure(self, result: HookResult) -> None:
         if not result.is_timeout and not result.exit_code and not result.error_message:
@@ -1548,7 +1552,9 @@ class PhaseCoordinator:
     def _print_hook_issues(self, result: HookResult) -> None:
         assert result.issues_found is not None
         for issue in result.issues_found:
-            self.console.print(f" - {self._strip_ansi(issue)}", highlight=False)
+            self.console.print(
+                f" - {self._strip_ansi(issue)}", highlight=False, markup=False
+            )
 
     def _display_failure_reasons(self, result: HookResult) -> None:
         self._display_ruff_failure_details(result)

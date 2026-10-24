@@ -111,7 +111,18 @@ _FORMATTER_TOOLS: frozenset[str] = frozenset(
 
 
 class BaseToolAdapter(QAAdapterBase):
-    settings: ToolAdapterSettings | None = None
+    # Each adapter narrows `settings` to its own settings class (e.g.
+    # `BanditSettings`) and reads adapter-specific fields off it. Narrowing
+    # a *mutable* attribute is a Liskov violation, so type checkers reject
+    # it -- hence the per-line `ty: ignore[invalid-mutable-override]`, which
+    # matches this repo's mypy posture (`allow_redefinition = true`).
+    #
+    # The narrowing is sound in practice because the factory now only ever
+    # hands an adapter its own settings class, or None. `ty` flags it
+    # regardless, so the suppression stays until the attribute becomes
+    # read-only, which would cost every `self.settings.<field>` read an
+    # explicit None-check.
+    settings: ToolAdapterSettings | None = None  # ty: ignore[invalid-mutable-override]
     metadata: AdapterMetadata | None = None
 
     def __init__(self, settings: ToolAdapterSettings | None = None) -> None:

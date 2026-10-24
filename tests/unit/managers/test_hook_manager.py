@@ -178,6 +178,34 @@ class TestHookManagerConfiguration:
         out = manager._filter_strategy_for_tool(strategy, "nonexistent-tool")
         assert out.hooks == []
 
+    def test_comprehensive_hooks_honour_the_tool_scope(self, manager) -> None:
+        """``--tool`` must scope the comprehensive phase too.
+
+        The fast phase honoured the scope but the comprehensive phase did
+        not, so ``crackerjack run --tool osv-scanner`` still ran the whole
+        comprehensive suite -- ty and pyright over the whole tree -- and
+        took minutes instead of seconds.
+        """
+        from crackerjack.config.hooks import HookDefinition, HookStrategy
+
+        strategy = HookStrategy(
+            hooks=[
+                HookDefinition(name="ty"),
+                HookDefinition(name="pyright"),
+            ],
+            name="comprehensive",
+        )
+        manager.config_loader.load_strategy.return_value = strategy
+        manager.executor.execute_strategy.return_value = Mock(
+            results=[], successes=0, failures=0
+        )
+        manager.set_active_tool("ty")
+
+        manager.run_comprehensive_hooks()
+
+        executed = manager.executor.execute_strategy.call_args[0][0]
+        assert [h.name for h in executed.hooks] == ["ty"]
+
 
 @pytest.mark.unit
 class TestHookManagerExecution:

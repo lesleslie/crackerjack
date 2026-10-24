@@ -42,7 +42,7 @@ class TySettings(ToolAdapterSettings):
 
 
 class TyAdapter(BaseToolAdapter):
-    settings: TySettings | None = None
+    settings: TySettings | None = None  # ty: ignore[invalid-mutable-override]
 
     def __init__(self, settings: TySettings | None = None) -> None:
         super().__init__(settings=settings)

@@ -39,7 +39,7 @@ class ComplexipySettings(ToolAdapterSettings):
 
 
 class ComplexipyAdapter(BaseToolAdapter):
-    settings: ComplexipySettings | None = None
+    settings: ComplexipySettings | None = None  # ty: ignore[invalid-mutable-override]
 
     def __init__(self, settings: ComplexipySettings | None = None) -> None:
         super().__init__(settings=settings)

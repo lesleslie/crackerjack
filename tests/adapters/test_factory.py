@@ -12,6 +12,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from crackerjack.adapters.factory import DefaultAdapterFactory
+from crackerjack.adapters.format.ruff import RuffSettings
 
 
 class TestDefaultAdapterFactory:
@@ -166,9 +167,23 @@ class TestResolveSettings:
         assert result is provided
 
     def test_uses_factory_settings_when_none_provided(self):
+        """Factory-level *tool* settings are used when none are provided."""
+        factory = DefaultAdapterFactory(settings=RuffSettings())
+        result = factory._resolve_settings("Ruff", None)
+        assert isinstance(result, RuffSettings)
+
+    def test_ignores_non_tool_factory_settings(self):
+        """Application-level settings are never injected into an adapter.
+
+        The MCP server builds the factory with the application settings,
+        which are not adapter settings. Injecting them made every adapter
+        raise AttributeError on its first settings access, and the caller
+        swallowed that into a warning -- so the adapters silently never
+        worked.
+        """
         factory = DefaultAdapterFactory(settings={"key": "value"})
         result = factory._resolve_settings("Ruff", None)
-        assert result == {"key": "value"}
+        assert result is None
 
     def test_creates_default_when_ai_agent_enabled(self):
         with patch.dict(os.environ, {"AI_AGENT": "1"}):

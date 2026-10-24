@@ -88,7 +88,7 @@ def _handle_f_prefix(code: str) -> IssueType:
 
 
 class RuffAdapter(BaseToolAdapter):
-    settings: RuffSettings | None = None
+    settings: RuffSettings | None = None  # ty: ignore[invalid-mutable-override]
 
     def __init__(self, settings: RuffSettings | None = None) -> None:
         super().__init__(settings=settings)

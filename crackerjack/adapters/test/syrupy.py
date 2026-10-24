@@ -39,7 +39,7 @@ class SyrupySettings(ToolAdapterSettings):
 
 
 class SyrupyAdapter(BaseToolAdapter):
-    settings: SyrupySettings | None = None
+    settings: SyrupySettings | None = None  # ty: ignore[invalid-mutable-override]
 
     def __init__(self, settings: SyrupySettings | None = None) -> None:
         super().__init__(settings=settings)

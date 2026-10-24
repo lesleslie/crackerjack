@@ -237,7 +237,10 @@ qa_enable_incremental: true
 
 # Adapter-specific settings
 adapter_timeouts:
-  refurb_timeout: 600
+  # refurb over the crackerjack package measures ~800s on this repo, so a
+  # 600s cap always killed it mid-scan. Matches the pyproject default and
+  # the refurb hook's own timeout.
+  refurb_timeout: 1800
   bandit_timeout: 300
   semgrep_timeout: 300
   osv_scanner_timeout: 120

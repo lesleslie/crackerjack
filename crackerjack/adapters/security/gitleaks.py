@@ -40,7 +40,7 @@ class GitleaksSettings(ToolAdapterSettings):
 
 
 class GitleaksAdapter(BaseToolAdapter):
-    settings: GitleaksSettings | None = None
+    settings: GitleaksSettings | None = None  # ty: ignore[invalid-mutable-override]
 
     def __init__(self, settings: GitleaksSettings | None = None) -> None:
         super().__init__(settings=settings)

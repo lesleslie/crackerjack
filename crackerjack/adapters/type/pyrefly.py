@@ -39,7 +39,7 @@ class PyreflySettings(ToolAdapterSettings):
 
 
 class PyreflyAdapter(BaseToolAdapter):
-    settings: PyreflySettings | None = None
+    settings: PyreflySettings | None = None  # ty: ignore[invalid-mutable-override]
 
     def __init__(self, settings: PyreflySettings | None = None) -> None:
         super().__init__(settings=settings)

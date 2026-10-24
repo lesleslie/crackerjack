@@ -42,7 +42,7 @@ class CreosoteSettings(ToolAdapterSettings):
 
 
 class CreosoteAdapter(BaseToolAdapter):
-    settings: CreosoteSettings | None = None
+    settings: CreosoteSettings | None = None  # ty: ignore[invalid-mutable-override]
 
     def __init__(self, settings: CreosoteSettings | None = None) -> None:
         super().__init__(settings=settings)

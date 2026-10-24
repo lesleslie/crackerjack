@@ -47,7 +47,7 @@ class PyscnSettings(ToolAdapterSettings):
 
 
 class PyscnAdapter(BaseToolAdapter):
-    settings: PyscnSettings | None = None
+    settings: PyscnSettings | None = None  # ty: ignore[invalid-mutable-override]
 
     def __init__(self, settings: PyscnSettings | None = None) -> None:
         super().__init__(settings=settings)

@@ -104,7 +104,7 @@ class BenchmarkIssue:
 
 
 class PytestBenchmarkAdapter(BaseToolAdapter):
-    settings: BenchmarkSettings | None = None
+    settings: BenchmarkSettings | None = None  # ty: ignore[invalid-mutable-override]
 
     def __init__(self, settings: BenchmarkSettings | None = None) -> None:
         super().__init__(settings=settings)

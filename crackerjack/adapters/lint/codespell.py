@@ -37,7 +37,7 @@ class CodespellSettings(ToolAdapterSettings):
 
 
 class CodespellAdapter(BaseToolAdapter):
-    settings: CodespellSettings | None = None
+    settings: CodespellSettings | None = None  # ty: ignore[invalid-mutable-override]
 
     def __init__(self, settings: CodespellSettings | None = None) -> None:
         super().__init__(settings=settings)

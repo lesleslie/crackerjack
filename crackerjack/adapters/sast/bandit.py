@@ -42,7 +42,7 @@ class BanditSettings(ToolAdapterSettings):
 
 
 class BanditAdapter(BaseToolAdapter):
-    settings: BanditSettings | None = None
+    settings: BanditSettings | None = None  # ty: ignore[invalid-mutable-override]
 
     def __init__(self, settings: BanditSettings | None = None) -> None:
         super().__init__(settings=settings)

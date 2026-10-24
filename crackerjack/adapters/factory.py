@@ -47,22 +47,30 @@ class DefaultAdapterFactory(AdapterFactoryProtocol):
         return settings
 
     def _create_default_settings(self, adapter_name: str) -> t.Any:
+        """Build the adapter's *own* settings object for ``adapter_name``.
+
+        Each adapter declares its settings as a narrowed type (e.g.
+        ``BanditSettings``) and reads adapter-specific fields off it, so the
+        default must be that exact class. Handing back a plain
+        ``ToolAdapterSettings`` makes the adapter blow up on the first
+        adapter-specific field access.
+        """
         if adapter_name == "Ruff":
             from crackerjack.adapters.format.ruff import RuffSettings
 
             return RuffSettings()
         if adapter_name == "Bandit":
-            from crackerjack.adapters._tool_adapter_base import ToolAdapterSettings
+            from crackerjack.adapters.sast.bandit import BanditSettings
 
-            return ToolAdapterSettings(tool_name="bandit")
+            return BanditSettings()
         if adapter_name == "Semgrep":
-            from crackerjack.adapters._tool_adapter_base import ToolAdapterSettings
+            from crackerjack.adapters.sast.semgrep import SemgrepSettings
 
-            return ToolAdapterSettings(tool_name="semgrep")
+            return SemgrepSettings()
         if adapter_name == "Refurb":
-            from crackerjack.adapters._tool_adapter_base import ToolAdapterSettings
+            from crackerjack.adapters.refactor.refurb import RefurbSettings
 
-            return ToolAdapterSettings(tool_name="refurb")
+            return RefurbSettings()
         if adapter_name == "Pyrefly":
             from crackerjack.adapters.type.pyrefly import PyreflySettings
 
@@ -103,11 +111,26 @@ class DefaultAdapterFactory(AdapterFactoryProtocol):
         adapter_name: str,
         settings: t.Any | None,
     ) -> t.Any | None:
-        if settings is None and self.settings is not None:
+        """Pick the settings object to hand to the adapter.
+
+        The factory-level ``settings`` is only usable when it is itself a
+        tool settings object. Callers such as the MCP server construct the
+        factory with the *application* settings (``CrackerjackSettings``),
+        which are not adapter settings at all — injecting those left every
+        adapter raising ``AttributeError`` on its first settings access, and
+        the caller swallowed that into a warning, so the adapter silently
+        never worked.
+        """
+        if settings is not None:
+            return settings
+
+        from crackerjack.adapters._tool_adapter_base import ToolAdapterSettings
+
+        if isinstance(self.settings, ToolAdapterSettings):
             return self.settings
-        if settings is None and self._is_ai_agent_enabled():
+        if self._is_ai_agent_enabled():
             return self._create_default_settings(adapter_name)
-        return settings
+        return None
 
     def _instantiate_adapter(
         self,

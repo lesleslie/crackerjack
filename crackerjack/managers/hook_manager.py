@@ -455,6 +455,7 @@ class HookManagerImpl:
                 return asyncio.run(self._run_comprehensive_hooks_orchestrated())
 
         strategy = self.config_loader.load_strategy("comprehensive")
+        strategy = self._filter_strategy_for_tool(strategy, self._active_tool)
 
         if self._config_path:
             for hook in strategy.hooks:

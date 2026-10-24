@@ -623,9 +623,25 @@ session-buddy = "2099-12-31T23:59:59Z"
 # CWE-295). Transitive via requests/httpx; exposed at TLS handshake time.
 uv = "2099-12-31T23:59:59Z"
 certifi = "2099-12-31T23:59:59Z"
+# filelock 4.2.1 — GHSA-567q-5qvw-pf92 / GHSA-9vhv-jxww-xfm5 /
+# GHSA-v4x8-3wr5-3wq8 (CVE-2026-112907 / CVE-2026-112913 /
+# CVE-2026-112940). SoftFileLock/ReadWriteLock mishandle hostile local
+# state: a stale-break restore follows a swapped-in symlink, and the lock
+# database is reopened by name so a planted file is used instead. The fix
+# landed 2026-10-17, inside the 7-day cooldown above, so without this entry
+# `uv lock --upgrade` keeps the vulnerable 3.32.7 rather than erroring.
+filelock = "2099-12-31T23:59:59Z"
+# fastmcp 4.1.2 — GHSA-7xgj-8392-5q4r / GHSA-vqqp-x5qm-5qp4. Both are
+# authorization bypasses in the MCP server: post-transform component
+# authorization is skipped on direct calls, and the client wrappers build
+# M2M OAuth providers without issuer binding. The fix landed 2026-10-20,
+# inside the 7-day cooldown above. `fastmcp-slim` ships the same code
+# under a separate distribution name, so it needs its own entry.
+fastmcp = "2099-12-31T23:59:59Z"
+fastmcp-slim = "2099-12-31T23:59:59Z"
 
 [tool.pip-audit]
-ignore-vulns = [
+ignore-vuln = [
     "CVE-2025-69872",
 ]
 
@@ -657,7 +673,6 @@ exclude-deps = [
     # Lazy-import false positives (used via import inside function bodies):
     "complexipy",
     "fastapi",
-    "linkcheckmd",
     "mdformat-ruff",
     "watchdog",
     "websockets",
