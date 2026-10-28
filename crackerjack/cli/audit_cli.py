@@ -129,7 +129,9 @@ def locate(
 ) -> None:
     audit_script = _find_audit_script(path)
     if audit_script is None:
-        console.print(f"[red]audit_orphans.py not found under {redact_path(path)}[/red]")
+        console.print(
+            f"[red]audit_orphans.py not found under {redact_path(path)}[/red]"
+        )
         raise typer.Exit(2)
     sys.stdout.write(str(audit_script))
     sys.stdout.write("\n")

@@ -261,7 +261,9 @@ class EnhancedFileSystemService(EnhancedFileSystemServiceProtocol, ServiceProtoc
                 try:
                     results[path] = self.read_file(path)
                 except Exception as e:
-                    self.logger.exception(f"Failed to read file path={redact_path(path)} error={e}")
+                    self.logger.exception(
+                        f"Failed to read file path={redact_path(path)} error={e}"
+                    )
                     results[path] = ""
             return results
 
@@ -272,8 +274,9 @@ class EnhancedFileSystemService(EnhancedFileSystemServiceProtocol, ServiceProtoc
 
             for path, result in zip(paths, results_list, strict=False):
                 if isinstance(result, Exception):
-                    self.logger.error(f"Failed to read file "
-                    f"path={redact_path(path)} error={result}")
+                    self.logger.error(
+                        f"Failed to read file path={redact_path(path)} error={result}"
+                    )
                     results[path] = ""
                 elif isinstance(result, str):
                     results[path] = result
@@ -286,8 +289,9 @@ class EnhancedFileSystemService(EnhancedFileSystemServiceProtocol, ServiceProtoc
                 try:
                     self.write_file(path, content)
                 except Exception as e:
-                    self.logger.exception(f"Failed to write file "
-                    f"path={redact_path(path)} error={e}")
+                    self.logger.exception(
+                        f"Failed to write file path={redact_path(path)} error={e}"
+                    )
             return
 
         with LoggingContext("write_multiple_files", count=len(file_data)):

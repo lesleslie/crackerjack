@@ -296,7 +296,9 @@ class AutofixCoordinator:
                 self.console.print(f"[dim]📝 Detailed error log: {display_path}[/dim]")
                 return
             except Exception as e:
-                self.logger.warning(f"Failed to write error log at {redact_path(log_dir)}: {e}")
+                self.logger.warning(
+                    f"Failed to write error log at {redact_path(log_dir)}: {e}"
+                )
 
     async def apply_autofix_for_hooks(
         self, mode: str, hook_results: list[object]
@@ -546,7 +548,9 @@ class AutofixCoordinator:
                 try:
                     json.loads(stripped)
                     json_file.write_text(stripped, encoding="utf-8")
-                    self.logger.info(f"Stripped JSONC comments from {redact_path(json_file)}")
+                    self.logger.info(
+                        f"Stripped JSONC comments from {redact_path(json_file)}"
+                    )
                 except json.JSONDecodeError as e:
                     self.logger.warning(
                         f"Stripped content from {redact_path(json_file)} is not valid JSON: {e}"

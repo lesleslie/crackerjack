@@ -122,7 +122,9 @@ class ReferenceGenerator:
         include_examples: bool = True,
         include_workflows: bool = True,
     ) -> CommandReference:
-        self.logger.info(f"Generating command reference from: {redact_path(cli_module_path)}")
+        self.logger.info(
+            f"Generating command reference from: {redact_path(cli_module_path)}"
+        )
 
         commands = await self._analyze_cli_module(cli_module_path)
 

@@ -341,10 +341,14 @@ class ComplexipyJSONParser(JSONParser):
 
         path = Path(file_path)
         if not path.exists():
-            logger.debug(f"File not found for line number extraction: {redact_path(file_path)}")
+            logger.debug(
+                f"File not found for line number extraction: {redact_path(file_path)}"
+            )
             return False
         if path.suffix != ".py":
-            logger.debug(f"Not a Python file, skipping AST extraction: {redact_path(file_path)}")
+            logger.debug(
+                f"Not a Python file, skipping AST extraction: {redact_path(file_path)}"
+            )
             return False
         return True
 

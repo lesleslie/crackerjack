@@ -359,7 +359,9 @@ class GitCleanupService:
                         f"[green]✓[/green] Removed from index: {redact_path(rel_path)}"
                     )
                 else:
-                    logger.warning(f"Failed to remove {redact_path(rel_path)} from index")
+                    logger.warning(
+                        f"Failed to remove {redact_path(rel_path)} from index"
+                    )
 
             except Exception as e:
                 logger.error(f"Error removing {redact_path(file_path)} from index: {e}")
@@ -380,8 +382,9 @@ class GitCleanupService:
 
                 if result.success:
                     removed_count += 1
-                    self.console.print(f"[green]✓[/green] Removed "
-                    f"entirely: {redact_path(rel_path)}")
+                    self.console.print(
+                        f"[green]✓[/green] Removed entirely: {redact_path(rel_path)}"
+                    )
                 else:
                     logger.warning(f"Failed to remove {redact_path(rel_path)}")
 

@@ -257,8 +257,9 @@ class HookLockManager:
 
             try:
                 os.link(temp_path, lock_path)
-                self.logger.debug(f"Successfully created global lock "
-                f"file: {redact_path(lock_path)}")
+                self.logger.debug(
+                    f"Successfully created global lock file: {redact_path(lock_path)}"
+                )
             except FileExistsError:
                 with suppress(OSError):
                     temp_path.unlink()
@@ -369,7 +370,9 @@ class HookLockManager:
 
                     if lock_data.get("session_id") == self._global_config.session_id:
                         lock_path.unlink()
-                        self.logger.debug(f"Removed global lock file: {redact_path(lock_path)}")
+                        self.logger.debug(
+                            f"Removed global lock file: {redact_path(lock_path)}"
+                        )
                     else:
                         self.logger.warning(
                             f"Lock ownership changed, not removing file: {redact_path(lock_path)}",
@@ -560,7 +563,9 @@ class HookLockManager:
                 )
 
         except OSError as e:
-            self.logger.exception(f"Could not access locks directory {redact_path(locks_dir)}: {e}")
+            self.logger.exception(
+                f"Could not access locks directory {redact_path(locks_dir)}: {e}"
+            )
 
         if cleaned_count > 0:
             self.logger.info(f"Cleaned up {cleaned_count} stale lock files")
@@ -603,7 +608,9 @@ class HookLockManager:
 
         except json.JSONDecodeError, KeyError:
             lock_file.unlink()
-            self.logger.warning(f"Cleaned corrupted lock file: {redact_path(lock_file)}")
+            self.logger.warning(
+                f"Cleaned corrupted lock file: {redact_path(lock_file)}"
+            )
             return 1
 
         return 0

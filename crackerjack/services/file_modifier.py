@@ -187,7 +187,9 @@ class SafeFileModifier(SafeFileModifierProtocol, ServiceProtocol):
             error_msg = f"Syntax error in generated code: {e.msg}"
             if e.lineno:
                 error_msg += f" at line {e.lineno}"
-            logger.error(f"❌ Blocking invalid code for {redact_path(path)}: {error_msg}")
+            logger.error(
+                f"❌ Blocking invalid code for {redact_path(path)}: {error_msg}"
+            )
             return {
                 "success": False,
                 "error": error_msg,

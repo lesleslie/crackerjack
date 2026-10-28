@@ -60,8 +60,10 @@ def detect(
         0.9, "--threshold", help="Minimum similarity (0.0–1.0)"
     ),
 ) -> None:
-    console.print(f"[bold]Scanning {redact_path(path)} for "
-    f"clones (threshold={threshold})...[/bold]")
+    console.print(
+        f"[bold]Scanning {redact_path(path)} for "
+        f"clones (threshold={threshold})...[/bold]"
+    )
     data = _run_pyscn_json(path, threshold=threshold)
     clone_data = data.get("clone", {})
     raw_pairs = clone_data.get("clone_pairs") or []
@@ -115,7 +117,8 @@ def refactor(
     ),
 ) -> None:
     console.print(
-        f"[bold]Clone refactor for {redact_path(path)}[/bold]" + (" (dry-run)" if dry_run else "")
+        f"[bold]Clone refactor for {redact_path(path)}[/bold]"
+        + (" (dry-run)" if dry_run else "")
     )
     data = _run_pyscn_json(path, threshold=threshold)
     raw_pairs = (data.get("clone") or {}).get("clone_pairs") or []

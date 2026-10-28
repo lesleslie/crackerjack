@@ -340,7 +340,9 @@ def get_best_practices_propagation(
                 )
                 repos_data.append(velocity)
             except Exception as e:
-                logger.warning(f"Failed to collect metrics from {redact_path(repo_path_str)}: {e}")
+                logger.warning(
+                    f"Failed to collect metrics from {redact_path(repo_path_str)}: {e}"
+                )
                 continue
 
         if not repos_data:
@@ -625,7 +627,9 @@ def _collect_conflicts_from_repos(
             )
 
         except Exception as e:
-            logger.error(f"Failed to analyze conflicts for {redact_path(repo_path)}: {e}")
+            logger.error(
+                f"Failed to analyze conflicts for {redact_path(repo_path)}: {e}"
+            )
             continue
 
     return (
@@ -1381,7 +1385,9 @@ def get_active_branches_analysis(
                     all_naming_patterns[pattern["prefix"]] += pattern["count"]
 
             except Exception as e:
-                logger.error(f"Failed to analyze branches for {redact_path(repo_path)}: {e}")
+                logger.error(
+                    f"Failed to analyze branches for {redact_path(repo_path)}: {e}"
+                )
                 continue
 
         if not repos_data:
@@ -1508,7 +1514,9 @@ def _collect_branch_data(
     except subprocess.TimeoutExpired:
         logger.error(f"Git command timed out for {redact_path(repo_path)}")
     except Exception as e:
-        logger.error(f"Failed to collect branch data from {redact_path(repo_path)}: {e}")
+        logger.error(
+            f"Failed to collect branch data from {redact_path(repo_path)}: {e}"
+        )
 
     return branches
 
@@ -1937,7 +1945,9 @@ def get_repository_health_dashboard(
                         commit_metrics, previous_commit_metrics
                     )
                 except Exception as e:
-                    logger.debug(f"Could not calculate trend for {redact_path(repo_path)}: {e}")
+                    logger.debug(
+                        f"Could not calculate trend for {redact_path(repo_path)}: {e}"
+                    )
                     trend = "unknown"
 
                 all_health_data.append(
@@ -2107,7 +2117,9 @@ def get_workflow_recommendations(
                 )
                 repos_data.append(velocity)
             except Exception as e:
-                logger.warning(f"Failed to collect metrics from {redact_path(repo_path_str)}: {e}")
+                logger.warning(
+                    f"Failed to collect metrics from {redact_path(repo_path_str)}: {e}"
+                )
                 continue
 
         if not repos_data:
@@ -2475,7 +2487,9 @@ def _scan_stale_branches(repo_path: Path) -> list[dict]:
                 continue
 
     except Exception as e:
-        logger.debug(f"Could not detect stale branches for {redact_path(repo_path)}: {e}")
+        logger.debug(
+            f"Could not detect stale branches for {redact_path(repo_path)}: {e}"
+        )
 
     return stale_branches[:20]
 

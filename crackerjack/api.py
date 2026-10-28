@@ -122,7 +122,9 @@ class CrackerjackAPI:
         safe_mode: bool = True,
     ) -> list[CleaningResult] | PackageCleaningResult:
         target_dir = target_dir or self._get_package_root()
-        self.logger.info(f"Cleaning code in {redact_path(target_dir)} (safe_mode={safe_mode})")
+        self.logger.info(
+            f"Cleaning code in {redact_path(target_dir)} (safe_mode={safe_mode})"
+        )
 
         self._validate_code_before_cleaning(target_dir)
 
@@ -168,7 +170,9 @@ class CrackerjackAPI:
     ) -> None:
         for _i, (file_path, line_no, content) in enumerate(todos_found[:5]):
             relative_path = file_path.relative_to(target_dir)
-            self.console.print(f" {redact_path(relative_path)}: {line_no}: {content.strip()}")
+            self.console.print(
+                f" {redact_path(relative_path)}: {line_no}: {content.strip()}"
+            )
 
         if todo_count > 5:
             self.console.print(f" ... and {todo_count - 5} more")

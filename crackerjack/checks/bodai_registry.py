@@ -49,10 +49,12 @@ _TABLE_ROW_RE = re.compile(
 )
 
 # Sections that document repos but are out of scope for the fleet guard.
-_OUT_OF_SCOPE_HEADINGS = frozenset({
-    "deprecated",
-    "excluded from scope",
-})
+_OUT_OF_SCOPE_HEADINGS = frozenset(
+    {
+        "deprecated",
+        "excluded from scope",
+    }
+)
 
 
 def _sibling_candidates(start: Path, depth: int) -> Iterator[Path]:
@@ -129,8 +131,7 @@ def resolve_registry_path() -> Path | None:
         if candidate.is_file():
             return candidate
         logger.warning(
-            "%s points at %s, which is not a file; "
-            "treating no repos as fleet members",
+            "%s points at %s, which is not a file; treating no repos as fleet members",
             REGISTRY_ENV_VAR,
             redact_path(candidate),
         )
@@ -167,9 +168,7 @@ def parse_registry_repo_paths(text: str) -> list[Path]:
         stripped = line.strip()
         if stripped.startswith("#"):
             lower = stripped.lower()
-            section_excluded = any(
-                marker in lower for marker in _OUT_OF_SCOPE_HEADINGS
-            )
+            section_excluded = any(marker in lower for marker in _OUT_OF_SCOPE_HEADINGS)
             continue
         if section_excluded:
             continue

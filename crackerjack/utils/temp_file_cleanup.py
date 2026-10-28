@@ -54,7 +54,9 @@ def cleanup_project_root_temp_files(project_root: Path | None = None) -> int:
             try:
                 file_path.unlink()
                 cleaned_count += 1
-                logger.debug(f"Cleaned up project-root temp file: {redact_path(file_path)}")
+                logger.debug(
+                    f"Cleaned up project-root temp file: {redact_path(file_path)}"
+                )
             except FileNotFoundError:
                 pass
             except Exception as e:
@@ -98,7 +100,9 @@ def cleanup_old_complexipy_files(max_age_hours: int = 24) -> int:
             if file_age > max_age_seconds:
                 path.unlink()
                 cleaned_count += 1
-                logger.debug(f"Cleaned up old complexipy file: {redact_path(file_path)}")
+                logger.debug(
+                    f"Cleaned up old complexipy file: {redact_path(file_path)}"
+                )
         except (FileNotFoundError, OSError) as e:
             logger.warning(f"Failed to clean up old file {redact_path(file_path)}: {e}")
 

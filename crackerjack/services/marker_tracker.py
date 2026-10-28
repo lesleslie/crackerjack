@@ -70,7 +70,9 @@ class MarkerTracker:
                             files_needing_scan.append(file_path)
 
                     except OSError as e:
-                        logger.debug(f"Skipping unreadable file {redact_path(file_path)}: {e}")
+                        logger.debug(
+                            f"Skipping unreadable file {redact_path(file_path)}: {e}"
+                        )
                         continue
 
         except sqlite3.Error as e:
@@ -114,7 +116,9 @@ class MarkerTracker:
                             (str(file_path), tool_name, file_hash, scan_time),
                         )
                     except OSError as e:
-                        logger.debug(f"Skipping unreadable file {redact_path(file_path)}: {e}")
+                        logger.debug(
+                            f"Skipping unreadable file {redact_path(file_path)}: {e}"
+                        )
                         continue
 
                 conn.commit()

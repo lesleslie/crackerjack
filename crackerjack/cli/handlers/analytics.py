@@ -36,12 +36,16 @@ def _save_heatmap_output(
         if output_path.suffix.lower() == ".html":
             html_content = generator.generate_html_visualization(heatmap_data)
             output_path.write_text(html_content, encoding="utf-8")
-            console.print(f"[green]✅[/green] Heat map HTML saved to: {redact_path(output_path)}")
+            console.print(
+                f"[green]✅[/green] Heat map HTML saved to: {redact_path(output_path)}"
+            )
             return True
         if output_path.suffix.lower() in (".json", ".csv"):
             format_type = output_path.suffix[1:]
             generator.export_heatmap_data(heatmap_data, output_path, format_type)
-            console.print(f"[green]✅[/green] Heat map data saved to: {redact_path(output_path)}")
+            console.print(
+                f"[green]✅[/green] Heat map data saved to: {redact_path(output_path)}"
+            )
             return True
 
         console.print(f"[red]❌[/red] Unsupported output format: {output_path.suffix}")
@@ -219,7 +223,9 @@ def save_anomaly_report(
 
     report_path.write_text(json.dumps(report_data, indent=2), encoding="utf-8")
 
-    console.print(f"[green]✅[/green] Anomaly detection report saved to: {redact_path(report_path)}")
+    console.print(
+        f"[green]✅[/green] Anomaly detection report saved to: {redact_path(report_path)}"
+    )
 
 
 def handle_anomaly_detection(
@@ -404,7 +410,9 @@ def save_analytics_dashboard(
 
     dashboard_path.write_text(json.dumps(dashboard_data, indent=2), encoding="utf-8")
 
-    console.print(f"[green]✅[/green] Analytics dashboard saved to: {redact_path(dashboard_path)}")
+    console.print(
+        f"[green]✅[/green] Analytics dashboard saved to: {redact_path(dashboard_path)}"
+    )
 
 
 def handle_predictive_analytics(

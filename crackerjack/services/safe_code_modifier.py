@@ -116,7 +116,9 @@ class SafeCodeModifier:
         backup_metadata = await self._backup_file(file_path)
 
         if not backup_metadata:
-            self.console.print(f"[red]✗ Failed to create backup for {redact_path(file_path)}[/red]")
+            self.console.print(
+                f"[red]✗ Failed to create backup for {redact_path(file_path)}[/red]"
+            )
             return False
 
         self.console.print(
@@ -169,7 +171,9 @@ class SafeCodeModifier:
         backup_metadata = await self._backup_file(file_path)
 
         if not backup_metadata:
-            self.console.print(f"[red]✗ Failed to create backup for {redact_path(file_path)}[/red]")
+            self.console.print(
+                f"[red]✗ Failed to create backup for {redact_path(file_path)}[/red]"
+            )
             return False
 
         self.console.print(
@@ -357,7 +361,9 @@ class SafeCodeModifier:
     ) -> bool:
         try:
             if not backup_metadata.backup_path.exists():
-                logger.error(f"Backup file not found: {redact_path(backup_metadata.backup_path)}")
+                logger.error(
+                    f"Backup file not found: {redact_path(backup_metadata.backup_path)}"
+                )
                 return False
 
             shutil.copy2(backup_metadata.backup_path, file_path)

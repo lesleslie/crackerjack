@@ -66,7 +66,9 @@ def init(
 ) -> None:
     toml_path = path / "zensical.toml"
     if toml_path.exists():
-        console.print(f"[yellow]zensical.toml already exists at {redact_path(toml_path)}[/yellow]")
+        console.print(
+            f"[yellow]zensical.toml already exists at {redact_path(toml_path)}[/yellow]"
+        )
         raise typer.Exit(0)
     name = _project_name(path)
     toml_path.write_text(_ZENSICAL_TOML_TEMPLATE.format(name=name), encoding="utf-8")

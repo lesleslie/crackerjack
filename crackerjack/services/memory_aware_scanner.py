@@ -92,7 +92,9 @@ class MemoryAwareScanner:
 
             if known_good:
                 skipped_files.append(file)
-                self.console.print(f"[dim] ✓ Skipping {redact_path(file)} (passed recently)[/dim]")
+                self.console.print(
+                    f"[dim] ✓ Skipping {redact_path(file)} (passed recently)[/dim]"
+                )
             else:
                 files_to_scan.append(file)
 

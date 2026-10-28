@@ -221,7 +221,9 @@ class MCPServerContext:
 
     def _log_to_console(self, git_root: Path) -> None:
         if self.console:
-            self.console.print(f"🔧 Auto-detected git repository: {redact_path(git_root)}")
+            self.console.print(
+                f"🔧 Auto-detected git repository: {redact_path(git_root)}"
+            )
             self.console.print(
                 f"💡 Recommend: Use `mcp__git__git_set_working_dir` "
                 f"with path='{redact_path(git_root)}'",

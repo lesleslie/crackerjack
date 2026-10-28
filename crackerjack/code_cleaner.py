@@ -1070,7 +1070,9 @@ class CodeCleaner(BaseModel):
             return False
 
         except Exception as e:
-            self.logger.warning(f"Unexpected error checking file {redact_path(file_path)}: {e}")
+            self.logger.warning(
+                f"Unexpected error checking file {redact_path(file_path)}: {e}"
+            )
             return False
 
     def _create_line_comment_step(self) -> CleaningStepProtocol:

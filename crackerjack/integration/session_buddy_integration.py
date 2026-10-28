@@ -640,7 +640,9 @@ class CorrelationStorageSQLite:
         """)
 
         self.conn.commit()
-        logger.info(f"Correlation insights storage initialized: {redact_path(self.db_path)}")
+        logger.info(
+            f"Correlation insights storage initialized: {redact_path(self.db_path)}"
+        )
 
     async def store_insight(self, insight: CorrelationInsight) -> None:
         if not self.conn:

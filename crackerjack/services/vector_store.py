@@ -113,7 +113,9 @@ class VectorStore:
         try:
             chunk_data = self._process_file_content(file_path, current_hash)
             if not chunk_data["chunks"]:
-                logger.warning(f"No chunks generated for file: {redact_path(file_path)}")
+                logger.warning(
+                    f"No chunks generated for file: {redact_path(file_path)}"
+                )
                 return []
 
             embeddings = self._create_embedding_vectors(
@@ -446,7 +448,9 @@ class VectorStore:
             return lines[context_start:context_end]
 
         except Exception as e:
-            logger.warning(f"Failed to get context lines for {redact_path(file_path)}: {e}")
+            logger.warning(
+                f"Failed to get context lines for {redact_path(file_path)}: {e}"
+            )
             return []
 
     def get_stats(self) -> IndexStats:
@@ -515,7 +519,9 @@ class VectorStore:
             )
 
             conn.commit()
-            logger.info(f"Removed {count} embeddings for file: {redact_path(file_path)}")
+            logger.info(
+                f"Removed {count} embeddings for file: {redact_path(file_path)}"
+            )
             return True
 
     def clear_index(self) -> None:

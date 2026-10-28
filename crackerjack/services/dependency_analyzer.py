@@ -84,7 +84,9 @@ class DependencyAnalyzer:
         self.dependency_graph = DependencyGraph()
 
     def analyze_project(self) -> DependencyGraph:
-        logger.info(f"Starting dependency analysis for {redact_path(self.project_root)}")
+        logger.info(
+            f"Starting dependency analysis for {redact_path(self.project_root)}"
+        )
 
         self._discover_python_files()
 

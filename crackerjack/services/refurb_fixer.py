@@ -146,7 +146,9 @@ class SafeRefurbFixer:
             try:
                 file_path.write_text(new_content, encoding="utf-8")
                 self.fixes_applied += fixes
-                logger.info(f"Applied {fixes} safe refurb fixes to {redact_path(file_path)}")
+                logger.info(
+                    f"Applied {fixes} safe refurb fixes to {redact_path(file_path)}"
+                )
                 return fixes
             except OSError as e:
                 logger.warning(f"Could not write {redact_path(file_path)}: {e}")

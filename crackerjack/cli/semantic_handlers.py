@@ -19,11 +19,15 @@ def handle_semantic_index(
 
         console = CrackerjackConsole()
     try:
-        console.print(f"[cyan]Indexing file for semantic search:[/cyan] {redact_path(file_path)}")
+        console.print(
+            f"[cyan]Indexing file for semantic search:[/cyan] {redact_path(file_path)}"
+        )
 
         path_obj = Path(file_path)
         if not path_obj.exists():
-            console.print(f"[red]Error:[/red] File does not exist: {redact_path(file_path)}")
+            console.print(
+                f"[red]Error:[/red] File does not exist: {redact_path(file_path)}"
+            )
             return
 
         config = SemanticConfig(

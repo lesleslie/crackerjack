@@ -359,7 +359,9 @@ class InitializationService:
 
     def _skip_existing_file(self, file_name: str, results: dict[str, t.Any]) -> None:
         t.cast("list[str]", results["files_skipped"]).append(file_name)
-        self.console.print(f"[yellow]⚠️[/yellow] Skipped {redact_path(file_name)} (already exists)")
+        self.console.print(
+            f"[yellow]⚠️[/yellow] Skipped {redact_path(file_name)} (already exists)"
+        )
 
     def _handle_missing_source_file(
         self,
@@ -652,7 +654,9 @@ python -m crackerjack - a patch
                     f"[yellow]⚠️[/yellow] Could not git add {redact_path(file_name)}: {e}",
                 )
 
-            self.console.print(f"[green]✅[/green] Appended to {redact_path(file_name)}")
+            self.console.print(
+                f"[green]✅[/green] Appended to {redact_path(file_name)}"
+            )
 
         except Exception as e:
             self._handle_file_processing_error(file_name, e, results)

@@ -306,7 +306,9 @@ class DocUpdateService:
                     )
 
                 except Exception as e:
-                    logger.error(f"Failed to generate update for {redact_path(doc_file)}: {e}")
+                    logger.error(
+                        f"Failed to generate update for {redact_path(doc_file)}: {e}"
+                    )
                     continue
 
         except ImportError:
@@ -405,12 +407,16 @@ Return the complete updated documentation file content:"""
                 doc_path = self.pkg_path / update.doc_file
                 doc_path.write_text(update.updated_content)
 
-                self.console.print(f"[green]✓[/green] Updated: {redact_path(update.doc_file)}")
+                self.console.print(
+                    f"[green]✓[/green] Updated: {redact_path(update.doc_file)}"
+                )
 
                 applied_count += 1
 
             except Exception as e:
-                logger.error(f"Failed to apply update to {redact_path(update.doc_file)}: {e}")
+                logger.error(
+                    f"Failed to apply update to {redact_path(update.doc_file)}: {e}"
+                )
                 self.console.print(
                     f"[red]✗[/red] Failed to update {redact_path(update.doc_file)}: {e}"
                 )
@@ -431,7 +437,9 @@ Return the complete updated documentation file content:"""
                 logger.info(f"Created commit for {redact_path(update.doc_file)}")
 
             except Exception as e:
-                logger.error(f"Failed to create commit for {redact_path(update.doc_file)}: {e}")
+                logger.error(
+                    f"Failed to create commit for {redact_path(update.doc_file)}: {e}"
+                )
 
     def _generate_dry_run_summary(self, updates: list[DocUpdate]) -> str:
         lines = [
