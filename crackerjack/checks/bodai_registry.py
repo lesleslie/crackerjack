@@ -16,6 +16,11 @@ Resolution order (first hit wins):
 
 When nothing resolves, the registry is *absent* rather than broken: callers
 treat that as "no fleet members" so the gate stays a no-op off-fleet.
+
+The registry's ``Path`` column is relative to a *projects root* rather than
+absolute — the registry lives in a public repository, so an absolute path
+would disclose the operator's account name and local directory layout.
+:func:`resolve_projects_root` turns a row back into a location on disk.
 """
 
 from __future__ import annotations
@@ -36,15 +41,22 @@ REGISTRY_FILENAME = "BODAI_REPO_REGISTRY.md"
 REGISTRY_REPO_DIRNAME = "mahavishnu"
 REGISTRY_ENV_VAR = "CRACKERJACK_BODAI_REGISTRY"
 
+# Consumer-side override for the projects root. The registry's Path column
+# is relative to it; see ``resolve_projects_root``.
+PROJECTS_ROOT_ENV_VAR = "BODAI_PROJECTS_ROOT"
+DEFAULT_PROJECTS_DIRNAME = "Projects"
+
 # How far up from the working directory to look for a sibling checkout.
 _SIBLING_SEARCH_DEPTH = 4
 
-# Markdown table row whose second column is an absolute path:
-#   | repo-name | /absolute/path/ | >=3.13 | notes... |
+# Markdown table row whose second column is a path:
+#   | repo-name | path/relative/to/projects/root/ | >=3.13 | notes... |
 # Anchored on the path column so free-form prose rows never match. The
-# trailing slash is optional, and the path itself is machine-independent.
+# trailing slash is optional. Both root-relative (``oneiric/``) and legacy
+# absolute (``/some/absolute/checkout``) forms match, so a registry
+# generated before the relative-path format still resolves.
 _TABLE_ROW_RE = re.compile(
-    r"^\|\s*(?P<repo>[a-zA-Z0-9_-]+)\s*\|\s*(?P<path>/[^\s|]+?)/?\s*\|",
+    r"^\|\s*(?P<repo>[a-zA-Z0-9_-]+)\s*\|\s*(?P<path>[A-Za-z0-9._~/-]+?)/?\s*\|",
     re.MULTILINE,
 )
 
@@ -149,20 +161,53 @@ def resolve_registry_path() -> Path | None:
     return None
 
 
-def parse_registry_repo_paths(text: str) -> list[Path]:
-    """Extract repo paths from every non-excluded table row in `text`.
+def resolve_projects_root(registry_path: Path | None = None) -> Path:
+    """Resolve the projects root that the registry's Path column is relative to.
 
-    A row qualifies when its second column is an absolute path. Sections
-    whose heading mentions "deprecated" or "excluded from scope" are
-    skipped.
+    Resolution order (first hit wins):
+
+      1. ``$BODAI_PROJECTS_ROOT`` — explicit operator override.
+      2. The registry's own location — the registry lives at
+         ``<projects root>/mahavishnu/BODAI_REPO_REGISTRY.md``.
+      3. ``~/Projects`` — the standard developer layout.
 
     Args:
-        text: The full registry markdown.
+        registry_path: The registry file, when it is known. Passing it lets
+            the root be derived from where the registry actually sits, which
+            is the most reliable signal available.
 
     Returns:
-        The repo paths in document order.
+        The projects root. Never raises: when nothing can be resolved the
+        current working directory is returned, and every repo path derived
+        from it simply will not exist.
     """
-    paths: list[Path] = []
+    override = os.environ.get(PROJECTS_ROOT_ENV_VAR)
+    if override:
+        return Path(override).expanduser()
+
+    if registry_path is not None:
+        repo_dir = registry_path.resolve().parent
+        if repo_dir.name == REGISTRY_REPO_DIRNAME:
+            return repo_dir.parent
+
+    try:
+        home = Path.home()
+    except RuntimeError:
+        logger.warning(
+            "Cannot resolve the projects root (no home directory, no $%s); "
+            "falling back to the working directory",
+            PROJECTS_ROOT_ENV_VAR,
+        )
+        return Path.cwd()
+    return home / DEFAULT_PROJECTS_DIRNAME
+
+
+def _iter_table_paths(text: str) -> Iterator[str]:
+    """Yield the raw path cell of every in-scope table row in `text`.
+
+    Sections whose heading mentions "deprecated" or "excluded from scope"
+    are skipped, as are the markdown header and separator rows.
+    """
     section_excluded = False
     for line in text.splitlines():
         stripped = line.strip()
@@ -175,7 +220,76 @@ def parse_registry_repo_paths(text: str) -> list[Path]:
         match = _TABLE_ROW_RE.match(line)
         if not match:
             continue
-        paths.append(Path(match.group("path")))
+        repo = match.group("repo")
+        raw = match.group("path")
+        # Skip the table's own header ("Repo | Path | ...") and its
+        # separator row ("---|--- ...").
+        if repo.lower() == "repo" or not raw.strip("-"):
+            continue
+        yield raw
+
+
+def _resolve_under_root(raw: str, trusted_root: Path) -> Path | None:
+    """Resolve a registry path cell against the trusted projects root.
+
+    Returns ``None`` when the path escapes the root.
+
+    The registry is an *input*, not a trusted constant: it can be pointed at
+    any file via ``$CRACKERJACK_BODAI_REGISTRY``, and it is tracked in a
+    public repository. A row must therefore not be able to steer the fleet
+    tools at an arbitrary directory. The containment check runs on the
+    *resolved* path, so ``..`` segments and symlinks whose target lies
+    outside the root are both rejected. An absolute path is accepted only
+    when it lands inside the root, which keeps a registry generated before
+    the relative-path format working.
+
+    Args:
+        raw: The path cell from a registry table row.
+        trusted_root: The canonical projects root.
+
+    Returns:
+        The canonical path, or None when it is not contained by the root.
+    """
+    # pathlib's join keeps an absolute component absolute, so this handles
+    # both the relative and the legacy absolute form.
+    candidate = (trusted_root / raw).resolve()
+    try:
+        relative = candidate.relative_to(trusted_root)
+    except ValueError:
+        logger.warning(
+            "Registry row %r resolves outside the projects root (%s); skipping it",
+            raw,
+            trusted_root,
+        )
+        return None
+    if not relative.parts:
+        # The row points at the root itself, which is not a repo.
+        return None
+    return candidate
+
+
+def parse_registry_repo_paths(text: str, root: Path | None = None) -> list[Path]:
+    """Extract repo paths from every non-excluded table row in `text`.
+
+    A row qualifies when its second column is a path. The path is relative
+    to the projects root, so it is joined against `root` to produce a
+    location on disk. Rows that resolve outside the root are skipped.
+
+    Args:
+        text: The full registry markdown.
+        root: The projects root the Path column is relative to. Defaults to
+            :func:`resolve_projects_root` without a registry path.
+
+    Returns:
+        The repo paths in document order.
+    """
+    base = root if root is not None else resolve_projects_root()
+    trusted_root = base.resolve()
+    paths: list[Path] = []
+    for raw in _iter_table_paths(text):
+        candidate = _resolve_under_root(raw, trusted_root)
+        if candidate is not None:
+            paths.append(candidate)
     return paths
 
 
@@ -183,10 +297,12 @@ def parse_registry_repo_paths(text: str) -> list[Path]:
 def load_fleet_repo_paths() -> frozenset[Path]:
     """Resolve the set of repos that are members of the Bodai fleet.
 
-    Reads the ``### Core 7`` / ``### Web / framework libraries`` / etc.
+    Reads the ``### Core 6`` / ``### Web / framework libraries`` / etc.
     sections and pulls the second column (the path) out of every
-    ``| ... | ... | ... |`` row. Only existing directories count. Frozen so
-    callers cannot mutate the shared cache.
+    ``| ... | ... | ... |`` row. The path is relative to the projects root,
+    so it is resolved before the directory check, and rows that resolve
+    outside the root are skipped. Only existing directories count. Frozen
+    so callers cannot mutate the shared cache.
 
     Returns:
         The fleet repo paths; empty when the registry cannot be resolved.
@@ -195,22 +311,10 @@ def load_fleet_repo_paths() -> frozenset[Path]:
     if registry is None or not registry.is_file():
         return frozenset()
 
+    trusted_root = resolve_projects_root(registry).resolve()
     paths: set[Path] = set()
-    in_table = False
-    for line in registry.read_text().splitlines():
-        stripped = line.strip()
-        if stripped.startswith("###"):
-            in_table = True
-            continue
-        if stripped.startswith("##"):
-            in_table = False
-            continue
-        if not in_table or not stripped.startswith("|"):
-            continue
-        cells = [c.strip() for c in stripped.split("|") if c.strip()]
-        if len(cells) < 2:
-            continue
-        candidate = cells[1].rstrip("/")
-        if candidate.startswith("/") and Path(candidate).is_dir():
-            paths.add(Path(candidate).resolve())
+    for raw in _iter_table_paths(registry.read_text(encoding="utf-8")):
+        candidate = _resolve_under_root(raw, trusted_root)
+        if candidate is not None and candidate.is_dir():
+            paths.add(candidate)
     return frozenset(paths)

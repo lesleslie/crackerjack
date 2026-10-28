@@ -35,6 +35,7 @@ import pytest
 
 from crackerjack.checks.bodai_registry import (
     parse_registry_repo_paths,
+    resolve_projects_root,
     resolve_registry_path,
 )
 
@@ -50,14 +51,13 @@ def _find_registry() -> Path | None:
 def _extract_repos(registry: Path) -> list[Path]:
     """Parse the registry markdown and return the list of Bodai repo paths.
 
-    Only entries with a real absolute path column are included; entries
-    from "Deprecated" or "Excluded" sections are skipped. The check is
-    conservative: if we can't positively identify the section (missing
-    headings), we include the repo. This favors false positives (a guard
-    catches drift) over false negatives (a guard misses it).
+    The registry's Path column is relative to a projects root (the registry
+    lives in a public repo, so it publishes no absolute paths), so each row
+    is resolved against the root before being returned. Entries from
+    "Deprecated" or "Excluded" sections are skipped.
     """
     text = registry.read_text(encoding="utf-8")
-    return parse_registry_repo_paths(text)
+    return parse_registry_repo_paths(text, resolve_projects_root(registry))
 
 
 @pytest.fixture(scope="module")
@@ -156,8 +156,7 @@ class TestBodaiBuildSystemGuard:
         missing = [str(p) for p in bodai_repos if not p.is_dir()]
         assert not missing, (
             "BODAI_REPO_REGISTRY.md references paths that don't exist on "
-            "disk; this guard would silently skip them:\n  - "
-            + "\n  - ".join(missing)
+            "disk; this guard would silently skip them:\n  - " + "\n  - ".join(missing)
         )
 
     def test_registry_matches_known_active_repos(self) -> None:
@@ -175,9 +174,11 @@ class TestBodaiBuildSystemGuard:
         # 2026-09-19 baseline: 34 active repos per current registry audit.
         # Updated from 36 → 34 after moving jinja2-custom-delimiters to
         # "Excluded from scope" (it is an IntelliJ Platform Gradle plugin,
-        # not a Python project). Update this number when the registry's
-        # authoritative count changes (new repo added, or repo moved to
-        # Deprecated section).
+        # not a Python project). The exclusions are now enforced by the
+        # generator (settings/registry_metadata.yaml), so this count is
+        # reproducible rather than dependent on a per-machine overlay.
+        # Update this number when the registry's authoritative count changes
+        # (new repo added, or repo moved to Deprecated section).
         assert len(repos) == 34, (
             f"BODAI_REPO_REGISTRY.md reports {len(repos)} active repos; "
             f"expected 34 (2026-09-19 baseline). If the count legitimately "
