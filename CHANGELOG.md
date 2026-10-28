@@ -10,6 +10,17 @@ blocks_on: []
 topic: changelog
 ---
 
+## [Unreleased]
+
+### Added
+
+- deps: `opentelemetry-sdk` and `opentelemetry-exporter-otlp-proto-http`, so
+  crackerjack can report spans to the Bodai span substrate. The receiver's
+  heartbeat roster lists crackerjack as a service expected to be producing
+  spans, and with only the OpenTelemetry API available the spans were
+  recorded but had nowhere to go — the API has no exporter, so nothing ever
+  left the process and the watcher read the service as absent.
+
 ## [0.91.1] - 2026-10-24
 
 ### Changed
