@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 import json
 import re
 import shutil
@@ -13,7 +14,6 @@ from pathlib import Path
 from rich import box
 from rich.panel import Panel
 from rich.table import Table
-from rich.text import Text
 
 from crackerjack.config import get_console_width
 from crackerjack.core.console import CrackerjackConsole
@@ -23,11 +23,11 @@ from crackerjack.models.protocols import (
     CoverageRatchetProtocol,
     OptionsProtocol,
 )
+from crackerjack.services.coverage_badge_service import CoverageBadgeService
 from crackerjack.services.testing.coverage_manager import CoverageManager
 from crackerjack.services.testing.test_result_parser import TestResultParser
 from crackerjack.services.testing.test_result_renderer import TestResultRenderer
-
-from crackerjack.services.coverage_badge_service import CoverageBadgeService
+from crackerjack.utils.path_redaction import redact_path
 
 from .test_command_builder import TestCommandBuilder
 from .test_executor import TestExecutor
@@ -683,7 +683,6 @@ class TestManager:
         return coverage_ok
 
     def _extract_failure_lines(self, output: str) -> list[str]:
-        import re
 
         lines = output.split("\n")
 
@@ -697,7 +696,6 @@ class TestManager:
         return failures[:10]
 
     def _extract_from_short_summary(self, lines: list[str]) -> list[str]:
-        import re
 
         failures = []
         in_summary = False
@@ -872,7 +870,7 @@ class TestManager:
             return False
 
     def _render_structured_failures_with_summary(
-        self, clean_output: str, failures: list["TestFailure"], options: OptionsProtocol,
+        self, clean_output: str, failures: list[TestFailure], options: OptionsProtocol,
     ) -> None:
 
         failed_tests = [f for f in failures if f.status == "FAILED"]
@@ -899,7 +897,6 @@ class TestManager:
     def _render_fallback_sections(
         self, clean_output: str, options: OptionsProtocol,
     ) -> None:
-        from rich.panel import Panel
 
         sections = self._split_output_sections(clean_output)
 
@@ -925,7 +922,6 @@ class TestManager:
                     self.console.print(f"[dim]{section_content}[/dim]")
 
     def _render_failure_section(self, section_content: str) -> None:
-        from rich.panel import Panel
         from rich.syntax import Syntax
 
 
@@ -947,8 +943,8 @@ class TestManager:
         self.console.print(panel)
 
     def _parse_failure_header(
-        self, line: str, current_failure: "TestFailure | None",
-    ) -> tuple["TestFailure | None", bool]:
+        self, line: str, current_failure: TestFailure | None,
+    ) -> tuple[TestFailure | None, bool]:
         import re
 
         from crackerjack.models.test_models import TestFailure
@@ -984,7 +980,7 @@ class TestManager:
         return current_failure, False
 
     def _parse_location_and_assertion(
-        self, line: str, current_failure: "TestFailure", in_traceback: bool,
+        self, line: str, current_failure: TestFailure, in_traceback: bool,
     ) -> bool:
         import re
 
@@ -1016,7 +1012,7 @@ class TestManager:
         return False, None
 
     def _parse_traceback_line(
-        self, line: str, lines: list[str], i: int, current_failure: "TestFailure",
+        self, line: str, lines: list[str], i: int, current_failure: TestFailure,
     ) -> bool:
         if line.startswith((" ", "\t", "E ")):
             current_failure.traceback.append(line)
@@ -1024,7 +1020,7 @@ class TestManager:
         return not (line.strip().startswith(("=", "FAILED")) or (i < len(lines) - 1 and "FAILED" in lines[i + 1]))
 
     def _parse_captured_output(
-        self, line: str, capture_type: str | None, current_failure: "TestFailure",
+        self, line: str, capture_type: str | None, current_failure: TestFailure,
     ) -> bool:
         if line.strip().startswith(("=", "_")):
             return False
@@ -1041,7 +1037,7 @@ class TestManager:
                 current_failure.captured_stderr = line
         return True
 
-    def _extract_structured_failures(self, output: str) -> list["TestFailure"]:
+    def _extract_structured_failures(self, output: str) -> list[TestFailure]:
         failures: list[TestFailure] = []
         lines = output.split("\n")
 
@@ -1096,9 +1092,8 @@ class TestManager:
         return state
 
     def _enrich_failures_from_short_summary(
-        self, failures: list["TestFailure"], output: str,
+        self, failures: list[TestFailure], output: str,
     ) -> None:
-        from crackerjack.models.test_models import TestFailure
 
         summary_failures = self._parse_short_summary(output)
 
@@ -1115,7 +1110,6 @@ class TestManager:
         self._match_unnamed_failures(failures, summary_failures)
 
     def _parse_short_summary(self, output: str) -> list[dict[str, str]]:
-        import re
 
         lines = output.split("\n")
         in_summary = False
@@ -1180,7 +1174,7 @@ class TestManager:
 
     def _create_failures_from_summary(
         self,
-        failures: list["TestFailure"],
+        failures: list[TestFailure],
         summary_failures: list[dict[str, str]],
     ) -> None:
         from crackerjack.models.test_models import TestFailure
@@ -1200,7 +1194,7 @@ class TestManager:
 
     def _enrich_existing_failures(
         self,
-        failures: list["TestFailure"],
+        failures: list[TestFailure],
         summary_failures: list[dict[str, str]],
     ) -> None:
         for summary_failure in summary_failures:
@@ -1217,7 +1211,7 @@ class TestManager:
 
     def _try_enrich_named_failure(
         self,
-        failures: list["TestFailure"],
+        failures: list[TestFailure],
         test_path: str,
         error_message: str,
         status: str,
@@ -1232,7 +1226,7 @@ class TestManager:
 
     def _try_enrich_unnamed_failure(
         self,
-        failures: list["TestFailure"],
+        failures: list[TestFailure],
         test_path: str,
         error_message: str,
         status: str,
@@ -1250,7 +1244,7 @@ class TestManager:
 
     def _match_unnamed_failures(
         self,
-        failures: list["TestFailure"],
+        failures: list[TestFailure],
         summary_failures: list[dict[str, str]],
     ) -> None:
         unnamed_values = ("", "unknown", "N/A")
@@ -1277,7 +1271,7 @@ class TestManager:
         line: str,
         lines: list[str],
         index: int,
-        current_failure: "TestFailure | None",
+        current_failure: TestFailure | None,
         in_traceback: bool,
         in_captured: bool,
         capture_type: str | None,
@@ -1327,7 +1321,7 @@ class TestManager:
 
         return result
 
-    def _render_structured_failure_panels(self, failures: list["TestFailure"]) -> None:
+    def _render_structured_failure_panels(self, failures: list[TestFailure]) -> None:
 
         if not failures:
             return
@@ -1360,7 +1354,7 @@ class TestManager:
             self._render_single_failure(failure, i, len(failures), style)
 
     def _render_single_failure(
-        self, failure: "TestFailure", index: int, total: int, style: str,
+        self, failure: TestFailure, index: int, total: int, style: str,
     ) -> None:
         self._print_failure_header(index, failure, style)
         self._print_failure_location(failure)
@@ -1369,7 +1363,7 @@ class TestManager:
         self._print_failure_traceback(failure)
 
     def _print_failure_header(
-        self, index: int, failure: "TestFailure", style: str,
+        self, index: int, failure: TestFailure, style: str,
     ) -> None:
         self.console.print()
         self.console.print(
@@ -1377,23 +1371,23 @@ class TestManager:
             f"[bold cyan]{failure.test_name}[/bold cyan]"
         )
 
-    def _print_failure_location(self, failure: "TestFailure") -> None:
+    def _print_failure_location(self, failure: TestFailure) -> None:
         if failure.location and failure.location != failure.test_name:
             self.console.print(
-                f" [dim]📍 Location:[/dim] [blue]{failure.location}[/blue]"
+                f" [dim]📍 Location:[/dim] [blue]{redact_path(failure.location)}[/blue]"
             )
 
-    def _print_failure_status(self, failure: "TestFailure", style: str) -> None:
+    def _print_failure_status(self, failure: TestFailure, style: str) -> None:
         self.console.print(
             f" [dim]❌ Status:[/dim] [bold {style}]{failure.status}[/bold {style}]"
         )
 
-    def _print_failure_summary(self, failure: "TestFailure") -> None:
+    def _print_failure_summary(self, failure: TestFailure) -> None:
         summary = self._get_failure_summary(failure)
         if summary:
             self.console.print(f" [dim]📝[/dim] [yellow]{summary}[/yellow]")
 
-    def _get_failure_summary(self, failure: "TestFailure") -> str | None:
+    def _get_failure_summary(self, failure: TestFailure) -> str | None:
         if failure.short_summary:
             return self._truncate_text(failure.short_summary, 200)
         if failure.assertion:
@@ -1406,12 +1400,12 @@ class TestManager:
             return text[:max_length - 3] + "..."
         return text
 
-    def _print_failure_traceback(self, failure: "TestFailure") -> None:
+    def _print_failure_traceback(self, failure: TestFailure) -> None:
         preview = self._get_traceback_preview(failure)
         if preview:
             self.console.print(f" [dim]💡 Traceback:[/dim] [dim]{preview}[/dim]")
 
-    def _get_traceback_preview(self, failure: "TestFailure") -> str | None:
+    def _get_traceback_preview(self, failure: TestFailure) -> str | None:
         if not failure.traceback:
             return None
         preview = failure.traceback[0]
@@ -1419,7 +1413,7 @@ class TestManager:
             return None
         return self._truncate_text(preview, 150)
 
-    def _build_simple_failure_list(self, failures: list["TestFailure"]) -> str:
+    def _build_simple_failure_list(self, failures: list[TestFailure]) -> str:
         lines = []
 
         for failure in failures:
@@ -1441,8 +1435,8 @@ class TestManager:
         return "\n".join(lines)
 
     def _group_failures_by_file(
-        self, failures: list["TestFailure"],
-    ) -> dict[str, list["TestFailure"]]:
+        self, failures: list[TestFailure],
+    ) -> dict[str, list[TestFailure]]:
         failures_by_file: dict[str, list[TestFailure]] = {}
         for failure in failures:
             file_path = failure.get_file_path()
@@ -1452,17 +1446,17 @@ class TestManager:
         return failures_by_file
 
     def _render_file_failure_header(
-        self, file_path: str, file_failures: list["TestFailure"],
+        self, file_path: str, file_failures: list[TestFailure],
     ) -> None:
         self.console.print(
-            f"\n[bold red]📁 {file_path}[/bold red] ({len(file_failures)} failure(s))\n",
+            f"\n[bold red]📁 {redact_path(file_path)}[/bold red] "
+            f"({len(file_failures)} failure(s))\n",
         )
 
     def _render_single_failure_panel(
-        self, failure: "TestFailure", index: int, total: int,
+        self, failure: TestFailure, index: int, total: int,
     ) -> None:
         from rich.console import Group
-        from rich.panel import Panel
 
 
         table = self._create_failure_details_table(failure)
@@ -1481,8 +1475,7 @@ class TestManager:
         )
         self.console.print(panel)
 
-    def _create_failure_details_table(self, failure: "TestFailure") -> "Table":
-        from rich import box
+    def _create_failure_details_table(self, failure: TestFailure) -> Table:
         from rich.table import Table
 
         table = Table(
@@ -1512,7 +1505,7 @@ class TestManager:
         return table
 
     def _build_failure_components(
-        self, failure: "TestFailure", table: "Table",
+        self, failure: TestFailure, table: Table,
     ) -> list[t.Any]:
         from rich.syntax import Syntax
 
@@ -1556,7 +1549,7 @@ class TestManager:
 
         return components
 
-    def _get_duration_note(self, failure: "TestFailure") -> str | None:
+    def _get_duration_note(self, failure: TestFailure) -> str | None:
         if not failure.duration:
             return None
 

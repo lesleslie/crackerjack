@@ -19,6 +19,7 @@ from crackerjack.integration.mahavishnu_integration import (
     MahavishnuConfig,
     RepositoryVelocity,
 )
+from crackerjack.utils.path_redaction import redact_path
 
 logger = logging.getLogger(__name__)
 
@@ -45,9 +46,9 @@ def get_portfolio_velocity_dashboard(
         description="List of absolute paths to git repositories for portfolio analysis",
         examples=[
             [
-                "/Users/les/Projects/crackerjack",
-                "/Users/les/Projects/mcp-common",
-                "/Users/les/Projects/session-buddy",
+                "/Users/example/Projects/crackerjack",
+                "/Users/example/Projects/mcp-common",
+                "/Users/example/Projects/session-buddy",
             ]
         ],
     ),
@@ -159,8 +160,8 @@ def analyze_merge_patterns(
         description="List of absolute paths to git repositories",
         examples=[
             [
-                "/Users/les/Projects/crackerjack",
-                "/Users/les/Projects/mcp-common",
+                "/Users/example/Projects/crackerjack",
+                "/Users/example/Projects/mcp-common",
             ]
         ],
     ),
@@ -194,7 +195,7 @@ def analyze_merge_patterns(
             repo_path = Path(repo_path_str).resolve()
 
             if not (repo_path / ".git").exists():
-                logger.warning(f"Not a git repository: {repo_path}")
+                logger.warning(f"Not a git repository: {redact_path(repo_path)}")
                 continue
 
             try:
@@ -228,7 +229,7 @@ def analyze_merge_patterns(
                     all_conflicted_files[file_path] += count
 
             except Exception as e:
-                logger.error(f"Failed to analyze {repo_path}: {e}")
+                logger.error(f"Failed to analyze {redact_path(repo_path)}: {e}")
                 continue
 
         portfolio_conflict_rate = (
@@ -300,8 +301,8 @@ def get_best_practices_propagation(
         description="List of absolute paths to git repositories",
         examples=[
             [
-                "/Users/les/Projects/crackerjack",
-                "/Users/les/Projects/mcp-common",
+                "/Users/example/Projects/crackerjack",
+                "/Users/example/Projects/mcp-common",
             ]
         ],
     ),
@@ -339,7 +340,7 @@ def get_best_practices_propagation(
                 )
                 repos_data.append(velocity)
             except Exception as e:
-                logger.warning(f"Failed to collect metrics from {repo_path_str}: {e}")
+                logger.warning(f"Failed to collect metrics from {redact_path(repo_path_str)}: {e}")
                 continue
 
         if not repos_data:
@@ -401,8 +402,8 @@ def get_repository_comparison(
         description="List of 2-5 absolute paths to git repositories for comparison",
         examples=[
             [
-                "/Users/les/Projects/crackerjack",
-                "/Users/les/Projects/mcp-common",
+                "/Users/example/Projects/crackerjack",
+                "/Users/example/Projects/mcp-common",
             ]
         ],
     ),
@@ -452,7 +453,7 @@ def get_repository_comparison(
                     }
                 )
             except Exception as e:
-                logger.error(f"Failed to analyze {repo_path_str}: {e}")
+                logger.error(f"Failed to analyze {redact_path(repo_path_str)}: {e}")
                 continue
 
         if not comparison_data:
@@ -526,8 +527,8 @@ def get_cross_project_conflicts(
         description="List of absolute paths to git repositories",
         examples=[
             [
-                "/Users/les/Projects/crackerjack",
-                "/Users/les/Projects/mcp-common",
+                "/Users/example/Projects/crackerjack",
+                "/Users/example/Projects/mcp-common",
             ]
         ],
     ),
@@ -599,7 +600,7 @@ def _collect_conflicts_from_repos(
         repo_path = Path(repo_path_str).resolve()
 
         if not (repo_path / ".git").exists():
-            logger.warning(f"Not a git repository: {repo_path}")
+            logger.warning(f"Not a git repository: {redact_path(repo_path)}")
             continue
 
         try:
@@ -624,7 +625,7 @@ def _collect_conflicts_from_repos(
             )
 
         except Exception as e:
-            logger.error(f"Failed to analyze conflicts for {repo_path}: {e}")
+            logger.error(f"Failed to analyze conflicts for {redact_path(repo_path)}: {e}")
             continue
 
     return (
@@ -1296,9 +1297,9 @@ def get_active_branches_analysis(
         description="List of absolute paths to git repositories for branch analysis",
         examples=[
             [
-                "/Users/les/Projects/crackerjack",
-                "/Users/les/Projects/mcp-common",
-                "/Users/les/Projects/session-buddy",
+                "/Users/example/Projects/crackerjack",
+                "/Users/example/Projects/mcp-common",
+                "/Users/example/Projects/session-buddy",
             ]
         ],
     ),
@@ -1328,7 +1329,7 @@ def get_active_branches_analysis(
             repo_path = Path(repo_path_str).resolve()
 
             if not (repo_path / ".git").exists():
-                logger.warning(f"Not a git repository: {repo_path}")
+                logger.warning(f"Not a git repository: {redact_path(repo_path)}")
                 continue
 
             try:
@@ -1380,7 +1381,7 @@ def get_active_branches_analysis(
                     all_naming_patterns[pattern["prefix"]] += pattern["count"]
 
             except Exception as e:
-                logger.error(f"Failed to analyze branches for {repo_path}: {e}")
+                logger.error(f"Failed to analyze branches for {redact_path(repo_path)}: {e}")
                 continue
 
         if not repos_data:
@@ -1473,7 +1474,7 @@ def _collect_branch_data(
         )
 
         if result.returncode != 0:
-            logger.warning(f"Failed to get branches for {repo_path}")
+            logger.warning(f"Failed to get branches for {redact_path(repo_path)}")
             return []
 
         for line in result.stdout.strip().split("\n"):
@@ -1505,9 +1506,9 @@ def _collect_branch_data(
                 continue
 
     except subprocess.TimeoutExpired:
-        logger.error(f"Git command timed out for {repo_path}")
+        logger.error(f"Git command timed out for {redact_path(repo_path)}")
     except Exception as e:
-        logger.error(f"Failed to collect branch data from {repo_path}: {e}")
+        logger.error(f"Failed to collect branch data from {redact_path(repo_path)}: {e}")
 
     return branches
 
@@ -1848,9 +1849,9 @@ def get_repository_health_dashboard(
         description="List of absolute paths to git repositories for health analysis",
         examples=[
             [
-                "/Users/les/Projects/crackerjack",
-                "/Users/les/Projects/mcp-common",
-                "/Users/les/Projects/session-buddy",
+                "/Users/example/Projects/crackerjack",
+                "/Users/example/Projects/mcp-common",
+                "/Users/example/Projects/session-buddy",
             ]
         ],
     ),
@@ -1882,7 +1883,7 @@ def get_repository_health_dashboard(
             repo_path = Path(repo_path_str).resolve()
 
             if not (repo_path / ".git").exists():
-                logger.warning(f"Not a git repository: {repo_path}")
+                logger.warning(f"Not a git repository: {redact_path(repo_path)}")
                 continue
 
             try:
@@ -1936,7 +1937,7 @@ def get_repository_health_dashboard(
                         commit_metrics, previous_commit_metrics
                     )
                 except Exception as e:
-                    logger.debug(f"Could not calculate trend for {repo_path}: {e}")
+                    logger.debug(f"Could not calculate trend for {redact_path(repo_path)}: {e}")
                     trend = "unknown"
 
                 all_health_data.append(
@@ -1985,7 +1986,7 @@ def get_repository_health_dashboard(
                 )
 
             except Exception as e:
-                logger.error(f"Failed to analyze {repo_path}: {e}")
+                logger.error(f"Failed to analyze {redact_path(repo_path)}: {e}")
                 continue
 
         if not all_health_data:
@@ -2064,9 +2065,9 @@ def get_workflow_recommendations(
         description="List of absolute paths to git repositories for workflow analysis",
         examples=[
             [
-                "/Users/les/Projects/crackerjack",
-                "/Users/les/Projects/mcp-common",
-                "/Users/les/Projects/session-buddy",
+                "/Users/example/Projects/crackerjack",
+                "/Users/example/Projects/mcp-common",
+                "/Users/example/Projects/session-buddy",
             ]
         ],
     ),
@@ -2106,7 +2107,7 @@ def get_workflow_recommendations(
                 )
                 repos_data.append(velocity)
             except Exception as e:
-                logger.warning(f"Failed to collect metrics from {repo_path_str}: {e}")
+                logger.warning(f"Failed to collect metrics from {redact_path(repo_path_str)}: {e}")
                 continue
 
         if not repos_data:
@@ -2139,7 +2140,7 @@ def get_workflow_recommendations(
 
             except Exception as e:
                 logger.warning(
-                    f"Failed to collect detailed metrics for {repo_path}: {e}"
+                    f"Failed to collect detailed metrics for {redact_path(repo_path)}: {e}"
                 )
 
         workflow_analysis = _analyze_workflow_patterns(repo_workflow_data)
@@ -2422,7 +2423,7 @@ def _scan_large_files(repo_path: Path, size_threshold_mb: float = 1.0) -> list[d
                     continue
 
     except Exception as e:
-        logger.debug(f"Could not detect large files for {repo_path}: {e}")
+        logger.debug(f"Could not detect large files for {redact_path(repo_path)}: {e}")
 
     return large_files[:20]
 
@@ -2474,7 +2475,7 @@ def _scan_stale_branches(repo_path: Path) -> list[dict]:
                 continue
 
     except Exception as e:
-        logger.debug(f"Could not detect stale branches for {repo_path}: {e}")
+        logger.debug(f"Could not detect stale branches for {redact_path(repo_path)}: {e}")
 
     return stale_branches[:20]
 

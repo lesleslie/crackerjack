@@ -11,6 +11,7 @@ from pydantic import Field
 from crackerjack.adapters._qa_adapter_base import QAAdapterBase, QABaseSettings
 from crackerjack.models.adapter_metadata import AdapterStatus
 from crackerjack.models.qa_results import QACheckType, QAResult, QAResultStatus
+from crackerjack.utils.path_redaction import redact_path
 
 if t.TYPE_CHECKING:
     from crackerjack.models.qa_config import QACheckConfig
@@ -161,7 +162,7 @@ class TreeSitterAdapter(QAAdapterBase):
         try:
             return await self._check_file(file_path)
         except Exception as e:
-            logger.debug(f"Error checking {file_path}: {e}")
+            logger.debug(f"Error checking {redact_path(file_path)}: {e}")
             return []
 
     @staticmethod

@@ -8,6 +8,7 @@ from pathlib import Path
 
 from crackerjack.core.console import CrackerjackConsole
 from crackerjack.models.protocols import APIExtractorProtocol
+from crackerjack.utils.path_redaction import redact_path
 
 from .regex_patterns import SAFE_PATTERNS
 
@@ -127,7 +128,7 @@ class APIExtractorImpl(APIExtractorProtocol):
 
             except Exception as e:
                 self.console.print(
-                    f"[yellow]Warning: Could not parse {file_path}: {e}[/yellow]",
+                    f"[yellow]Warning: Could not parse {redact_path(file_path)}: {e}[/yellow]",
                 )
                 continue
 
@@ -171,7 +172,8 @@ class APIExtractorImpl(APIExtractorProtocol):
 
             except Exception as e:
                 self.console.print(
-                    f"[yellow]Warning: Could not parse service {file_path}: {e}[/yellow]",
+                    f"[yellow]Warning: Could not parse service "
+                    f"{redact_path(file_path)}: {e}[/yellow]",
                 )
                 continue
 
@@ -193,7 +195,8 @@ class APIExtractorImpl(APIExtractorProtocol):
 
             except Exception as e:
                 self.console.print(
-                    f"[yellow]Warning: Could not parse CLI file {file_path}: {e}[/yellow]",
+                    f"[yellow]Warning: Could not parse CLI file "
+                    f"{redact_path(file_path)}: {e}[/yellow]",
                 )
                 continue
 
@@ -222,7 +225,8 @@ class APIExtractorImpl(APIExtractorProtocol):
 
             except Exception as e:
                 self.console.print(
-                    f"[yellow]Warning: Could not parse MCP file {file_path}: {e}[/yellow]",
+                    f"[yellow]Warning: Could not parse MCP file "
+                    f"{redact_path(file_path)}: {e}[/yellow]",
                 )
                 continue
 

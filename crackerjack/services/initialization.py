@@ -9,6 +9,7 @@ import tomli
 
 from crackerjack.core.console import CrackerjackConsole
 from crackerjack.models.protocols import ConfigMergeServiceProtocol
+from crackerjack.utils.path_redaction import redact_path
 
 from .config_merge import ConfigMergeService
 from .filesystem import FileSystemService
@@ -319,7 +320,7 @@ class InitializationService:
         if target_file.exists() and not force:
             t.cast("list[str]", results["files_skipped"]).append(file_name)
             self.console.print(
-                f"[yellow]⚠️[/yellow] Skipped {file_name} (already exists)",
+                f"[yellow]⚠️[/yellow] Skipped {redact_path(file_name)} (already exists)",
             )
             return False
         return True
@@ -351,14 +352,14 @@ class InitializationService:
             self.git_service.add_files([str(target_file)])
         except Exception as e:
             self.console.print(
-                f"[yellow]⚠️[/yellow] Could not git add {file_name}: {e}",
+                f"[yellow]⚠️[/yellow] Could not git add {redact_path(file_name)}: {e}",
             )
 
-        self.console.print(f"[green]✅[/green] Copied {file_name}")
+        self.console.print(f"[green]✅[/green] Copied {redact_path(file_name)}")
 
     def _skip_existing_file(self, file_name: str, results: dict[str, t.Any]) -> None:
         t.cast("list[str]", results["files_skipped"]).append(file_name)
-        self.console.print(f"[yellow]⚠️[/yellow] Skipped {file_name} (already exists)")
+        self.console.print(f"[yellow]⚠️[/yellow] Skipped {redact_path(file_name)} (already exists)")
 
     def _handle_missing_source_file(
         self,
@@ -648,10 +649,10 @@ python -m crackerjack - a patch
                 self.git_service.add_files([str(target_file)])
             except Exception as e:
                 self.console.print(
-                    f"[yellow]⚠️[/yellow] Could not git add {file_name}: {e}",
+                    f"[yellow]⚠️[/yellow] Could not git add {redact_path(file_name)}: {e}",
                 )
 
-            self.console.print(f"[green]✅[/green] Appended to {file_name}")
+            self.console.print(f"[green]✅[/green] Appended to {redact_path(file_name)}")
 
         except Exception as e:
             self._handle_file_processing_error(file_name, e, results)

@@ -7,6 +7,8 @@ from mcp_common.websocket.tls import (
     get_tls_config_from_env,
 )
 
+from crackerjack.utils.path_redaction import redact_path
+
 logger = logging.getLogger(__name__)
 
 
@@ -37,7 +39,7 @@ def load_ssl_context(
                 ca_file=ca_file,
                 verify_client=verify_client,
             )
-            logger.info(f"Loaded TLS certificate: {cert_file}")
+            logger.info(f"Loaded TLS certificate: {redact_path(cert_file)}")
         except Exception as e:
             logger.error(f"Failed to load SSL context: {e}")
             raise

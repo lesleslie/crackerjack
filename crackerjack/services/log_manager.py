@@ -12,6 +12,8 @@ from pathlib import Path
 
 from rich.console import Console
 
+from crackerjack.utils.path_redaction import redact_path
+
 console = Console()
 
 
@@ -275,7 +277,7 @@ class LogManager:
         stats = self.get_log_stats()
 
         console.print("\n[bold]📊 Log File Summary[/bold]")
-        console.print(f"[dim]Location: {self.log_dir}[/dim]")
+        console.print(f"[dim]Location: {redact_path(self.log_dir)}[/dim]")
 
         total_files: int = 0
         total_size: float = 0.0

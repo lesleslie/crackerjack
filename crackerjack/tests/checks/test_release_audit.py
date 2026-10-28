@@ -13,13 +13,38 @@ from crackerjack.checks.release_audit import (
     check_release_audit,
 )
 
-FIXTURES = Path("/Users/les/Projects/mcp-common/tests/release_audit/fixtures")
+_FIXTURE_RELATIVE = Path("tests") / "release_audit" / "fixtures"
+
+
+def _find_fixtures() -> Path | None:
+    """Locate the release-audit fixtures in the sibling `mcp-common` checkout.
+
+    The fixtures live in another repo, so they are resolved relative to
+    this checkout rather than hardcoded to one machine's home directory.
+    Returns None when the sibling checkout is not present.
+    """
+    repo_root = Path(__file__).resolve().parents[3]
+    candidates = [
+        repo_root.parent / "mcp-common" / _FIXTURE_RELATIVE,
+        Path.home() / "Projects" / "mcp-common" / _FIXTURE_RELATIVE,
+    ]
+    for candidate in candidates:
+        if candidate.is_dir():
+            return candidate
+    return None
+
+
+FIXTURES = _find_fixtures()
 
 
 @pytest.fixture
 def good_project(tmp_path: Path) -> Path:
     """Symlink the fixtures into a tmp dir for test isolation."""
     import shutil
+
+    if FIXTURES is None:
+        pytest.skip("mcp-common release-audit fixtures not found")
+
     dst = tmp_path / "fixtures"
     shutil.copytree(FIXTURES, dst)
     return dst

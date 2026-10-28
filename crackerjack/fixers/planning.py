@@ -174,6 +174,7 @@ from crackerjack.models.fix_plan import ChangeSpec, FixPlan
 from crackerjack.models.issues import Issue, IssueType
 from crackerjack.services.import_resolution import get_safe_import_spec
 from crackerjack.services.refurb_fixer import SafeRefurbFixer
+from crackerjack.utils.path_redaction import redact_path
 
 logger = logging.getLogger(__name__)
 
@@ -210,7 +211,7 @@ async def create_fix_plan(
     if not changes:
         logger.debug(
             f"No changes generated for {issue.type.value} at "
-            f"{issue.file_path}:{issue.line_number} - requires manual fix"
+            f"{redact_path(issue.file_path)}:{issue.line_number} - requires manual fix"
         )
 
         return FixPlan(
@@ -235,7 +236,8 @@ async def create_fix_plan(
         if "lychee" in reason_lower and "excluded" in reason_lower:
             file_path_for_plan = ".lycheeignore"
             logger.info(
-                f"Lychee exclusion change detected, targeting .lycheeignore instead of {issue.file_path}"
+                f"Lychee exclusion change detected, targeting "
+                f".lycheeignore instead of {redact_path(issue.file_path)}"
             )
 
     plan = FixPlan(
@@ -252,7 +254,7 @@ async def create_fix_plan(
 
     logger.info(
         f"Created FixPlan with {len(changes)} changes, "
-        f"risk={risk_level}, for {issue.file_path}:{issue.line_number}"
+        f"risk={risk_level}, for {redact_path(issue.file_path)}:{issue.line_number}"
     )
 
     return plan
@@ -313,7 +315,7 @@ def _generate_changes(
             return [validated_change]
         logger.warning(
             f"Change validation failed for {issue.type.value} at "
-            f"{issue.file_path}:{issue.line_number}"
+            f"{redact_path(issue.file_path)}:{issue.line_number}"
         )
 
     complexity_fallback = _build_complexity_fallback_change(issue, file_content)
@@ -1021,7 +1023,7 @@ def _fix_type_annotation(issue: Issue, code: str) -> ChangeSpec | None:
     error_context = _get_type_error_context(issue, code)
 
     logger.debug(
-        f"Type error context for {issue.file_path}:{issue.line_number}: "
+        f"Type error context for {redact_path(issue.file_path)}:{issue.line_number}: "
         f"error_code={error_context.get('error_code')}, "
         f"expected_type={error_context.get('expected_type')}"
     )
@@ -2282,7 +2284,8 @@ def _fix_dependency(issue: Issue, code: str) -> ChangeSpec | None:
 
     if "# noqa" in old_code or "# UNUSED" in old_code or "# DEAD" in old_code:
         logger.debug(
-            f"Skipping dependency issue at {issue.file_path}:{issue.line_number}: already handled"
+            f"Skipping dependency issue at "
+            f"{redact_path(issue.file_path)}:{issue.line_number}: already handled"
         )
         return None
 
@@ -2319,7 +2322,8 @@ def _fix_dependency(issue: Issue, code: str) -> ChangeSpec | None:
         )
 
     logger.debug(
-        f"Dependency issue at {issue.file_path}:{issue.line_number}: {issue.message} - requires manual fix"
+        f"Dependency issue at {redact_path(issue.file_path)}:{issue.line_number}: "
+        f"{issue.message} - requires manual fix"
     )
     return None
 
@@ -2396,7 +2400,8 @@ def _fix_import(issue: Issue, code: str, project_path: Path) -> ChangeSpec | Non
         return _comment_out_unused_import(old_code, issue)
 
     logger.debug(
-        f"Import issue at {issue.file_path}:{issue.line_number}: {issue.message} - may need manual fix"
+        f"Import issue at {redact_path(issue.file_path)}:{issue.line_number}: "
+        f"{issue.message} - may need manual fix"
     )
     return None
 
@@ -2727,7 +2732,8 @@ def _path_to_module_name(path: Path, project_path: Path) -> str | None:
 def _fix_test(issue: Issue, code: str) -> ChangeSpec | None:
 
     logger.debug(
-        f"Test failure at {issue.file_path}:{issue.line_number}: {issue.message} - requires test analysis"
+        f"Test failure at {redact_path(issue.file_path)}:{issue.line_number}: "
+        f"{issue.message} - requires test analysis"
     )
     return None
 
@@ -2777,7 +2783,7 @@ def _try_safe_refurb_fixer(issue: Issue) -> ChangeSpec | None:
         return None
 
     logger.info(
-        f"SafeRefurbFixer applied {fixes_applied} fixes to {file_path} (in-memory)"
+        f"SafeRefurbFixer applied {fixes_applied} fixes to {redact_path(file_path)} (in-memory)"
     )
     line_count = len(new_content.split("\n"))
 
@@ -3181,7 +3187,8 @@ def _fix_warning(issue: Issue, code: str) -> ChangeSpec | None:
 
     if "# noqa" in old_code or "# type: ignore" in old_code:
         logger.debug(
-            f"Skipping warning at {issue.file_path}:{issue.line_number}: already handled"
+            f"Skipping warning at "
+            f"{redact_path(issue.file_path)}:{issue.line_number}: already handled"
         )
         return None
 

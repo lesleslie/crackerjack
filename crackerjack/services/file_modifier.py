@@ -13,6 +13,7 @@ from pathlib import Path
 from loguru import logger
 
 from crackerjack.models.protocols import SafeFileModifierProtocol, ServiceProtocol
+from crackerjack.utils.path_redaction import redact_path
 
 
 class SafeFileModifier(SafeFileModifierProtocol, ServiceProtocol):
@@ -81,7 +82,7 @@ class SafeFileModifier(SafeFileModifierProtocol, ServiceProtocol):
     def _ensure_backup_dir(self) -> None:
         if not self._backup_dir.exists():
             self._backup_dir.mkdir(parents=True, exist_ok=True)
-            logger.debug(f"Created backup directory: {self._backup_dir}")
+            logger.debug(f"Created backup directory: {redact_path(self._backup_dir)}")
 
     async def apply_fix(
         self,
@@ -186,7 +187,7 @@ class SafeFileModifier(SafeFileModifierProtocol, ServiceProtocol):
             error_msg = f"Syntax error in generated code: {e.msg}"
             if e.lineno:
                 error_msg += f" at line {e.lineno}"
-            logger.error(f"❌ Blocking invalid code for {path}: {error_msg}")
+            logger.error(f"❌ Blocking invalid code for {redact_path(path)}: {error_msg}")
             return {
                 "success": False,
                 "error": error_msg,
@@ -269,7 +270,7 @@ class SafeFileModifier(SafeFileModifierProtocol, ServiceProtocol):
                 os.chmod(temp_path_str, original_stat.st_mode)
                 shutil.move(temp_path_str, path)
 
-                logger.info(f"Successfully applied fix to {file_path}")
+                logger.info(f"Successfully applied fix to {redact_path(file_path)}")
 
                 return {
                     "success": True,
@@ -429,7 +430,7 @@ class SafeFileModifier(SafeFileModifierProtocol, ServiceProtocol):
 
         backup_path.write_text(content, encoding="utf-8")
 
-        logger.debug(f"Created backup: {backup_path}")
+        logger.debug(f"Created backup: {redact_path(backup_path)}")
 
         return backup_path
 
@@ -442,7 +443,7 @@ class SafeFileModifier(SafeFileModifierProtocol, ServiceProtocol):
             backup_content = backup_path.read_text(encoding="utf-8")
             file_path.write_text(backup_content, encoding="utf-8")
 
-            logger.info(f"Restored {file_path} from backup")
+            logger.info(f"Restored {redact_path(file_path)} from backup")
 
         except Exception as e:
             logger.error(f"Failed to restore backup: {e}")

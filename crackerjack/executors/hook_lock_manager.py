@@ -15,6 +15,7 @@ from crackerjack.config.global_lock_config import (
     GlobalLockConfig,
     get_global_lock_config,
 )
+from crackerjack.utils.path_redaction import redact_path
 
 
 class HookLockManager:
@@ -151,7 +152,7 @@ class HookLockManager:
 
         self._global_lock_attempts[hook_name] += 1
         self.logger.debug(
-            f"Attempting global lock acquisition for {hook_name}: {lock_path}",
+            f"Attempting global lock acquisition for {hook_name}: {redact_path(lock_path)}",
         )
 
         await self._cleanup_stale_lock_if_needed(hook_name)
@@ -256,7 +257,8 @@ class HookLockManager:
 
             try:
                 os.link(temp_path, lock_path)
-                self.logger.debug(f"Successfully created global lock file: {lock_path}")
+                self.logger.debug(f"Successfully created global lock "
+                f"file: {redact_path(lock_path)}")
             except FileExistsError:
                 with suppress(OSError):
                     temp_path.unlink()
@@ -367,10 +369,10 @@ class HookLockManager:
 
                     if lock_data.get("session_id") == self._global_config.session_id:
                         lock_path.unlink()
-                        self.logger.debug(f"Removed global lock file: {lock_path}")
+                        self.logger.debug(f"Removed global lock file: {redact_path(lock_path)}")
                     else:
                         self.logger.warning(
-                            f"Lock ownership changed, not removing file: {lock_path}",
+                            f"Lock ownership changed, not removing file: {redact_path(lock_path)}",
                         )
 
                 except Exception as e:
@@ -558,7 +560,7 @@ class HookLockManager:
                 )
 
         except OSError as e:
-            self.logger.exception(f"Could not access locks directory {locks_dir}: {e}")
+            self.logger.exception(f"Could not access locks directory {redact_path(locks_dir)}: {e}")
 
         if cleaned_count > 0:
             self.logger.info(f"Cleaned up {cleaned_count} stale lock files")
@@ -594,13 +596,14 @@ class HookLockManager:
                 hook_name = lock_file.stem
                 self._stale_locks_cleaned[hook_name] += 1
                 self.logger.info(
-                    f"Cleaned stale lock: {lock_file} (age: {heartbeat_age_hours:.2f}h)",
+                    f"Cleaned stale lock: {redact_path(lock_file)} "
+                    f"(age: {heartbeat_age_hours:.2f}h)",
                 )
                 return 1
 
         except json.JSONDecodeError, KeyError:
             lock_file.unlink()
-            self.logger.warning(f"Cleaned corrupted lock file: {lock_file}")
+            self.logger.warning(f"Cleaned corrupted lock file: {redact_path(lock_file)}")
             return 1
 
         return 0

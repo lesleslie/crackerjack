@@ -28,7 +28,7 @@ Exit codes:
 
 Usage:
     python scripts/audit_type_checking_runtime_refs.py [ROOT...] [--json]
-    python scripts/audit_type_checking_runtime_refs.py --root /Users/les/Projects/mahavishnu
+    python scripts/audit_type_checking_runtime_refs.py --root /Users/example/Projects/mahavishnu
 """
 
 from __future__ import annotations
@@ -806,7 +806,7 @@ def main() -> int:
 
     Default-roots behavior: when called with no positional ``roots``,
     scan ``Path.cwd()`` — the invoking repo. Previously this defaulted to
-    ``Path("/Users/les/Projects")`` which silently ballooned a single-repo
+    ``Path("/Users/example/Projects")`` which silently ballooned a single-repo
     audit into a 300 s timeout by walking every sibling Bodai repo.
 
     --per-repo is silently ignored when no --roots were passed AND cwd has

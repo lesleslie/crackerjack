@@ -10,6 +10,8 @@ from pathlib import Path
 
 from rich.console import Console
 
+from crackerjack.utils.path_redaction import redact_path
+
 console = Console()
 
 
@@ -227,7 +229,8 @@ class ResourceMonitor:
             size_mb = file_path.stat().st_size / (1024 * 1024)
             if size_mb > self.config.max_file_size_mb:
                 console.print(
-                    f"[red]🚫 File {file_path} ({size_mb:.1f}MB) exceeds limit ({self.config.max_file_size_mb}MB)[/red]",
+                    f"[red]🚫 File {redact_path(file_path)} ({size_mb:.1f}MB) exceeds "
+                    f"limit ({redact_path(self.config.max_file_size_mb)}MB)[/red]",
                 )
                 return False
 
@@ -243,7 +246,8 @@ class ResourceMonitor:
             file_count = len(list[t.Any](progress_dir.glob("job-* .json")))
             if file_count > self.config.max_progress_files:
                 console.print(
-                    f"[red]🚫 Progress files ({file_count}) exceed limit ({self.config.max_progress_files})[/red]",
+                    f"[red]🚫 Progress files ({redact_path(file_count)}) "
+                    f"exceed limit ({self.config.max_progress_files})[/red]",
                 )
                 return False
 

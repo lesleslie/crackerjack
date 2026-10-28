@@ -39,6 +39,8 @@ from pathlib import Path
 
 import yaml
 
+from crackerjack.utils.path_redaction import redact_path
+
 logger = logging.getLogger(__name__)
 
 ENV_VAR_NAME = "BODAI_ECOSYSTEM_CONFIG"
@@ -67,7 +69,7 @@ def _read_ecosystem_publish_config(
             data: t.Any = yaml.safe_load(handle)
     except (yaml.YAMLError, OSError, FileNotFoundError) as exc:
         logger.debug(
-            f"BODAI_ECOSYSTEM_CONFIG: failed to read {ecosystem_path}: {exc}",
+            f"BODAI_ECOSYSTEM_CONFIG: failed to read {redact_path(ecosystem_path)}: {exc}",
         )
         return None, None
 
@@ -155,7 +157,7 @@ def apply_ecosystem_publish_synthesis(
     ecosystem_path = Path(env_path_str).expanduser()
     if not ecosystem_path.is_file():
         logger.debug(
-            f"BODAI_ECOSYSTEM_CONFIG path is not a file: {ecosystem_path}",
+            f"BODAI_ECOSYSTEM_CONFIG path is not a file: {redact_path(ecosystem_path)}",
         )
         return False
 
@@ -172,6 +174,6 @@ def apply_ecosystem_publish_synthesis(
             publishing["publish_token_env"] = token_env
     logger.debug(
         "BODAI_ECOSYSTEM_CONFIG: synthesized publish_url="
-        f"{url} token_env={token_env!r} for cwd={cwd}",
+        f"{url} token_env={token_env!r} for cwd={redact_path(cwd)}",
     )
     return True

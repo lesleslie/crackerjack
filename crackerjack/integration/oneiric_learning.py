@@ -9,6 +9,8 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 
+from crackerjack.utils.path_redaction import redact_path
+
 logger = logging.getLogger(__name__)
 
 
@@ -193,7 +195,7 @@ class SQLiteDAGO_optimizer:
             conn.close()
 
             self._initialized = True
-            logger.info(f"✅ DAG optimizer initialized: {self.db_path}")
+            logger.info(f"✅ DAG optimizer initialized: {redact_path(self.db_path)}")
 
         except Exception as e:
             logger.error(f"❌ Failed to initialize DAG optimizer: {e}")

@@ -8,6 +8,7 @@ from enum import Enum
 from pathlib import Path
 
 from crackerjack.models.protocols import ConfigManagerProtocol, LoggerProtocol
+from crackerjack.utils.path_redaction import redact_path
 
 
 def _should_skip_documentation(file_path: Path) -> bool:
@@ -121,7 +122,7 @@ class ReferenceGenerator:
         include_examples: bool = True,
         include_workflows: bool = True,
     ) -> CommandReference:
-        self.logger.info(f"Generating command reference from: {cli_module_path}")
+        self.logger.info(f"Generating command reference from: {redact_path(cli_module_path)}")
 
         commands = await self._analyze_cli_module(cli_module_path)
 

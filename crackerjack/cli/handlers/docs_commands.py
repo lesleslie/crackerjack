@@ -4,6 +4,7 @@ import typing as t
 from pathlib import Path
 
 from crackerjack.models.protocols import ConsoleInterface
+from crackerjack.utils.path_redaction import redact_path
 
 logger = logging.getLogger(__name__)
 
@@ -112,11 +113,11 @@ def check_docs(console: ConsoleInterface) -> int:
             _scan_file_for_docs(py_file, stats)
 
         except SyntaxError as e:
-            console.print(f"[yellow]⚠️ Skipping {py_file}: syntax error[/yellow]")
-            logger.debug(f"Syntax error in {py_file}: {e}")
+            console.print(f"[yellow]⚠️ Skipping {redact_path(py_file)}: syntax error[/yellow]")
+            logger.debug(f"Syntax error in {redact_path(py_file)}: {e}")
         except Exception as e:
-            console.print(f"[yellow]⚠️ Error reading {py_file}: {e}[/yellow]")
-            logger.debug(f"Error reading {py_file}: {e}")
+            console.print(f"[yellow]⚠️ Error reading {redact_path(py_file)}: {e}[/yellow]")
+            logger.debug(f"Error reading {redact_path(py_file)}: {e}")
 
     _display_doc_summary(console, stats)
     return 0 if stats["missing_count"] == 0 else 1
@@ -235,9 +236,9 @@ def validate_docs(console: ConsoleInterface) -> int:
             )
 
         except SyntaxError:
-            console.print(f"[yellow]⚠️ Skipping {py_file}: syntax error[/yellow]")
+            console.print(f"[yellow]⚠️ Skipping {redact_path(py_file)}: syntax error[/yellow]")
         except Exception as e:
-            logger.debug(f"Error validating {py_file}: {e}")
+            logger.debug(f"Error validating {redact_path(py_file)}: {e}")
 
     _display_validation_summary(
         console,

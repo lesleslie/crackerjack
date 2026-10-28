@@ -10,6 +10,7 @@ from pathlib import Path
 from pydantic import BaseModel, ConfigDict
 
 from crackerjack.errors import ErrorCode, ExecutionError
+from crackerjack.utils.path_redaction import redact_path
 
 from .secure_path_utils import AtomicFileOperations, SecurePathValidator
 from .security_logger import SecurityEventLevel, SecurityEventType, get_security_logger
@@ -324,7 +325,7 @@ class PackageBackupService(BaseModel):
 
                 AtomicFileOperations.atomic_write(backup_file_path, content)
 
-                self.logger.debug(f"Backed up file: {relative_path}")
+                self.logger.debug(f"Backed up file: {redact_path(relative_path)}")
 
             except Exception as e:
                 raise ExecutionError(
@@ -464,7 +465,7 @@ class PackageBackupService(BaseModel):
                 base_directory,
             )
 
-            self.logger.debug(f"Restored file: {relative_path_str}")
+            self.logger.debug(f"Restored file: {redact_path(relative_path_str)}")
 
     def _cleanup_backup_directory(self, directory: Path) -> None:
         if directory.exists() and directory.is_dir():

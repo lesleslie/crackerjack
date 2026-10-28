@@ -18,6 +18,7 @@ from crackerjack.models.semantic_models import (
     SemanticConfig,
 )
 from crackerjack.services.ai.embeddings import EmbeddingService
+from crackerjack.utils.path_redaction import redact_path
 
 logger = logging.getLogger(__name__)
 
@@ -107,12 +108,12 @@ class VectorStore:
         if current_hash is None:
             return self._get_existing_embeddings(file_path)
 
-        logger.info(f"Indexing file: {file_path}")
+        logger.info(f"Indexing file: {redact_path(file_path)}")
 
         try:
             chunk_data = self._process_file_content(file_path, current_hash)
             if not chunk_data["chunks"]:
-                logger.warning(f"No chunks generated for file: {file_path}")
+                logger.warning(f"No chunks generated for file: {redact_path(file_path)}")
                 return []
 
             embeddings = self._create_embedding_vectors(
@@ -126,12 +127,12 @@ class VectorStore:
             self._update_file_tracking(file_path, current_hash, len(embeddings))
 
             logger.info(
-                f"Successfully indexed {len(embeddings)} chunks from {file_path}",
+                f"Successfully indexed {len(embeddings)} chunks from {redact_path(file_path)}",
             )
             return embeddings
 
         except Exception as e:
-            logger.exception(f"Failed to index file {file_path}: {e}")
+            logger.exception(f"Failed to index file {redact_path(file_path)}: {e}")
             raise
 
     def _prepare_file_for_indexing(self, file_path: Path) -> str | None:
@@ -139,7 +140,7 @@ class VectorStore:
 
         current_hash = self.embedding_service.get_file_hash(file_path)
         if not self._needs_reindexing(file_path, current_hash):
-            logger.debug(f"File {file_path} is up to date, skipping")
+            logger.debug(f"File {redact_path(file_path)} is up to date, skipping")
             return None
 
         return current_hash
@@ -445,7 +446,7 @@ class VectorStore:
             return lines[context_start:context_end]
 
         except Exception as e:
-            logger.warning(f"Failed to get context lines for {file_path}: {e}")
+            logger.warning(f"Failed to get context lines for {redact_path(file_path)}: {e}")
             return []
 
     def get_stats(self) -> IndexStats:
@@ -514,7 +515,7 @@ class VectorStore:
             )
 
             conn.commit()
-            logger.info(f"Removed {count} embeddings for file: {file_path}")
+            logger.info(f"Removed {count} embeddings for file: {redact_path(file_path)}")
             return True
 
     def clear_index(self) -> None:

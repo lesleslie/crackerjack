@@ -9,6 +9,7 @@ from crackerjack.models.issues import Issue, IssueType, Priority
 from crackerjack.parsers.base import JSONParser
 from crackerjack.parsers.factory import ParserFactory
 from crackerjack.services.testing.test_result_parser import TestResultParser
+from crackerjack.utils.path_redaction import redact_path
 
 logger = logging.getLogger(__name__)
 
@@ -262,13 +263,14 @@ class ComplexipyJSONParser(JSONParser):
             logger.warning("Could not find complexipy JSON file path in output")
             return []
         if not Path(json_path).exists():
-            logger.warning(f"Complexipy JSON file not found: {json_path}")
+            logger.warning(f"Complexipy JSON file not found: {redact_path(json_path)}")
             return []
         try:
             json_content = Path(json_path).read_text()
             data = json.loads(json_content)
             logger.debug(
-                f"Read complexipy JSON file: {json_path} ({(len(data) if isinstance(data, list) else 'N/A')} entries)"
+                f"Read complexipy JSON file: {redact_path(json_path)} "
+                f"({(len(data) if isinstance(data, list) else 'N/A')} entries)"
             )
         except Exception as e:
             logger.error(f"Error reading/parsing complexipy JSON file: {e}")
@@ -339,10 +341,10 @@ class ComplexipyJSONParser(JSONParser):
 
         path = Path(file_path)
         if not path.exists():
-            logger.debug(f"File not found for line number extraction: {file_path}")
+            logger.debug(f"File not found for line number extraction: {redact_path(file_path)}")
             return False
         if path.suffix != ".py":
-            logger.debug(f"Not a Python file, skipping AST extraction: {file_path}")
+            logger.debug(f"Not a Python file, skipping AST extraction: {redact_path(file_path)}")
             return False
         return True
 
@@ -370,21 +372,25 @@ class ComplexipyJSONParser(JSONParser):
                 if line_number := self._find_function_in_ast(tree, search_name):
                     self._line_number_cache[file_path][function_name] = line_number
                     logger.debug(
-                        f"Found line number for '{function_name}' (searched as '{search_name}') in {file_path}: {line_number}"
+                        f"Found line number for '{function_name}' (searched as "
+                        f"'{search_name}') in {redact_path(file_path)}: {line_number}"
                     )
                     return line_number
             logger.debug(
-                f"Function '{function_name}' not found in {file_path} (searched for: {search_names})"
+                f"Function '{function_name}' not found in "
+                f"{redact_path(file_path)} (searched for: {search_names})"
             )
             return None
         except (SyntaxError, OSError, UnicodeDecodeError) as e:
             logger.debug(
-                f"Failed to extract line number for '{function_name}' in {file_path}: {e}"
+                f"Failed to extract line number for "
+                f"'{function_name}' in {redact_path(file_path)}: {e}"
             )
             return None
         except Exception as e:
             logger.warning(
-                f"Unexpected error extracting line number for '{function_name}' in {file_path}: {e}"
+                f"Unexpected error extracting line number for "
+                f"'{function_name}' in {redact_path(file_path)}: {e}"
             )
             return None
 
@@ -576,7 +582,7 @@ class PyscnJSONParser(JSONParser):
             )
         json_file = Path(json_path)
         if not json_file.exists():
-            logger.warning(f"pyscn JSON report not found: {json_path}")
+            logger.warning(f"pyscn JSON report not found: {redact_path(json_path)}")
             return []
         try:
             data = json.loads(json_file.read_text())

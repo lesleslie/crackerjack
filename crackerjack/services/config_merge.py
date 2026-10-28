@@ -16,6 +16,7 @@ from crackerjack.models.protocols import (
     FileSystemInterface,
     GitInterface,
 )
+from crackerjack.utils.path_redaction import redact_path
 
 
 class ConfigMergeService(ConfigMergeServiceProtocol):
@@ -100,7 +101,7 @@ class ConfigMergeService(ConfigMergeServiceProtocol):
         merged_content += source_content.strip() + "\n"
         merged_content += end_marker + "\n"
 
-        self.logger.info(f"Smart appended file with markers path={target_path}")
+        self.logger.info(f"Smart appended file with markers path={redact_path(target_path)}")
         return merged_content
 
     def smart_merge_gitignore(
@@ -262,7 +263,7 @@ class ConfigMergeService(ConfigMergeServiceProtocol):
         with target_path.open("w", encoding="utf-8") as f:
             json.dump(config, f, indent=2)
 
-        self.logger.debug(f"Wrote pre-commit config path={target_path}")
+        self.logger.debug(f"Wrote pre-commit config path={redact_path(target_path)}")
 
     def write_pyproject_config(
         self,
@@ -282,7 +283,7 @@ class ConfigMergeService(ConfigMergeServiceProtocol):
         with target_path.open("w", encoding="utf-8") as f:
             f.write(content)
 
-        self.logger.debug(f"Wrote pyproject.toml config path={target_path}")
+        self.logger.debug(f"Wrote pyproject.toml config path={redact_path(target_path)}")
 
     def _ensure_crackerjack_dev_dependency(
         self,

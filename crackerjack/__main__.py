@@ -86,6 +86,7 @@ from crackerjack.cli.semantic_handlers import (
     handle_semantic_stats,
 )
 from crackerjack.config import CrackerjackSettings, load_settings
+from crackerjack.utils.path_redaction import redact_path
 
 if t.TYPE_CHECKING:
     from crackerjack.cli.options import Options
@@ -403,7 +404,7 @@ def _print_run_context() -> None:
     branch_suffix = f" [dim]@ {git_branch}[/dim]" if git_branch else ""
 
     _print_project_line(project_name, git_remote, branch_suffix)
-    console.print(f"[dim]cwd:[/dim] {cwd}")
+    console.print(f"[dim]cwd:[/dim] {redact_path(cwd)}")
 
     if venv_name:
         console.print(f"[dim]venv:[/dim] {venv_name}")

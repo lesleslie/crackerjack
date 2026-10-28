@@ -11,6 +11,7 @@ import typing as t
 from pathlib import Path
 
 from crackerjack.models.resource_protocols import AbstractFileResource
+from crackerjack.utils.path_redaction import redact_path
 
 from .resource_manager import ResourceManager
 
@@ -50,14 +51,15 @@ class AtomicFileWriter(AbstractFileResource):
             try:
                 self.temp_path.unlink()
             except OSError as e:
-                self.logger.warning(f"Failed to remove temp file {self.temp_path}: {e}")
+                self.logger.warning(f"Failed to remove temp file "
+                f"{redact_path(self.temp_path)}: {e}")
 
         if self.backup_path and self.backup_path.exists():
             try:
                 self.backup_path.unlink()
             except OSError as e:
                 self.logger.warning(
-                    f"Failed to remove backup file {self.backup_path}: {e}",
+                    f"Failed to remove backup file {redact_path(self.backup_path)}: {e}",
                 )
 
     def write(self, content: str) -> None:
@@ -92,16 +94,16 @@ class AtomicFileWriter(AbstractFileResource):
 
         try:
             self.temp_path.replace(self.path)
-            self.logger.debug(f"Successfully committed changes to {self.path}")
+            self.logger.debug(f"Successfully committed changes to {redact_path(self.path)}")
         except OSError as e:
             if self.backup_path and self.backup_path.exists():
                 try:
                     self.backup_path.replace(self.path)
                     self.logger.info(
-                        f"Restored {self.path} from backup after commit failure",
+                        f"Restored {redact_path(self.path)} from backup after commit failure",
                     )
                 except OSError:
-                    self.logger.exception(f"Failed to restore {self.path} from backup")
+                    self.logger.exception(f"Failed to restore {redact_path(self.path)} from backup")
             msg = f"Failed to commit changes to {self.path}"
             raise RuntimeError(msg) from e
 
@@ -109,9 +111,9 @@ class AtomicFileWriter(AbstractFileResource):
         if self.backup_path and self.backup_path.exists():
             try:
                 self.backup_path.replace(self.path)
-                self.logger.info(f"Rolled back changes to {self.path}")
+                self.logger.info(f"Rolled back changes to {redact_path(self.path)}")
             except OSError as e:
-                self.logger.exception(f"Failed to rollback {self.path}: {e}")
+                self.logger.exception(f"Failed to rollback {redact_path(self.path)}: {e}")
                 raise
 
 
@@ -141,7 +143,7 @@ class LockedFileResource(AbstractFileResource):
         while time.time() - start_time < self.timeout:
             try:
                 fcntl.flock(self._file_handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
-                self.logger.debug(f"Acquired lock on {self.path}")
+                self.logger.debug(f"Acquired lock on {redact_path(self.path)}")
                 return
             except OSError:
                 await asyncio.sleep(0.1)
@@ -155,9 +157,9 @@ class LockedFileResource(AbstractFileResource):
         if self._file_handle and not self._file_handle.closed:
             try:
                 fcntl.flock(self._file_handle.fileno(), fcntl.LOCK_UN)
-                self.logger.debug(f"Released lock on {self.path}")
+                self.logger.debug(f"Released lock on {redact_path(self.path)}")
             except OSError as e:
-                self.logger.warning(f"Failed to release lock on {self.path}: {e}")
+                self.logger.warning(f"Failed to release lock on {redact_path(self.path)}: {e}")
             finally:
                 self._file_handle.close()
 
@@ -207,9 +209,9 @@ class SafeDirectoryCreator(AbstractFileResource):
         for dir_path in self._created_dirs:
             try:
                 dir_path.mkdir(exist_ok=True)
-                self.logger.debug(f"Created directory: {dir_path}")
+                self.logger.debug(f"Created directory: {redact_path(dir_path)}")
             except OSError as e:
-                self.logger.exception(f"Failed to create directory {dir_path}: {e}")
+                self.logger.exception(f"Failed to create directory {redact_path(dir_path)}: {e}")
                 if self.cleanup_on_error:
                     await self._cleanup_created_dirs()
                 raise
@@ -223,9 +225,9 @@ class SafeDirectoryCreator(AbstractFileResource):
             try:
                 if dir_path.exists() and not any(dir_path.iterdir()):
                     dir_path.rmdir()
-                    self.logger.debug(f"Removed directory: {dir_path}")
+                    self.logger.debug(f"Removed directory: {redact_path(dir_path)}")
             except OSError as e:
-                self.logger.warning(f"Failed to remove directory {dir_path}: {e}")
+                self.logger.warning(f"Failed to remove directory {redact_path(dir_path)}: {e}")
 
 
 class BatchFileOperations:
@@ -416,7 +418,7 @@ class SafeFileOperations:
                 raise
             except Exception as e:
                 logging.getLogger(__name__).warning(
-                    f"Failed to read {path} with encoding {enc}: {e}",
+                    f"Failed to read {redact_path(path)} with encoding {enc}: {e}",
                 )
                 continue
 

@@ -8,6 +8,8 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
+from crackerjack.utils.path_redaction import redact_path
+
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
@@ -291,7 +293,7 @@ class SessionBuddyIntegration:
         )
 
         if not workflow:
-            logger.warning(f"No workflow metrics found for {project_path}")
+            logger.warning(f"No workflow metrics found for {redact_path(project_path)}")
             return []
 
         git_metrics_list = self.git_reader.get_metrics(
@@ -301,7 +303,7 @@ class SessionBuddyIntegration:
         )
 
         if not git_metrics_list:
-            logger.warning(f"No git metrics found for {project_path}")
+            logger.warning(f"No git metrics found for {redact_path(project_path)}")
             return []
 
         insights: list[CorrelationInsight] = []
@@ -638,7 +640,7 @@ class CorrelationStorageSQLite:
         """)
 
         self.conn.commit()
-        logger.info(f"Correlation insights storage initialized: {self.db_path}")
+        logger.info(f"Correlation insights storage initialized: {redact_path(self.db_path)}")
 
     async def store_insight(self, insight: CorrelationInsight) -> None:
         if not self.conn:

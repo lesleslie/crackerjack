@@ -9,6 +9,8 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 
+from crackerjack.utils.path_redaction import redact_path
+
 if t.TYPE_CHECKING:
     from collections.abc import Callable
 
@@ -197,7 +199,7 @@ class SQLiteQueryOptimizer:
             conn.close()
 
             self._initialized = True
-            logger.info(f"✅ Query optimizer initialized: {self.db_path}")
+            logger.info(f"✅ Query optimizer initialized: {redact_path(self.db_path)}")
 
         except Exception as e:
             logger.error(f"❌ Failed to initialize query optimizer: {e}")

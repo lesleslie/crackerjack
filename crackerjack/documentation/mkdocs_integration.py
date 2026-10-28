@@ -12,6 +12,7 @@ from crackerjack.models.protocols import (
     FileSystemServiceProtocol,
     LoggerProtocol,
 )
+from crackerjack.utils.path_redaction import redact_path
 
 
 @dataclass
@@ -88,7 +89,7 @@ class MkDocsIntegrationService:
             build_path=site_dir,
         )
 
-        self.logger.info(f"Generated MkDocs site at: {site_dir}")
+        self.logger.info(f"Generated MkDocs site at: {redact_path(site_dir)}")
         return site
 
     async def build_site(self, site: DocumentationSite, serve: bool = False) -> bool:

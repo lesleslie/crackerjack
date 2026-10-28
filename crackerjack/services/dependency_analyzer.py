@@ -8,6 +8,8 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 
+from crackerjack.utils.path_redaction import redact_path
+
 logger = logging.getLogger(__name__)
 
 
@@ -82,7 +84,7 @@ class DependencyAnalyzer:
         self.dependency_graph = DependencyGraph()
 
     def analyze_project(self) -> DependencyGraph:
-        logger.info(f"Starting dependency analysis for {self.project_root}")
+        logger.info(f"Starting dependency analysis for {redact_path(self.project_root)}")
 
         self._discover_python_files()
 
@@ -90,7 +92,7 @@ class DependencyAnalyzer:
             try:
                 self._analyze_file(file_path)
             except Exception as e:
-                logger.warning(f"Failed to analyze {file_path}: {e}")
+                logger.warning(f"Failed to analyze {redact_path(file_path)}: {e}")
                 continue
 
         self._generate_clusters()
@@ -140,9 +142,9 @@ class DependencyAnalyzer:
             self.dependency_graph.edges.extend(visitor.edges)
 
         except SyntaxError as e:
-            logger.warning(f"Syntax error in {file_path}: {e}")
+            logger.warning(f"Syntax error in {redact_path(file_path)}: {e}")
         except Exception as e:
-            logger.exception(f"Error analyzing {file_path}: {e}")
+            logger.exception(f"Error analyzing {redact_path(file_path)}: {e}")
 
     def _generate_clusters(self) -> None:
         clusters: dict[str, list[str]] = {}

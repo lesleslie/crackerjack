@@ -8,6 +8,8 @@ from typing import Protocol, cast
 
 from pydantic import BaseModel, ConfigDict
 
+from crackerjack.utils.path_redaction import redact_path
+
 from .errors import ErrorCode, ExecutionError
 from .services.backup_service import BackupMetadata, PackageBackupService
 from .services.regex_patterns import SAFE_PATTERNS
@@ -143,7 +145,7 @@ class FileProcessor(BaseModel):
             try:
                 content = validated_path.read_text(encoding=encoding)
                 self.logger.warning(
-                    f"File {validated_path} read with {encoding} encoding",
+                    f"File {redact_path(validated_path)} read with {encoding} encoding",
                 )
                 return content
             except UnicodeDecodeError:
@@ -237,7 +239,8 @@ class CleaningErrorHandler(BaseModel):
 
     def handle_file_error(self, file_path: Path, error: Exception, step: str) -> None:
         self.console.print(
-            f"[bold bright_yellow]⚠️ Warning: {step} failed for {file_path}: {error}[/bold bright_yellow]",
+            f"[bold bright_yellow]⚠️ Warning: {step} failed for "
+            f"{redact_path(file_path)}: {error}[/bold bright_yellow]",
         )
 
         self.logger.warning(
@@ -253,12 +256,12 @@ class CleaningErrorHandler(BaseModel):
     def log_cleaning_result(self, result: CleaningResult) -> None:
         if result.success:
             self.console.print(
-                f"[green]✅ Cleaned {result.file_path}[/green] "
+                f"[green]✅ Cleaned {redact_path(result.file_path)}[/green] "
                 f"({result.original_size} → {result.cleaned_size} bytes)",
             )
         else:
             self.console.print(
-                f"[red]❌ Failed to clean {result.file_path}[/red] "
+                f"[red]❌ Failed to clean {redact_path(result.file_path)}[/red] "
                 f"({len(result.steps_failed)} steps failed)",
             )
 
@@ -298,7 +301,7 @@ class CleaningPipeline(BaseModel):
         file_path: Path,
         cleaning_steps: list[CleaningStepProtocol],
     ) -> CleaningResult:
-        self.logger.info(f"Starting clean_file for {file_path}")
+        self.logger.info(f"Starting clean_file for {redact_path(file_path)}")
         try:
             original_code = self.file_processor.read_file_safely(file_path)
             original_size = len(original_code.encode("utf-8"))
@@ -529,7 +532,7 @@ class CodeCleaner(BaseModel):
         validated_pkg_dir = self._prepare_package_directory(pkg_dir)
 
         self.logger.info(
-            f"Starting safe package cleaning with backup: {validated_pkg_dir}",
+            f"Starting safe package cleaning with backup: {redact_path(validated_pkg_dir)}",
         )
         self.console.print(
             "[cyan]🛡️ Starting package cleaning with backup protection...[/cyan]",
@@ -606,7 +609,7 @@ class CodeCleaner(BaseModel):
             )
             return self._fallback_discover_packages(root_dir)
 
-        self.logger.debug(f"Using package directory: {package_dir}")
+        self.logger.debug(f"Using package directory: {redact_path(package_dir)}")
 
         package_files = list[t.Any](package_dir.rglob("*.py"))
 
@@ -1067,7 +1070,7 @@ class CodeCleaner(BaseModel):
             return False
 
         except Exception as e:
-            self.logger.warning(f"Unexpected error checking file {file_path}: {e}")
+            self.logger.warning(f"Unexpected error checking file {redact_path(file_path)}: {e}")
             return False
 
     def _create_line_comment_step(self) -> CleaningStepProtocol:

@@ -9,6 +9,7 @@ from unittest.mock import Mock
 
 from crackerjack.config.settings import CrackerjackSettings, DocUpdateSettings
 from crackerjack.models.protocols import GitInterface
+from crackerjack.utils.path_redaction import redact_path
 
 if t.TYPE_CHECKING:
     from crackerjack.models.protocols import (
@@ -305,7 +306,7 @@ class DocUpdateService:
                     )
 
                 except Exception as e:
-                    logger.error(f"Failed to generate update for {doc_file}: {e}")
+                    logger.error(f"Failed to generate update for {redact_path(doc_file)}: {e}")
                     continue
 
         except ImportError:
@@ -396,7 +397,7 @@ Return the complete updated documentation file content:"""
             try:
                 if update.confidence < 0.5:
                     self.console.print(
-                        f"[yellow]Skipping {update.doc_file} "
+                        f"[yellow]Skipping {redact_path(update.doc_file)} "
                         f"(confidence: {update.confidence:.2f})[/yellow]"
                     )
                     continue
@@ -404,14 +405,14 @@ Return the complete updated documentation file content:"""
                 doc_path = self.pkg_path / update.doc_file
                 doc_path.write_text(update.updated_content)
 
-                self.console.print(f"[green]✓[/green] Updated: {update.doc_file}")
+                self.console.print(f"[green]✓[/green] Updated: {redact_path(update.doc_file)}")
 
                 applied_count += 1
 
             except Exception as e:
-                logger.error(f"Failed to apply update to {update.doc_file}: {e}")
+                logger.error(f"Failed to apply update to {redact_path(update.doc_file)}: {e}")
                 self.console.print(
-                    f"[red]✗[/red] Failed to update {update.doc_file}: {e}"
+                    f"[red]✗[/red] Failed to update {redact_path(update.doc_file)}: {e}"
                 )
 
         return applied_count
@@ -427,10 +428,10 @@ Return the complete updated documentation file content:"""
 
                 self.git_service.commit(commit_msg)
 
-                logger.info(f"Created commit for {update.doc_file}")
+                logger.info(f"Created commit for {redact_path(update.doc_file)}")
 
             except Exception as e:
-                logger.error(f"Failed to create commit for {update.doc_file}: {e}")
+                logger.error(f"Failed to create commit for {redact_path(update.doc_file)}: {e}")
 
     def _generate_dry_run_summary(self, updates: list[DocUpdate]) -> str:
         lines = [

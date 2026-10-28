@@ -22,6 +22,7 @@ from crackerjack.checks.gitignore_conformance import (
     check_repo_gitignore,
     sync_repo_gitignore,
 )
+from crackerjack.utils.path_redaction import redact_path
 
 app = typer.Typer(
     name="gitignore",
@@ -46,26 +47,30 @@ def check(
     """Check whether the canonical Bodai `.gitignore` snippet is installed."""
     result = check_repo_gitignore(pkg_path)
     if not result.is_fleet_member:
-        console.print(f"[dim]Skipped (non-Bodai): {result.repo_path}[/dim]")
+        console.print(
+            f"[dim]Skipped (non-Bodai): {redact_path(result.repo_path)}[/dim]"
+        )
         raise typer.Exit(0)
 
     if result.snippet_present and not result.missing_patterns:
         console.print(
             f"[green]OK[/green] Bodai `.gitignore` snippet is present in "
-            f"{result.repo_path}"
+            f"{redact_path(result.repo_path)}"
         )
         raise typer.Exit(0)
 
     if not result.snippet_present:
         console.print(
             f"[red]MISSING[/red] Bodai `.gitignore` snippet is not present "
-            f"in {result.repo_path}. Run `crackerjack gitignore sync` to install."
+            f"in {redact_path(result.repo_path)}. "
+            f"Run `crackerjack gitignore sync` to install."
         )
         raise typer.Exit(1)
 
     console.print(
         f"[red]DRIFT[/red] Bodai `.gitignore` snippet is present but "
-        f"missing {len(result.missing_patterns)} pattern(s) in {result.repo_path}:"
+        f"missing {len(result.missing_patterns)} pattern(s) in "
+        f"{redact_path(result.repo_path)}:"
     )
     for pattern in result.missing_patterns:
         console.print(f"  - {pattern}")
@@ -89,12 +94,15 @@ def sync(
     result = sync_repo_gitignore(pkg_path, backup=not no_backup)
 
     if not result.is_fleet_member:
-        console.print(f"[dim]Skipped (non-Bodai): {result.repo_path}[/dim]")
+        console.print(
+            f"[dim]Skipped (non-Bodai): {redact_path(result.repo_path)}[/dim]"
+        )
         raise typer.Exit(0)
 
     console.print(
-        f"[green]Synced[/green] Bodai `.gitignore` snippet in {result.repo_path}"
+        f"[green]Synced[/green] Bodai `.gitignore` snippet in "
+        f"{redact_path(result.repo_path)}"
     )
     if result.backup_path:
-        console.print(f"  Backup: {result.backup_path}")
+        console.print(f"  Backup: {redact_path(result.backup_path)}")
     raise typer.Exit(0)

@@ -7,6 +7,7 @@ from pathlib import Path
 from rich.console import Console
 
 from crackerjack.models.protocols import OptionsProtocol, PluginRegistryProtocol
+from crackerjack.utils.path_redaction import redact_path
 
 from .base import PluginRegistry, PluginType, get_plugin_registry
 from .hooks import HookPluginBase, HookPluginRegistry, get_hook_plugin_registry
@@ -232,7 +233,7 @@ class PluginManager:
 
             if success:
                 self.console.print(
-                    f"[green]✅[/green] Installed plugin from: {plugin_file}",
+                    f"[green]✅[/green] Installed plugin from: {redact_path(plugin_file)}",
                 )
 
                 if self._initialized:
@@ -245,14 +246,14 @@ class PluginManager:
                         self.enable_plugin(latest_plugin_name)
             else:
                 self.console.print(
-                    f"[red]❌[/red] Failed to install plugin from: {plugin_file}",
+                    f"[red]❌[/red] Failed to install plugin from: {redact_path(plugin_file)}",
                 )
 
             return success
 
         except Exception as e:
             self.console.print(
-                f"[red]❌[/red] Error installing plugin {plugin_file}: {e}",
+                f"[red]❌[/red] Error installing plugin {redact_path(plugin_file)}: {e}",
             )
             return False
 

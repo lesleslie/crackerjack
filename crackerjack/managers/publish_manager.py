@@ -23,6 +23,7 @@ from crackerjack.models.protocols import (
     VersionAnalyzerProtocol,
 )
 from crackerjack.services.pypi_auth._auth import PyPIAuth, discover_auth
+from crackerjack.utils.path_redaction import redact_path
 
 logger = logging.getLogger(__name__)
 
@@ -740,7 +741,7 @@ class PublishManagerImpl:
         if source_root is None:
             self.console.print(
                 "[yellow]⚠️[/yellow] Release-audit: no source package "
-                f"found under {project_root}, skipping",
+                f"found under {redact_path(project_root)}, skipping",
             )
             return True
 
@@ -788,7 +789,8 @@ class PublishManagerImpl:
 
         if result.snippet_present and not result.missing_patterns:
             self.console.print(
-                f"[green]✅[/green] Gitignore-conformance passed for {result.repo_path}"
+                f"[green]✅[/green] Gitignore-conformance passed for "
+                f"{redact_path(result.repo_path)}"
             )
             return True
 
@@ -799,13 +801,13 @@ class PublishManagerImpl:
             else f"{len(result.missing_patterns)} pattern(s) missing"
         )
         self.console.print(
-            f"[yellow]⚠️[/yellow] Gitignore drift in {result.repo_path.name} "
+            f"[yellow]⚠️[/yellow] Gitignore drift in {redact_path(result.repo_path)} "
             f"({drift_kind})"
         )
 
         if not self._attempt_gitignore_sync():
             self.console.print(
-                f"[red]❌[/red] Auto-sync failed for {result.repo_path}; "
+                f"[red]❌[/red] Auto-sync failed for {redact_path(result.repo_path)}; "
                 f"aborting publish. Run `crackerjack gitignore sync` "
                 f"manually to inspect."
             )
@@ -818,7 +820,7 @@ class PublishManagerImpl:
         if not (post.snippet_present and not post.missing_patterns):
             self.console.print(
                 f"[red]❌[/red] Gitignore still drifting after auto-sync "
-                f"in {result.repo_path} "
+                f"in {redact_path(result.repo_path)} "
                 f"({len(post.missing_patterns)} missing pattern(s)):"
             )
             for p in post.missing_patterns:
@@ -827,7 +829,7 @@ class PublishManagerImpl:
 
         self.console.print(
             f"[green]✅[/green] Gitignore auto-sync succeeded for "
-            f"{result.repo_path.name}"
+            f"{redact_path(result.repo_path)}"
         )
         return True
 
@@ -855,8 +857,8 @@ class PublishManagerImpl:
                 if result.stdout.strip():
                     self.console.print(
                         f"[yellow]⚠️[/yellow] `.gitignore` has uncommitted "
-                        f"edits in {self.pkg_path}; refusing to auto-sync. "
-                        f"Commit or stash, then re-run."
+                        f"edits in {redact_path(self.pkg_path)}; refusing to "
+                        f"auto-sync. Commit or stash, then re-run."
                     )
                     return False
             except subprocess.TimeoutExpired:

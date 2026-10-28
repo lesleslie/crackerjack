@@ -28,6 +28,7 @@ from crackerjack.services.security_logger import (
     SecurityEventType,
     get_security_logger,
 )
+from crackerjack.utils.path_redaction import redact_path
 
 if t.TYPE_CHECKING:
     from crackerjack.config.settings import CrackerjackSettings
@@ -386,7 +387,8 @@ class DocumentationCleanup:
 
             if dry_run:
                 self.console.print(
-                    f"[yellow]Would move:[/yellow] {file_path.name} → {target_path_relative}"
+                    f"[yellow]Would move:[/yellow] {file_path.name} "
+                    f"→ {redact_path(target_path_relative)}"
                 )
             else:
                 try:
@@ -412,7 +414,7 @@ class DocumentationCleanup:
                     files_moved += 1
 
                 except Exception as e:
-                    logger.exception(f"Failed to move {file_path}: {e}")
+                    logger.exception(f"Failed to move {redact_path(file_path)}: {e}")
                     self.console.print(
                         f"[yellow]⚠️[/yellow] Failed to move {file_path.name}: {e}"
                     )

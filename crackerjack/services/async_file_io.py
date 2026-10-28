@@ -9,6 +9,8 @@ from functools import partial
 from itertools import starmap
 from pathlib import Path
 
+from crackerjack.utils.path_redaction import redact_path
+
 logger = logging.getLogger(__name__)
 
 _io_executor_lock = threading.Lock()
@@ -63,7 +65,7 @@ async def async_write_file(
             partial(file_path.write_text, content),
         )
     except Exception as e:
-        logger.error(f"Failed to write file {file_path}: {e}")
+        logger.error(f"Failed to write file {redact_path(file_path)}: {e}")
         raise
 
 
@@ -95,7 +97,7 @@ async def async_read_file(file_path: Path) -> str:
         content = await asyncio.to_thread(file_path.read_text)
         return content
     except Exception as e:
-        logger.error(f"Failed to read file {file_path}: {e}")
+        logger.error(f"Failed to read file {redact_path(file_path)}: {e}")
         raise
 
 

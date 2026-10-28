@@ -7,6 +7,7 @@ from rich.table import Table
 from crackerjack.models.protocols import ConsoleInterface
 from crackerjack.models.semantic_models import SearchQuery, SemanticConfig
 from crackerjack.services.vector_store import VectorStore
+from crackerjack.utils.path_redaction import redact_path
 
 
 def handle_semantic_index(
@@ -18,11 +19,11 @@ def handle_semantic_index(
 
         console = CrackerjackConsole()
     try:
-        console.print(f"[cyan]Indexing file for semantic search:[/cyan] {file_path}")
+        console.print(f"[cyan]Indexing file for semantic search:[/cyan] {redact_path(file_path)}")
 
         path_obj = Path(file_path)
         if not path_obj.exists():
-            console.print(f"[red]Error:[/red] File does not exist: {file_path}")
+            console.print(f"[red]Error:[/red] File does not exist: {redact_path(file_path)}")
             return
 
         config = SemanticConfig(
@@ -57,7 +58,7 @@ def handle_semantic_index(
                     )
                 except Exception as e:
                     console.print(
-                        f"[yellow]Warning:[/yellow] Failed to index {file}: {e}",
+                        f"[yellow]Warning:[/yellow] Failed to index {redact_path(file)}: {e}",
                     )
 
             console.print(
@@ -149,7 +150,7 @@ def handle_semantic_search(
                 Panel(
                     dedent(f"""
                 [cyan]Top Result Details:[/cyan]
-                [bold]File:[/bold] {top_result.file_path}
+                [bold]File:[/bold] {redact_path(top_result.file_path)}
                 [bold]Lines:[/bold] {top_result.start_line}-{top_result.end_line}
                 [bold]Similarity Score:[/bold] {top_result.similarity_score:.4f}
 
@@ -238,7 +239,7 @@ def handle_remove_from_semantic_index(
         console = CrackerjackConsole()
     try:
         console.print(
-            f"[cyan]Removing file from semantic search index:[/cyan] {file_path}",
+            f"[cyan]Removing file from semantic search index:[/cyan] {redact_path(file_path)}",
         )
 
         path_obj = Path(file_path)

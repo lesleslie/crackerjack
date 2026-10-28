@@ -142,6 +142,7 @@ from pathlib import Path
 from typing import cast
 
 from crackerjack.models.issues import FixResult, Issue
+from crackerjack.utils.path_redaction import redact_path
 
 logger = logging.getLogger(__name__)
 
@@ -171,13 +172,13 @@ def _format_python_file(file_path: Path, project_root: Path) -> None:
             timeout=30,
         )
         if result.returncode == 0:
-            logger.debug(f"Applied ruff format to {file_path}")
+            logger.debug(f"Applied ruff format to {redact_path(file_path)}")
         else:
             logger.warning(
-                f"Ruff format warning for {file_path}: {result.stderr.strip()}"
+                f"Ruff format warning for {redact_path(file_path)}: {result.stderr.strip()}"
             )
     except Exception as e:
-        logger.warning(f"Ruff format failed for {file_path}: {e}")
+        logger.warning(f"Ruff format failed for {redact_path(file_path)}: {e}")
 
 
 def _apply_common_fixes(content: str, issue: Issue) -> tuple[str, list[str]]:

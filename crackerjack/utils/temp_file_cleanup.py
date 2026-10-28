@@ -3,6 +3,8 @@ import logging
 from contextlib import suppress
 from pathlib import Path
 
+from crackerjack.utils.path_redaction import redact_path
+
 logger = logging.getLogger(__name__)
 
 
@@ -30,11 +32,11 @@ def cleanup_temp_files() -> int:
             try:
                 Path(file_path).unlink()
                 cleaned_count += 1
-                logger.debug(f"Cleaned up temporary file: {file_path}")
+                logger.debug(f"Cleaned up temporary file: {redact_path(file_path)}")
             except FileNotFoundError:
                 pass
             except Exception as e:
-                logger.warning(f"Failed to clean up {file_path}: {e}")
+                logger.warning(f"Failed to clean up {redact_path(file_path)}: {e}")
 
     if cleaned_count > 0:
         logger.info(f"Cleaned up {cleaned_count} temporary tool output files")
@@ -52,11 +54,11 @@ def cleanup_project_root_temp_files(project_root: Path | None = None) -> int:
             try:
                 file_path.unlink()
                 cleaned_count += 1
-                logger.debug(f"Cleaned up project-root temp file: {file_path}")
+                logger.debug(f"Cleaned up project-root temp file: {redact_path(file_path)}")
             except FileNotFoundError:
                 pass
             except Exception as e:
-                logger.warning(f"Failed to clean up {file_path}: {e}")
+                logger.warning(f"Failed to clean up {redact_path(file_path)}: {e}")
 
     return cleaned_count
 
@@ -96,8 +98,8 @@ def cleanup_old_complexipy_files(max_age_hours: int = 24) -> int:
             if file_age > max_age_seconds:
                 path.unlink()
                 cleaned_count += 1
-                logger.debug(f"Cleaned up old complexipy file: {file_path}")
+                logger.debug(f"Cleaned up old complexipy file: {redact_path(file_path)}")
         except (FileNotFoundError, OSError) as e:
-            logger.warning(f"Failed to clean up old file {file_path}: {e}")
+            logger.warning(f"Failed to clean up old file {redact_path(file_path)}: {e}")
 
     return cleaned_count

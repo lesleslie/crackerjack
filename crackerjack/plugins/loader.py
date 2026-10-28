@@ -9,6 +9,7 @@ from pathlib import Path
 
 from crackerjack.config.hooks import HookStage
 from crackerjack.models.protocols import PluginRegistryProtocol
+from crackerjack.utils.path_redaction import redact_path
 
 from .base import (
     PluginBase,
@@ -300,7 +301,7 @@ class PluginDiscovery:
         results = {}
 
         for plugin_file in plugin_files:
-            self.logger.info(f"Loading plugin: {plugin_file}")
+            self.logger.info(f"Loading plugin: {redact_path(plugin_file)}")
             success = self.loader.load_and_register(plugin_file)
             results[str(plugin_file)] = success
 

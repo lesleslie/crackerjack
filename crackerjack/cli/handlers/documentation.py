@@ -4,6 +4,7 @@ import typing as t
 from pathlib import Path
 
 from crackerjack.models.protocols import ConsoleInterface
+from crackerjack.utils.path_redaction import redact_path
 
 
 def generate_documentation(doc_service: t.Any, console: ConsoleInterface) -> bool:
@@ -32,7 +33,7 @@ def validate_documentation_files(
             console.print(f"⚠️ Found {len(issues)} documentation issues:")
             for issue in issues:
                 file_path = issue.get("path", issue.get("file", "unknown"))
-                console.print(f" - {file_path}: {issue['message']}")
+                console.print(f" - {redact_path(file_path)}: {issue['message']}")
         else:
             console.print(
                 "✅ [bold green]Documentation validation passed![/bold green]",
@@ -197,7 +198,8 @@ def handle_mkdocs_build_result(
 ) -> None:
     if site:
         console.print(
-            f"[green]✅[/green] MkDocs site generated successfully at: {site.build_path}",
+            f"[green]✅[/green] MkDocs site generated "
+            f"successfully at: {redact_path(site.build_path)}",
         )
         console.print(
             f"[blue]📄[/blue] Generated {len(site.pages)} documentation pages",

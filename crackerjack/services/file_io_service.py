@@ -6,6 +6,8 @@ from pathlib import Path
 import aiofiles
 from loguru import logger
 
+from crackerjack.utils.path_redaction import redact_path
+
 
 class FileIOService:
     @staticmethod
@@ -28,7 +30,7 @@ class FileIOService:
             async with aiofiles.open(file_path, "w", encoding=encoding) as f:
                 await f.write(content)
         except (OSError, UnicodeEncodeError) as e:
-            logger.error(f"Error writing to file {path}: {e}")
+            logger.error(f"Error writing to file {redact_path(path)}: {e}")
             raise
 
     @staticmethod
@@ -51,7 +53,7 @@ class FileIOService:
             with file_path.open("w", encoding=encoding) as f:
                 f.write(content)
         except (OSError, UnicodeEncodeError) as e:
-            logger.error(f"Error writing to file {path}: {e}")
+            logger.error(f"Error writing to file {redact_path(path)}: {e}")
             raise
 
     @staticmethod
@@ -60,10 +62,10 @@ class FileIOService:
             content = await FileIOService.read_text_file(path)
             return json.loads(content)
         except json.JSONDecodeError as e:
-            logger.error(f"Invalid JSON in file {path}: {e}")
+            logger.error(f"Invalid JSON in file {redact_path(path)}: {e}")
             raise
         except Exception as e:
-            logger.error(f"Error reading JSON file {path}: {e}")
+            logger.error(f"Error reading JSON file {redact_path(path)}: {e}")
             raise
 
     @staticmethod
@@ -77,7 +79,7 @@ class FileIOService:
             content = json.dumps(data, indent=indent, ensure_ascii=False)
             await FileIOService.write_text_file(path, content, create_dirs=create_dirs)
         except Exception as e:
-            logger.error(f"Error writing JSON file {path}: {e}")
+            logger.error(f"Error writing JSON file {redact_path(path)}: {e}")
             raise
 
     @staticmethod
@@ -86,10 +88,10 @@ class FileIOService:
             with open(path, encoding="utf-8") as f:
                 return json.load(f)
         except json.JSONDecodeError as e:
-            logger.error(f"Invalid JSON in file {path}: {e}")
+            logger.error(f"Invalid JSON in file {redact_path(path)}: {e}")
             raise
         except Exception as e:
-            logger.error(f"Error reading JSON file {path}: {e}")
+            logger.error(f"Error reading JSON file {redact_path(path)}: {e}")
             raise
 
     @staticmethod
@@ -108,7 +110,7 @@ class FileIOService:
             with file_path.open("w", encoding="utf-8") as f:
                 json.dump(data, f, indent=indent, ensure_ascii=False)
         except Exception as e:
-            logger.error(f"Error writing JSON file {path}: {e}")
+            logger.error(f"Error writing JSON file {redact_path(path)}: {e}")
             raise
 
     @staticmethod
@@ -117,7 +119,7 @@ class FileIOService:
             with Path(path).open("rb") as f:
                 return f.read()
         except Exception as e:
-            logger.error(f"Error reading binary file {path}: {e}")
+            logger.error(f"Error reading binary file {redact_path(path)}: {e}")
             raise
 
     @staticmethod
@@ -126,7 +128,7 @@ class FileIOService:
             async with aiofiles.open(path, "rb") as f:
                 return await f.read()
         except Exception as e:
-            logger.error(f"Error reading binary file {path}: {e}")
+            logger.error(f"Error reading binary file {redact_path(path)}: {e}")
             raise
 
     @staticmethod
@@ -143,7 +145,7 @@ class FileIOService:
 
             file_path.write_bytes(data)
         except Exception as e:
-            logger.error(f"Error writing to binary file {path}: {e}")
+            logger.error(f"Error writing to binary file {redact_path(path)}: {e}")
             raise
 
     @staticmethod
@@ -161,7 +163,7 @@ class FileIOService:
             async with aiofiles.open(file_path, "wb") as f:
                 await f.write(data)
         except Exception as e:
-            logger.error(f"Error writing to binary file {path}: {e}")
+            logger.error(f"Error writing to binary file {redact_path(path)}: {e}")
             raise
 
     @staticmethod

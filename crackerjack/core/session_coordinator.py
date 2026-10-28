@@ -13,6 +13,7 @@ from crackerjack.core.console import CrackerjackConsole
 from crackerjack.models.protocols import ConsoleInterface
 from crackerjack.models.session_metrics import SessionMetrics
 from crackerjack.models.task import SessionTracker
+from crackerjack.utils.path_redaction import redact_path
 
 logger = logging.getLogger(__name__)
 
@@ -264,7 +265,7 @@ class SessionCoordinator:
 
         if not self.pkg_path or not self.pkg_path.exists():
             logger.warning(
-                f"Invalid project path for git metrics collection: {self.pkg_path}"
+                f"Invalid project path for git metrics collection: {redact_path(self.pkg_path)}"
             )
             return None
 
@@ -307,7 +308,7 @@ class SessionCoordinator:
 
             logger.info(
                 f"Collecting git metrics for session {self.session_id} "
-                f"at {self.pkg_path}"
+                f"at {redact_path(self.pkg_path)}"
             )
 
             SessionMetrics(
@@ -418,9 +419,9 @@ class SessionCoordinator:
             try:
                 file_path.unlink()
             except PermissionError:
-                logger.debug(f"Permission denied: {file_path}")
+                logger.debug(f"Permission denied: {redact_path(file_path)}")
             except FileNotFoundError:
-                logger.debug(f"File not found: {file_path}")
+                logger.debug(f"File not found: {redact_path(file_path)}")
 
     def _cleanup_coverage_files(self, keep_recent: int | None = None) -> None:
         pattern = ".coverage.*"
@@ -439,7 +440,7 @@ class SessionCoordinator:
             try:
                 file_path.unlink()
             except FileNotFoundError:
-                logger.debug(f"File not found: {file_path}")
+                logger.debug(f"File not found: {redact_path(file_path)}")
 
     def _cleanup_pycache_directories(self) -> None:
         pass

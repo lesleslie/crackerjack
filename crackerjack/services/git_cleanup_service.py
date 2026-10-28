@@ -8,6 +8,7 @@ from pathlib import Path
 
 from crackerjack.config.settings import CrackerjackSettings, GitCleanupSettings
 from crackerjack.models.protocols import GitInterface
+from crackerjack.utils.path_redaction import redact_path
 
 if t.TYPE_CHECKING:
     from crackerjack.models.protocols import (
@@ -355,13 +356,13 @@ class GitCleanupService:
                 if result.success:
                     removed_count += 1
                     self.console.print(
-                        f"[green]✓[/green] Removed from index: {rel_path}"
+                        f"[green]✓[/green] Removed from index: {redact_path(rel_path)}"
                     )
                 else:
-                    logger.warning(f"Failed to remove {rel_path} from index")
+                    logger.warning(f"Failed to remove {redact_path(rel_path)} from index")
 
             except Exception as e:
-                logger.error(f"Error removing {file_path} from index: {e}")
+                logger.error(f"Error removing {redact_path(file_path)} from index: {e}")
 
         return removed_count
 
@@ -379,12 +380,13 @@ class GitCleanupService:
 
                 if result.success:
                     removed_count += 1
-                    self.console.print(f"[green]✓[/green] Removed entirely: {rel_path}")
+                    self.console.print(f"[green]✓[/green] Removed "
+                    f"entirely: {redact_path(rel_path)}")
                 else:
-                    logger.warning(f"Failed to remove {rel_path}")
+                    logger.warning(f"Failed to remove {redact_path(rel_path)}")
 
             except Exception as e:
-                logger.error(f"Error removing {file_path}: {e}")
+                logger.error(f"Error removing {redact_path(file_path)}: {e}")
 
         return removed_count
 

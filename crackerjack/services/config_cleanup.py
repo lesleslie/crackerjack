@@ -24,6 +24,7 @@ from crackerjack.services.security_logger import (
     SecurityEventType,
     get_security_logger,
 )
+from crackerjack.utils.path_redaction import redact_path
 
 if t.TYPE_CHECKING:
     from crackerjack.config.settings import CrackerjackSettings
@@ -487,7 +488,7 @@ class ConfigCleanupService:
             )
             return True
         except Exception as e:
-            logger.exception(f"Failed to merge {config_file}: {e}")
+            logger.exception(f"Failed to merge {redact_path(config_file)}: {e}")
             self.console.print(
                 f"[yellow]⚠️[/yellow] Failed to merge {config_file.name}: {e}"
             )
@@ -708,7 +709,7 @@ class ConfigCleanupService:
             try:
                 if not self.path_validator.validate_safe_path(config_file):
                     self.console.print(
-                        f"[red]❌[/red] Unsafe path detected: {config_file}"
+                        f"[red]❌[/red] Unsafe path detected: {redact_path(config_file)}"
                     )
                     continue
 
@@ -718,7 +719,7 @@ class ConfigCleanupService:
                 self.console.print(f"[green]✅[/green] Removed: {config_file.name}")
 
             except Exception as e:
-                logger.exception(f"Failed to remove {config_file}: {e}")
+                logger.exception(f"Failed to remove {redact_path(config_file)}: {e}")
                 self.console.print(
                     f"[yellow]⚠️[/yellow] Failed to remove {config_file.name}: {e}"
                 )
@@ -743,7 +744,7 @@ class ConfigCleanupService:
             try:
                 if not self.path_validator.validate_safe_path(cache_dir):
                     self.console.print(
-                        f"[red]❌[/red] Unsafe path detected: {cache_dir}"
+                        f"[red]❌[/red] Unsafe path detected: {redact_path(cache_dir)}"
                     )
                     continue
 
@@ -755,7 +756,7 @@ class ConfigCleanupService:
                 )
 
             except Exception as e:
-                logger.exception(f"Failed to clean {cache_dir}: {e}")
+                logger.exception(f"Failed to clean {redact_path(cache_dir)}: {e}")
                 self.console.print(
                     f"[yellow]⚠️[/yellow] Failed to clean {cache_dir.name}: {e}"
                 )
@@ -778,7 +779,7 @@ class ConfigCleanupService:
             try:
                 if not self.path_validator.validate_safe_path(output_file):
                     self.console.print(
-                        f"[red]❌[/red] Unsafe path detected: {output_file}"
+                        f"[red]❌[/red] Unsafe path detected: {redact_path(output_file)}"
                     )
                     continue
 
@@ -788,7 +789,7 @@ class ConfigCleanupService:
                 self.console.print(f"[green]✅[/green] Cleaned: {output_file.name}")
 
             except Exception as e:
-                logger.exception(f"Failed to clean {output_file}: {e}")
+                logger.exception(f"Failed to clean {redact_path(output_file)}: {e}")
                 self.console.print(
                     f"[yellow]⚠️[/yellow] Failed to clean {output_file.name}: {e}"
                 )

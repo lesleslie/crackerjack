@@ -12,6 +12,8 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from types import TracebackType
 
+from crackerjack.utils.path_redaction import redact_path
+
 
 class ResourceProtocol(t.Protocol):
     async def cleanup(self) -> None: ...
@@ -133,7 +135,7 @@ class ManagedTemporaryFile(ManagedResource):
                     self.path.unlink()
             except OSError as e:
                 logging.getLogger(__name__).warning(
-                    f"Failed to remove temporary file {self.path}: {e}",
+                    f"Failed to remove temporary file {redact_path(self.path)}: {e}",
                 )
 
     def write_text(self, content: str, encoding: str = "utf-8") -> None:
@@ -168,7 +170,7 @@ class ManagedTemporaryDirectory(ManagedResource):
                     shutil.rmtree(self.path)
             except OSError as e:
                 logging.getLogger(__name__).warning(
-                    f"Failed to remove temporary directory {self.path}: {e}",
+                    f"Failed to remove temporary directory {redact_path(self.path)}: {e}",
                 )
 
 

@@ -5,11 +5,11 @@ from pathlib import Path
 
 import pytest
 
+from crackerjack.checks.bodai_registry import load_fleet_repo_paths
 from crackerjack.checks.gitignore_conformance import (
     MARKER_BEGIN,
     MARKER_END,
     TEMPLATE_PATH,
-    _bodai_fleet_paths,
     _parse_canonical_template,
     check_repo_gitignore,
     is_bodai_fleet_member,
@@ -26,11 +26,11 @@ def fleet_repo(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     # Force the registry lookup to recognise this path by registering it
     # via the module-level cache reset hook.
     monkeypatch.setattr(
-        "crackerjack.checks.gitignore_conformance._bodai_fleet_paths",
+        "crackerjack.checks.gitignore_conformance.load_fleet_repo_paths",
         lambda: frozenset({repo.resolve()}),
     )
     # Re-seed the cached lookup so check_repo_gitignore sees the override.
-    _bodai_fleet_paths.cache_clear()
+    load_fleet_repo_paths.cache_clear()
     snippet = TEMPLATE_PATH.read_text()
     (repo / ".gitignore").write_text(snippet)
     return repo
@@ -42,10 +42,10 @@ def non_fleet_repo(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     repo = tmp_path / "non_fleet"
     repo.mkdir()
     monkeypatch.setattr(
-        "crackerjack.checks.gitignore_conformance._bodai_fleet_paths",
+        "crackerjack.checks.gitignore_conformance.load_fleet_repo_paths",
         frozenset,
     )
-    _bodai_fleet_paths.cache_clear()
+    load_fleet_repo_paths.cache_clear()
     return repo
 
 
@@ -69,10 +69,10 @@ def test_fleet_repo_without_snippet_fails(tmp_path: Path, monkeypatch: pytest.Mo
     repo.mkdir()
     (repo / ".gitignore").write_text("# only project-specific patterns\n__pycache__/\n")
     monkeypatch.setattr(
-        "crackerjack.checks.gitignore_conformance._bodai_fleet_paths",
+        "crackerjack.checks.gitignore_conformance.load_fleet_repo_paths",
         lambda: frozenset({repo.resolve()}),
     )
-    _bodai_fleet_paths.cache_clear()
+    load_fleet_repo_paths.cache_clear()
     result = check_repo_gitignore(repo)
     assert result.is_fleet_member
     assert not result.snippet_present
@@ -86,10 +86,10 @@ def test_fleet_repo_with_partial_drift_fails(tmp_path: Path, monkeypatch: pytest
     drifted = TEMPLATE_PATH.read_text().replace("*.bak\n", "")
     (repo / ".gitignore").write_text(drifted)
     monkeypatch.setattr(
-        "crackerjack.checks.gitignore_conformance._bodai_fleet_paths",
+        "crackerjack.checks.gitignore_conformance.load_fleet_repo_paths",
         lambda: frozenset({repo.resolve()}),
     )
-    _bodai_fleet_paths.cache_clear()
+    load_fleet_repo_paths.cache_clear()
     result = check_repo_gitignore(repo)
     assert result.is_fleet_member
     assert result.snippet_present
@@ -106,10 +106,10 @@ def test_sync_installs_snippet(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) 
     repo = tmp_path / "needs_sync"
     repo.mkdir()
     monkeypatch.setattr(
-        "crackerjack.checks.gitignore_conformance._bodai_fleet_paths",
+        "crackerjack.checks.gitignore_conformance.load_fleet_repo_paths",
         lambda: frozenset({repo.resolve()}),
     )
-    _bodai_fleet_paths.cache_clear()
+    load_fleet_repo_paths.cache_clear()
     result = sync_repo_gitignore(repo)
     assert result.is_fleet_member
     assert result.snippet_present
@@ -127,10 +127,10 @@ def test_sync_preserves_project_specific_patterns(
     repo.mkdir()
     (repo / ".gitignore").write_text("__pycache__/\nmy_special_local_dir/\n")
     monkeypatch.setattr(
-        "crackerjack.checks.gitignore_conformance._bodai_fleet_paths",
+        "crackerjack.checks.gitignore_conformance.load_fleet_repo_paths",
         lambda: frozenset({repo.resolve()}),
     )
-    _bodai_fleet_paths.cache_clear()
+    load_fleet_repo_paths.cache_clear()
     sync_repo_gitignore(repo)
     body = (repo / ".gitignore").read_text()
     assert "__pycache__/" in body
@@ -144,10 +144,10 @@ def test_sync_writes_backup(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> 
     original = "ORIGINAL CONTENT\n"
     (repo / ".gitignore").write_text(original)
     monkeypatch.setattr(
-        "crackerjack.checks.gitignore_conformance._bodai_fleet_paths",
+        "crackerjack.checks.gitignore_conformance.load_fleet_repo_paths",
         lambda: frozenset({repo.resolve()}),
     )
-    _bodai_fleet_paths.cache_clear()
+    load_fleet_repo_paths.cache_clear()
     result = sync_repo_gitignore(repo)
     assert result.backup_path is not None
     assert result.backup_path.exists()
@@ -168,10 +168,10 @@ def test_sync_is_idempotent(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> 
     repo = tmp_path / "idempotent"
     repo.mkdir()
     monkeypatch.setattr(
-        "crackerjack.checks.gitignore_conformance._bodai_fleet_paths",
+        "crackerjack.checks.gitignore_conformance.load_fleet_repo_paths",
         lambda: frozenset({repo.resolve()}),
     )
-    _bodai_fleet_paths.cache_clear()
+    load_fleet_repo_paths.cache_clear()
     sync_repo_gitignore(repo, backup=False)
     body_after_first = (repo / ".gitignore").read_text()
     sync_repo_gitignore(repo, backup=False)
@@ -193,8 +193,8 @@ def test_fleet_membership_lookup_handles_missing_registry(
 ) -> None:
     """If the registry file is missing, the check should not crash."""
     monkeypatch.setattr(
-        "crackerjack.checks.gitignore_conformance.BODAI_REGISTRY_PATH",
-        tmp_path / "does_not_exist.md",
+        "crackerjack.checks.bodai_registry.resolve_registry_path",
+        lambda: tmp_path / "does_not_exist.md",
     )
-    _bodai_fleet_paths.cache_clear()
-    assert _bodai_fleet_paths() == frozenset()
+    load_fleet_repo_paths.cache_clear()
+    assert load_fleet_repo_paths() == frozenset()

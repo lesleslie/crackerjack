@@ -9,6 +9,7 @@ from pathlib import Path
 
 from crackerjack.core.console import CrackerjackConsole
 from crackerjack.models.protocols import ConsoleInterface, GitInterface
+from crackerjack.utils.path_redaction import redact_path
 
 from .security_logger import get_security_logger
 
@@ -229,7 +230,7 @@ class GitService(GitInterface):
                         result = self._run_git_command(cmd)
                     if result.returncode != 0:
                         self.console.print(
-                            f"[red]❌[/red] Failed to add {file}: {result.stderr}"
+                            f"[red]❌[/red] Failed to add {redact_path(file)}: {result.stderr}"
                         )
                         return False
             return True

@@ -10,6 +10,7 @@ from crackerjack.models.protocols import (
     DocumentationGeneratorProtocol,
     DocumentationServiceProtocol,
 )
+from crackerjack.utils.path_redaction import redact_path
 
 from .api_extractor import APIExtractorImpl
 from .documentation_generator import DocumentationGeneratorImpl
@@ -186,7 +187,7 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
             index_path.write_text(index_content, encoding="utf-8")
 
             self.console.print(
-                f"[green]✅[/green] Updated documentation index at {index_path}",
+                f"[green]✅[/green] Updated documentation index at {redact_path(index_path)}",
             )
             return True
 

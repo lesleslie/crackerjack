@@ -19,6 +19,7 @@ from crackerjack.core.resource_manager import (
     register_global_resource_manager,
 )
 from crackerjack.services.secure_path_utils import SecurePathValidator
+from crackerjack.utils.path_redaction import redact_path
 
 from .cache import ErrorCache
 from .rate_limiter import RateLimitConfig, RateLimitMiddleware
@@ -220,9 +221,10 @@ class MCPServerContext:
 
     def _log_to_console(self, git_root: Path) -> None:
         if self.console:
-            self.console.print(f"🔧 Auto-detected git repository: {git_root}")
+            self.console.print(f"🔧 Auto-detected git repository: {redact_path(git_root)}")
             self.console.print(
-                f"💡 Recommend: Use `mcp__git__git_set_working_dir` with path='{git_root}'",
+                f"💡 Recommend: Use `mcp__git__git_set_working_dir` "
+                f"with path='{redact_path(git_root)}'",
             )
 
     def _handle_git_setup_failure(self, error: Exception) -> None:

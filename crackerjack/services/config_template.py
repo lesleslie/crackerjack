@@ -11,6 +11,8 @@ import tomli
 import yaml
 from rich.console import Console
 
+from crackerjack.utils.path_redaction import redact_path
+
 
 @dataclass
 class ConfigUpdateInfo:
@@ -268,7 +270,7 @@ class ConfigTemplateService:
 
         if not config_file.exists():
             self.console.print(
-                f"[yellow]⚠️[/yellow] pyproject.toml not found at {project_path}",
+                f"[yellow]⚠️[/yellow] pyproject.toml not found at {redact_path(project_path)}",
             )
             return False
 

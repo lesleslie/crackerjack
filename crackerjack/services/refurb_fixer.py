@@ -9,6 +9,8 @@ import subprocess
 import typing as t
 from pathlib import Path
 
+from crackerjack.utils.path_redaction import redact_path
+
 logger = logging.getLogger(__name__)
 
 
@@ -135,7 +137,7 @@ class SafeRefurbFixer:
         try:
             content = file_path.read_text(encoding="utf-8")
         except (OSError, UnicodeDecodeError) as e:
-            logger.debug(f"Could not read {file_path}: {e}")
+            logger.debug(f"Could not read {redact_path(file_path)}: {e}")
             return 0
 
         new_content, fixes = self._apply_fixes(content)
@@ -144,17 +146,17 @@ class SafeRefurbFixer:
             try:
                 file_path.write_text(new_content, encoding="utf-8")
                 self.fixes_applied += fixes
-                logger.info(f"Applied {fixes} safe refurb fixes to {file_path}")
+                logger.info(f"Applied {fixes} safe refurb fixes to {redact_path(file_path)}")
                 return fixes
             except OSError as e:
-                logger.warning(f"Could not write {file_path}: {e}")
+                logger.warning(f"Could not write {redact_path(file_path)}: {e}")
                 return 0
 
         return 0
 
     def fix_package(self, package_dir: Path) -> int:
         if not package_dir.exists() or not package_dir.is_dir():
-            logger.warning(f"Package directory not found: {package_dir}")
+            logger.warning(f"Package directory not found: {redact_path(package_dir)}")
             return 0
 
         total_fixes = 0

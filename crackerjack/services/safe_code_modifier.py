@@ -12,6 +12,8 @@ from datetime import datetime
 from enum import StrEnum
 from pathlib import Path
 
+from crackerjack.utils.path_redaction import redact_path
+
 if t.TYPE_CHECKING:
     from rich.console import Console
 
@@ -114,7 +116,7 @@ class SafeCodeModifier:
         backup_metadata = await self._backup_file(file_path)
 
         if not backup_metadata:
-            self.console.print(f"[red]✗ Failed to create backup for {file_path}[/red]")
+            self.console.print(f"[red]✗ Failed to create backup for {redact_path(file_path)}[/red]")
             return False
 
         self.console.print(
@@ -167,7 +169,7 @@ class SafeCodeModifier:
         backup_metadata = await self._backup_file(file_path)
 
         if not backup_metadata:
-            self.console.print(f"[red]✗ Failed to create backup for {file_path}[/red]")
+            self.console.print(f"[red]✗ Failed to create backup for {redact_path(file_path)}[/red]")
             return False
 
         self.console.print(
@@ -299,7 +301,7 @@ class SafeCodeModifier:
                     timeout=30,
                 )
                 if result.returncode == 0:
-                    logger.debug(f"Applied ruff format to {file_path}")
+                    logger.debug(f"Applied ruff format to {redact_path(file_path)}")
                 else:
                     logger.warning(f"Ruff format warning: {result.stderr}")
             except Exception as e:
@@ -355,7 +357,7 @@ class SafeCodeModifier:
     ) -> bool:
         try:
             if not backup_metadata.backup_path.exists():
-                logger.error(f"Backup file not found: {backup_metadata.backup_path}")
+                logger.error(f"Backup file not found: {redact_path(backup_metadata.backup_path)}")
                 return False
 
             shutil.copy2(backup_metadata.backup_path, file_path)
@@ -421,7 +423,7 @@ class SafeCodeModifier:
                             continue
 
         except subprocess.TimeoutExpired:
-            logger.warning(f"Ruff check timeout for {file_path}")
+            logger.warning(f"Ruff check timeout for {redact_path(file_path)}")
         except FileNotFoundError:
             logger.debug("Ruff not installed, skipping quality check")
         except Exception as e:

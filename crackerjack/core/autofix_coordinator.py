@@ -40,6 +40,7 @@ from crackerjack.services.pycharm_mcp_integration import (
 )
 from crackerjack.services.refurb_fixer import SafeRefurbFixer
 from crackerjack.utils.issue_detection import extract_issue_lines
+from crackerjack.utils.path_redaction import redact_path
 
 if t.TYPE_CHECKING:
     from crackerjack.agents.base import AgentContext
@@ -295,7 +296,7 @@ class AutofixCoordinator:
                 self.console.print(f"[dim]📝 Detailed error log: {display_path}[/dim]")
                 return
             except Exception as e:
-                self.logger.warning(f"Failed to write error log at {log_dir}: {e}")
+                self.logger.warning(f"Failed to write error log at {redact_path(log_dir)}: {e}")
 
     async def apply_autofix_for_hooks(
         self, mode: str, hook_results: list[object]
@@ -540,15 +541,15 @@ class AutofixCoordinator:
         all_successful = True
         for json_file in jsonc_files:
             stripped, had_comments = self._strip_jsonc_comments(json_file)
-            self.logger.debug(f"{json_file}: had_comments={had_comments}")
+            self.logger.debug(f"{redact_path(json_file)}: had_comments={had_comments}")
             if had_comments:
                 try:
                     json.loads(stripped)
                     json_file.write_text(stripped, encoding="utf-8")
-                    self.logger.info(f"Stripped JSONC comments from {json_file}")
+                    self.logger.info(f"Stripped JSONC comments from {redact_path(json_file)}")
                 except json.JSONDecodeError as e:
                     self.logger.warning(
-                        f"Stripped content from {json_file} is not valid JSON: {e}"
+                        f"Stripped content from {redact_path(json_file)} is not valid JSON: {e}"
                     )
                     all_successful = False
 

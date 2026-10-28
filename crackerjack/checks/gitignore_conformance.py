@@ -19,14 +19,18 @@ import logging
 import shutil
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from functools import lru_cache
 from pathlib import Path
+
+from crackerjack.checks.bodai_registry import (
+    load_fleet_repo_paths,
+    resolve_registry_path,
+)
+from crackerjack.utils.path_redaction import redact_path
 
 logger = logging.getLogger(__name__)
 
 
 TEMPLATE_PATH = Path(__file__).parent.parent.parent / "templates" / "GITIGNORE_BODAI.md"
-BODAI_REGISTRY_PATH = Path("/Users/les/Projects/mahavishnu/BODAI_REPO_REGISTRY.md")
 
 MARKER_BEGIN = "# >>> bodai-shared-gitignore >>>"
 MARKER_END = "# <<< bodai-shared-gitignore <<<"
@@ -69,50 +73,13 @@ def _parse_canonical_template(template_path: Path) -> list[str]:
     ]
 
 
-@lru_cache(maxsize=1)
-def _bodai_fleet_paths() -> frozenset[Path]:
-    """Resolve absolute repo paths from the Bodai registry.
-
-    Reads the `### Core 7` / `### Web / framework libraries` / etc.
-    sections and pulls the second column (the path) out of every
-    `| ... | ... | ... |` row. Frozen so callers can't mutate the
-    shared cache.
-    """
-    if not BODAI_REGISTRY_PATH.exists():
-        logger.warning(
-            "Bodai registry not found at %s; treating no repos as fleet members",
-            BODAI_REGISTRY_PATH,
-        )
-        return frozenset()
-
-    paths: set[Path] = set()
-    in_table = False
-    for line in BODAI_REGISTRY_PATH.read_text().splitlines():
-        stripped = line.strip()
-        if stripped.startswith("###"):
-            in_table = True
-            continue
-        if stripped.startswith("##"):
-            in_table = False
-            continue
-        if not in_table or not stripped.startswith("|"):
-            continue
-        cells = [c.strip() for c in stripped.split("|") if c.strip()]
-        if len(cells) < 2:
-            continue
-        candidate = cells[1].rstrip("/")
-        if candidate.startswith("/") and Path(candidate).is_dir():
-            paths.add(Path(candidate).resolve())
-    return frozenset(paths)
-
-
 def is_bodai_fleet_member(repo_path: Path) -> bool:
     """True iff `repo_path` is listed in the Bodai registry."""
     try:
         resolved = repo_path.resolve()
     except OSError:
         return False
-    return resolved in _bodai_fleet_paths()
+    return resolved in load_fleet_repo_paths()
 
 
 def _read_existing_gitignore(repo_path: Path) -> str:
@@ -222,10 +189,11 @@ def sync_repo_gitignore(
     """
     resolved = repo_path.resolve()
     if not is_bodai_fleet_member(resolved):
+        registry = resolve_registry_path()
         logger.info(
             "Skipping non-Bodai repo %s (not in %s)",
-            resolved,
-            BODAI_REGISTRY_PATH,
+            redact_path(resolved),
+            redact_path(registry) if registry else "the Bodai registry",
         )
         return GitignoreConformanceResult(
             repo_path=resolved,
@@ -240,7 +208,11 @@ def sync_repo_gitignore(
     if backup and existing_text:
         backup_path = resolved / f".gitignore.bak.{_utc_timestamp()}"
         shutil.copy2(gitignore, backup_path)
-        logger.info("Backed up %s -> %s", gitignore, backup_path)
+        logger.info(
+            "Backed up %s -> %s",
+            redact_path(gitignore),
+            redact_path(backup_path),
+        )
 
     cleaned = _strip_marker_block(existing_text)
     canonical_block = TEMPLATE_PATH.read_text()

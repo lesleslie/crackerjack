@@ -58,7 +58,7 @@ def _display_path(p: Path) -> str:
 
     If `p` is under the current working directory, return the relative
     form so we don't leak the local filesystem layout (e.g.
-    `/Users/les/Projects/<repo>/...` on macOS) into shared logs or
+    `/Users/example/Projects/<repo>/...` on macOS) into shared logs or
     terminals. Otherwise, return the path unchanged — the absolute
     form is more informative when operating outside a repo.
     """

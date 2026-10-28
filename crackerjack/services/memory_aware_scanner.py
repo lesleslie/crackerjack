@@ -9,6 +9,8 @@ from typing import Any
 
 from rich.console import Console
 
+from crackerjack.utils.path_redaction import redact_path
+
 logger = logging.getLogger(__name__)
 
 
@@ -90,7 +92,7 @@ class MemoryAwareScanner:
 
             if known_good:
                 skipped_files.append(file)
-                self.console.print(f"[dim] ✓ Skipping {file} (passed recently)[/dim]")
+                self.console.print(f"[dim] ✓ Skipping {redact_path(file)} (passed recently)[/dim]")
             else:
                 files_to_scan.append(file)
 

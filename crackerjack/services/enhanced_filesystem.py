@@ -15,6 +15,7 @@ from crackerjack.models.protocols import (
     ServiceProtocol,
 )
 from crackerjack.services.logging import LoggingContext
+from crackerjack.utils.path_redaction import redact_path
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -260,7 +261,7 @@ class EnhancedFileSystemService(EnhancedFileSystemServiceProtocol, ServiceProtoc
                 try:
                     results[path] = self.read_file(path)
                 except Exception as e:
-                    self.logger.exception(f"Failed to read file path={path} error={e}")
+                    self.logger.exception(f"Failed to read file path={redact_path(path)} error={e}")
                     results[path] = ""
             return results
 
@@ -271,7 +272,8 @@ class EnhancedFileSystemService(EnhancedFileSystemServiceProtocol, ServiceProtoc
 
             for path, result in zip(paths, results_list, strict=False):
                 if isinstance(result, Exception):
-                    self.logger.error(f"Failed to read file path={path} error={result}")
+                    self.logger.error(f"Failed to read file "
+                    f"path={redact_path(path)} error={result}")
                     results[path] = ""
                 elif isinstance(result, str):
                     results[path] = result
@@ -284,7 +286,8 @@ class EnhancedFileSystemService(EnhancedFileSystemServiceProtocol, ServiceProtoc
                 try:
                     self.write_file(path, content)
                 except Exception as e:
-                    self.logger.exception(f"Failed to write file path={path} error={e}")
+                    self.logger.exception(f"Failed to write file "
+                    f"path={redact_path(path)} error={e}")
             return
 
         with LoggingContext("write_multiple_files", count=len(file_data)):
@@ -388,7 +391,7 @@ class EnhancedFileSystemService(EnhancedFileSystemServiceProtocol, ServiceProtoc
         path_obj = Path(path) if isinstance(path, str) else path
         try:
             path_obj.mkdir(parents=True, exist_ok=True)
-            self.logger.debug(f"Directory created path={path_obj}")
+            self.logger.debug(f"Directory created path={redact_path(path_obj)}")
         except OSError as e:
             raise FileError(
                 message=f"Cannot create directory: {path_obj}",
@@ -407,7 +410,7 @@ class EnhancedFileSystemService(EnhancedFileSystemServiceProtocol, ServiceProtoc
                 self.cache._evict(cache_key)
                 self._file_timestamps.pop(path_obj, None)
 
-                self.logger.debug(f"File deleted path={path_obj}")
+                self.logger.debug(f"File deleted path={redact_path(path_obj)}")
         except OSError as e:
             raise FileError(
                 message=f"Cannot delete file: {path_obj}",

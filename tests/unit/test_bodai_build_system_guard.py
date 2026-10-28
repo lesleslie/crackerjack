@@ -27,79 +27,37 @@ mahavishnu as a sibling).
 
 from __future__ import annotations
 
-import re
 import tomllib
 from pathlib import Path
 from typing import cast
 
 import pytest
 
-# Authoritative registry maintained by the Bodai ecosystem. Source of truth:
-# /Users/les/Projects/mahavishnu/BODAI_REPO_REGISTRY.md (Phase 0+ rollout).
-# Search a small set of known sibling locations so this test stays portable
-# across clone layouts (e.g. CI runners, worktrees).
-_REGISTRY_CANDIDATES = (
-    Path("/Users/les/Projects/mahavishnu/BODAI_REPO_REGISTRY.md"),
-    Path(__file__).resolve().parents[4] / "mahavishnu" / "BODAI_REPO_REGISTRY.md",
-    Path(__file__).resolve().parents[3] / "mahavishnu" / "BODAI_REPO_REGISTRY.md",
+from crackerjack.checks.bodai_registry import (
+    parse_registry_repo_paths,
+    resolve_registry_path,
 )
 
-# Markdown table row matcher: matches lines of the form
-#   | repo-name | /Users/les/Projects/path/ | >=3.13 | notes... |
-# Anchored on the absolute path column so we don't pick up free-form prose
-# or the deprecated/confirmation sections.
-_TABLE_ROW_RE = re.compile(
-    r"^\|\s*(?P<repo>[a-zA-Z0-9_-]+)\s*\|\s*(?P<path>/Users/les/Projects/[^\s|]+)/?\s*\|",
-    re.MULTILINE,
-)
 
-# Sections of the registry that document repos but are out of scope for the
-# guard. Matched case-insensitively against the leading pipe-content of any
-# preceding heading text.
-_OUT_OF_SCOPE_HEADINGS = frozenset({
-    "deprecated",
-    "excluded from scope",
-})
-
-
+# Authoritative registry maintained by the Bodai ecosystem, living in the
+# *mahavishnu* repo. `crackerjack.checks.bodai_registry` owns the resolution
+# chain so this test stays portable across clone layouts (CI runners,
+# worktrees, different home directories).
 def _find_registry() -> Path | None:
-    for candidate in _REGISTRY_CANDIDATES:
-        if candidate.is_file():
-            return candidate
-    return None
+    return resolve_registry_path()
 
 
 def _extract_repos(registry: Path) -> list[Path]:
     """Parse the registry markdown and return the list of Bodai repo paths.
 
-    Only entries with a real ``/Users/les/Projects/...`` path column are
-    included; entries from "Deprecated" or "Excluded" sections are skipped.
-    The check is conservative: if we can't positively identify the section
-    (missing headings), we include the repo. This favors false positives
-    (a guard catches drift) over false negatives (a guard misses it).
+    Only entries with a real absolute path column are included; entries
+    from "Deprecated" or "Excluded" sections are skipped. The check is
+    conservative: if we can't positively identify the section (missing
+    headings), we include the repo. This favors false positives (a guard
+    catches drift) over false negatives (a guard misses it).
     """
     text = registry.read_text(encoding="utf-8")
-
-    # Walk the file linearly; track current section via heading text.
-    current_section_excluded = False
-    repos: list[Path] = []
-    for line in text.splitlines():
-        stripped = line.strip()
-        # Track headings like "### Core 7 (...)" — section text matters
-        # only when it contains one of the out-of-scope markers.
-        if stripped.startswith("#"):
-            lower = stripped.lower()
-            current_section_excluded = any(
-                marker in lower for marker in _OUT_OF_SCOPE_HEADINGS
-            )
-            continue
-        if current_section_excluded:
-            continue
-        match = _TABLE_ROW_RE.match(line)
-        if not match:
-            continue
-        repos.append(Path(match.group("path")))
-    return repos
+    return parse_registry_repo_paths(text)
 
 
 @pytest.fixture(scope="module")

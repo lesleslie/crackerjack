@@ -210,7 +210,7 @@ class SQLiteWorkflowLearner:
             conn.close()
 
             self._initialized = True
-            logger.info(f"✅ Workflow learner initialized: {self.db_path}")
+            logger.info(f"✅ Workflow learner initialized: {redact_path(self.db_path)}")
 
         except Exception as e:
             logger.error(f"❌ Failed to initialize workflow learner: {e}")
@@ -604,6 +604,8 @@ class SQLiteWorkflowLearner:
 
 
 import numpy as np
+
+from crackerjack.utils.path_redaction import redact_path
 
 
 def create_workflow_learner(

@@ -10,6 +10,8 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
+from crackerjack.utils.path_redaction import redact_path
+
 logger = logging.getLogger(__name__)
 
 
@@ -206,7 +208,7 @@ class SQLiteAdapterLearner:
             conn.close()
 
             self._initialized = True
-            logger.info(f"✅ Adapter learner initialized: {self.db_path}")
+            logger.info(f"✅ Adapter learner initialized: {redact_path(self.db_path)}")
 
         except Exception as e:
             logger.error(f"❌ Failed to initialize adapter learner: {e}")
@@ -245,7 +247,8 @@ class SQLiteAdapterLearner:
             conn.close()
 
             logger.debug(
-                f"Recorded adapter attempt: {attempt.adapter_name} for {attempt.file_type} "
+                f"Recorded adapter attempt: {attempt.adapter_name} for "
+                f"{redact_path(attempt.file_type)} "
                 f"(success={attempt.success})"
             )
 
@@ -383,7 +386,7 @@ class SQLiteAdapterLearner:
             if row:
                 adapter_name, success_rate, _ = row
                 logger.debug(
-                    f"Recommending adapter {adapter_name} for {file_type} "
+                    f"Recommending adapter {adapter_name} for {redact_path(file_type)} "
                     f"(success_rate={success_rate:.2%})"
                 )
                 return adapter_name

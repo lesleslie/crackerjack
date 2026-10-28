@@ -7,6 +7,8 @@ import tomli
 import tomli_w
 from rich.console import Console
 
+from crackerjack.utils.path_redaction import redact_path
+
 from .template_detector import TemplateDetector
 
 
@@ -124,7 +126,8 @@ class TemplateApplicator:
 
             result["success"] = True
             self.console.print(
-                f"[green]✅ Applied {selected_template} template to {pyproject_path}[/green]",
+                f"[green]✅ Applied {selected_template} template "
+                f"to {redact_path(pyproject_path)}[/green]",
             )
 
         except Exception as e:

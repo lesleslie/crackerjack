@@ -16,6 +16,7 @@ from rich.panel import Panel
 from rich.table import Table
 
 from crackerjack.models.protocols import DebuggerProtocol
+from crackerjack.utils.path_redaction import redact_path
 
 from .log_manager import get_log_manager
 from .logging import get_logger
@@ -439,7 +440,7 @@ class AIAgentDebugger:
             self._deduplicator.print_summary(self.console)
 
         self.console.print(
-            f"\n[dim]📝 Full debug log available at: {self.debug_log_path}[/dim]"
+            f"\n[dim]📝 Full debug log available at: {redact_path(self.debug_log_path)}[/dim]"
             if self.debug_log_path
             else "",
         )
@@ -696,7 +697,7 @@ class AIAgentDebugger:
         with output_path.open("w") as f:
             json.dump(debug_data, f, indent=2, default=str)
 
-        self.logger.info(f"Debug data exported to {output_path}")
+        self.logger.info(f"Debug data exported to {redact_path(output_path)}")
         return output_path
 
 

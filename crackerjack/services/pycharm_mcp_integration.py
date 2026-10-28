@@ -10,6 +10,8 @@ from contextlib import suppress
 from dataclasses import dataclass
 from pathlib import Path
 
+from crackerjack.utils.path_redaction import redact_path
+
 logger = logging.getLogger(__name__)
 
 
@@ -108,7 +110,7 @@ class PyCharmMCPAdapter:
     ) -> bool:
 
         if not self._is_safe_path(file_path):
-            self.logger.warning(f"Unsafe file path rejected: {file_path}")
+            self.logger.warning(f"Unsafe file path rejected: {redact_path(file_path)}")
             return False
 
         return await self._execute_with_circuit_breaker(

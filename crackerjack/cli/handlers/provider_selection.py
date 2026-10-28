@@ -15,6 +15,7 @@ from crackerjack.adapters.ai.registry import (
     list_providers,
 )
 from crackerjack.config import CrackerjackSettings, load_settings
+from crackerjack.utils.path_redaction import redact_path
 
 logger = logging.getLogger(__name__)
 
@@ -184,7 +185,7 @@ class ProviderSelectionCLI:
             yaml.dump(existing_config, f, default_flow_style=False)
 
         self.console.print(
-            f"[green]✓ Settings saved to {local_settings_path}[/green]",
+            f"[green]✓ Settings saved to {redact_path(local_settings_path)}[/green]",
         )
 
     def _get_api_key_env_var(self, provider_id: ProviderID) -> str:

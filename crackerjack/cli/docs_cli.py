@@ -16,6 +16,7 @@ from crackerjack.services.frontmatter_validator import (
     FrontmatterValidationError,
     FrontmatterValidator,
 )
+from crackerjack.utils.path_redaction import redact_path
 
 app = typer.Typer(
     name="docs", help="Documentation management commands.", no_args_is_help=True
@@ -65,11 +66,11 @@ def init(
 ) -> None:
     toml_path = path / "zensical.toml"
     if toml_path.exists():
-        console.print(f"[yellow]zensical.toml already exists at {toml_path}[/yellow]")
+        console.print(f"[yellow]zensical.toml already exists at {redact_path(toml_path)}[/yellow]")
         raise typer.Exit(0)
     name = _project_name(path)
     toml_path.write_text(_ZENSICAL_TOML_TEMPLATE.format(name=name), encoding="utf-8")
-    console.print(f"[green]Created[/green] {toml_path}")
+    console.print(f"[green]Created[/green] {redact_path(toml_path)}")
 
 
 @app.command()
@@ -268,11 +269,13 @@ def validate(
         )
         for issue in result.errors:
             console.print(
-                f" [red]ERROR[/red] {issue.file}:{issue.line} {issue.code}: {issue.message}"
+                f" [red]ERROR[/red] {redact_path(issue.file)}:{issue.line} "
+                f"{issue.code}: {issue.message}"
             )
         for issue in result.warnings:
             console.print(
-                f" [yellow]WARN[/yellow] {issue.file}:{issue.line} {issue.code}: {issue.message}"
+                f" [yellow]WARN[/yellow] {redact_path(issue.file)}:{issue.line} "
+                f"{issue.code}: {issue.message}"
             )
 
     if not result.success or (strict and result.warning_count > 0):

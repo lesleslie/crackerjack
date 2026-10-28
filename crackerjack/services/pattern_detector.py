@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from crackerjack.models.issues import Issue, IssueType, Priority
+from crackerjack.utils.path_redaction import redact_path
 
 from .pattern_cache import CachedPattern, PatternCache
 
@@ -90,7 +91,7 @@ class PatternDetector:
             try:
                 tree = ast.parse(content, filename=file_path)
             except SyntaxError as e:
-                self.logger.warning(f"Syntax error in {file_path}: {e}")
+                self.logger.warning(f"Syntax error in {redact_path(file_path)}: {e}")
                 return []
 
             for pattern_name, pattern_info in self._anti_patterns.items():
@@ -100,11 +101,11 @@ class PatternDetector:
                     anti_patterns.extend(detected)
                 except Exception as e:
                     self.logger.warning(
-                        f"Error in {pattern_name} detector for {file_path}: {e}",
+                        f"Error in {pattern_name} detector for {redact_path(file_path)}: {e}",
                     )
 
         except Exception as e:
-            self.logger.warning(f"Failed to analyze {file_path}: {e}")
+            self.logger.warning(f"Failed to analyze {redact_path(file_path)}: {e}")
 
         return anti_patterns
 

@@ -8,6 +8,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 
 from crackerjack.models.issues import FixResult, Issue, IssueType
+from crackerjack.utils.path_redaction import redact_path
 
 
 @dataclass
@@ -295,7 +296,7 @@ class PatternCache:
                 json.dump(data, f, indent=2)
 
             self.logger.info(
-                f"Exported {len(self._patterns)} patterns to {export_path}",
+                f"Exported {len(self._patterns)} patterns to {redact_path(export_path)}",
             )
             return True
 
@@ -333,7 +334,7 @@ class PatternCache:
             if imported_count > 0:
                 self._save_patterns()
                 self.logger.info(
-                    f"Imported {imported_count} patterns from {import_path}",
+                    f"Imported {imported_count} patterns from {redact_path(import_path)}",
                 )
 
             return True

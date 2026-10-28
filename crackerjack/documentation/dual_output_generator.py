@@ -11,6 +11,7 @@ import yaml
 from rich.console import Console
 
 from crackerjack.services.cache import CrackerjackCache
+from crackerjack.utils.path_redaction import redact_path
 
 logger = logging.getLogger(__name__)
 
@@ -604,29 +605,29 @@ graph TD
         ai_dir.mkdir(exist_ok=True)
 
         self.ai_reference_path.write_text(result.ai_reference)
-        self.console.print(f"✅ Updated {self.ai_reference_path}")
+        self.console.print(f"✅ Updated {redact_path(self.ai_reference_path)}")
 
         with self.agent_capabilities_path.open("w") as f:
             json.dump(result.agent_capabilities, f, indent=2)
-        self.console.print(f"✅ Updated {self.agent_capabilities_path}")
+        self.console.print(f"✅ Updated {redact_path(self.agent_capabilities_path)}")
 
         with self.error_patterns_path.open("w") as f:
             yaml.dump(result.error_patterns, f, default_flow_style=False)
-        self.console.print(f"✅ Updated {self.error_patterns_path}")
+        self.console.print(f"✅ Updated {redact_path(self.error_patterns_path)}")
 
         if self.readme_path.exists():
             current_readme = self.readme_path.read_text()
             if "Enhanced Documentation Sections" not in current_readme:
                 enhanced_readme = current_readme + "\n" + result.readme_enhancements
                 self.readme_path.write_text(enhanced_readme)
-                self.console.print(f"✅ Enhanced {self.readme_path}")
+                self.console.print(f"✅ Enhanced {redact_path(self.readme_path)}")
             else:
                 self.console.print(
-                    f"ℹ️ {self.readme_path} already contains enhancements",
+                    f"ℹ️ {redact_path(self.readme_path)} already contains enhancements",
                 )
         else:
             self.readme_path.write_text(result.readme_enhancements)
-            self.console.print(f"✅ Created {self.readme_path}")
+            self.console.print(f"✅ Created {redact_path(self.readme_path)}")
 
     def _cache_generation_metadata(self, result: DocumentationResult) -> None:
         metadata = {

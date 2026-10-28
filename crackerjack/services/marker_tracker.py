@@ -6,6 +6,8 @@ import sqlite3
 from datetime import datetime
 from pathlib import Path
 
+from crackerjack.utils.path_redaction import redact_path
+
 logger = logging.getLogger(__name__)
 
 
@@ -31,7 +33,7 @@ class MarkerTracker:
                 """)
                 conn.commit()
 
-            logger.debug(f"Marker database initialized: {self.db_path}")
+            logger.debug(f"Marker database initialized: {redact_path(self.db_path)}")
 
         except (sqlite3.Error, OSError) as e:
             logger.error(f"Failed to initialize marker database: {e}")
@@ -68,7 +70,7 @@ class MarkerTracker:
                             files_needing_scan.append(file_path)
 
                     except OSError as e:
-                        logger.debug(f"Skipping unreadable file {file_path}: {e}")
+                        logger.debug(f"Skipping unreadable file {redact_path(file_path)}: {e}")
                         continue
 
         except sqlite3.Error as e:
@@ -112,7 +114,7 @@ class MarkerTracker:
                             (str(file_path), tool_name, file_hash, scan_time),
                         )
                     except OSError as e:
-                        logger.debug(f"Skipping unreadable file {file_path}: {e}")
+                        logger.debug(f"Skipping unreadable file {redact_path(file_path)}: {e}")
                         continue
 
                 conn.commit()
@@ -136,5 +138,5 @@ class MarkerTracker:
         try:
             return hashlib.md5(file_path.read_bytes()).hexdigest()
         except OSError as e:
-            logger.warning(f"Failed to hash file {file_path}: {e}")
+            logger.warning(f"Failed to hash file {redact_path(file_path)}: {e}")
             return ""

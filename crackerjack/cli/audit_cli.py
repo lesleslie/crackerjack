@@ -15,6 +15,7 @@ from crackerjack.skills.health import (
     SkillHealthReport,
     fetch_skill_health,
 )
+from crackerjack.utils.path_redaction import redact_path
 
 app = typer.Typer(
     name="audit",
@@ -82,7 +83,7 @@ def orphans(
     if audit_script is None:
         expected = path / "scripts" / "audit_orphans.py"
         console.print(
-            f"[red]audit_orphans.py not found under {path}[/red]\n"
+            f"[red]audit_orphans.py not found under {redact_path(path)}[/red]\n"
             f"[dim]Expected: {expected}[/dim]\n"
             f"[dim]See: https://github.com/lesleslie/mahavishnu "
             f"for the canonical script.[/dim]"
@@ -128,7 +129,7 @@ def locate(
 ) -> None:
     audit_script = _find_audit_script(path)
     if audit_script is None:
-        console.print(f"[red]audit_orphans.py not found under {path}[/red]")
+        console.print(f"[red]audit_orphans.py not found under {redact_path(path)}[/red]")
         raise typer.Exit(2)
     sys.stdout.write(str(audit_script))
     sys.stdout.write("\n")

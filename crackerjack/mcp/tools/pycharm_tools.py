@@ -11,6 +11,7 @@ from crackerjack.mcp.context import get_context
 from crackerjack.services.pycharm_mcp_integration import (
     PyCharmMCPAdapter,
 )
+from crackerjack.utils.path_redaction import redact_path
 
 logger = logging.getLogger(__name__)
 
@@ -180,7 +181,7 @@ def _local_regex_search(
         extensions = [".py"]
 
     if not search_root.exists():
-        logger.debug(f"search_root does not exist: {search_root}")
+        logger.debug(f"search_root does not exist: {redact_path(search_root)}")
         return []
 
     try:

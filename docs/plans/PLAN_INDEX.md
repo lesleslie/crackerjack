@@ -1,6 +1,6 @@
 # Plan Index
 
-_Regenerated 2026-10-24 by `crackerjack.tools.plan_index_sync` (phase)._
+_Regenerated 2026-10-28 by `crackerjack.tools.plan_index_sync` (phase)._
 
 ### Docs: adr
 
@@ -34,6 +34,7 @@ _Regenerated 2026-10-24 by `crackerjack.tools.plan_index_sync` (phase)._
 | [`docs/plans/2026-09-07-bodai-shared-gitignore-snippet.md`](2026-09-07-bodai-shared-gitignore-snippet.md) | 2026-09-07 | `draft` | `implementation` | `gitignore-conformance` | Bodai Shared `.gitignore` Snippet — crackerjack-enforced |
 | [`docs/plans/2026-10-10-crackerjack-oneiric-loader-migration.md`](2026-10-10-crackerjack-oneiric-loader-migration.md) | 2026-10-10 | `draft` | `implementation` | `settings-resolution` | Crackerjack Settings Loader — Migration to Oneiric — Implementation Plan |
 | [`docs/plans/2026-10-11-remove-zuban-skylos-lsp-from-crackerjack.md`](2026-10-11-remove-zuban-skylos-lsp-from-crackerjack.md) | 2026-10-11 | `active` | `implementation` | `architecture` | Remove Zuban + Skylos LSP Adapters from Crackerjack |
+| [`docs/plans/2026-10-28-path-disclosure-redaction.md`](2026-10-28-path-disclosure-redaction.md) | 2026-10-28 | `active` | `implementation` | `security` | Redact User Home Paths from Crackerjack Output and Resolve the Bodai Registry Dynamically |
 
 ### Docs: specs
 
@@ -80,11 +81,12 @@ _Regenerated 2026-10-24 by `crackerjack.tools.plan_index_sync` (phase)._
 
 ## Lifecycle × Role Distribution
 
-| Role \\ Lifecycle | draft | active | partial | shipped | complete | Total |
+| Role \ Lifecycle | draft | active | partial | shipped | complete | Total |
 |---|---|---|---|---|---|---|
 | `canonical` | · | 10 | · | · | 2 | **12** |
-| `implementation` | 16 | 21 | · | · | 1 | **38** |
+| `implementation` | 16 | 22 | · | · | 1 | **39** |
 | `umbrella` | · | · | · | · | · | **0** |
 | `historical` | · | · | · | · | 1 | **1** |
 | `superseded` | · | · | · | · | · | **0** |
-| **Total** | **16** | **31** | **·** | **·** | **4** | **51** |
+| **Total** | **16** | **32** | **·** | **·** | **4** | **52** |
+

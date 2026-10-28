@@ -673,3 +673,86 @@ def test_sanitize_end_to_end_wrapped_token_does_not_reach_console(
             assert sub not in rendered, (
                 f"Wrapped token leaked to console: {sub!r} in {rendered!r}"
             )
+
+
+# ---------------------------------------------------------------------------
+# Path disclosure
+# ---------------------------------------------------------------------------
+
+
+def test_pass_message_redacts_home_directory(
+    tmp_path: Path, mock_console: MagicMock, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The PASS message must not disclose the user's home directory.
+
+    Guards the log line that reads
+    ``Gitignore-conformance passed for <path>``: the path is rendered
+    home-relative (``~/Projects/oneiric``) so the OS account name never
+    reaches the console or a log file.
+    """
+    home = tmp_path / "home"
+    repo = home / "Projects" / "oneiric"
+    repo.mkdir(parents=True)
+    monkeypatch.setenv("HOME", str(home))
+
+    pm = _make_publish_manager(repo, mock_console)
+    conform = _make_conform_result(
+        is_fleet_member=True,
+        snippet_present=True,
+        missing_patterns=[],
+        repo_path=repo,
+    )
+
+    with patch(
+        "crackerjack.managers.publish_manager.check_repo_gitignore",
+        return_value=conform,
+    ):
+        result = pm._validate_gitignore_conformance()
+
+    assert result is True
+    rendered = " ".join(
+        str(arg) for call in mock_console.print.call_args_list for arg in call.args
+    )
+    assert "Gitignore-conformance passed for ~/Projects/oneiric" in rendered
+    assert str(home) not in rendered, (
+        f"Home directory leaked to console: {str(home)!r} in {rendered!r}"
+    )
+
+
+def test_drift_message_redacts_home_directory(
+    tmp_path: Path, mock_console: MagicMock, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The drift message must not disclose the user's home directory."""
+    home = tmp_path / "home"
+    repo = home / "Projects" / "oneiric"
+    repo.mkdir(parents=True)
+    monkeypatch.setenv("HOME", str(home))
+
+    pm = _make_publish_manager(repo, mock_console)
+    conform = _make_conform_result(
+        is_fleet_member=True,
+        snippet_present=False,
+        missing_patterns=[".claude/*"],
+        repo_path=repo,
+    )
+    fake_sync = _completed(returncode=0)
+
+    with (
+        patch(
+            "crackerjack.managers.publish_manager.check_repo_gitignore",
+            return_value=conform,
+        ),
+        patch(
+            "crackerjack.managers.publish_manager.subprocess.run",
+            return_value=fake_sync,
+        ),
+    ):
+        result = pm._validate_gitignore_conformance()
+
+    assert result is False
+    rendered = " ".join(
+        str(arg) for call in mock_console.print.call_args_list for arg in call.args
+    )
+    assert str(home) not in rendered, (
+        f"Home directory leaked to console: {str(home)!r} in {rendered!r}"
+    )

@@ -51,6 +51,8 @@ except ImportError:
 
 MCP_AVAILABLE: Final[bool] = _mcp_available
 
+from crackerjack.utils.path_redaction import redact_path
+
 from .context import (
     MCPServerConfig,
     MCPServerContext,
@@ -177,7 +179,8 @@ async def create_mcp_server(config: dict[str, t.Any] | None = None) -> t.Any | N
         await task_manager.start()
         set_task_manager(task_manager)
         console.print(
-            f"[green]🎯 AsyncTaskManager wired (storage_path={settings.async_task.storage_path})[/green]",
+            f"[green]🎯 AsyncTaskManager wired "
+            f"(storage_path={redact_path(settings.async_task.storage_path)})[/green]",
         )
     except Exception as e:
         console.print(

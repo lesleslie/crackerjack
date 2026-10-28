@@ -1,7 +1,8 @@
 # >>> bodai-shared-gitignore >>>
 # Source of truth: crackerjack/templates/GITIGNORE_BODAI.md
 # Enforced by: crackerjack check `gitignore-conformance`
-# Fleet list: /Users/les/Projects/mahavishnu/BODAI_REPO_REGISTRY.md
+# Fleet list: BODAI_REPO_REGISTRY.md (maintained in the mahavishnu repo;
+# resolved via $CRACKERJACK_BODAI_REGISTRY or a sibling mahavishnu checkout)
 # Do NOT remove the marker line above — `crackerjack gitignore sync` uses it
 # to detect already-applied state.
 

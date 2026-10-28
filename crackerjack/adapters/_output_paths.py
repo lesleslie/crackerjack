@@ -5,6 +5,8 @@ import os
 from datetime import UTC, datetime
 from pathlib import Path
 
+from crackerjack.utils.path_redaction import redact_path
+
 logger = logging.getLogger(__name__)
 
 
@@ -94,9 +96,9 @@ class AdapterOutputPaths:
             try:
                 file_path.unlink()
                 deleted_count += 1
-                logger.debug(f"Deleted old output file: {file_path}")
+                logger.debug(f"Deleted old output file: {redact_path(file_path)}")
             except OSError as e:
-                logger.warning(f"Failed to delete {file_path}: {e}")
+                logger.warning(f"Failed to delete {redact_path(file_path)}: {e}")
 
         if deleted_count > 0:
             logger.info(
