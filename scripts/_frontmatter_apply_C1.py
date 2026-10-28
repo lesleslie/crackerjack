@@ -15,7 +15,7 @@ FM_TEMPLATE = (
     "\n"
 )
 
-REPO_ROOT = Path("/Users/les/Projects/crackerjack")
+REPO_ROOT = Path(__file__).resolve().parent.parent
 
 
 SUBDIR_DEFAULTS: list[tuple[str, tuple[str, str, str]]] = [

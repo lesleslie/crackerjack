@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-REPO_ROOT = Path("/Users/les/Projects/crackerjack")
+REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
 def test_profiles_py_defines() -> None:

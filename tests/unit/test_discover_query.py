@@ -17,6 +17,7 @@ override) so the surface matches production behavior.
 """
 from __future__ import annotations
 
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest
@@ -25,7 +26,7 @@ if TYPE_CHECKING:
     from fastmcp import FastMCP
 
 
-REPO_ROOT = "/Users/les/Projects/crackerjack"
+REPO_ROOT = str(Path(__file__).resolve().parents[2])
 
 
 async def _build_server() -> "FastMCP":

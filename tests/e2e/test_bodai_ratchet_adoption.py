@@ -13,7 +13,8 @@ from crackerjack.cli.coverage_ratchet_cli import app
 @pytest.fixture
 def mcp_common_copy(tmp_path: Path) -> Path:
     """Copy a stripped-down version of mcp-common to tmp_path."""
-    src = Path("/Users/les/Projects/mcp-common")
+    repo_root = Path(__file__).resolve().parents[2]
+    src = repo_root.parent / "mcp-common"
     dest = tmp_path / "mcp-common"
     if not src.exists():
         pytest.skip("mcp-common not available in this environment")

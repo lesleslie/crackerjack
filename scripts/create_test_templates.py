@@ -181,7 +181,7 @@ class TestCLI{command.replace("-", " ").title().replace(" ", "")}:
 
 
 def main():
-    base_dir = Path("/Users/les/Projects/crackerjack")
+    base_dir = Path(__file__).resolve().parent.parent
     tests_dir = base_dir / "tests" / "unit"
 
     adapters = [

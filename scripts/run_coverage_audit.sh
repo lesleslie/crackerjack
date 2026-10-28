@@ -15,8 +15,8 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-# Change to project directory
-cd /Users/les/Projects/crackerjack
+# Change to project directory (resolved from this script's location)
+cd "$(dirname "$0")/.."
 
 echo -e "${BLUE}Step 1: Running coverage analysis...${NC}"
 pytest --cov=crackerjack \

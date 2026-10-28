@@ -8,12 +8,32 @@ import pytest
 
 import crackerjack.tools.ty_ignore_syntax as _ty_ignore
 
-DECISION_FILE = Path(
-    os.environ.get(
-        "CRACKERJACK_TY_IGNORE_DECISION_FILE",
-        "/Users/les/Projects/mahavishnu/.claude/decisions/ty-ignore-codes.md",
-    ),
-)
+
+def _resolve_decision_file() -> Path:
+    """Locate the canonical ty ignore-code decision file.
+
+    The file lives in the sibling ``mahavishnu`` checkout, under
+    ``docs/decisions/``. Resolve it relative to this repo rather than
+    hardcoding one machine's home directory, so the lookup survives a
+    layout change in the other repo. ``CRACKERJACK_TY_IGNORE_DECISION_FILE``
+    overrides everything.
+    """
+    override = os.environ.get("CRACKERJACK_TY_IGNORE_DECISION_FILE")
+    if override:
+        return Path(override)
+
+    repo_root = Path(__file__).resolve().parents[3]
+    candidates = [
+        repo_root.parent / "mahavishnu" / "docs" / "decisions" / "ty-ignore-codes.md",
+        Path.home() / "Projects" / "mahavishnu" / "docs" / "decisions" / "ty-ignore-codes.md",
+    ]
+    for candidate in candidates:
+        if candidate.is_file():
+            return candidate
+    return candidates[0]
+
+
+DECISION_FILE = _resolve_decision_file()
 DECISION_RULE_PATTERN = re.compile(
     r"^## Decision rule\s*\n(?P<body>.*?)(?=^## |\Z)",
     re.MULTILINE | re.DOTALL,

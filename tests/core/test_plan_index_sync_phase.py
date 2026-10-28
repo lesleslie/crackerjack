@@ -31,9 +31,7 @@ import pytest
 # Helpers
 # ---------------------------------------------------------------------------
 
-REPO_ROOT = Path(
-    "/Users/les/.local/state/mahavishnu/worktrees/crackerjack"
-)
+REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
 def _make_options(**overrides):
