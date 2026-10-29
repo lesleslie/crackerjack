@@ -10,6 +10,22 @@ blocks_on: []
 topic: changelog
 ---
 
+## [0.91.3] - 2026-10-29
+
+### Performance
+
+- Run the Refurb hook with Mypy import traversal skipped
+
+### Documentation
+
+- changelog: Note the worktree-bucket fix in the registry resolver
+- plans: Plan for plan-index-sync delegating to the repo's renderer
+- plans: Scope the crackerjack action-kit adoption audit
+
+### Build
+
+- deps: Raise the mcp-common floor to 0.33.1 for the ownership API
+
 ## [0.91.2] - 2026-10-28
 
 ### Added
