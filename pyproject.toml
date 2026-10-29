@@ -711,6 +711,31 @@ ignore = [
     "FURB120",
     "FURB137",
 ]
+# Refurb drives Mypy internally (Mypy is a hard dependency, not a pluggable
+# backend), so Mypy's own flags are the only speed lever available.
+#
+# ``follow_imports`` defaults to ``normal``: Mypy type-checks every import
+# transitively, and any dependency shipping ``py.typed`` gets analyzed as if
+# it were first-party source. That drags in the whole third-party graph to
+# lint the package and costs minutes per run -- warm cache included, because
+# Refurb forces fine-grained incremental mode on, which does not help when
+# the entire third-party graph is re-verified each time.
+#
+# ``skip`` leaves imported modules unanalyzed (``Any``) while keeping the
+# scanned package's own types precise, so in-package type-aware rules still
+# fire.
+#
+# NOTE: this package already sets ``follow_imports = "skip"`` in mypy.ini,
+# so here the flag is effectively a no-op -- it only makes the behaviour
+# explicit rather than incidental, so a change to mypy.ini cannot silently
+# slow the hook back down. The measurable win is in repositories that leave
+# ``follow_imports`` at the default: mcp-common drops from 294s to 55s and
+# mahavishnu from minutes to ~75s, with the same findings.
+#
+# The Crackerjack hook passes the same flags (see
+# crackerjack/config/refurb_args.py) and uses this list in place of its
+# defaults, so a repository's own value wins.
+mypy_args = ["--follow-imports=skip", "--ignore-missing-imports"]
 
 [tool.bandit]
 skips = [

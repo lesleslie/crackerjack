@@ -14,6 +14,7 @@ from crackerjack.adapters._tool_adapter_base import (
     ToolExecutionResult,
     ToolIssue,
 )
+from crackerjack.config.refurb_args import build_refurb_mypy_args_for_file_list
 from crackerjack.models.adapter_metadata import AdapterStatus
 from crackerjack.models.qa_results import QACheckType
 
@@ -127,6 +128,33 @@ class RefurbAdapter(BaseToolAdapter):
         files_to_scan = files if files is not None else []
         cmd.extend([str(f) for f in files_to_scan])
 
+        # NOTE: this adapter scans an explicit *file* list, so it must NOT
+        # inherit the package-wide speed flags (--follow-imports=skip; see
+        # crackerjack/config/refurb_args.py). That flag suits a whole-package
+        # scan, where sibling modules stay in the Mypy build set and their
+        # types remain precise; a file list leaves them outside it, so their
+        # types degrade to Any and type-aware rules silently stop firing --
+        # verified: on a single-file scan FURB123 stops being reported while
+        # FURB173 still is.
+        #
+        # The repository's own flags are carried over and only follow_imports
+        # is forced to "normal". Omitting the flags entirely is not enough:
+        # Refurb reads [tool.refurb].mypy_args from pyproject.toml when no
+        # Mypy args are given on the command line, so the repository config
+        # would otherwise supply the skip flag anyway. Carrying the rest over
+        # matters too -- dropping --ignore-missing-imports would make Mypy
+        # report an unresolved import for an optional dependency that is
+        # absent from the venv. That import error is not a blocker, so
+        # Refurb drops it; but a blocker Mypy error (a syntax error, a
+        # "Duplicate module named" complaint, a rejected command line) is
+        # surfaced by Refurb as its own error with exit code 1, and the tool
+        # adapter treats "exit 1 with output" as success, so the check would
+        # report "No issues found" while Mypy had actually failed.
+        #
+        # The separator goes last: Refurb forwards everything after it to
+        # Mypy, so its own flags and the source targets must stay before it.
+        cmd.extend(build_refurb_mypy_args_for_file_list(Path.cwd()))
+
         logger.info(
             "Built Refurb command",
             extra={
@@ -153,12 +181,27 @@ class RefurbAdapter(BaseToolAdapter):
         logger.debug("Parsing Refurb text output", extra={"line_count": len(lines)})
 
         for line in lines:
-            if "[FURB" not in line:
+            if "[FURB" in line:
+                issue = self._parse_refurb_line(line)
+                if issue:
+                    issues.append(issue)
                 continue
 
-            issue = self._parse_refurb_line(line)
-            if issue:
-                issues.append(issue)
+            # Refurb reports its own errors on stdout with a "refurb: "
+            # prefix -- including the Mypy errors it surfaces, such as a
+            # syntax error, a "Duplicate module named" complaint or a
+            # rejected command line. Without this, such a run produces no
+            # parseable issues and the adapter reports "No issues found":
+            # a clean verdict for a scan that never actually ran.
+            if line.startswith("refurb:"):
+                issues.append(
+                    ToolIssue(
+                        file_path=Path.cwd(),
+                        message=line.strip(),
+                        code="REFURB_ERROR",
+                        severity="error",
+                    )
+                )
 
         logger.info(
             "Parsed Refurb output",

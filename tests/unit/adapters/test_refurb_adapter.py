@@ -197,6 +197,27 @@ class TestParseOutput:
 
         assert len(issues) == 0
 
+    @pytest.mark.asyncio
+    async def test_refurb_error_output_is_surfaced_as_an_issue(self, refurb_adapter):
+        """A Mypy failure must not be reported as a clean scan.
+
+        Refurb surfaces the Mypy errors it hits on stdout with a
+        ``refurb:`` prefix and exits 1. Without this, such a run yields no
+        parseable issues and the adapter reports "No issues found" -- a
+        clean verdict for a scan that never actually ran.
+        """
+        text_output = (
+            "refurb: usage: mypy [-h] [-v] [-V] [more options; see below]\n"
+            "refurb: mypy: error: unrecognized arguments: pkg/mod.py\n"
+        )
+
+        result = ToolExecutionResult(raw_output=text_output, exit_code=1)
+        issues = await refurb_adapter.parse_output(result)
+
+        assert len(issues) == 2
+        assert all(issue.code == "REFURB_ERROR" for issue in issues)
+        assert all(issue.severity == "error" for issue in issues)
+
 
 class TestGetDefaultConfig:
     """Test suite for get_default_config method."""

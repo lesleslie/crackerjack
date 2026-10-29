@@ -61,6 +61,13 @@ class HookDefinition:
     config_path: Path | None = None
     security_level: SecurityLevel = SecurityLevel.MEDIUM
     accepts_file_paths: bool = False
+    # When True the hook's base command already carries its own source
+    # target, so build_command must NOT append a file list on top of it.
+    # Mypy-backed tools need this: passing both a package directory and a
+    # file inside it makes mypy report "Duplicate module named", and a
+    # file-only scan drops the sibling modules from the build set, so
+    # type-aware rules lose their type information. Refurb sets this.
+    scans_own_target: bool = False
     disabled: bool = False
     run_schedule: str | None = None
     allow_unsafe_fixes: bool = False
@@ -83,15 +90,27 @@ class HookDefinition:
         return self._direct_cmd_cache
 
     def build_command(self, files: list[Path] | None = None) -> list[str]:
+        # Copy the cached list: get_command() returns the cache itself, and
+        # these HookDefinition objects are module-level singletons, so
+        # mutating it would leak this call's targets into every later call.
+        base_cmd = self.get_command().copy()
 
-        base_cmd = self.get_command()
-
-        if files and self.accepts_file_paths:
-            base_cmd.extend([str(f) for f in files])
+        if files and self.accepts_file_paths and not self.scans_own_target:
+            targets = [str(f) for f in files]
+        elif self.scans_own_target:
+            # The base command already names the source target; adding a
+            # file list would either duplicate the module (mypy) or narrow
+            # the scan and lose type precision.
+            targets = []
         else:
-            base_cmd.append("crackerjack/")
+            targets = ["crackerjack/"]
 
-        return base_cmd
+        # Refurb forwards everything after "--" to Mypy, so source targets
+        # have to be inserted BEFORE the separator. Mypy's positional is
+        # nargs="*": a path after "--" is reported as an unrecognized
+        # argument and the hook fails with zero findings.
+        separator = base_cmd.index("--") if "--" in base_cmd else len(base_cmd)
+        return base_cmd[:separator] + targets + base_cmd[separator:]
 
 
 @dataclass
@@ -346,6 +365,7 @@ COMPREHENSIVE_HOOKS = [
         auto_run=True,
         security_level=SecurityLevel.MEDIUM,
         accepts_file_paths=True,
+        scans_own_target=True,
     ),
     HookDefinition(
         name="creosote",

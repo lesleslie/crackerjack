@@ -237,9 +237,14 @@ qa_enable_incremental: true
 
 # Adapter-specific settings
 adapter_timeouts:
-  # refurb over the crackerjack package measures ~800s on this repo, so a
-  # 600s cap always killed it mid-scan. Matches the pyproject default and
-  # the refurb hook's own timeout.
+  # refurb over the crackerjack package measures ~180s. The hook now passes
+  # Mypy flags (--follow-imports=skip, see crackerjack/config/refurb_args.py),
+  # which makes the behaviour explicit rather than incidental -- this repo's
+  # mypy.ini already set follow_imports = "skip", so the flag itself is
+  # effectively a no-op here; the measurable win is in repositories that
+  # leave follow_imports at the default. The cap stays generous so a cold
+  # cache or an unusually large dependency graph cannot kill the scan
+  # mid-run. Matches the pyproject default and the refurb hook's own timeout.
   refurb_timeout: 1800
   bandit_timeout: 300
   semgrep_timeout: 300

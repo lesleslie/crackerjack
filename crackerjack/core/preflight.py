@@ -11,6 +11,7 @@ from pathlib import Path
 
 from pydantic import BaseModel
 
+from crackerjack.config.refurb_args import build_refurb_mypy_args
 from crackerjack.config.settings import HookSettings
 from crackerjack.services.git_cleanup_service import (
     DirtyWorkingTreeError,
@@ -262,7 +263,11 @@ class PreflightFixer:
             # directory instead, falling back to the repo root when no
             # subdirectory can be identified (matches the legacy behaviour).
             target = self._resolve_package_target()
-            return ["uv", "run", "refurb", str(target)]
+            cmd = ["uv", "run", "refurb", str(target)]
+            # Same Mypy flags as the comprehensive hook: without them
+            # Refurb type-checks the whole third-party dependency graph.
+            cmd.extend(build_refurb_mypy_args(self._pkg_path))
+            return cmd
         return []
 
     def _resolve_package_target(self) -> Path:

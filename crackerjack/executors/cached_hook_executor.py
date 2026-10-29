@@ -255,12 +255,17 @@ class CachedHookExecutor:
         return self.cache.cleanup_all()
 
     def _get_tool_version(self, tool_name: str) -> str | None:
+        # These strings are cache-key epochs, not upstream versions: bump the
+        # entry whenever the hook's effective behaviour changes so stale
+        # cached results are not reused. refurb moved to 1.18.0 when the hook
+        # started passing Mypy flags (--follow-imports=skip), which changes
+        # which findings Refurb reports.
         version_mapping = {
             "pyright": "1.1.0",
             "bandit": "1.7.5",
             "vulture": "2.7.0",
             "complexipy": "0.13.0",
-            "refurb": "1.17.0",
+            "refurb": "1.18.0",
             "ruff": "0.1.0",
             "gitleaks": "8.18.0",
         }

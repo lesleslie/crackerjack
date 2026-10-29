@@ -660,5 +660,15 @@ class TestPackageTargetDiscovery:
         fixer, _ = _make_fixer(tmp_path)
         cmd = fixer._build_cmd("refurb")
 
-        assert cmd[-1] == str(tmp_path / "demo"), cmd
-        assert ".venv" not in cmd[-1]
+        # The target sits right after the tool name; Mypy flags follow it
+        # after the "--" separator that Refurb forwards to Mypy.
+        assert cmd[:4] == [
+            "uv",
+            "run",
+            "refurb",
+            str(tmp_path / "demo"),
+        ], cmd
+        assert ".venv" not in cmd[3]
+
+        separator = cmd.index("--")
+        assert "--follow-imports=skip" in cmd[separator:], cmd

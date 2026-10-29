@@ -7,6 +7,7 @@ from functools import lru_cache
 from pathlib import Path
 
 from crackerjack.config.per_file_ignores import build_inline_per_file_ignores
+from crackerjack.config.refurb_args import build_refurb_mypy_args
 from crackerjack.config.settings import HookSettings
 
 
@@ -355,6 +356,14 @@ def get_tool_command(
 
     if verbose and hook_name == "ty":
         cmd.append("--verbose")
+
+    # Refurb has no pluggable type checker, so Mypy's own flags are its only
+    # speed lever. They are appended after "--" (Refurb forwards everything
+    # past that separator to Mypy) and taken from the repository's own
+    # [tool.refurb].mypy_args, which Refurb would otherwise discard.
+    if hook_name == "refurb":
+        cmd.extend(build_refurb_mypy_args(pkg_path))
+
     return cmd
 
 

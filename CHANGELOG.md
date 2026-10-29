@@ -36,6 +36,30 @@ topic: changelog
 
 ### Changed
 
+- perf(refurb): the refurb hook now runs with Mypy's import traversal
+  skipped (`--follow-imports=skip`). Refurb embeds Mypy, so Mypy's own
+  flags are its only speed lever: by default Mypy type-checks every
+  import transitively, and any dependency shipping a `py.typed` marker is
+  analyzed as if it were first-party source.
+
+  The effect depends on the repository's Mypy configuration. Where
+  `follow_imports` is left at the default, the scan drops from minutes to
+  seconds — mcp-common from 294s to 55s, mahavishnu from minutes to
+  about 75s. Where a repository's config already sets `follow_imports =
+  "skip"` (this repo's mypy.ini does), the flag is effectively a no-op; it
+  still makes the behaviour explicit rather than incidental, so a change
+  to mypy.ini cannot silently slow the hook back down.
+
+  This also changes what the hook reports. `--ignore-missing-imports`
+  suppresses the third-party "missing stub" failures that previously
+  failed the hook, and `--follow-imports=skip` means a rule whose answer
+  depends on a third-party library's default value may no longer fire —
+  FURB120 is the concrete case. The skipped set is a strict subset: no new
+  findings appear, and the default check set is unaffected.
+
+  A repository's own `[tool.refurb].mypy_args` is authoritative when
+  present — including when it is an empty list, which opts out.
+
 - deps: the OpenTelemetry SDK and the OTLP exporters are no longer declared
   here. mcp-common's `producer_telemetry` imports them, and mcp-common
   declares them, so they arrive transitively. The `mcp-common` floor moves

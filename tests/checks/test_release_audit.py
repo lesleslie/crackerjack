@@ -348,22 +348,49 @@ def test_symbol_in_source_unreadable_dir_skipped(
 def test_verify_added_found(tmp_path: Path) -> None:
     (tmp_path / "m.py").write_text("def hello():\n    pass\n")
     claim = ChangelogClaim(ClaimType.ADDED, "m.hello")
-    r = _verify_added(claim, tmp_path)
+    r = _verify_added(claim, tmp_path, tmp_path)
     assert r.passed is True
     assert "added" in r.message
 
 
 def test_verify_added_missing(tmp_path: Path) -> None:
     claim = ChangelogClaim(ClaimType.ADDED, "m.NotThere")
-    r = _verify_added(claim, tmp_path)
+    r = _verify_added(claim, tmp_path, tmp_path)
     assert r.passed is False
     assert "no definition found" in r.message
+
+
+def test_verify_added_file_path_found(tmp_path: Path) -> None:
+    """A file-path claim is verified on disk, not by searching source."""
+    scripts = tmp_path / "scripts"
+    scripts.mkdir()
+    (scripts / "audit_cli_inventory.py").write_text("# helper\n")
+    claim = ChangelogClaim(
+        ClaimType.ADDED,
+        "audit_cli_inventory.py",
+        is_file_path=True,
+    )
+    r = _verify_added(claim, tmp_path, tmp_path)
+    assert r.passed is True
+    assert "file verified on disk" in r.message
+
+
+def test_verify_added_file_path_missing(tmp_path: Path) -> None:
+    """A file-path claim whose file is absent → fail."""
+    claim = ChangelogClaim(
+        ClaimType.ADDED,
+        "audit_cli_inventory.py",
+        is_file_path=True,
+    )
+    r = _verify_added(claim, tmp_path, tmp_path)
+    assert r.passed is False
+    assert "does not exist" in r.message
 
 
 def test_verify_removed_actually_removed(tmp_path: Path) -> None:
     """Removed claim + symbol gone from source → pass."""
     claim = ChangelogClaim(ClaimType.REMOVED, "m.NotThere")
-    r = _verify_removed(claim, tmp_path)
+    r = _verify_removed(claim, tmp_path, tmp_path)
     assert r.passed is True
 
 
@@ -371,7 +398,7 @@ def test_verify_removed_still_present(tmp_path: Path) -> None:
     """Removed claim + symbol still exists → fail."""
     (tmp_path / "m.py").write_text("def still_here():\n    pass\n")
     claim = ChangelogClaim(ClaimType.REMOVED, "m.still_here")
-    r = _verify_removed(claim, tmp_path)
+    r = _verify_removed(claim, tmp_path, tmp_path)
     assert r.passed is False
     assert "still exists" in r.message
 
