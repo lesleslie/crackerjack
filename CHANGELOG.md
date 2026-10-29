@@ -10,6 +10,27 @@ blocks_on: []
 topic: changelog
 ---
 
+## [0.91.2] - 2026-10-28
+
+### Added
+
+- Redact home paths from output and resolve the Bodai registry dynamically
+- Resolve registry paths against a projects root
+
+### Changed
+
+- Apply ruff formatter output to 30 modules
+
+### Fixed
+
+- deps: Keep the OTel SDK and exporter out of creosote's unused report
+- Resolve hardcoded home paths in scripts and cross-repo tests
+
+### Build
+
+- deps: Give crackerjack an OpenTelemetry exporter
+- deps: Take the OTel packages from mcp-common instead
+
 ## [Unreleased]
 
 ### Changed

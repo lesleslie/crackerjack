@@ -195,9 +195,30 @@ def test_projects_root_is_derived_from_the_registry_location(tmp_path: Path) -> 
     """The registry sits at ``<root>/mahavishnu/``, so its parent is the root."""
     registry = tmp_path / "mahavishnu" / REGISTRY_FILENAME
     registry.parent.mkdir(parents=True)
+    # A primary checkout's ``.git`` is a *directory*. That is what tells a
+    # projects root apart from the fleet's worktree bucket.
+    (registry.parent / ".git").mkdir()
     registry.write_text("| demo | demo/ | py | notes |\n")
 
     assert resolve_projects_root(registry) == tmp_path
+
+
+def test_projects_root_ignores_a_registry_inside_a_worktree(tmp_path: Path) -> None:
+    """The fleet's worktree bucket must not be mistaken for a projects root.
+
+    The bucket holds directories named after fleet repos, so the name alone
+    cannot tell it apart from a projects root -- but a git worktree's
+    ``.git`` is a *file* pointing at the real repository, while a primary
+    checkout's is a *directory*. Without that check the root resolves to
+    the bucket, and every repo then resolves to a worktree instead of the
+    primary checkout.
+    """
+    registry = tmp_path / "mahavishnu" / REGISTRY_FILENAME
+    registry.parent.mkdir(parents=True)
+    (registry.parent / ".git").write_text("gitdir: /elsewhere/.git/worktrees/x\n")
+    registry.write_text("| demo | demo/ | py | notes |\n")
+
+    assert resolve_projects_root(registry) == Path.home() / "Projects"
 
 
 def test_projects_root_falls_back_to_the_home_layout() -> None:

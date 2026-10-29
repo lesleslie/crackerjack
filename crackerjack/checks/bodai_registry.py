@@ -161,6 +161,18 @@ def resolve_registry_path() -> Path | None:
     return None
 
 
+def _is_primary_checkout(repo_root: Path) -> bool:
+    """Whether `repo_root` is a primary git checkout rather than a worktree.
+
+    A git worktree's ``.git`` is a *file* that points at the real
+    repository; a primary checkout's is a *directory*. The fleet's
+    worktree bucket (``~/.local/state/mahavishnu/worktrees/``) holds
+    directories named after fleet repos, so the name alone cannot tell a
+    projects root from the bucket -- but the ``.git`` entry can.
+    """
+    return (repo_root / ".git").is_dir()
+
+
 def resolve_projects_root(registry_path: Path | None = None) -> Path:
     """Resolve the projects root that the registry's Path column is relative to.
 
@@ -187,7 +199,7 @@ def resolve_projects_root(registry_path: Path | None = None) -> Path:
 
     if registry_path is not None:
         repo_dir = registry_path.resolve().parent
-        if repo_dir.name == REGISTRY_REPO_DIRNAME:
+        if repo_dir.name == REGISTRY_REPO_DIRNAME and _is_primary_checkout(repo_dir):
             return repo_dir.parent
 
     try:

@@ -476,4 +476,16 @@ test-results/
 .claude/**/*~.tmp
 .claude/**/test_hook_*.txt
 .claude/**/hook_test_marker.txt
+# Runtime data dirs (per-repo scratch: DuckDB/SQLite caches, local state).
+# Added 2026-10-20 after akosha's data/warm/warm.db (274 KB) was found
+# tracked on main: c37dde2 (2026-09-26) untracked it and added a repo-local
+# rule, then f4a5376 ("chore: bump version", the next day) re-added the
+# binary and dropped the rule. A .gitignore rule only binds UNTRACKED
+# files, so once the artifact re-entered the index the rule stopped
+# mattering and could be deleted alongside it, leaving nothing to catch a
+# repeat. Carrying the rule here makes `crackerjack gitignore sync` apply
+# it fleet-wide instead of each repo rediscovering the gap.
+# Verified 2026-10-20: no tracked file under any data/ dir in akosha,
+# oneiric, mahavishnu, crackerjack, session-buddy or mcp-common.
+data/
 # <<< bodai-shared-gitignore <<<
