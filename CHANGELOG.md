@@ -21,6 +21,16 @@ topic: changelog
   recorded but had nowhere to go — the API has no exporter, so nothing ever
   left the process and the watcher read the service as absent.
 
+### Fixed
+
+- deps: stop the creosote hook from reporting `opentelemetry-sdk` and
+  `opentelemetry-exporter-otlp-proto-http` as unused. Both are consumed
+  by mcp-common's `producer_telemetry`, which imports them inside
+  function bodies to build the span exporter, so creosote's scan of
+  crackerjack's own package cannot see them used. Excluding them keeps
+  them declared, which is what the span export needs — the OpenTelemetry
+  API alone records spans but has no exporter to send them with.
+
 ## [0.91.1] - 2026-10-24
 
 ### Changed

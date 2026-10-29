@@ -683,6 +683,18 @@ exclude-deps = [
     "mdformat-ruff",
     "watchdog",
     "websockets",
+    # Consumed by a dependency's lazy import, not by crackerjack's own
+    # code. mcp-common's producer_telemetry imports the OTel SDK and the
+    # OTLP/HTTP exporter inside function bodies to build the span
+    # exporter, and mcp-common does not declare them itself, so this
+    # project must. Creosote scans crackerjack's package for `import`
+    # statements and sees neither package used, so it reports them as
+    # unused. They are load-bearing: the API alone records spans but has
+    # no exporter, so without these the spans never leave the process and
+    # the receiver's heartbeat watcher reads crackerjack as an absent
+    # service.
+    "opentelemetry-sdk",
+    "opentelemetry-exporter-otlp-proto-http",
     # Subprocess-only: invoked via tool wrappers (e.g. crackerjack.tools.codespell_wrapper).
     # Never imported by name, so creosote (which scans `import` statements)
     # cannot see them in use and would false-positive them as unused.
