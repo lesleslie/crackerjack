@@ -12,24 +12,23 @@ topic: changelog
 
 ## [Unreleased]
 
-### Added
+### Changed
 
-- deps: `opentelemetry-sdk` and `opentelemetry-exporter-otlp-proto-http`, so
-  crackerjack can report spans to the Bodai span substrate. The receiver's
-  heartbeat roster lists crackerjack as a service expected to be producing
-  spans, and with only the OpenTelemetry API available the spans were
-  recorded but had nowhere to go — the API has no exporter, so nothing ever
-  left the process and the watcher read the service as absent.
+- deps: the OpenTelemetry SDK and the OTLP exporters are no longer declared
+  here. mcp-common's `producer_telemetry` imports them, and mcp-common
+  declares them, so they arrive transitively. The `mcp-common` floor moves
+  to `>=0.33.0`, the release that carries them as runtime dependencies.
+  Crackerjack still reports spans to the Bodai span substrate — the
+  packages just come from the project that imports them.
 
 ### Fixed
 
-- deps: stop the creosote hook from reporting `opentelemetry-sdk` and
-  `opentelemetry-exporter-otlp-proto-http` as unused. Both are consumed
-  by mcp-common's `producer_telemetry`, which imports them inside
-  function bodies to build the span exporter, so creosote's scan of
-  crackerjack's own package cannot see them used. Excluding them keeps
-  them declared, which is what the span export needs — the OpenTelemetry
-  API alone records spans but has no exporter to send them with.
+- deps: the creosote hook no longer reports the OpenTelemetry SDK and the
+  OTLP exporter as unused. They were flagged because this project declared
+  them while importing neither by name, and a static checker can only match
+  a declaration to an import it can see. Keeping the declaration here also
+  meant every Bodai repo that produces spans had to repeat the same version
+  floors by hand.
 
 ## [0.91.1] - 2026-10-24
 
