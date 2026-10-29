@@ -25,6 +25,7 @@ topic: changelog
 
 - deps: Keep the OTel SDK and exporter out of creosote's unused report
 - Resolve hardcoded home paths in scripts and cross-repo tests
+- Do not resolve a git worktree bucket as the projects root
 
 ### Build
 
