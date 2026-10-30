@@ -886,3 +886,181 @@ class TestRecordHealthSnapshot:
         assert row is not None
         assert row["metric_type"] == "health_adapters"
         assert row["metric_value"] == 1.0
+
+
+# ---------------------------------------------------------------------------
+# _record_health_snapshot — referential integrity of result_id
+# ---------------------------------------------------------------------------
+
+
+class TestHealthSnapshotReferentialIntegrity:
+    """Regression coverage for the dangling ``result_id`` defect.
+
+    ``quality_metrics_history.result_id`` declares a foreign key to
+    ``crackerjack_results(id)``, but the snapshot writer used to point every
+    metric row at a ``snapshot_id`` that was never inserted into the parent
+    table.  SQLite does not enforce foreign keys unless the connection
+    enables ``PRAGMA foreign_keys``, so every health snapshot silently left
+    three orphaned metric rows behind.
+    """
+
+    @staticmethod
+    def _run_health_check(tmp_path: Path) -> Path:
+        """Run a health check whose snapshot lands in a temp database."""
+        db_path = tmp_path / "crackerjack_integration.db"
+        categories = {
+            "adapters": _make_component_health(HealthStatus.HEALTHY, "adapters"),
+            "managers": _make_component_health(HealthStatus.DEGRADED, "managers"),
+            "services": _make_component_health(HealthStatus.HEALTHY, "services"),
+        }
+        with patch.object(
+            health_mod, "DEFAULT_INTEGRATION_DB_PATH", db_path
+        ), patch.object(
+            health_mod, "_check_adapters", return_value=categories["adapters"]
+        ), patch.object(
+            health_mod, "_check_managers", return_value=categories["managers"]
+        ), patch.object(
+            health_mod, "_check_services", return_value=categories["services"]
+        ):
+            handle_health_check(quiet=True, pkg_path=tmp_path)
+        return db_path
+
+    def test_every_metric_row_has_a_matching_parent_result(self, tmp_path: Path) -> None:
+        db_path = self._run_health_check(tmp_path)
+
+        with sqlite3.connect(str(db_path)) as conn:
+            conn.row_factory = sqlite3.Row
+            orphans = conn.execute(
+                """
+                SELECT q.id AS id, q.result_id AS result_id
+                FROM quality_metrics_history AS q
+                LEFT JOIN crackerjack_results AS r ON r.id = q.result_id
+                WHERE q.result_id IS NOT NULL AND r.id IS NULL
+                """,
+            ).fetchall()
+
+        assert orphans == []
+
+    def test_foreign_key_check_reports_no_violations(self, tmp_path: Path) -> None:
+        db_path = self._run_health_check(tmp_path)
+
+        with sqlite3.connect(str(db_path)) as conn:
+            violations = conn.execute("PRAGMA foreign_key_check").fetchall()
+
+        assert violations == []
+
+    def test_parent_result_row_records_the_health_command(self, tmp_path: Path) -> None:
+        db_path = self._run_health_check(tmp_path)
+
+        with sqlite3.connect(str(db_path)) as conn:
+            conn.row_factory = sqlite3.Row
+            rows = conn.execute(
+                """
+                SELECT command, exit_code, working_directory
+                FROM crackerjack_results
+                """,
+            ).fetchall()
+
+        assert len(rows) == 1
+        assert rows[0]["command"] == "crackerjack health"
+        assert rows[0]["exit_code"] == 0
+        assert rows[0]["working_directory"] == str(tmp_path.resolve())
+
+    def test_metric_rows_are_still_written(self, tmp_path: Path) -> None:
+        db_path = self._run_health_check(tmp_path)
+
+        with sqlite3.connect(str(db_path)) as conn:
+            conn.row_factory = sqlite3.Row
+            rows = conn.execute(
+                """
+                SELECT metric_type, metric_value, project_path
+                FROM quality_metrics_history
+                ORDER BY metric_type
+                """,
+            ).fetchall()
+
+        assert {row["metric_type"] for row in rows} == {
+            "health_adapters",
+            "health_managers",
+            "health_services",
+        }
+        values = {row["metric_type"]: row["metric_value"] for row in rows}
+        assert values["health_adapters"] == 1.0
+        assert values["health_managers"] == 0.0
+        assert values["health_services"] == 1.0
+        assert all(row["project_path"] == str(tmp_path.resolve()) for row in rows)
+
+    def test_snapshot_on_fresh_database_creates_the_parent_table(
+        self, tmp_path: Path
+    ) -> None:
+        """A database without the parent table still gets a valid association."""
+        db_path = tmp_path / "fresh.db"
+        report = SystemHealthReport(
+            overall_status=HealthStatus.HEALTHY,
+            categories={
+                "adapters": _make_component_health(HealthStatus.HEALTHY, "adapters"),
+            },
+            summary="ok",
+        )
+
+        _record_health_snapshot(tmp_path, report, db_path=db_path)
+
+        with sqlite3.connect(str(db_path)) as conn:
+            conn.row_factory = sqlite3.Row
+            metric_row = conn.execute(
+                "SELECT metric_type, result_id FROM quality_metrics_history",
+            ).fetchone()
+            parent = conn.execute(
+                "SELECT id FROM crackerjack_results WHERE id = ?",
+                (metric_row["result_id"],),
+            ).fetchone()
+            violations = conn.execute("PRAGMA foreign_key_check").fetchall()
+
+        assert metric_row["metric_type"] == "health_adapters"
+        assert parent is not None
+        assert violations == []
+
+    def test_no_metric_rows_are_written_when_the_parent_insert_fails(
+        self, tmp_path: Path
+    ) -> None:
+        """A failed parent insert must not leave dangling metric rows behind."""
+        db_path = tmp_path / "strict.db"
+        with sqlite3.connect(str(db_path)) as conn:
+            conn.execute(
+                """
+                CREATE TABLE crackerjack_results (
+                    id TEXT PRIMARY KEY,
+                    command TEXT NOT NULL,
+                    exit_code INTEGER,
+                    stdout TEXT,
+                    stderr TEXT,
+                    execution_time REAL,
+                    timestamp TIMESTAMP,
+                    working_directory TEXT,
+                    parsed_data TEXT,
+                    quality_metrics TEXT,
+                    memory_insights TEXT,
+                    required_column TEXT NOT NULL
+                )
+                """,
+            )
+
+        report = SystemHealthReport(
+            overall_status=HealthStatus.HEALTHY,
+            categories={
+                "adapters": _make_component_health(HealthStatus.HEALTHY, "adapters"),
+            },
+            summary="ok",
+        )
+
+        # Must not raise: the write path swallows database errors.
+        _record_health_snapshot(tmp_path, report, db_path=db_path)
+
+        with sqlite3.connect(str(db_path)) as conn:
+            metric_rows = conn.execute(
+                "SELECT COUNT(*) FROM quality_metrics_history",
+            ).fetchone()[0]
+            violations = conn.execute("PRAGMA foreign_key_check").fetchall()
+
+        assert metric_rows == 0
+        assert violations == []

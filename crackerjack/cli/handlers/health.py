@@ -345,6 +345,30 @@ def _record_health_snapshot(
         import uuid
 
         with sqlite3.connect(str(target)) as conn:
+            # Enforce the declared foreign key for this write path so a
+            # dangling ``result_id`` fails loudly instead of silently.
+            conn.execute("PRAGMA foreign_keys=ON")
+            # The parent table of the ``quality_metrics_history`` foreign
+            # key.  Schema mirrors the one Session-Buddy creates for the
+            # shared integration database; it is a no-op when the table
+            # already exists.
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS crackerjack_results (
+                    id TEXT PRIMARY KEY,
+                    command TEXT NOT NULL,
+                    exit_code INTEGER,
+                    stdout TEXT,
+                    stderr TEXT,
+                    execution_time REAL,
+                    timestamp TIMESTAMP,
+                    working_directory TEXT,
+                    parsed_data TEXT,
+                    quality_metrics TEXT,
+                    memory_insights TEXT
+                )
+                """,
+            )
             conn.execute(
                 """
                 CREATE TABLE IF NOT EXISTS quality_metrics_history (
@@ -361,6 +385,18 @@ def _record_health_snapshot(
             now = datetime.now(UTC).isoformat()
             project_path = str(pkg_path.resolve())
             snapshot_id = f"health_{uuid.uuid4().hex}"
+            # ``quality_metrics_history.result_id`` references
+            # ``crackerjack_results(id)``.  The parent row has to be
+            # written before the metric rows, otherwise every health
+            # snapshot leaves orphaned metric rows behind.
+            conn.execute(
+                """
+                INSERT OR REPLACE INTO crackerjack_results
+                (id, command, exit_code, timestamp, working_directory)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                (snapshot_id, "crackerjack health", 0, now, project_path),
+            )
             rows = [
                 (
                     f"{snapshot_id}_{category_name}",
