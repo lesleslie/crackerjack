@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 from crackerjack.utils.path_redaction import redact_path
+from crackerjack.utils.xdg_paths import data_dir
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -490,9 +491,11 @@ class SessionBuddyIntegration:
 
 
 class SessionBuddyDirectClient:
-    def __init__(self, db_path: str = "~/.claude/data/workflow_metrics.db") -> None:
+    def __init__(self, db_path: str | None = None) -> None:
         import os
 
+        if db_path is None:
+            db_path = str(data_dir() / "workflow_metrics.db")
         self.db_path = os.path.expanduser(db_path)
         self._conn: sqlite3.Connection | duckdb.DuckDBPyConnection | None = None
 
@@ -598,12 +601,12 @@ class SessionBuddyDirectClient:
 
 
 class CorrelationStorageSQLite:
-    def __init__(
-        self, db_path: str | Path = "~/.claude/data/correlation_insights.db"
-    ) -> None:
+    def __init__(self, db_path: str | Path | None = None) -> None:
         import os
 
-        self.db_path = Path(os.path.expanduser(db_path))
+        if db_path is None:
+            db_path = data_dir() / "correlation_insights.db"
+        self.db_path = Path(os.path.expanduser(str(db_path)))
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
 
         self.conn: sqlite3.Connection | None = None
@@ -732,8 +735,8 @@ class CorrelationStorageSQLite:
 
 def create_session_buddy_integration(
     git_metrics_reader: GitMetricsReader | None = None,
-    db_path: str = "~/.claude/data/workflow_metrics.db",
-    insights_db_path: str = "~/.claude/data/correlation_insights.db",
+    db_path: str | None = None,
+    insights_db_path: str | None = None,
 ) -> SessionBuddyIntegration:
 
     session_buddy_client = SessionBuddyDirectClient(db_path=db_path)

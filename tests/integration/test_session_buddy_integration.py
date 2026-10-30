@@ -452,8 +452,14 @@ class TestCorrelationStorageSQLite:
 class TestFactoryFunction:
     """Tests for create_session_buddy_integration factory."""
 
-    def test_create_integration_with_defaults(self) -> None:
+    def test_create_integration_with_defaults(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Test factory creates integration with default components."""
+        # The default databases live under the XDG data root. Point it at a
+        # sandbox so the test does not create anything in the real home.
+        monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path))
+
         integration = create_session_buddy_integration()
 
         assert integration is not None
@@ -461,8 +467,14 @@ class TestFactoryFunction:
         assert integration.session_buddy is not None
         assert integration.storage is not None
 
-    def test_create_integration_with_custom_git_reader(self) -> None:
+    def test_create_integration_with_custom_git_reader(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Test factory with custom git metrics reader."""
+        # The default databases live under the XDG data root. Point it at a
+        # sandbox so the test does not create anything in the real home.
+        monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path))
+
         custom_reader = MockGitMetricsReader()
         integration = create_session_buddy_integration(
             git_metrics_reader=custom_reader,
