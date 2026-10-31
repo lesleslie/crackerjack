@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import hashlib
-from contextlib import suppress
 from dataclasses import dataclass
 from enum import IntEnum
 from pathlib import Path
@@ -61,9 +60,6 @@ class CloneGroup:
 
 
 class CloneGrouper:
-    def __init__(self, dhara: Any | None = None) -> None:
-        self._dhara = dhara
-
     def group_pairs(self, raw_pairs: list[dict[str, Any]]) -> list[CloneGroup]:
         groups: list[CloneGroup] = []
         for pair in raw_pairs:
@@ -98,28 +94,6 @@ class CloneGrouper:
             "CloneGrouper: grouped %d pairs into %d groups", len(raw_pairs), len(groups)
         )
         return groups
-
-    async def group_pairs_filtered(
-        self, raw_pairs: list[dict[str, Any]]
-    ) -> list[CloneGroup]:
-        groups = self.group_pairs(raw_pairs)
-        if self._dhara is None:
-            return groups
-
-        filtered: list[CloneGroup] = []
-        for group in groups:
-            with suppress(Exception):
-                existing = await self._dhara.get_async(
-                    f"clone-handled/{group.group_id}"
-                )
-                if existing:
-                    logger.info(
-                        "CloneGrouper: skipping handled group %s", group.group_id
-                    )
-                    continue
-            filtered.append(group)
-
-        return filtered
 
     @staticmethod
     def _make_group_id(

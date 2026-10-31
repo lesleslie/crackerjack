@@ -1,12 +1,12 @@
 """TDD red-green tests for adapter runtime observability.
 
 Spec: docs/specs/2026-06-22-adapter-runtime-observability-design.md
-Pivot (Phase 3): Dhara-backed settings versioning (was: cross-machine session continuity).
+Pivot (Phase 3): HTTP-backed settings versioning (was: cross-machine session continuity).
 
 Coverage targets:
     - AdapterSettingsVersion: immutable value model for a settings row.
     - SettingsActivationRecord: write side (persister interface + in-memory impl).
-    - HttpSettingsPersister: stub for HTTP CRUD (Workstream C — blocked on Dhara HTTP).
+    - HttpSettingsPersister: stub for HTTP CRUD (Workstream C — blocked on the remote HTTP surface).
 
 The seam with Plan 4 Phase D (``mahavishnu/distill/tracked_settings.py``, Oneiric side)
 is documented in ``mahavishnu/observability/adapter_runtime.py``. Both sides share
@@ -262,8 +262,8 @@ class TestHttpSettingsPersister:
         assert isinstance(p, SettingsPersister)
 
     def test_constructs_with_base_url(self) -> None:
-        p = HttpSettingsPersister(base_url="http://example/dhara")
-        assert p.base_url == "http://example/dhara"
+        p = HttpSettingsPersister(base_url="http://example/storage")
+        assert p.base_url == "http://example/storage"
 
 
 # ---------------------------------------------------------------------------

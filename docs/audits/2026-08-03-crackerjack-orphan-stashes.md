@@ -363,11 +363,11 @@ Touches: `crackers/adapters/lsp/_base.py`, `crackerjack/adapters/lsp/_manager.py
 `agents/helpers/ast_transform/surgeons/libcst_surgeon.py`,
 `crackerjack/agents/refactoring_agent.py`, `decorators/error_handling.py`,
 `executors/tool_proxy.py`, `integration/akosha_integration.py`,
-`integration/akosha_learning.py`, `integration/dhara_integration.py`,
+`integration/akosha_learning.py`, `integration/adapter_learning.py`,
 `integration/session_buddy_integration.py`, and more.
 
-**Cross-cutting**: changes the LSP adapters AND the integrations with akosha,
-dhara, and session-buddy. Significant scope.
+**Cross-cutting**: changes the LSP adapters AND the integrations with akosha
+and session-buddy. Significant scope.
 
 **Action**: branch it; design doc needed.
 
@@ -454,7 +454,7 @@ deleted the recovered stash@{8} branch), the path taken was **drop everything**
       needs design review.
 - [ ] stash@{10} — anti-AI flavor + cross-repo. Touches vendored
       `mahavishnu/...`; needs integration review.
-- [ ] stash@{11} — LSP refactor + integrations. Touches akosha/dhara/
+- [ ] stash@{11} — LSP refactor + integrations. Touches akosha/
       session-buddy integration modules; needs ecosystem review.
 
 The Tier 2-4 work above represents the canonical implementations of multiple
@@ -550,7 +550,7 @@ specs in `docs/specs/` and 12 plans in `docs/plans/`:
 | | | `2026-07-10-output-validator-traceback-details` | active |
 | | | `2026-07-10-validation-coordinator-serialization` | active |
 | @{10} | `2002f21c` (tier3-12-ruff-dedup) | `docs/followups/2026-07-04-tier3-implementation-plan.md` | Historical |
-| @{11} | `97823f54` (ty_audit triage) | Cross-system integrations (akosha/dhara/session-buddy) | — |
+| @{11} | `97823f54` (ty_audit triage) | Cross-system integrations (akosha/session-buddy) | — |
 
 ### Five active plans whose implementations are partially stashed
 

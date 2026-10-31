@@ -47,7 +47,6 @@ The README is the most-referenced doc; it carries the worst mismatches:
 - **CLI flags that don't exist:** `--enhanced-monitor`, `--monitor`, `--orchestrated`, `--update-precommit`, `--no-config-update` (typo for `--no-config-updates`), `--disable-global-locking` (typo for `--disable-global-locks`).
 - **CLI subcommands that don't exist:** `crackerjack init-ci`, `set-threshold`, `add-check`, `gate create`, `gate add-check`, `gate set-threshold`.
 - **MCP server that doesn't exist:** `session-mgmt` (conflated with `session-buddy`).
-- **Dhara description wrong:** "SQLite + WAL" — current is DuckDB + Sqlite.
 - **Session-Buddy feature drift:** "automatic git project tracking" via a `crackerjack_integration.py` module that does not exist in either repo.
 - **Tool count understates reality:** lists 8 MCP tools; actual surface is ~42.
 - **Slash-command framing wrong:** treats Claude Code slash commands (`/checkpoint`, `/quit`) as Crackerjack CLI invocations.
@@ -203,7 +202,6 @@ ______________________________________________________________________
 
 - Session-Buddy 8678 (HTTP) + 8765 (WS) — confirmed.
 - Akosha 8682 — confirmed.
-- Dhara 8683 — confirmed.
 - Mahavishnu 8680 — confirmed.
 - Crackerjack HTTP 8676 — confirmed.
 
@@ -214,7 +212,7 @@ ______________________________________________________________________
 
 #### Component role / version drift
 
-- `README.md:26, 86, 605` says "Dhara Storage (SQLite + WAL)" — actual is DuckDB + Sqlite.
+- `README.md` storage diagram named a retired external storage component — actual is the local SQLite store. **Fixed 2026-10-30.**
 - `README.md:444` "Crackerjack integrates with **session-buddy** for AI agent metrics tracking" — the 12-agent AI-fix subsystem that produced these was removed 2026-08-06.
 - `README.md:1782-1840` "session-buddy" section claims automatic git project tracking via `crackerjack_integration.py` — no such file in session-buddy source.
 
@@ -260,7 +258,7 @@ ______________________________________________________________________
 - `docs/python-review-logging-progress-implementation.md:261, 599` imports `crackerjack.utils.logger_config` and `crackerjack.utils.logger_state` — neither module exists in `crackerjack/utils/`.
 - `docs/AI_FIX_TEST_FAILURE_IMPLEMENTATION_PLAN.md:642, 1173` imports `crackerjack.parsers.test_result_parser.TestResultParser` and `TestFailureCategory` — actual path is `crackerjack.services.testing.test_result_parser`; exports are `TestErrorType` and `TestFailure` (not `TestFailureCategory`).
 - `docs/reporting_tools_investigation.md:318` + `docs/archive/analysis/PHASE_3.3_SOLID_ANALYSIS.md:93` import `crackerjack.adapters.format.ruff_adapter.RuffAdapter` and `crackerjack.adapters.format.ruff.RuffAdapter,RuffSettings` — actual is `crackerjack.adapters.format.ruff` (`ruff.py`); no `_adapter` suffix.
-- `docs/specs/2026-06-03-dhara-mcp-migration-design.md:581, 647` references `crackerjack.services.aiosqlite_cleanup` — module does not exist.
+- `docs/specs/.archive/2026-06-03-mcp-adapter-learner-migration-design.md:581, 647` references `crackerjack.services.aiosqlite_cleanup` — module does not exist.
 
 #### Subcommand / CLI drift
 

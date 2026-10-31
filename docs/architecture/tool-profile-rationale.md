@@ -5,7 +5,7 @@
 Adopting `mcp_common.tools.dispatch._apply_tool_profile` (mcp-common 0.18.0)
 as the canonical mechanism for gating Crackerjack MCP tools based on
 `CRACKERJACK_TOOL_PROFILE` (matches `MAHAVISHNU_TOOL_PROFILE` /
-`AKOSHA_TOOL_PROFILE` / `DHARA_TOOL_PROFILE`).
+`AKOSHA_TOOL_PROFILE`).
 
 W2a deletes the legacy `crackerjack/mcp/tools/discover_tools.py`
 (236 lines: `TOOL_REGISTRY` + `DEFERRED_TOOLS` + `register_discover_tools`)

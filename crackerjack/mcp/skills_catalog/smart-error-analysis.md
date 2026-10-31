@@ -1,6 +1,6 @@
 ---
 name: smart-error-analysis
-description: Use ONLY when the user explicitly types `/crackerjack:smart-error-analysis` or selects this Skill from the picker to surface common Crackerjack fix-failure patterns. Do not auto-trigger. Routes through `mcp__crackerjack__smart_error_analysis` with `use_cache=True` for the cached Dhara-backed path. Use when the user asks "what keeps breaking in the test suite?", "which hook fails most often?", or "is there a pattern in the recent failures?"
+description: Use ONLY when the user explicitly types `/crackerjack:smart-error-analysis` or selects this Skill from the picker to surface common Crackerjack fix-failure patterns. Do not auto-trigger. Routes through `mcp__crackerjack__smart_error_analysis` with `use_cache=True` for the cached local error-pattern path. Use when the user asks "what keeps breaking in the test suite?", "which hook fails most often?", or "is there a pattern in the recent failures?"
 allowed-tools: mcp__crackerjack__smart_error_analysis, Read
 ---
 
@@ -17,16 +17,16 @@ issue:
 - "Any pattern in the recent failures?"
 - "What did the cache return?"
 
-The Skill returns aggregated fix-failure records from Dhara (the
-Crackerjack state substrate) and surfaces the most frequent patterns
+The Skill returns aggregated fix-failure records from the local
+Crackerjack error-pattern cache and surfaces the most frequent patterns
 in the last 30 days.
 
 ## What the tool does
 
-`mcp__crackerjack__smart_error_analysis` queries Dhara for accumulated
-fix-failure records. The `use_cache=True` flag returns the cached
-result if it was computed within the last 5 minutes; the first call
-per session triggers a fresh aggregation.
+`mcp__crackerjack__smart_error_analysis` reads accumulated fix-failure
+records from the local error-pattern cache. The `use_cache=True` flag
+serves the cached result; the first call per session triggers a fresh
+aggregation.
 
 The output includes:
 
@@ -48,8 +48,8 @@ The output includes:
 - **Cache miss on first call**: response includes `cached=False`; the
   caller should retry after ~30s. Surface to the user as "warming
   up the cache".
-- **Dhara unreachable**: response includes `errors=["akosha: ...",
-  "dhara: connection refused"]`. Surface verbatim; do not retry
+- **Cache unavailable**: response includes `status="error"` with a
+  `message` describing the failure. Surface verbatim; do not retry
   silently.
 - **Stale cache**: if `cached=True` but `cache_age_seconds > 300`,
   surface "cache stale; call with use_cache=False to refresh".

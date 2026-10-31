@@ -30,7 +30,7 @@ Bodai fleet repos have a canonical `.gitignore` snippet that crackerjack CI enfo
 
 ### Failure Conditions (verifier-only)
 
-1. `crackerjack run` against `/Users/les/Projects/dhara` (and each of the other 28 fleet repos) exits 0 with the canonical snippet present in the repo's `.gitignore`.
+1. `crackerjack run` against `/Users/les/Projects/akosha` (and each of the other fleet repos) exits 0 with the canonical snippet present in the repo's `.gitignore`.
 2. Removing the canonical snippet block from any one fleet repo's `.gitignore` causes `crackerjack run` to exit 1 with a clear error naming the missing block.
 4. Running `crackerjack gitignore-sync` against a fleet repo preserves every pattern in the repo's existing `.gitignore` that is not in the canonical snippet.
 5. Running the new check against `/Users/les/Projects/<some-non-bodai-repo>` (any project outside the Bodai registry) does not modify the repo and exits 0.

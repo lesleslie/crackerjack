@@ -113,7 +113,7 @@ ______________________________________________________________________
          ┌──────────────▼──────────────┐
          │    Session-Buddy             │
          │  (Skills Metrics Storage)    │
-         │  • Dhara (SQLite + WAL)     │
+         │  • Local SQLite (WAL)       │
          │  • Vector embeddings (Akosha)│
          │  • Semantic search           │
          └──────────────────────────────┘
@@ -696,9 +696,9 @@ ______________________________________________________________________
 
 ## Data Migration
 
-### Migrate from JSON to Dhara
+### Migrate from JSON to SQLite
 
-**Legacy JSON-based metrics** → **Dhara SQLite database**
+**Legacy JSON-based metrics** → **SQLite database**
 
 #### Migration Script
 

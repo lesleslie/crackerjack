@@ -86,7 +86,7 @@ class InMemorySettingsPersister:
 
 
 class HttpSettingsPersister:
-    # TODO(Workstream C): wire to the actual Dhara HTTP client once the
+    # TODO(Workstream C): wire to the real HTTP client once the
 
     def __init__(self, base_url: str, *, timeout_seconds: float = 5.0) -> None:
         self.base_url = base_url.rstrip("/")
@@ -97,7 +97,7 @@ class HttpSettingsPersister:
 
         raise NotImplementedError(
             "HttpSettingsPersister is a stub — Workstream C is blocked on "
-            "the Dhara HTTP surface. Use InMemorySettingsPersister in tests "
+            "the remote HTTP surface. Use InMemorySettingsPersister in tests "
             "or wait for the endpoint to ship."
         )
 

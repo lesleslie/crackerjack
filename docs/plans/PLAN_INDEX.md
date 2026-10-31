@@ -1,6 +1,6 @@
 # Plan Index
 
-_Regenerated 2026-10-29 by `crackerjack.tools.plan_index_sync` (phase)._
+_Regenerated 2026-10-31 by `crackerjack.tools.plan_index_sync` (phase)._
 
 ### Docs: adr
 
@@ -17,7 +17,6 @@ _Regenerated 2026-10-29 by `crackerjack.tools.plan_index_sync` (phase)._
 |---|---|---|---|---|---|
 | [`docs/plans/2026-05-20-phase-0-event-bus-plan.md`](2026-05-20-phase-0-event-bus-plan.md) | 2026-07-17 | `active` | `implementation` | `lifecycle` | Phase 0 Implementation Plan — AI-Fix Event Bus |
 | [`docs/plans/2026-06-02-ai-fix-display-loop-bugs.md`](2026-06-02-ai-fix-display-loop-bugs.md) | 2026-07-17 | `active` | `implementation` | `lifecycle` | AI-Fix Display & Loop Bugs Implementation Plan |
-| [`docs/plans/2026-06-03-dhara-mcp-migration.md`](2026-06-03-dhara-mcp-migration.md) | 2026-07-17 | `active` | `implementation` | `lifecycle` | Dhara MCP Migration Implementation Plan |
 | [`docs/plans/2026-06-29-ty-ratchet-cleanup.md`](2026-06-29-ty-ratchet-cleanup.md) | 2026-07-17 | `active` | `implementation` | `lifecycle` | ty-ratchet pipeline cleanup (E.3 + missing-dir) Implementation Plan |
 | [`docs/plans/2026-07-08-fix-sandbox-integration.md`](2026-07-08-fix-sandbox-integration.md) | 2026-07-17 | `active` | `implementation` | `lifecycle` | FixSandbox Production Integration Plan |
 | [`docs/plans/2026-07-10-libcst-surgeon-extract-method-fallback.md`](2026-07-10-libcst-surgeon-extract-method-fallback.md) | 2026-07-17 | `active` | `implementation` | `lifecycle` | W3 LibcstSurgeon Extract-Method Fallback Fix — Implementation Plan |
@@ -42,7 +41,6 @@ _Regenerated 2026-10-29 by `crackerjack.tools.plan_index_sync` (phase)._
 | Path | Date | Status | Role | Topic | Title |
 |---|---|---|---|---|---|
 | [`docs/specs/2026-05-20-ai-fix-comprehensive-overhaul-design.md`](../specs/2026-05-20-ai-fix-comprehensive-overhaul-design.md) | 2026-07-17 | `draft` | `implementation` | `lifecycle` | AI-Fix Comprehensive-Stage Overhaul — Design |
-| [`docs/specs/2026-06-03-dhara-mcp-migration-design.md`](../specs/2026-06-03-dhara-mcp-migration-design.md) | 2026-07-17 | `draft` | `implementation` | `lifecycle` | Dhara MCP Adapter Learner Migration — Design |
 | [`docs/specs/2026-06-29-ty-ratchet-cleanup-design.md`](../specs/2026-06-29-ty-ratchet-cleanup-design.md) | 2026-07-17 | `draft` | `implementation` | `lifecycle` | Plan: ty-ratchet pipeline cleanup (E.3 + missing-dir) |
 | [`docs/specs/2026-07-08-fix-sandbox-integration-design.md`](../specs/2026-07-08-fix-sandbox-integration-design.md) | 2026-07-17 | `draft` | `implementation` | `lifecycle` | FixSandbox Production Integration Design |
 | [`docs/specs/2026-07-10-libcst-surgeon-extract-method-fallback-design.md`](../specs/2026-07-10-libcst-surgeon-extract-method-fallback-design.md) | 2026-07-17 | `draft` | `implementation` | `lifecycle` | LibcstSurgeon Extract-Method Fallback Fix — Design |
@@ -74,7 +72,7 @@ _Regenerated 2026-10-29 by `crackerjack.tools.plan_index_sync` (phase)._
 | Path | Date | Status | Role | Topic | Title |
 |---|---|---|---|---|---|
 | [`docs/followups/2026-07-04-tier3-implementation-plan.md`](../followups/2026-07-04-tier3-implementation-plan.md) | 2026-07-17 | `active` | `implementation` | `lifecycle` | Tier-3 Implementation Plan — Crackerjack |
-| [`docs/followups/2026-09-14-delete-dhara-mcp-client-after-decomposition.md`](../followups/2026-09-14-delete-dhara-mcp-client-after-decomposition.md) | 2026-09-14 | `complete` | `implementation` | `integration` | Delete `crackerjack/integration/dhara_mcp_client.py` after Phase 8 |
+| [`docs/followups/2026-09-14-delete-storage-mcp-client-after-decomposition.md`](../followups/2026-09-14-delete-storage-mcp-client-after-decomposition.md) | 2026-09-14 | `complete` | `implementation` | `integration` | Delete the storage MCP client module after Phase 8 |
 | [`docs/followups/2026-09-18-mcp-subcommand-only.md`](../followups/2026-09-18-mcp-subcommand-only.md) | 2026-09-18 | `active` | `implementation` | `cli-lifecycle` | Plan — `mcp` subcommand is the only lifecycle surface |
 | [`docs/followups/triage/2026-07-10-output-validator-import-check.md`](../followups/triage/2026-07-10-output-validator-import-check.md) | 2026-07-17 | `active` | `implementation` | `lifecycle` | Triage Note — OutputValidator.import_check None crash (Cluster 1) |
 | [`docs/followups/triage/2026-07-10-refactoring-agent-ast-fallback.md`](../followups/triage/2026-07-10-refactoring-agent-ast-fallback.md) | 2026-07-17 | `active` | `implementation` | `lifecycle` | Triage Note — refactoring_agent.py AST fallback tests |
@@ -82,11 +80,12 @@ _Regenerated 2026-10-29 by `crackerjack.tools.plan_index_sync` (phase)._
 
 ## Lifecycle × Role Distribution
 
-| Role \\ Lifecycle | draft | active | partial | shipped | complete | Total |
+| Role \ Lifecycle | draft | active | partial | shipped | complete | Total |
 |---|---|---|---|---|---|---|
 | `canonical` | · | 10 | · | · | 2 | **12** |
-| `implementation` | 16 | 23 | · | · | 1 | **40** |
+| `implementation` | 15 | 22 | · | · | 1 | **38** |
 | `umbrella` | · | · | · | · | · | **0** |
 | `historical` | · | · | · | · | 1 | **1** |
 | `superseded` | · | · | · | · | · | **0** |
-| **Total** | **16** | **33** | **·** | **·** | **4** | **53** |
+| **Total** | **15** | **32** | **·** | **·** | **4** | **51** |
+

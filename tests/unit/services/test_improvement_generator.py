@@ -82,17 +82,17 @@ class TestImprovementGeneratorNoiseGate:
 
         assert result is None
 
-    async def test_generator_fire_and_forget_survives_dhara_unavailable(self) -> None:
+    async def test_generator_fire_and_forget_survives_store_unavailable(self) -> None:
         from crackerjack.services.failure_metrics_repository import (
             FailureMetricsRepository,
         )
         from crackerjack.services.improvement_generator import ImprovementGenerator
 
         repo = AsyncMock(spec=FailureMetricsRepository)
-        repo.count_similar.side_effect = ConnectionError("Dhara down")
+        repo.count_similar.side_effect = ConnectionError("metrics store down")
 
         gen = ImprovementGenerator(repository=repo)
-        # Must not raise even when Dhara is unavailable
+        # Must not raise even when the metrics store is unavailable
         result = await gen.maybe_generate(fingerprint="fp-abc")
         assert result is None
 

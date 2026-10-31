@@ -334,9 +334,9 @@ Mahavishnu exposes `mcp__mahavishnu__treesitter_extract_symbols`, `treesitter_fi
 
 After every `IssueResolved`, the dispatcher posts the `(issue_signature, agent, diff, hook)` tuple to `mcp__session-buddy__capture_successful_pattern`. Closes the loop with §8.2: today's fix becomes tomorrow's deterministic match. Also feeds `mcp__session-buddy__record_fix_success` for learning telemetry.
 
-### 8.4 Dhara persistent fix registry
+### 8.4 Persistent fix registry
 
-The captured patterns above persist via `mcp__dhara__put` into an `ai_fix_registry` namespace. Dhara's ACID guarantees mean parallel Crackerjack instances across repos can safely write to the same registry, and `mcp__dhara__record_time_series` tracks duration/success-rate trends per issue type — feeding both the local TUI ETA and the ecosystem-wide quality dashboards.
+The captured patterns above persist in the local SQLite fix-attempt registry (`fix_attempts` in `.crackerjack/fix_strategy_memory.db`). Its ACID guarantees mean parallel Crackerjack instances across repos can safely write to the same registry, and the `git_metrics` time-series tracks duration/success-rate trends per issue type — feeding both the local TUI ETA and the ecosystem-wide quality dashboards.
 
 ### 8.5 OpenTelemetry trace ingestion
 
@@ -362,7 +362,7 @@ The Crackerjack WebSocket server at 8686 is already in use. The `WebSocketSink` 
 | Akosha pattern lookup | 1 (pre-flight extension) | Medium |
 | Session-Buddy capture + reflection | 2 (after dispatcher succeeds) | Low |
 | Treesitter clustering | 2 (clusterer enhancement) | Medium |
-| Dhara persistent registry | 2/3 (alongside capture) | Low |
+| Persistent fix registry | 2/3 (alongside capture) | Low |
 | OTel ingestion | 3 (postrun) | Low |
 | PyCharm problems | 1 (preflight signal) | Low |
 | TurboQuant | implicit (via §8.3/§8.4) | None |
@@ -374,7 +374,7 @@ All eight are **off by default** and gated behind `ai_fix.bodai.<feature>` confi
 - Every agent invocation is wrapped in `try/except`; failures emit `IssueFailed` with the exception class and abbreviated message. Other units proceed.
 - Diff application is atomic per file: a `FileEditLock` holder takes a hash of the file before editing; if its diff fails to apply cleanly, the file is restored and the unit is marked failed.
 - `JsonlSink` flushes after every event; a crash mid-run leaves a recoverable transcript.
-- Mahavishnu/Akosha/Session-Buddy/Dhara calls all use `asyncio.wait_for(..., timeout=5)` and fall back to the local path on timeout.
+- Mahavishnu/Akosha/Session-Buddy calls all use `asyncio.wait_for(..., timeout=5)` and fall back to the local path on timeout.
 
 ## 10. Testing strategy
 
@@ -419,7 +419,7 @@ New:
 - `crackerjack/agents/parallel_dispatcher.py`
 - `crackerjack/integration/mahavishnu_pool_dispatcher.py` (Phase 4)
 - `crackerjack/ui/ai_fix_dashboard.py`
-- `crackerjack/integration/bodai/{akosha,dhara,session_buddy,treesitter}.py`
+- `crackerjack/integration/bodai/{akosha,session_buddy,treesitter}.py`
 - `settings/ai_fix.yaml`
 
 Modified:

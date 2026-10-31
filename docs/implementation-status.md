@@ -155,7 +155,7 @@ ______________________________________________________________________
 
 1. **Aggregation Queries** ❌
 
-   - Combine git metrics from Dhara time-series
+   - Combine git metrics from the local git-metrics time-series
    - Combine workflow performance from Session-Buddy
    - Combine quality scores from Session-Buddy
    - Estimated: 0.5 day

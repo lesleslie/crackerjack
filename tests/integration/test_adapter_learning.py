@@ -1,12 +1,10 @@
 """Tests for the SQLite adapter learner and its factory.
 
-The Dhara backend was decommissioned on 2026-09-20, so the only learner
-backends covered here are SQLite and NoOp. Tests that previously exercised
-the Dhara backend (and the in-process Dhara MCP factory selection) lived in
-files that were removed when the backend was retired:
+SQLite is the only learner backend; the retired shelf-based backend was
+decommissioned on 2026-09-20. The tests that exercised it (and the
+in-process MCP factory selection) lived in files that were removed when
+the backend was retired:
 
-- ``tests/integration/dhara_mcp_client_test.py``
-- ``tests/integration/dhara_mcp_adapter_learner_test.py``
 - ``tests/integration/test_aio_thread_leak_regression.py``
 """
 
@@ -123,8 +121,8 @@ class TestCreateAdapterLearner:
 
         Regression test for the ``file is not a database`` error that
         surfaced on every ``crackerjack run`` in repos whose
-        ``.crackerjack/adapter_learning.db`` predated the Dhara→SQLite
-        switch (the Dhara backend wrote ``PersistentDict`` shelves to that
+        ``.crackerjack/adapter_learning.db`` predated the switch to SQLite
+        (the retired backend wrote ``PersistentDict`` shelves to that
         filename). The factory must detect the mismatch, move the legacy
         file aside, and create a fresh SQLite db in place.
         """
@@ -152,12 +150,12 @@ class TestCreateAdapterLearner:
     def test_legacy_pickle_is_quarantined_then_replaced(
         self, tmp_path: Path
     ) -> None:
-        """Realistic Dhara ``PersistentDict`` SHELF file → same quarantine flow.
+        """Realistic ``PersistentDict`` SHELF file → same quarantine flow.
 
         Mirrors the actual bytes observed at
         ``/Users/les/Projects/mahavishnu/.crackerjack/adapter_learning.db``
         on 2026-09-20: ``SHELF-1\\n`` header followed by pickle opcodes
-        referencing ``dhara.collections.dict.PersistentDict``.
+        referencing ``legacy.collections.dict.PersistentDict``.
         """
         from crackerjack.integration.adapter_learning import _is_valid_sqlite_file
 
@@ -167,7 +165,7 @@ class TestCreateAdapterLearner:
             b"\x00\x00\x00\x00\x00\x10\x00\x00\x00\x00\x00\x01"
             b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00c"
             b"\x00\x00\x00\x00\x00[\x00\x00\x00\x00\x00\x00"
-            b"\x00\x00\x00\x00\x00\x00\x00\x00G\x80\x02cdhara.collections"
+            b"\x00\x00\x00\x00\x00\x00\x00\x00G\x80\x02cdlegacy.collections"
         )
 
         learner = create_adapter_learner(

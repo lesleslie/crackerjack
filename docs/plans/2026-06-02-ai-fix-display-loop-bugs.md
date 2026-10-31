@@ -44,7 +44,7 @@ ______________________________________________________________________
 | `tests/test_core_autofix_coordinator.py` | New tests for comprehensive-stage fast-fix dispatch and v2 progress tracking | Tasks 2, 4 |
 | `tests/test_phase_coordinator.py` | New test for the CALLED-marker log level | Task 5 |
 | `tests/test_ai_fix_dashboard.py` | New tests for panel rendering and live/header interaction | Task 6 |
-| `tests/integration/` (smoke test only) | End-to-end verification in the `dhara` repo | Task 7 |
+| `tests/integration/` (smoke test only) | End-to-end verification in the `session-buddy` repo | Task 7 |
 
 No new files outside the package. The plan is to fix bugs in place rather than introduce parallel implementations.
 
@@ -836,7 +836,7 @@ ______________________________________________________________________
 - Modify: `crackerjack/services/ai_fix_progress.py:118-144` (same treatment for `_render_footer_panel`)
 - Test: `tests/test_ai_fix_dashboard.py` (new file)
 
-**Symptom** (from the user's `dhara` run, captured in the issue report):
+**Symptom** (from the user's `session-buddy` run, captured in the issue report):
 
 - A horizontal rule (`---`) appears under `🤖 AI AGENT FIXING ...`
 - The `Crackerjack · AI Fix · run` panel renders, then the `CRACKERJACK AI-ENGINE v2.0` mini-panel overlaps the next row, with `║` characters showing where the SIMPLE-box column dividers meet the Panel border
@@ -977,25 +977,25 @@ git commit -m "fix(ai-fix): replace SIMPLE-box inner tables with single-column p
 
 ______________________________________________________________________
 
-## Task 7: End-to-end smoke test in the dhara repo
+## Task 7: End-to-end smoke test in the session-buddy repo
 
 **Files:**
 
 - No new files. This task is a manual verification step that confirms the four unit-level fixes combine into the right user-visible behavior.
 
-- [ ] **Step 1: Reset the dhara repo to a clean state**
+- [ ] **Step 1: Reset the session-buddy repo to a clean state**
 
-Run: `cd /Users/les/Projects/dhara && git status`
+Run: `cd /Users/les/Projects/session-buddy && git status`
 Expected: working tree clean. If not, stash or commit and note what was uncommitted.
 
 - [ ] **Step 2: Install the patched Crackerjack in editable mode**
 
-Run: `cd /Users/les/Projects/dhara && uv pip install -e /Users/les/Projects/crackerjack`
+Run: `cd /Users/les/Projects/session-buddy && uv pip install -e /Users/les/Projects/crackerjack`
 Expected: `Successfully installed crackerjack-<version>`.
 
 - [ ] **Step 3: Re-run the exact command from the original report**
 
-Run: `cd /Users/les/Projects/dhara && python -m crackerjack run -v --ai-fix -p minor 2>&1 | tee /tmp/crackerjack-after-fix.log`
+Run: `cd /Users/les/Projects/session-buddy && python -m crackerjack run -v --ai-fix -p minor 2>&1 | tee /tmp/crackerjack-after-fix.log`
 Expected: completes without raising, and `/tmp/crackerjack-after-fix.log` contains:
 
 - AI-ENGINE panel with `Issues: 58` (matches the hook table)
@@ -1008,7 +1008,7 @@ Expected: completes without raising, and `/tmp/crackerjack-after-fix.log` contai
 
 - [ ] **Step 4: Re-run with `CRACKERJACK_AI_FIX_MAX_ITERATIONS=1` to verify the new label tracks reality**
 
-Run: `cd /Users/les/Projects/dhara && CRACKERJACK_AI_FIX_MAX_ITERATIONS=1 python -m crackerjack run -v --ai-fix -p minor 2>&1 | grep -E 'Iterations|Issues:' | head -10`
+Run: `cd /Users/les/Projects/session-buddy && CRACKERJACK_AI_FIX_MAX_ITERATIONS=1 python -m crackerjack run -v --ai-fix -p minor 2>&1 | grep -E 'Iterations|Issues:' | head -10`
 Expected: the footer's `Iterations: 1` matches the env-cap, and the "Details" section now shows the *remaining* issues rather than re-listing the original 58.
 
 - [ ] **Step 5: Run Crackerjack's own quality gates on the patched code**
@@ -1021,7 +1021,7 @@ Expected: passes. The five bug fixes themselves should be clean code per the cra
 ```bash
 cd /Users/les/Projects/crackerjack
 git add docs/plans/2026-06-02-ai-fix-display-loop-bugs.md
-git commit -m "docs(ai-fix): record dhara smoke-test verification"
+git commit -m "docs(ai-fix): record session-buddy smoke-test verification"
 ```
 
 ______________________________________________________________________

@@ -5,7 +5,6 @@ import os
 from datetime import UTC, datetime
 from typing import Protocol, runtime_checkable
 
-import httpx2 as httpx
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 CONTEXT_FILES: tuple[str, ...] = ("voice", "icp", "positioning", "visual_identity")
@@ -13,20 +12,10 @@ CONTEXT_FILES: tuple[str, ...] = ("voice", "icp", "positioning", "visual_identit
 DEFAULT_TENANT: str = "default"
 
 
-# TODO(Workstream C): replace with the real substrate-bound async client
-
-
-_http_stub_client: httpx.AsyncClient | None = None
-
-
-def _get_http_client() -> httpx.AsyncClient:
-    global _http_stub_client
-    if _http_stub_client is None:
-        _http_stub_client = httpx.AsyncClient(
-            base_url=os.environ.get("MAHAVISHNU_DHARA_URL", "http://localhost: 8683"),
-            timeout=httpx.Timeout(5.0),
-        )
-    return _http_stub_client
+# TODO(Workstream C): the tenant-context HTTP CRUD surface
+# (``/tenants/<id>/context-versions``) is owned by Workstream C and has not
+# shipped. Until it does, the module-level helpers below stay stubs rather
+# than pointing at a store that does not exist.
 
 
 class TenantContextPack(BaseModel):
@@ -87,37 +76,27 @@ class PublishedContextPack(BaseModel):
 
 
 async def publish_context_pack(pack: TenantContextPack) -> PublishedContextPack:
-    client = _get_http_client()
-    resp = await client.post(
-        f"/tenants/{pack.tenant_id}/context-versions",
-        json={
-            "tenant_id": pack.tenant_id,
-            "version": pack.version,
-            "content_hash": pack.content_hash,
-            "body": pack.body,
-            "published_at": pack.published_at.isoformat(),
-            "published_by": pack.published_by,
-        },
+    """Publish a context-pack version to the tenant-context substrate.
+
+    Stub: the tenant-context HTTP CRUD surface has not shipped, so this
+    raises loudly rather than writing to a store that does not exist.
+    """
+    raise NotImplementedError(
+        "publish_context_pack is a stub — the tenant-context HTTP CRUD "
+        "substrate (/tenants/<id>/context-versions) is owned by Workstream C "
+        "and has not shipped."
     )
-    resp.raise_for_status()
-    payload = resp.json()
-    return PublishedContextPack(pack=pack, version_id=payload["version_id"])
 
 
 async def get_active_context_pack(tenant_id: str) -> TenantContextPack | None:
-    client = _get_http_client()
-    resp = await client.get(f"/tenants/{tenant_id}/active-context-version")
-    if resp.status_code == 404:
-        return None
-    resp.raise_for_status()
-    payload = resp.json()
-    return TenantContextPack(
-        tenant_id=payload["tenant_id"],
-        version=payload["version"],
-        content_hash=payload["content_hash"],
-        body=payload["body"],
-        published_at=datetime.fromisoformat(payload["published_at"]),
-        published_by=payload["published_by"],
+    """Fetch the active context pack for ``tenant_id`` from the substrate.
+
+    Stub: same blocked-surface caveat as :func:`publish_context_pack`.
+    """
+    raise NotImplementedError(
+        "get_active_context_pack is a stub — the tenant-context HTTP CRUD "
+        "substrate (/tenants/<id>/active-context-version) is owned by "
+        "Workstream C and has not shipped."
     )
 
 

@@ -5,7 +5,6 @@ import logging
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from enum import StrEnum
-from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -30,10 +29,8 @@ class PypiStatsService:
     def __init__(
         self,
         drop_warn_threshold: float = 0.30,
-        dhara: Any | None = None,
     ) -> None:
         self._threshold = drop_warn_threshold
-        self._dhara = dhara
 
     def get_snapshot(self, package: str) -> PackageStatsSnapshot | None:
         try:
@@ -77,29 +74,3 @@ class PypiStatsService:
                 return DownloadTrendClass.ABRUPT_DROP
 
         return DownloadTrendClass.GRADUAL_DECAY
-
-    async def store_snapshot(
-        self,
-        snapshot: PackageStatsSnapshot,
-        version: str,
-    ) -> None:
-        if self._dhara is None:
-            return
-        try:
-            key = f"pypistats-snapshots/{snapshot.package}/{version}"
-            record: dict[str, Any] = {
-                "package": snapshot.package,
-                "version": version,
-                "downloads_7d": snapshot.downloads_7d,
-                "downloads_30d": snapshot.downloads_30d,
-                "downloads_7d_prev": snapshot.downloads_7d_prev,
-                "has_download_drop": snapshot.has_download_drop,
-                "publish_timestamp": (
-                    snapshot.publish_timestamp.isoformat()
-                    if snapshot.publish_timestamp
-                    else None
-                ),
-            }
-            await self._dhara.put_async(key, record)
-        except Exception as e:
-            logger.warning("Failed to store pypistats snapshot to Dhara: %s", e)

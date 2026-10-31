@@ -472,17 +472,17 @@ topic: changelog
 
 ### Build
 
-- deps: Drop dhara from adapter-learning group + uv cooldown (Phase 8 T13)
+- deps: Drop the retired storage backend from adapter-learning group + uv cooldown (Phase 8 T13)
 
 ## [0.81.2] - 2026-09-15
 
 ### Changed
 
-- integration: Migrate dhara + session-buddy MCP clients to CommonMCPClient
+- integration: Migrate the storage + session-buddy MCP clients to CommonMCPClient
 
 ### Documentation
 
-- followups: Add deferred followup to delete dhara_mcp_client.py after Dhara decomposition
+- followups: Add deferred followup to delete the storage MCP client after the decomposition
 
 ## [0.81.1] - 2026-09-14
 
@@ -1514,7 +1514,7 @@ topic: changelog
   (a common pattern in plan/spec files across the Bodai ecosystem) were being
   parsed as YAML frontmatter and failing with `frontmatter_parse`. Tightened
   `_FRONTMATTER_RE` back to `---` only (matching the original
-  `scripts/validate_document_frontmatter.py`). Reported during the dhara
+  `scripts/validate_document_frontmatter.py`). Reported during the
   consumer migration on 2026-07-27.
 
 ______________________________________________________________________
@@ -1865,7 +1865,7 @@ ______________________________________________________________________
 
 ### Added
 
-- adapter-observability: Dhara-backed settings versioning substrate (Spec #8 Phase 3 pivot)
+- adapter-observability: HTTP-backed settings versioning substrate (Spec #8 Phase 3 pivot)
 - ai-fix: Persist/restore partial state in JsonlSink + fix event-emit-outside-try
 - ai-fix: Tier-1 — DELETE MahavishnuPoolDispatcher, capture AI error, preserve uv cache
 - GREEN spec#4 three-layer-self-heal L1/L2/L3
@@ -2193,15 +2193,15 @@ ______________________________________________________________________
 
 ### Added
 
-- adapter-learning: Add DharaMCPAdapterLearner
-- adapter-learning: Add DharaMCPClient
-- adapter-learning: Factory walks MCP -> Dhara -> SQLite -> NoOp
-- adapter-learning: Wire MCP read path on DharaMCPAdapterLearner
-- Add DharaMCPSettings for adapter-learning MCP client
+- adapter-learning: Add MCP-backed adapter learner
+- adapter-learning: Add the storage MCP client
+- adapter-learning: Factory walks MCP -> in-process -> SQLite -> NoOp
+- adapter-learning: Wire MCP read path on the MCP-backed adapter learner
+- Add settings for the adapter-learning MCP client
 
 ### Changed
 
-- adapter-learning: Drop unused DharaMCPClientError
+- adapter-learning: Drop unused storage MCP client error
 - Crackerjack (quality: 69/100) - 2026-06-03 14:53:43
 - Crackerjack (quality: 70/100) - 2026-06-03 11:10:49
 - Crackerjack (quality: 70/100) - 2026-06-03 12:05:33
@@ -2211,27 +2211,27 @@ ______________________________________________________________________
 
 - adapter-learning: Actually send bearer token and enforce timeout
 - adapter-learning: Address Task 7 quality review
-- adapter-learning: Complete AdapterLearnerProtocol in DharaMCPAdapterLearner
+- adapter-learning: Complete AdapterLearnerProtocol in the MCP-backed adapter learner
 - adapter-learning: Reap aiosqlite worker via weakref.finalize
 - adapter-learning: Resolve comprehensive_hooks failures
 - adapter-learning: SSRF protection and HTTPS-required-with-token
 
 ### Documentation
 
-- Add Dhara MCP migration design spec
-- Note DharaMCPAdapterLearner transport in ecosystem integration doc
+- Add the adapter-learner MCP migration design spec
+- Note the MCP adapter-learner transport in ecosystem integration doc
 - rules+plan: Allow docstrings, regenerate plan with docstrings
 - spec: Clarify commit 1 removes \_safe_close helper too
 - spec: Incorporate review agent findings
 
 ### Testing
 
-- adapter-learning: Also skip test_auto_backend_with_dhara_available
+- adapter-learning: Also skip test_auto_backend_with_mcp_available
 - adapter-learning: Assert all 4 record_time_series arguments
-- adapter-learning: First test for DharaMCPClient.record_time_series
-- adapter-learning: First tests for DharaMCPAdapterLearner
+- adapter-learning: First test for the storage MCP client's record_time_series
+- adapter-learning: First tests for the MCP-backed adapter learner
 - adapter-learning: Regression test for aiosqlite worker leak
-- adapter-learning: Skip Dhara 0.5.0-incompatible tests cleanly
+- adapter-learning: Skip storage-backend-incompatible tests cleanly
 
 ### Internal
 
@@ -2443,11 +2443,11 @@ ______________________________________________________________________
 
 - Add adapter_learning_enabled opt-in flag to LearningSettings
 - Add backend selection to create_adapter_learner factory
-- Add DharaAdapterLearner with ACID storage
+- Add the ACID-backed adapter learner
 - Delegate websocket auth to mcp_common.auth
 - Enable adapter learning by default
-- Export DharaAdapterLearner and add backend setting
-- Export DharaLearningIntegration from integration package
+- Export the adapter learner and add backend setting
+- Export the learning integration from the integration package
 - Wire adapter learning into real execution path
 - Wire adapter learning tracking into QAOrchestrator
 
@@ -2469,14 +2469,14 @@ ______________________________________________________________________
 
 - Add close() to protocol, improve test coverage
 - Address code quality issues in crackerjack auth wrapper
-- Address code review issues in DharaAdapterLearner
+- Address code review issues in the adapter learner
 - Clean up crackerjack auth migration — no docstrings, correct mcp_common.auth delegation
 
 ### Testing
 
-- Add DharaAdapterLearner and factory backend tests
+- Add adapter learner and factory backend tests
 - Add tests for adapter learning in real execution path
-- Add tests for DharaLearningIntegration wiring
+- Add tests for the learning integration wiring
 
 ### Internal
 
@@ -2531,10 +2531,10 @@ ______________________________________________________________________
 
 - Add adapter_learning_enabled opt-in flag to LearningSettings
 - Add backend selection to create_adapter_learner factory
-- Add DharaAdapterLearner with ACID storage
+- Add the ACID-backed adapter learner
 - Enable adapter learning by default
-- Export DharaAdapterLearner and add backend setting
-- Export DharaLearningIntegration from integration package
+- Export the adapter learner and add backend setting
+- Export the learning integration from the integration package
 - Wire adapter learning into real execution path
 - Wire adapter learning tracking into QAOrchestrator
 
@@ -2552,13 +2552,13 @@ ______________________________________________________________________
 ### Fixed
 
 - Add close() to protocol, improve test coverage
-- Address code review issues in DharaAdapterLearner
+- Address code review issues in the adapter learner
 
 ### Testing
 
-- Add DharaAdapterLearner and factory backend tests
+- Add adapter learner and factory backend tests
 - Add tests for adapter learning in real execution path
-- Add tests for DharaLearningIntegration wiring
+- Add tests for the learning integration wiring
 
 ### Internal
 

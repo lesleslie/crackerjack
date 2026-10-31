@@ -777,7 +777,7 @@ class TestFixIssueEndToEnd:
         test_file.write_text(
             "from __future__ import annotations\n\n"
             "import warnings\n\n"
-            "from dhara.core.connection import Connection, ROOT_OID\n",
+            "from mypkg.core.connection import Connection, ROOT_OID\n",
             encoding="utf-8",
         )
 
@@ -791,7 +791,7 @@ class TestFixIssueEndToEnd:
 
         assert result.success is True
         written = test_file.read_text()
-        assert "from dhara.core.connection import ROOT_OID, Connection" in written
+        assert "from mypkg.core.connection import ROOT_OID, Connection" in written
         assert any("Sorted imported names" in fix for fix in result.fixes_applied)
 
     async def test_adds_project_imports_for_all_undefined_exports(

@@ -1,7 +1,7 @@
 """TDD tests for multi-tenant context packs (Spec #9).
 
 Covers the TenantContextPack Pydantic model and the TenantContextPublisher
-interface. HTTP CRUD calls are stubbed — the real Dhara HTTP substrate for
+interface. HTTP CRUD calls are stubbed — the tenant-context HTTP substrate for
 ``/tenants/<id>/context-versions`` is owned by Workstream C and is currently
 ``http_blocked`` per the phase 3 substrate status.
 """
@@ -12,7 +12,6 @@ import hashlib
 import inspect
 from datetime import UTC, datetime
 from typing import Protocol
-from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -155,42 +154,24 @@ class TestTenantContextPublisherInterface:
 
 class TestPublishContextPack:
     @pytest.mark.asyncio
-    async def test_publish_posts_to_correct_endpoint(self) -> None:
-        """publish_context_pack POSTs to /tenants/<id>/context-versions."""
-        mock_client = AsyncMock()
-        mock_client.post.return_value = MagicMock(
-            status_code=201,
-            json=lambda: {"version_id": "v2"},
-        )
+    async def test_publish_is_stubbed_until_the_substrate_ships(self) -> None:
+        """publish_context_pack raises until the Workstream C surface exists."""
         pack = TenantContextPack.with_body(
             tenant_id="acme",
             version=1,
             body={"voice": "Direct."},
             published_by="alice",
         )
-        with patch(
-            "crackerjack.mahavishnu.tenancy.context_packs._get_http_client",
-            return_value=mock_client,
-        ):
-            result = await publish_context_pack(pack)
-        assert result.version_id == "v2"
-        call_args = mock_client.post.call_args
-        # Path must include tenant_id
-        assert "/tenants/acme/context-versions" in call_args.args[0]
+        with pytest.raises(NotImplementedError):
+            await publish_context_pack(pack)
 
     @pytest.mark.asyncio
-    async def test_get_active_returns_tenant_context_pack_or_none(self) -> None:
-        """resolve_tenant_id returns a TenantContextPack from the substrate or None."""
+    async def test_get_active_is_stubbed_until_the_substrate_ships(self) -> None:
+        """get_active_context_pack raises until the Workstream C surface exists."""
         from crackerjack.mahavishnu.tenancy.context_packs import get_active_context_pack
 
-        mock_client = AsyncMock()
-        # 404 -> no active pack
-        mock_client.get.return_value = MagicMock(status_code=404)
-        with patch(
-            "crackerjack.mahavishnu.tenancy.context_packs._get_http_client",
-            return_value=mock_client,
-        ):
-            assert await get_active_context_pack("acme") is None
+        with pytest.raises(NotImplementedError):
+            await get_active_context_pack("acme")
 
 
 # ---------------------------------------------------------------------------

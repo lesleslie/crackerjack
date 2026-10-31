@@ -38,7 +38,7 @@ left 10 critical paths unprotected, including:
 
 The original list also used exact-path matching, which only protected files
 in this repo — it could not protect the same logical files when `SelfPatcher`
-runs against a sibling repo (mahavishnu, akosha, dhara, session-buddy).
+runs against a sibling repo (mahavishnu, akosha, session-buddy).
 
 ## Resolution
 

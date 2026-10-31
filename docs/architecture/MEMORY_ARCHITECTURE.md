@@ -1,7 +1,7 @@
 # Crackerjack Memory Architecture
 
 > **Status**: Living document. Updated whenever the storage schema, MCP surface, or integration contracts change.
-> **Audience**: Bodai ecosystem contributors, Claude Code users, and downstream components (Session-Buddy, Akosha, Dhara, Mahavishnu).
+> **Audience**: Bodai ecosystem contributors, Claude Code users, and downstream components (Session-Buddy, Akosha, Mahavishnu).
 > **Source of truth**: The SQLite-backed memory layer under `crackerjack/memory/`, the MCP tool implementations under `crackerjack/mcp/tools/`, the self-improvement services under `crackerjack/services/`, and the integration tests under `tests/integration/` (especially `test_symbiotic_ecosystem.py`, `test_skills_tracking.py`, `test_ai_fix_workflow.py`, `test_skill_coverage_report.py`, `test_eventbridge_e2e.py`).
 
 Crackerjack is the **Inspector / Quality** component of the Bodai ecosystem. It owns
@@ -53,7 +53,7 @@ EventBridge envelope).
 | **strategy effectiveness** | SQLite (same DB) | `strategy_effectiveness.agent_strategy` (PK, `"agent:strategy"`) | same | `fix_strategy_schema.sql` trigger `update_strategy_effectiveness_after_insert` (note: trigger only fires when the row already exists; first insert is a no-op — `update_strategy_effectiveness` is the canonical full-rebuild path) |
 | **git-metrics time-series** | SQLite (stdlib `sqlite3`, thread-local conn) | `(repository_path, timestamp, metric_type)` (composite PK) | `.crackerjack/git_metrics.db` (or `.git/git_metrics.db` per repo) | `crackerjack/memory/git_metrics_storage.py::GitMetricsStorage` (Pydantic `GitMetric` dataclass + raw SQL); consumed by `crackerjack/memory/git_metrics_collector.py::GitMetricsCollector` and `crackerjack/mcp/tools/git_metrics_tools.py` (`collect_git_metrics`, `get_repository_velocity`, `get_repository_health`, `get_conventional_compliance`) |
 | **git events log** | SQLite (same DB as git-metrics) | `(repository_path, timestamp, event_type)` (composite PK) | same | `git_metrics_schema.sql` table `git_events`; written by `_GitRepository._check_merge_conflicts` and `get_reflog_events`. **The shipped schema has a SQL syntax error** that prevents `executescript` from running (see [Contract 5.1](#contract-51--crackerjackmemorygit_metrics_schemasql-fails-executescript)). |
-| **adapter learning** | SQLite (Dhara or local SQLite via Dhara integration) | `adapter_attempts.adapter_name` + `file_type` | `.crackerjack/adapter_learning.db` (override via `LearningSettings.adapter_learning_db`; default in `crackerjack/config/settings.py:354`) | `crackerjack/integration/dhara_integration.py::DharaLearningIntegration` — every hook adapter (Ruff, Pyright, Bandit, etc.) records `(adapter_name, file_type, success, execution_time_ms)`. PhaseCoordinator wires this through `PhaseCoordinator.__init__` (`crackerjack/core/phase_coordinator.py:107-125`) and feeds it back to `HookManagerImpl` for tool selection. |
+| **adapter learning** | SQLite (local, stdlib `sqlite3`) | `adapter_attempts.adapter_name` + `file_type` | `.crackerjack/adapter_learning.db` (override via `LearningSettings.adapter_learning_db`; default in `crackerjack/config/settings.py:354`) | `crackerjack/integration/adapter_learning.py::SQLiteAdapterLearner` — every hook adapter (Ruff, Pyright, Bandit, etc.) records `(adapter_name, file_type, success, execution_time_ms)`. PhaseCoordinator wires this through `PhaseCoordinator.__init__` (`crackerjack/core/phase_coordinator.py:107-125`) and feeds it back to `HookManagerImpl` for tool selection. |
 | **fix-strategy strategy_effectiveness mirror** | SQLite (same DB) | `agent_strategy` PK | same as fix-attempts | Tracked alongside fix_attempts; updated by `FixStrategyStorage.update_strategy_effectiveness` (called from `crackerjack/skills/coverage.py` and after `record_attempt`). |
 | **Oneiric workflow checkpoints** | SQLite (managed by `oneiric`) | `workflow_key` (composite of DAG run id + workflow name) | `.crackerjack/oneiric_cache/workflow_checkpoints.sqlite` (fallback to `${tempdir}/crackerjack/oneiric_cache/`) | `crackerjack/runtime/oneiric_workflow.py::_resolve_workflow_checkpoints_path` resolves; `WorkflowPipeline._clear_oneiric_cache` wipes `workflow_key="crackerjack"` runs at the start of every `run_complete_workflow` |
 | **AI fix error pattern cache** | JSON file (in-process dict + atomic write) | `error_hash` (sha256 of pattern) | `~/.cache/crackerjack-mcp/error_patterns.json` + `fix_results.json` (configurable via `MCPServerConfig.cache_dir`) | `crackerjack/mcp/cache.py::ErrorCache` — extracted from Ruff/Pyright/Bandit output via `_extract_ruff_info` / `_extract_pyright_info` / `_extract_bandit_info`; consumed by `crackerjack/mcp/tools/error_analyzer.py::analyze_errors_with_caching` (via `smart_error_analysis`). The same JSON file backs `crackerjack/mcp/state.py::StateManager` (session / checkpoint / issue history). |
@@ -64,8 +64,8 @@ EventBridge envelope).
 The single **anchor point** for cross-component joins is **`issue_fingerprint`**
 (SHA-256 of `hook::issue_type::<file-replaced-error>`), defined in
 `crackerjack/services/failure_recorder.py::_compute_fingerprint`. It is the
-join key between `fix_attempts`, the failure-metrics repository in Dhara
-(`fix-failures/{fingerprint}`), the EventBridge-published
+join key between `fix_attempts`, the failure-metrics repository (a no-op
+wrapper since the remote store was decommissioned), the EventBridge-published
 `fingerprint` field, and the Session-Buddy `distilled_skills.problem_pattern`
 key after distillation.
 
@@ -85,15 +85,13 @@ erDiagram
     OneiricDBSqlite["OneiricDBSqlite<br/>(managed by oneiric)<br/>SQLite — workflow_checkpoints"]
     StateManagerJson["StateManagerJson<br/>(crackerjack/mcp/state.py)<br/>JSON — current_session.json + checkpoints"]
     ErrorCacheJson["ErrorCacheJson<br/>(crackerjack/mcp/cache.py)<br/>JSON — error_patterns.json + fix_results.json"]
-    AdapterLearningDB["AdapterLearningDB<br/>(crackerjack/integration/dhara_integration.py)<br/>SQLite — adapter_attempts + adapter_effectiveness"]
+    AdapterLearningDB["AdapterLearningDB<br/>(crackerjack/integration/adapter_learning.py)<br/>SQLite — adapter_attempts + adapter_effectiveness"]
 
-    %% Failure-flow (failure_recorder.py + Dhara + Session-Buddy)
+    %% Failure-flow (failure_recorder.py + Session-Buddy)
     %% written from PhaseCoordinator; read by ImprovementGenerator
     FailureRecorder["FailureRecorder<br/>(crackerjack/services/failure_recorder.py)"]
-    DharaKV["Dhara KV / TimeSeries<br/>fix-failures/{fingerprint}"]
     SBReflection["Session-Buddy MCP<br/>store_reflection(tags=[fix-failure,...])"]
 
-    FailureRecorder ||--o{ DharaKV : "put('fix-failures/{fingerprint}', ...)"
     FailureRecorder ||--o{ SBReflection : "store_reflection(content, tags=[fix-failure, ...])"
     GitMetricsDB ||--o{ FailureRecorder : "read for git_metrics context"
 
@@ -103,7 +101,6 @@ erDiagram
     style ErrorCacheJson fill:#ffd,stroke:#993
     style AdapterLearningDB fill:#dfd,stroke:#383
     style FailureRecorder fill:#dff,stroke:#399
-    style DharaKV fill:#dff,stroke:#399
     style SBReflection fill:#dff,stroke:#399
 ```
 
@@ -115,8 +112,8 @@ erDiagram
 | `strategy_effectiveness` | `FixStrategyStorage.get_statistics` (`top_strategies`); consumed by `PhaseCoordinator` and `StrategyRecommender` | `update_strategy_effectiveness_after_insert` trigger (only fires for existing rows) + `FixStrategyStorage.update_strategy_effectiveness` full rebuild | Full rebuild on each call — no separate aging |
 | `git_metrics` (rows) | `collect_git_metrics`, `get_repository_velocity`, `get_conventional_compliance` MCP tools; `GitMetricsSessionCollector` for Session-Buddy snapshot; `get_repository_health` (joins with `git_events`) | `GitMetricsStorage.store_metric` (called by `_collect_commit_metrics`); rate-limited by `_purge_ts`-style retention in `GitMetricsCollector` | None today; schema has no TTL |
 | `git_events` | `get_repository_health` (conflict / merge analysis) | `_check_merge_conflicts`, `_get_conflict_files`, `get_reflog_events` | None |
-| `adapter_attempts` | `DharaLearningIntegration` (feeds `_adapter_learner`) | Every hook call (FastStrategy & ComprehensiveStrategy) | `min_attempts=5`; no TTL |
-| `adapter_effectiveness` | Adapter selector chooses best adapter per `(file_type, file_size)` | `DharaLearningIntegration` aggregate update | No TTL |
+| `adapter_attempts` | `AdapterLearningIntegration` (feeds `_adapter_learner`) | Every hook call (FastStrategy & ComprehensiveStrategy) | `min_attempts=5`; no TTL |
+| `adapter_effectiveness` | Adapter selector chooses best adapter per `(file_type, file_size)` | `AdapterLearningIntegration` aggregate update | No TTL |
 | `workflow_checkpoints` | Oneiric workflow_bridge (resumable DAG) | `register_crackerjack_workflow` | `crackerjack` workflow_key is wiped by `WorkflowPipeline._clear_oneiric_cache` at the start of every `run_complete_workflow` |
 | `error_patterns` | `analyze_errors_with_caching` (via `smart_error_analysis`) | `ErrorCache.add_pattern` (extracted from Ruff/Pyright/Bandit output) | `cleanup_old_patterns(older_than_days)` exists but is not scheduled |
 | `fix_results` | `ErrorCache.get_fix_success_rate(pattern_id)` | `ErrorCache.add_fix_result` after each autofix | Same as `error_patterns` |
@@ -266,18 +263,17 @@ sequenceDiagram
     participant Gen as ImprovementGenerator
     participant Ovsr as ImprovementOverseer
     participant SP as SelfPatcher
-    participant Dhara as Dhara KV / TimeSeries
 
     Note over PC: When AI fix exhausts iterations
     PC->>FR: record(FixAttemptRecord(fingerprint, issue_type, hook, repo))
-    FR->>Repo: record(rec) -> put("fix-failures/{fingerprint}", ...)
+    FR->>Repo: record(rec) (no-op: remote store decommissioned)
     FR->>SB: store_reflection(content, tags=[fix-failure, hook, repo])
-    Repo->>Dhara: record_time_series("fix-failures", fingerprint, {ts,...})
 
     Note over PC: Subsequent request
     PC->>Gen: maybe_generate(fingerprint)
-    Gen->>Repo: count_similar(fingerprint) -> Dhara.query_time_series
+    Gen->>Repo: count_similar(fingerprint) -> 0 (no-op store)
     Repo-->>Gen: count
+    Note over Gen: count is always 0 while the metrics store is decommissioned
     alt count >= 3
         Gen->>Gen: emit improvement_job_id (status="generating")
         Gen-->>PC: {improvement_job_id, status: "generating", priority}
@@ -435,7 +431,6 @@ which Crackerjack reads from Session-Buddy.
 | **Mahavishnu** | `mcp__crackerjack__*` (50+ tools); `crackerjack run` CLI as worker fallback; `mcp__mahavishnu__self_improvement_*` (Mahavishnu's own tools, separate from Crackerjack's) | `execute_crackerjack` (status); `get_comprehensive_status`; `agent_performance_analysis`; `collect_git_metrics`; `publish_to_eventbridge` (Mahavishnu → Crackerjack publisher — see below) | `execute_crackerjack` (returns results); `session_management`; `clean_crackerjack`; `config_crackerjack`; `publish_to_eventbridge` (Mahavishnu invokes the tool — but the **publisher** inside is Crackerjack's Oneiric EventBridge, so Crackerjack emits onto the Bus, which Mahavishnu's bodai_subscriber then consumes; this is a routing convention, not a true Mahavishnu → Crackerjack write) |
 | **Session-Buddy** | Distilled-skill distillation; conscious-agent reflection storage | `crackerjack_run` results via `mcp__session-buddy__store_reflection` from `FailureRecorder` (cross-process via SB MCP); `crackerjack/skills/coverage.py::skill_coverage_report` (calls `mcp__session-buddy__distilled_skill_health`) | None (read-only consumer) |
 | **Akosha** | `mcp__akosha__analyze_changepoints` (proxied from `FailureRecorder.classify_failure_trend`); `query_local_traces` proxy in `crackerjack/mcp/tools/otel_tools.py` | None (read-only consumer) | None |
-| **Dhara** | `mcp__dhara__put` / `record_time_series` / `query_time_series` called by `FailureMetricsRepository` | None (read-only consumer) | `kv["fix-failures/{fingerprint}"]` and `time_series["fix-failures:{fingerprint}"]` (per-failure metric stream) |
 | **Oneiric** | Config + adapter factory paths | None (read-only consumer) | None (config-only consumer) |
 | **Claude Code** | MCP client + slash commands + hooks | `crackerjack_run` results (via `mcp__crackerjack__*`); the `/crackerjack:run` prompt is just `commands/crackerjack-run.md` loaded as a `mcp_app.prompt` (3 prompts: `run`, `init`, `status`) | Same as Mahavishnu (all tools) |
 | **PyCharm MCP** (external) | Bridged via `crackerjack/mcp/tools/pycharm_tools.py` | `search_code`, `get_ide_diagnostics` (calls `PyCharmMCPAdapter.search_regex`, `get_file_problems`) | None (PyCharm side is read-only IDE introspection) |
@@ -446,9 +441,9 @@ To avoid double-bookkeeping with neighbors, Crackerjack intentionally
 **does not** store:
 
 - **Distilled skills** — those live in Session-Buddy `distilled_skills`; Crackerjack's `fix_attempts.issue_message` is the input, the Conscious Agent in SB does the distillation.
-- **Cross-system time-series fitness signals** — those live in Dhara `time_series["routing_fitness:..."]`; Crackerjack's `fix-failures:{fingerprint}` is the per-failure stream, the routing-fitness stream is emitted by Mahavishnu's `RoutingFitnessReader._flush_buffer`.
+- **Cross-system time-series fitness signals** — those are emitted by Mahavishnu's `RoutingFitnessReader._flush_buffer`; Crackerjack keeps only the local per-failure stream in `fix_attempts`.
 - **OpenTelemetry trace spans** — those live in Akosha `HotStore.conversations`; `crackerjack/mcp/tools/otel_tools.py` proxies `query_local_traces` reads through but stores nothing.
-- **Pool / worker runtime state** — Dhara and Mahavishnu own that.
+- **Pool / worker runtime state** — Mahavishnu owns that.
 - **Pool routing decisions** — Mahavishnu's `RoutingDecisionBuffer` (ring buffer) + `pattern.detected` events to Bodai.
 - **LLM provider configuration / API keys** — Oneiric + env vars (`MINIMAX_API_KEY`).
 - **Code graph topology** — Mahavishnu's indexer owns the canonical view; Crackerjack's `crackerjack/mcp/tools/git_metrics_tools.py` is the per-repo slice, `mahavishnu_tools.py` is the aggregator.
@@ -460,7 +455,7 @@ To avoid double-bookkeeping with neighbors, Crackerjack intentionally
 | `.crackerjack/fix_strategy_memory.db` | SQLite | `crackerjack/config/settings.py:69` |
 | `.crackerjack/git_metrics.db` or `.git/git_metrics.db` | SQLite | `crackerjack/memory/git_metrics_collector.py:660-662` |
 | `.crackerjack/semantic_index.db` | SQLite (embeddings + file_tracking) | `crackerjack/mcp/tools/semantic_tools.py:11` |
-| `.crackerjack/adapter_learning.db` | SQLite (Dhara or local) | `crackerjack/config/settings.py:354` |
+| `.crackerjack/adapter_learning.db` | SQLite (local) | `crackerjack/config/settings.py:354` |
 | `.crackerjack/oneiric_cache/workflow_checkpoints.sqlite` | SQLite (Oneiric-managed) | `crackerjack/runtime/oneiric_workflow.py:_resolve_workflow_checkpoints_path` |
 | `~/.cache/crackerjack-mcp/` | JSON files | `crackerjack/mcp/state.py:103`, `crackerjack/mcp/cache.py:54` |
 | `.crackerjack/ci_patterns.json` | JSON | `crackerjack/ci_feedback.py:21` |
@@ -474,7 +469,7 @@ The contract between Crackerjack and its consumers is implicit in the
 schema and the MCP surface, but eight specific contracts caused real
 bugs and should be made explicit. After the contracts, a "Known gaps"
 subsection flags the planned-but-unimplemented parts of the schema
-(matching the convention used by Session-Buddy, Akosha, Dhara, and
+(matching the convention used by Session-Buddy, Akosha, and
 Mahavishnu).
 
 ### Contract 5.1 — `crackerjack/memory/git_metrics_schema.sql` fails `executescript`
@@ -778,7 +773,7 @@ when the Phase 3 wiring lands.
 - **Self-improvement fire-and-forget is documented**:
   `ImprovementGenerator.maybe_generate` returns `None` when the
   noise gate is not met, when the daily rate limit is hit, or when
-  Dhara is unavailable. Callers MUST treat `None` as "no proposal
+  the metrics store is unavailable. Callers MUST treat `None` as "no proposal
   will be emitted, do not retry".
 - **MCP tool surface is always-on**: Crackerjack does not implement
   a tool-profile gate (unlike Mahavishnu and Akosha). All 50+ tools
@@ -1046,7 +1041,7 @@ above; the sixth is the quality gate flow (`execute_crackerjack`
 `bodai/docs/memory/INDEX.md` once Stage 3 of the documentation
 plan lands.
 
-1. **Schema map** (Section 1) — `erDiagram` of all surviving on-disk stores and the failure-flow join through `issue_fingerprint` into Dhara KV and Session-Buddy reflections. `GitMetricsDB` and `AdapterLearningDB` are the authoritative write targets; `StateManagerJson` and `ErrorCacheJson` are derived (JSON, in-process); `OneiricDBSqlite` is Oneiric-managed.
+1. **Schema map** (Section 1) — `erDiagram` of all surviving on-disk stores and the failure-flow join through `issue_fingerprint` into Session-Buddy reflections. `GitMetricsDB` and `AdapterLearningDB` are the authoritative write targets; `StateManagerJson` and `ErrorCacheJson` are derived (JSON, in-process); `OneiricDBSqlite` is Oneiric-managed.
 1. **Read groups by access pattern** (Section 3) — `flowchart` of how Mahavishnu's hot path (every dispatch), dashboards (monitoring), code intelligence (search), self-improvement (skill coverage), and admin (utility) tools read from the schema.
 1. **Self-improvement loop** (Section 2) — `sequenceDiagram` of `PhaseCoordinator → FailureRecorder → FailureMetricsRepository → Session-Buddy → ImprovementGenerator → ImprovementOverseer → SelfPatcher`, with the `MIN_FAILURES_BEFORE_IMPROVEMENT=3` and `MAX_IMPROVEMENTS_PER_DAY=5` guards called out.
 
@@ -1094,7 +1089,7 @@ default). `_clear_oneiric_cache` runs at the start of every
 checkpoints; cross-key pollution is not prevented (see
 [Known gaps](#known-gaps-planned-but-unimplemented-parts)).
 
-### Failure flow (run → failure_recorder → Dhara → SB → ImprovementGenerator)
+### Failure flow (run → failure_recorder → SB → ImprovementGenerator)
 
 ```mermaid
 sequenceDiagram
@@ -1103,7 +1098,6 @@ sequenceDiagram
     participant FR as FailureRecorder
     participant Repo as FailureMetricsRepository
     participant GM as GitMetricsDB
-    participant Dhara as Dhara KV
     participant SB as Session-Buddy MCP
     participant Gen as ImprovementGenerator
     participant Ovsr as ImprovementOverseer
@@ -1111,13 +1105,12 @@ sequenceDiagram
 
     Note over Phase: phase exhausts retries (no AI-fix subsystem)
     Phase->>FR: record(FixAttemptRecord(hook, issue_type, fingerprint, fix_code, ...))
-    FR->>Repo: record(rec) -> put("fix-failures/{fingerprint}", rec.to_dict())
-    Repo->>Dhara: record_time_series("fix-failures", fingerprint, {ts, repo, hook, ...})
+    FR->>Repo: record(rec) (no-op: remote store decommissioned)
     FR->>SB: store_reflection(content, tags=[fix-failure, hook, repo])
     FR->>GM: write git_metrics + git_events (commit_velocity, merge_conflict)
 
     Note over Gen: next request for same fingerprint
-    Gen->>Repo: count_similar(fingerprint) -> Dhara.query_time_series
+    Gen->>Repo: count_similar(fingerprint) -> 0 (no-op store)
     Repo-->>Gen: count (>=3 for noise gate)
 
     Gen->>FR: classify_failure_trend(fingerprint)
@@ -1126,6 +1119,7 @@ sequenceDiagram
     FR-->>Gen: TrendClassification
 
     alt count >= MIN_FAILURES_BEFORE_IMPROVEMENT (3) OR abrupt early trigger
+        Note over Gen,Phase: count is always 0 while the metrics store is decommissioned
         Gen-->>Phase: {improvement_job_id, status: "generating", priority}
         Note over Phase: improvement_job_id is not consumed today,<br/>no diff generation, see Contract 5.8
     else
@@ -1180,7 +1174,7 @@ ______________________________________________________________________
 | `strategy_effectiveness` | Full rebuild each call | `FixStrategyStorage.update_strategy_effectiveness` deletes + rebuilds | Safe to truncate; rebuilt on next read |
 | `git_metrics` | None | `git_metrics_storage.py` does not auto-prune | Suggest: `delete from git_metrics where timestamp < datetime('now', '-365 days')` |
 | `git_events` | None | Same | Same |
-| `adapter_attempts` | `min_attempts=5`; no TTL | `crackerjack/integration/dhara_integration.py::DharaLearningIntegration` | No built-in retention |
+| `adapter_attempts` | `min_attempts=5`; no TTL | `crackerjack/integration/adapter_learning.py::SQLiteAdapterLearner` | No built-in retention |
 | `error_patterns` | `cleanup_old_patterns(30 days)` (method exists; not scheduled) | `ErrorCache.cleanup_old_patterns(days)` | Manual cleanup; the function is defined but not called by any background task |
 | `fix_results` | None | `ErrorCache.add_fix_result` | Same as `error_patterns` |
 | `session_state` | Per-session; manual cleanup | `BatchedStateSaver` debounces writes 1s | `session_management(action="reset")` clears |
@@ -1228,11 +1222,11 @@ ______________________________________________________________________
   process, `run_complete_workflow` raises `sqlite3.OperationalError`.
   Resolution: delete the file (it's safe — it's a cache, not a
   source of truth) or wait for the other process to release.
-- **Dhara unavailable**: `FailureMetricsRepository.record` and
-  `count_similar` both swallow `ConnectionError` and log a warning.
-  `ImprovementGenerator.maybe_generate` returns `None` (does not
-  raise) when Dhara is down — callers must treat `None` as
-  "no improvement will be emitted".
+- **Failure-metrics store unavailable**: `FailureMetricsRepository` is a
+  no-op wrapper — `record` logs at debug level and `count_similar`
+  returns `0`. `ImprovementGenerator.maybe_generate` therefore returns
+  `None` (does not raise) — callers must treat `None` as "no improvement
+  will be emitted".
 - **Session-Buddy unavailable**: `FailureRecorder.record` calls
   `sb.store_reflection` inside `with suppress(Exception):` — the
   failure is logged but not raised. `crackerjack run` continues
@@ -1265,8 +1259,8 @@ ______________________________________________________________________
 - **AI fix loop runaway**: `_apply_ai_fix_for_fast_hooks` and
   `_apply_ai_fix_for_comprehensive_hooks` are bounded by
   `ai_fix_max_iterations` (default 3). On exhaustion,
-  `_fire_exhaustion_record` writes a `FixAttemptRecord` to Dhara
-  and the loop terminates. The `MAX_IMPROVEMENTS_PER_DAY=5` cap
+  `_fire_exhaustion_record` writes a `FixAttemptRecord` to the
+  fix-strategy memory (and Session-Buddy) and the loop terminates. The `MAX_IMPROVEMENTS_PER_DAY=5` cap
   on `ImprovementGenerator` is independent and per-day rolling.
 
 ### Self-improvement / wiring notes
@@ -1310,7 +1304,6 @@ for the rationale.
 | Cross-component path | Latency | Notes |
 |----------------------|---------|-------|
 | `crackerjack_run` → `mcp__session-buddy__store_reflection` (per failure) | 20-100 ms | Sync call; failure is swallowed |
-| `crackerjack_run` → `mcp__dhara__put` (per failure) | 10-50 ms | Sync call; failure is swallowed |
 | `crackerjack_run` → `mcp__akosha__analyze_changepoints` (per fingerprint, async path) | 50-500 ms | Wrapped in `asyncio.wait_for(timeout=5.0)` |
 | `crackerjack_run` → `EventBridge.publish` (per test event) | 1-10 ms | When `eventbridge.enabled=true` |
 | `mcp__session-buddy__distilled_skill_health` (called from `skill_coverage_report`) | 50-200 ms | `await client.call_tool(...)` — the call site is not async-tolerant on error today (see [Contract 5.4](#contract-54--crackerjack-skill_coverage_report-requires-session-buddy-mcp-distilled_skill_health)) |
@@ -1363,7 +1356,7 @@ The contracts in Section 5 are derived from these ADRs and decisions:
   dead-letter pattern)
 - **ADR-004** — Adapter architecture for multi-engine support
   (drives `crackerjack/adapters/registry.py` and the
-  `DharaLearningIntegration` adapter selection)
+  `AdapterLearningIntegration` adapter selection)
 
 See `docs/adr/` for the full ADR catalog.
 
@@ -1378,15 +1371,15 @@ ______________________________________________________________________
 - `crackerjack/memory/git_metrics_storage.py` — `GitMetricsStorage` (time-series per `(repo, metric_type)`).
 - `crackerjack/memory/issue_embedder.py` — `IssueEmbedder` (neural) + `FallbackIssueEmbedder` (TF-IDF); the `is_neural_embeddings_available` flag is the model-availability signal.
 - `crackerjack/memory/git_history_embedder.py` — `GitHistoryEmbedder` (per-commit embeddings into `git_history_embeddings`).
-- `crackerjack/services/failure_recorder.py` — `FailureRecorder` (Dhara + Session-Buddy reflection fan-out) and `_compute_fingerprint` (the cross-component join key).
-- `crackerjack/services/failure_metrics_repository.py` — `FailureMetricsRepository` (Dhara `fix-failures` series; consumed by `ImprovementGenerator.count_similar`).
+- `crackerjack/services/failure_recorder.py` — `FailureRecorder` (fix-strategy memory + Session-Buddy reflection fan-out) and `_compute_fingerprint` (the cross-component join key).
+- `crackerjack/services/failure_metrics_repository.py` — `FailureMetricsRepository` (no-op wrapper over the decommissioned remote metrics store; consumed by `ImprovementGenerator.count_similar`).
 - `crackerjack/services/improvement_generator.py` — `ImprovementGenerator.maybe_generate` (fire-and-forget; see [Contract 5.8](#contract-58--improvementgeneratormaybe_generate-is-fire-and-forget)).
 - `crackerjack/services/improvement_overseer.py` — `ImprovementOverseer.review_diff` (the future Phase 3 reviewer; currently unused).
 - `crackerjack/core/workflow_orchestrator.py` — `WorkflowPipeline` (one-step `WorkflowPipeline.run_complete_workflow`; wires EventBridge publisher via `bridge_resolver`).
 - `crackerjack/core/phase_coordinator.py` — `PhaseCoordinator` (the 13 phase methods; `failure_recorder` is passed in for exhaustion tracking; see
   `crackerjack/core/phase_coordinator.py:195-233`).
 - `crackerjack/runtime/oneiric_workflow.py` — `OneiricWorkflowRuntime` (the DAG builder; `crackerjack` workflow key wiped per run).
-- `crackerjack/integration/dhara_integration.py` — `DharaLearningIntegration` + `create_adapter_learner` (feeds `adapter_attempts` + `adapter_effectiveness`).
+- `crackerjack/integration/adapter_learning.py` — `AdapterLearningIntegration` + `create_adapter_learner` (feeds `adapter_attempts` + `adapter_effectiveness`).
 - `crackerjack/integration/session_buddy_skills_compat.py` — `SkillsTracker` (per-invocation reflection storage; consumed via `get_session_tracker`).
 - `crackerjack/integration/skills_tracking.py` — `SessionBuddyDirectTracker` + `SessionBuddyMCPTracker` + `NoOpSkillsTracker` + `create_skills_tracker` (the auto-fallback to direct SB when MCP is unavailable).
 - `crackerjack/skills/coverage.py` — `skill_coverage_report` (the A3 + Q3 default that calls SB MCP `distilled_skill_health`).
@@ -1429,16 +1422,14 @@ ______________________________________________________________________
 - `tests/integration/test_eventbridge_e2e.py` — `publish_test_started` / `completed` / `failed` round-trip with a `RecordingTransport`; pins `headers.source="crackerjack"` and `headers.version="1.0.0"`.
 - `tests/integration/test_migration.py` — the skills-migration script (with a stub for the removed `validate_migration` function).
 - `tests/integration/test_two_stage_workflow.py` / `test_sandboxed_fix.py` / `test_tier_architecture_e2e.py` / `test_phase8_direct_invocation.py` / `test_phase_coordinator_integration.py` — workflow-level integration tests.
-- `tests/integration/test_akosha_integration.py` / `test_session_buddy_integration.py` / `test_dhara_integration.py` / `test_git_semantic_search.py` / `test_oneiric_transport_roundtrip.py` — external-component integration tests (mocked at the MCP boundary).
-- `tests/integration/dhara_mcp_adapter_learner_test.py` / `dhara_mcp_client_test.py` — Dhara adapter learner round-trips.
+- `tests/integration/test_akosha_integration.py` / `test_session_buddy_integration.py` / `test_git_semantic_search.py` / `test_oneiric_transport_roundtrip.py` — external-component integration tests (mocked at the MCP boundary).
 - `tests/unit/mcp/test_intelligence_tool_registry.py` — `intelligence_tool_registry` mocked-aggregator tests.
 - `tests/unit/mcp/test_otel_tools_query_local_traces.py` — `query_local_traces` happy / error paths.
 - `tests/unit/mcp/test_rate_limiter.py` — `RateLimitMiddleware` (token-bucket on MCP tool calls; `mcp_common.rate_limiter`).
 - `tests/unit/mcp/test_state.py` — `StateManager` + `BatchedStateSaver`.
 - `tests/unit/memory/test_git_metrics_storage.py` — Documents the schema syntax bug (Contract 5.1) and the `get_metrics` empty-dict bug (Contract 5.2).
 - `tests/unit/memory/test_git_history_embedder.py` — Documents the `__init__` + `close` + `find_similar_embeddings` source bugs (the test file ships a `_FIXED_SCHEMA` constant and a monkey-patched `sqlite3.adapt_compression`).
-- `tests/unit/memory/test_failure_recorder.py` — `_compute_fingerprint` determinism + `_sanitize_field` injection prevention.
-- `tests/unit/memory/test_failure_metrics_repository.py` — Dhara `count_similar` + `record` + `query_by_fingerprint` (with `_sanitize_record`).
+- `tests/unit/services/test_failure_recorder.py` — `_compute_fingerprint` determinism + `_sanitize_field` injection prevention + `FailureMetricsRepository` no-op behavior (`count_similar` → `0`, `record` → debug log).
 - `tests/unit/services/test_improvement_generator.py` — `maybe_generate` noise gate (3) + rate limit (5/day) + `ImprovementProposal` (the fire-and-forget contract — see [Contract 5.8](#contract-58--improvementgeneratormaybe_generate-is-fire-and-forget)).
 - `tests/unit/core/test_workflow_pipeline_eventbridge_wiring.py` — `WorkflowPipeline._wire_event_publisher` opt-in behavior (the production wiring test).
 - `tests/unit/core/test_eventbridge_resolver.py` — `resolve_event_publisher` settings + bridge resolution.

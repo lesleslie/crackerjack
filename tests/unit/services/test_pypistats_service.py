@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -140,61 +140,3 @@ class TestPypiStatsServiceErrorHandling:
             snapshot = service.get_snapshot("crackerjack")
 
         assert snapshot is None
-
-
-@pytest.mark.unit
-class TestPypiStatsServiceDharaStore:
-    """After publish, snapshot should be offered to Dhara for storage."""
-
-    async def test_service_stores_snapshot_to_dhara_on_publish(self) -> None:
-        """store_snapshot() passes key structured data to dhara.put_async()."""
-        from crackerjack.services.pypistats_service import (
-            PackageStatsSnapshot,
-            PypiStatsService,
-        )
-        from datetime import datetime, timezone
-
-        mock_dhara = AsyncMock()
-        mock_dhara.put_async = AsyncMock(return_value=None)
-
-        service = PypiStatsService(dhara=mock_dhara)
-        snapshot = PackageStatsSnapshot(
-            package="crackerjack",
-            downloads_7d=892,
-            downloads_30d=3421,
-            downloads_7d_prev=843,
-            has_download_drop=False,
-            publish_timestamp=datetime.now(tz=timezone.utc),
-        )
-
-        await service.store_snapshot(snapshot, version="0.65.12")
-
-        mock_dhara.put_async.assert_called_once()
-        call_args = mock_dhara.put_async.call_args
-        key = call_args[0][0]
-        record = call_args[0][1]
-        assert "pypistats-snapshots" in key
-        assert record["downloads_7d"] == 892
-        assert record["downloads_30d"] == 3421
-        assert record["version"] == "0.65.12"
-
-    async def test_service_skips_dhara_when_no_client_configured(self) -> None:
-        """store_snapshot() with no dhara client is a no-op, never raises."""
-        from crackerjack.services.pypistats_service import (
-            PackageStatsSnapshot,
-            PypiStatsService,
-        )
-        from datetime import datetime, timezone
-
-        service = PypiStatsService()  # no dhara
-        snapshot = PackageStatsSnapshot(
-            package="crackerjack",
-            downloads_7d=892,
-            downloads_30d=3421,
-            downloads_7d_prev=843,
-            has_download_drop=False,
-            publish_timestamp=datetime.now(tz=timezone.utc),
-        )
-
-        # Must not raise
-        await service.store_snapshot(snapshot, version="0.65.12")

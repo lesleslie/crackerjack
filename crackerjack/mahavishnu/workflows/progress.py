@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import os
 from collections import defaultdict
 from collections.abc import AsyncIterator
 from contextlib import suppress
@@ -77,16 +76,21 @@ class InMemoryRecorder:
 
 
 class RemotePersister:
-    def __init__(self, dhara_url: str | None = None) -> None:
-        self.dhara_url = dhara_url or os.environ.get(
-            "MAHAVISHNU_DHARA_URL", "http://localhost: 8683"
-        )
+    """Placeholder for submitting progress snapshots to a remote store.
+
+    The remote snapshot-submission surface has not shipped, so ``send``
+    raises ``NotImplementedError``. The class is kept as the seam where
+    that transport will be wired in.
+    """
+
+    def __init__(self, base_url: str | None = None) -> None:
+        self.base_url = base_url
 
     async def send(self, snapshot: ProgressSnapshot) -> dict[str, Any]:
         raise NotImplementedError(
             "TODO(Workstream-C): RemotePersister.send is stubbed while the "
-            "Dhara HTTP CRUD substrate (Phase 3 Workstream C) is blocked. "
-            "Wire to POST {dhara_url}/workflows/{workflow_id}/progress-snapshots "
+            "remote HTTP CRUD substrate (Phase 3 Workstream C) is blocked. "
+            "Wire to POST {base_url}/workflows/{workflow_id}/progress-snapshots "
             "when Workstream C lands."
         )
 

@@ -19,7 +19,7 @@ ______________________________________________________________________
 ## 1. Registration model
 
 Crackerjack uses a **three-tier profile gate** mirroring the other Bodai
-components (`mahavishnu`, `session-buddy`, `akosha`, `dhara`).
+components (`mahavishnu`, `session-buddy`, `akosha`).
 
 | Tier | Selection env var | When |
 |---|---|---|
@@ -320,7 +320,7 @@ ______________________________________________________________________
 - **Server wiring** — `crackerjack/mcp/server_core.py::create_mcp_server` (lines 196-248, `_apply_tool_profile` invocation).
 - **Discovery override** — `crackerjack/mcp/tools/discover_query.py::crackerjack_discovery` (substitutes the W0 helper's default discovery with a case-insensitive substring filter on `name`/`description`).
 - **Phase 4 web-adapter hooks** — `crackerjack/adapters/web/hooks.py` (`web.stylelint`, `web.eslint`, `web.tsc`, `web.html_validate`); surfaced via `language_tools.check_web_lint` + `language_tools.format_jinja_templates`.
-- **Sibling specs** — `akosha/docs/architecture/MEMORY_ARCHITECTURE.md`, `mahavishnu/docs/MCP_TOOLS_SPECIFICATION.md`, `session-buddy/docs/MCP_TOOLS_SPECIFICATION.md`, `dhara/docs/MCP_TOOLS_SPECIFICATION.md` (when present).
+- **Sibling specs** — `akosha/docs/architecture/MEMORY_ARCHITECTURE.md`, `mahavishnu/docs/MCP_TOOLS_SPECIFICATION.md`, `session-buddy/docs/MCP_TOOLS_SPECIFICATION.md` (when present).
 - **Drift regression tests** — `tests/unit/mcp/test_mcp_tool_drift.py` (mechanical enforcement of registration drift).
 - **Wiring policy** — `.claude/decisions/mcp-backend-wiring-discipline.md` (every tool must have `feed.entities_count`, `feed.last_updated_timestamp`, `feed.errors_total`, `cycles_total` and a passing `tests/integration/test_<tool>_e2e.py`).
 

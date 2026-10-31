@@ -396,11 +396,10 @@ git commit -m "feat(hooks): make darnlink the default local link checker (Phase 
 
 ---
 
-## Phase 4 — Roll out to the five other core Bodai repos
+## Phase 4 — Roll out to the four other core Bodai repos
 
-**Files (per repo, 5 repos × similar patch):**
+**Files (per repo, 4 repos × similar patch):**
 - Akosha: `akosha/settings/local.yaml`, `akosha/pyproject.toml` (add `darnlink` to dev deps if the repo pins its own deps)
-- Dhara: `dhara/settings/local.yaml`, `dhara/pyproject.toml`
 - Session-Buddy: `session-buddy/settings/local.yaml`, `session-buddy/pyproject.toml`
 - Oneiric: `oneiric/settings/local.yaml`, `oneiric/pyproject.toml`
 - Mahavishnu: `mahavishnu/settings/local.yaml`, `mahavishnu/pyproject.toml`
@@ -416,7 +415,7 @@ Each patch is minimal because none of the other Bodai repos run their own link-c
 
 - [ ] **Step 1: Per-repo local.yaml pin**
 
-For each of the 5 repos, create or update `settings/local.yaml` (gitignored — `.local.yaml` is the per-developer convention; the per-repo default lives in `settings/<repo>.yaml` if you want a checked-in default) with:
+For each of the 4 repos, create or update `settings/local.yaml` (gitignored — `.local.yaml` is the per-developer convention; the per-repo default lives in `settings/<repo>.yaml` if you want a checked-in default) with:
 
 ```yaml
 # Adopted: darnlink as the local link checker (Phase 4 of the cross-repo rollout).
@@ -547,7 +546,7 @@ This is a `{built, wired, adopted}` change spanning five phases. Track state in 
 
 1. **darnlink maturity:** v0.7.0 "Early", 14 stars, single production user. Phase 1's TDD coverage + Phase 2's pilot run are the natural gates. If Phase 2 surfaces a disagreement between `check-local-links` and `darnlink`, pause before Phase 3 and document the discrepancy.
 2. **GPL-3.0-or-later contamination:** every task in this plan uses `subprocess.run`. Do not "optimize" the wrapper later by inlining the call — that would convert crackerjack's wrapper into a derivative of darnlink and force the BSD-3 tree to GPL-3.
-3. **Per-repo docs tree diversity:** Mahavishnu, Akosha, Dhara, Session-Buddy, and Oneiric each have their own docs conventions (some have `docs/`, some have `README.md` only). Phase 4 Step 4 may surface findings in repos that had no prior link-checker; budget time to triage rather than auto-revert.
+3. **Per-repo docs tree diversity:** Mahavishnu, Akosha, Session-Buddy, and Oneiric each have their own docs conventions (some have `docs/`, some have `README.md` only). Phase 4 Step 4 may surface findings in repos that had no prior link-checker; budget time to triage rather than auto-revert.
 4. **Anchor coverage gap:** `darnlink`'s UUID anchoring is opt-in (`<!-- dvn-anchor:UUID -->` markers must be added per file). The Phase 1 wrapper runs `darnlink check` (integrity mode), not `darnlink check --strict`. If anchor coverage becomes a goal later, it belongs in a separate plan.
 
 ---

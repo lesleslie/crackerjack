@@ -70,7 +70,7 @@ ______________________________________________________________________
                        │
                        ▼
     ┌──────────────────────────────────────────────────────────┐
-    │         Dhara Storage (ACID SQLite)           │
+    │        Local SQLite Storage (ACID)             │
     │  - git_metrics table (time-series)            │
     │  - git_events table (detailed log)              │
     │  - fix_attempts table (learning)                │
@@ -154,7 +154,7 @@ class GitMetricsCollector:
 
 - ✅ **Merge Conflict Detection**: Identifies rebase conflicts, merge commits
 
-#### 1.2 Dhara Schema Extension
+#### 1.2 Git Metrics Schema Extension
 
 **File**: `crackerjack/memory/git_metrics_schema.sql` (1.6KB)
 
@@ -185,7 +185,7 @@ WHERE (repository_path, timestamp, metric_type) IN (
 );
 ```
 
-#### 1.3 Dhara Storage Backend
+#### 1.3 Git Metrics Storage Backend
 
 **File**: `crackerjack/memory/git_metrics_storage.py` (12KB, 370 lines)
 
@@ -680,7 +680,7 @@ Git Repository
                    │
                    ▼
         ┌──────────────────────────────────────────────────┐
-        │     Dhara SQLite Storage (ACID)         │
+        │     Local SQLite Storage (ACID)         │
         │  - git_metrics table                       │
         │  - git_events table                         │
         │  - fix_attempts table                        │
@@ -935,7 +935,7 @@ class SkillMetrics:
 - Detect which parallelizations work best
 - Minimize execution time based on history
 
-**Dhara**: Adapter selection learning
+**Local SQLite store**: Adapter selection learning
 
 - Track which adapters work best for file types
 - Learn from failures and successes
@@ -945,17 +945,13 @@ ______________________________________________________________________
 
 ## Migration Notes
 
-### Dhara MCP Transport
+### Adapter-learning storage
 
-Crackerjack's adapter-learning subsystem (used by `DharaMCPAdapterLearner`
-in `crackerjack/integration/dhara_integration.py`) talks to the
-Dhara MCP server via `streamablehttp` rather than importing Dhara
-in-process. The client lives in `crackerjack/integration/dhara_mcp_client.py`.
-
-The in-process path is preserved as a fallback for environments where
-the Dhara MCP server is unreachable. See `create_adapter_learner` in
-`crackerjack/integration/dhara_integration.py` for the chain order
-(MCP -> in-process Dhara -> SQLite -> NoOp).
+Crackerjack's adapter-learning subsystem records adapter outcomes in a
+local SQLite database (`.crackerjack/adapter_learning.db`). The store is
+created by `create_adapter_learner` in
+`crackerjack/integration/adapter_learning.py`, which falls back to NoOp
+when SQLite cannot be initialized.
 
 ### Dependency Changes
 
@@ -1048,8 +1044,8 @@ ______________________________________________________________________
 | Component | Files | Lines of Code | Test Coverage |
 |------------|-------|----------------|----------------|
 | Git Metrics Collector | 1 module (35KB) | ✅ Comprehensive |
-| Dhara Schema | 1 schema file (1.6KB) | ✅ N/A |
-| Dhara Storage | 1 module (12KB) | ✅ Comprehensive |
+| Git Metrics Schema | 1 schema file (1.6KB) | ✅ N/A |
+| Git Metrics Storage | 1 module (12KB) | ✅ Comprehensive |
 | Issue Embedder | 1 module (9KB) | ✅ Comprehensive |
 | Strategy Recommender | 1 module (13KB) | ✅ Comprehensive |
 | Akosha Integration | 1 module (531 lines) | ✅ 100% |
@@ -1082,7 +1078,6 @@ ______________________________________________________________________
 - [Akosha Documentation](https://github.com/lesleslie/akosha) - Semantic search and embeddings
 - [Session-Buddy Documentation](https://github.com/lesleslie/session-buddy) - Session management and metrics
 - [Mahavishnu Documentation](https://github.com/lesleslie/mahavishnu) - Cross-project orchestration
-- [Dhara Documentation](https://github.com/lesleslie/dhara) - ACID storage adapters
 - [Conventional Commits](https://www.conventionalcommits.org/) - Commit message standard
 
 ______________________________________________________________________

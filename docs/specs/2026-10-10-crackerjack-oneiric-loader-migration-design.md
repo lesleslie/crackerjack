@@ -46,7 +46,7 @@ filter / precedence logic that drifted three times in 2026.
 ## 3. Non-Goals
 
 1. **Migrating Bodai ecosystem components other than Crackerjack** (Akosha,
-   Session-Buddy, Dhara, mcp-common). Each owns its loader; this spec is
+   Session-Buddy, mcp-common). Each owns its loader; this spec is
    scoped to Crackerjack because the asymmetry was called out for it.
 2. **Replacing `crackerjack/config/profile_loader.py`** (ProfileConfig,
    ProfileLoader). Profile loading is a separate concern (hook profile

@@ -99,7 +99,7 @@ def test_extract_frontmatter_returns_none_for_underscore_section_separator(
 ) -> None:
     """Files that use ______________________ section separators must NOT be parsed as frontmatter.
 
-    Regression test for the 2026-07-27 dhara consumer migration ship-blocker:
+    Regression test for the 2026-07-27 consumer migration ship-blocker:
     the previous regex accepted `___` as a frontmatter delimiter AND matched
     the body until the next such line, swallowing markdown and failing
     yaml.safe_load with frontmatter_parse.
@@ -122,7 +122,7 @@ def test_extract_frontmatter_returns_none_for_underscore_section_separator(
 def test_extract_frontmatter_underscore_line_in_middle_returns_none() -> None:
     """A `___` line in the middle of a file (mid-body) must not start a false match.
 
-    Files like dhara's plan/spec use repeating `___` section separators
+    Files like some sibling repos' plan/spec use repeating `___` section separators
     throughout the body. The regex's opening match must require a *closing*
     `---` on its own line — never match `___`.
     """

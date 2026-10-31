@@ -945,7 +945,6 @@ class PublishManagerImpl:
             "oneiric",
             "session_buddy",
             "akosha",
-            "dhara",
         ):
             candidate = project_root / name
             if candidate.is_dir():

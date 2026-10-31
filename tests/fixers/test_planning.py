@@ -93,14 +93,14 @@ def test_fix_import_suppresses_star_import_lint(tmp_path) -> None:
     project_root = tmp_path
     target_file = project_root / "module.py"
     target_file.write_text(
-        "from dhara.core.connection import *\n",
+        "from mypkg.core.connection import *\n",
         encoding="utf-8",
     )
 
     issue = Issue(
         type=IssueType.IMPORT_ERROR,
         severity=Priority.MEDIUM,
-        message="F403 `from dhara.core.connection import *` used; unable to detect undefined names",
+        message="F403 `from mypkg.core.connection import *` used; unable to detect undefined names",
         file_path=str(target_file),
         line_number=1,
     )

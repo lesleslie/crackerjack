@@ -241,7 +241,7 @@ for the rationale and the new external-loop design.
 **Former capabilities** (now deleted):
 
 - ~~Agent Orchestration~~ — Multiple specialized AI agents
-- ~~Agent selection and routing~~ — Replaced by hook-time retry + Dhara `fix-failures/{fingerprint}` recording
+- ~~Agent selection and routing~~ — Replaced by hook-time retry + `fix_attempts` fingerprint recording
 - ~~Context-aware fixing~~ — Replaced by `FailureRecorder.record()` writes to `git_metrics.db`
 
 **Former providers** (now disconnected):

@@ -2,7 +2,7 @@
 
 Workflows publish live progress snapshots instead of waiting at the gate.
 Phase 3 substrate (HTTP CRUD ``/workflows/<id>/progress-snapshots``) is
-**http_blocked** in this dispatch (it is owned by Workstream C - Dhara thin
+**http_blocked** in this dispatch (it is owned by Workstream C - the remote thin
 client + HTTP CRUD). Until Workstream C lands, this test module pins the
 local interface that workers and the CLI must satisfy, and stubs the
 remote CRUD call behind a clearly-labelled TODO.
@@ -210,7 +210,7 @@ class TestHTTPCrudStub:
     def test_remote_persister_raises_substrate_blocked(self) -> None:
         from crackerjack.mahavishnu.workflows.progress import RemotePersister
 
-        persister = RemotePersister(dhara_url="http://localhost:8683")
+        persister = RemotePersister(base_url="http://localhost:8683")
         snap = ProgressSnapshot(
             workflow_id="wf-1",
             step="executing",
@@ -220,7 +220,7 @@ class TestHTTPCrudStub:
         with pytest.raises(NotImplementedError) as exc_info:
             asyncio.run(persister.send(snap))
         # TODO(Workstream-C): replace with httpx POST to
-        # /workflows/<id>/progress-snapshots once the Dhara HTTP CRUD
+        # /workflows/<id>/progress-snapshots once the remote HTTP CRUD
         # surface lands. Reference: phase-3 substrate plan, Workstream C.
         assert "Workstream-C" in str(exc_info.value) or "TODO" in str(exc_info.value)
 

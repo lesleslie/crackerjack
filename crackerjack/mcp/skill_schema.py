@@ -1,7 +1,7 @@
 """Skill metadata schema (Phase 1 of bodai-skill-agent-distribution plan).
 
-Per docs/plans/2026-09-14-dhara-mcp-decomposition-implementation.md
-Phase 10 task 4, the canonical skill schema now lives in
+Per the bodai skill/agent distribution decomposition (Phase 10 task 4),
+the canonical skill schema now lives in
 ``mcp_common.canonical_schemas.skill``. This module is a thin re-export
 shim that preserves the legacy ``SkillMetadata`` class name. New code
 should import directly from ``mcp_common.canonical_schemas``.
@@ -15,7 +15,7 @@ shim preserves ``isinstance(x, SkillMetadata)`` for callers that
 import the legacy name.
 
 Refs:
-- docs/specs/2026-09-14-dhara-mcp-decomposition-design.md §4.11
+- mcp_common/canonical_schemas/skill.py
 - docs/audits/2026-09-15-decomposition-final-review.md §2.1 W4
 """
 

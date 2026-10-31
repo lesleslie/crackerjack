@@ -506,10 +506,9 @@ def _adapter_learning_db_candidates(db_path: Path) -> list[Path]:
 
 # First 16 bytes of every valid SQLite 3.x database file, per
 # https://www.sqlite.org/fileformat.html. Reads that don't match this
-# header mean the file is something else (the Dhara backend, before it was
-# decommissioned 2026-09-20, wrote ``dhara.collections.PersistentDict``
-# shelves to ``.crackerjack/adapter_learning.db`` — same filename, very
-# different format).
+# header mean the file is something else (the retired shelf-based backend
+# wrote ``PersistentDict`` shelves to ``.crackerjack/adapter_learning.db``
+# — same filename, very different format).
 SQLITE_MAGIC_HEADER = b"SQLite format 3\x00"
 
 
@@ -581,27 +580,28 @@ def create_adapter_learner(
 ) -> AdapterLearnerProtocol:
     """Build an :class:`AdapterLearnerProtocol`.
 
-    With Dhara decommissioned (2026-09-20), the only non-no-op backend is
-    SQLite. ``backend="dhara"`` is preserved as a keyword so old config
-    files keep loading, but resolves to NoOp (with a warning) so users see
-    the deprecation rather than a crash.
+    SQLite is the only non-no-op backend: ``backend="auto"`` and
+    ``backend="sqlite"`` both select it. Any other value is rejected with
+    a warning and resolves to NoOp, so stale config files keep loading
+    instead of crashing.
 
     Before attempting SQLite init at each candidate path, the factory
     checks for a legacy non-SQLite file (typically a ``PersistentDict``
-    shelf left over from the Dhara backend) and moves it aside with a
-    timestamped suffix. This prevents the recurring
+    shelf left over from the retired shelf-based backend) and moves it
+    aside with a timestamped suffix. This prevents the recurring
     ``file is not a database`` error that would otherwise surface on
     every run for any repo whose ``.crackerjack/adapter_learning.db``
-    predates the Dhara→SQLite switch.
+    predates the switch to SQLite.
     """
     if not enabled:
         logger.info("adapter_learning: disabled, using NoOp")
         return NoOpAdapterLearner()
 
-    if backend == "dhara":
+    if backend not in ("auto", "sqlite"):
         logger.warning(
-            "adapter_learning: backend='dhara' is no longer supported (Dhara "
-            "decommissioned 2026-09-20); falling back to NoOp"
+            "adapter_learning: unsupported backend %r (only 'auto' and "
+            "'sqlite' are supported); falling back to NoOp",
+            backend,
         )
         return NoOpAdapterLearner()
 

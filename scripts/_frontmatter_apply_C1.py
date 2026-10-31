@@ -328,9 +328,9 @@ ASSIGNMENTS: dict[str, tuple[str, str, str]] = {
         "implementation",
         "lifecycle",
     ),
-    "docs/plans/2026-06-03-dhara-mcp-migration.md": (
-        "active",
-        "implementation",
+    "docs/plans/.archive/2026-06-03-mcp-adapter-learner-migration.md": (
+        "complete",
+        "historical",
         "lifecycle",
     ),
     "docs/plans/2026-06-29-ty-ratchet-cleanup.md": (
@@ -383,9 +383,9 @@ ASSIGNMENTS: dict[str, tuple[str, str, str]] = {
         "implementation",
         "lifecycle",
     ),
-    "docs/specs/2026-06-03-dhara-mcp-migration-design.md": (
-        "draft",
-        "implementation",
+    "docs/specs/.archive/2026-06-03-mcp-adapter-learner-migration-design.md": (
+        "complete",
+        "historical",
         "lifecycle",
     ),
     "docs/specs/2026-06-29-ty-ratchet-cleanup-design.md": (

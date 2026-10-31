@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -132,43 +131,6 @@ class TestCloneGrouperTypeMapping:
         assert len(groups) == 2
         group_ids = {g.group_id for g in groups}
         assert len(group_ids) == 2, "group_ids must be unique"
-
-    async def test_grouper_skips_group_with_handled_dhara_key(self) -> None:
-        """Groups already handled (dhara.get_async returns data) must be skipped."""
-        raw_pairs = [
-            {
-                "id": 1,
-                "clone1": {
-                    "location": {
-                        "file_path": "a.py",
-                        "start_line": 1,
-                        "end_line": 10,
-                        "start_col": 0,
-                        "end_col": 50,
-                    }
-                },
-                "clone2": {
-                    "location": {
-                        "file_path": "b.py",
-                        "start_line": 1,
-                        "end_line": 10,
-                        "start_col": 0,
-                        "end_col": 50,
-                    }
-                },
-                "similarity": 1.0,
-                "type": 1,
-                "confidence": 1.0,
-            }
-        ]
-        mock_dhara = AsyncMock()
-        mock_dhara.get_async = AsyncMock(
-            return_value={"refactored_at": "2026-06-01T00:00:00Z"}
-        )
-
-        grouper = CloneGrouper(dhara=mock_dhara)
-        groups = await grouper.group_pairs_filtered(raw_pairs)
-        assert groups == [], "Groups with Dhara handled key must be skipped"
 
 
 @pytest.mark.unit

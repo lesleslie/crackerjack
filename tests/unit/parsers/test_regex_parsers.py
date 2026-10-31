@@ -780,7 +780,7 @@ file3.py:5: E501 Line too long
     def test_parse_star_import_errors_as_import_issues(self, parser):
         """Test parsing star-import lint as import issues."""
         output = (
-            "dhara/connection.py:11:1: F403 `from dhara.core.connection import *` "
+            "mypkg/connection.py:11:1: F403 `from mypkg.core.connection import *` "
             "used; unable to detect undefined names"
         )
 
@@ -792,7 +792,7 @@ file3.py:5: E501 Line too long
     def test_parse_star_import_export_errors_as_import_issues(self, parser):
         """Test parsing __all__ star-import fallout as import issues."""
         output = (
-            "dhara/connection.py:19:12: F405 `Connection` may be undefined, "
+            "mypkg/connection.py:19:12: F405 `Connection` may be undefined, "
             "or defined from star imports"
         )
 

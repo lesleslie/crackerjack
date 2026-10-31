@@ -12,7 +12,7 @@ last_reviewed: 2026-09-09
 **Date:** 2026-08-11
 **Owner:** les
 **Policy repo:** crackerjack (the enforcer)
-**Applies to:** all 7 Bodai components (mcp-common, oneiric, fastblocks, mahavishnu, crackerjack, session-buddy, akosha, dhara)
+**Applies to:** all 7 Bodai components (mcp-common, oneiric, fastblocks, mahavishnu, crackerjack, session-buddy, akosha)
 
 ## Goal
 
@@ -38,7 +38,6 @@ The Bodai ecosystem has 7 components. Today:
 | crackerjack | absent | — | 80 |
 | session-buddy | absent | — | 80 |
 | akosha | absent | — | 80 |
-| dhara | absent | — | 80 |
 
 The Crackerjack service `crackerjack/crackerjack/services/coverage_ratchet.py` already implements the ratchet logic. The test stage partly wires it. The CLI surface is incomplete. Adoption is inconsistent.
 
@@ -254,9 +253,8 @@ Per-repo migration, lowest coverage first. Direct commits to main, no PRs.
 | 3 | crackerjack | no ratchet | Run `init` at current coverage, mirror pyproject |
 | 4 | session-buddy | no ratchet | Run `init` at current coverage, mirror pyproject |
 | 5 | akosha | no ratchet | Run `init` at current coverage, mirror pyproject |
-| 6 | dhara | no ratchet | Run `init` at current coverage, mirror pyproject |
-| 7 | mcp-common | ratchet at 99.49% | No change (already aligned) |
-| 8 | oneiric | ratchet at 79.41% | No change (already aligned) |
+| 6 | mcp-common | ratchet at 99.49% | No change (already aligned) |
+| 7 | oneiric | ratchet at 79.41% | No change (already aligned) |
 
 **Migration invariants:**
 

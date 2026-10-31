@@ -8,7 +8,7 @@
 
 ## Bodai Ecosystem Role
 
-Crackerjack is the **inspector** of the [Bodai ecosystem](https://github.com/lesleslie/bodai) — the standard quality gate used by every other Bodai repo (Mahavishnu, Akosha, Dhara, Session-Buddy, Oneiric) for linting, typing, tests, security, and release workflows.
+Crackerjack is the **inspector** of the [Bodai ecosystem](https://github.com/lesleslie/bodai) — the standard quality gate used by every other Bodai repo (Mahavishnu, Akosha, Session-Buddy, Oneiric) for linting, typing, tests, security, and release workflows.
 
 Standalone, Crackerjack is an opinionated Python project management tool — useful for any Python team that wants UV, Ruff, pytest, and AI-assisted fixing unified behind one CLI. See [bodai/docs](https://github.com/lesleslie/bodai) for the full integration story.
 
@@ -484,7 +484,7 @@ Crackerjack integrates with **session-buddy** for AI agent metrics tracking and 
             └───────────────┘          └─────────────────┘    └──────────────┘
                     │
             ┌───────▼────────┐
-            │ Dhara Storage│
+            │ Local SQLite   │
             │ (SQLite + WAL) │
             └────────────────┘
 ```
@@ -595,7 +595,7 @@ recommendations = context.get_skill_recommendations(
 
 ### Data Migration
 
-**Migrate from JSON-based metrics to Dhara database**:
+**Migrate from JSON-based metrics to SQLite database**:
 
 ```bash
 # 1. Backup existing JSON
