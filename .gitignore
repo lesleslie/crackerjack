@@ -22,6 +22,12 @@ __pycache__/
 *.backup.*
 *.bak
 *.bak2
+# Numbered backup suffixes (.bak3, .bak4, ...) are their own suffix
+# pattern: `*.bak` only matches a literal trailing ".bak", and `*.bak.*`
+# needs a dot after the marker. Two such files were tracked before this
+# rule existed — a backup of a deleted metrics module and a backup of a
+# deleted ULID migration script.
+*.bak[0-9]*
 *.cover
 *.py,cover
 *.crackerjack.bak

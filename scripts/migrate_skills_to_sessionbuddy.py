@@ -147,7 +147,7 @@ class SkillsMigrator:
 
         if not self.dry_run:
             try:
-                counts = self._migrate_to_druva(json_data)
+                counts = self._migrate_to_storage(json_data)
                 result.invocations_migrated = counts["invocations"]
                 result.skills_migrated = counts["skills"]
                 result.success = True
@@ -250,8 +250,8 @@ class SkillsMigrator:
             "skills": len(unique_skills),
         }
 
-    def _migrate_to_druva(self, data: dict[str, Any]) -> dict[str, int]:
-        logger.info("Migrating to Druva database...")
+    def _migrate_to_storage(self, data: dict[str, Any]) -> dict[str, int]:
+        logger.info("Migrating to the session-buddy skills store...")
 
         try:
             from session_buddy.storage.skills_storage import SkillsStorage

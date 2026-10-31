@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import importlib
 import time
 import uuid
 from contextvars import ContextVar
@@ -33,17 +32,7 @@ def add_correlation_id(
 
 
 def _generate_correlation_id() -> str:
-
-    try:
-        druva_mod = importlib.import_module("druva")
-    except ImportError:
-        return uuid.uuid4().hex[:8]
-
-    generate = getattr(druva_mod, "generate", None)
-    if generate is None:
-        return uuid.uuid4().hex[:8]
-
-    return generate()[:16]
+    return uuid.uuid4().hex[:8]
 
 
 def get_correlation_id() -> str:
