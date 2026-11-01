@@ -676,6 +676,23 @@ filelock = "2099-12-31T23:59:59Z"
 # under a separate distribution name, so it needs its own entry.
 fastmcp = "2099-12-31T23:59:59Z"
 fastmcp-slim = "2099-12-31T23:59:59Z"
+# pyasn1 0.6.5 — GHSA-2qm8-x737-gmw5 / GHSA-9m75-vc3g-4x39 /
+# GHSA-fm9c-5rcf-2q5p / GHSA-mm57-4v3p-rchx (CVE-2026-119196 /
+# CVE-2026-119195 / CVE-2026-119194 / CVE-2026-119197). All four are
+# quadratic-complexity denial-of-service bugs in pyasn1's BER/CER/DER
+# decoder: constructed BIT STRING decoding, constructed string and
+# indefinite-length ANY decoding, schemaless container decoding, and
+# binary REAL decoding. A crafted ASN.1 payload burns CPU quadratically
+# in the payload size.
+#
+# Transitive only: crackerjack never imports pyasn1. It arrives via
+# google-auth -> pyasn1-modules -> pyasn1 (the google-cloud-* stack used
+# by the GCP-backed LLM providers). pyasn1-modules 0.4.2 constrains
+# pyasn1>=0.6.1,<0.7.0, so 0.6.5 is a drop-in bump with no resolver
+# conflict. The fix landed 2026-10-27, inside the 7-day cooldown above,
+# so without this entry `uv lock --upgrade` keeps the vulnerable 0.6.4
+# rather than erroring.
+pyasn1 = "2099-12-31T23:59:59Z"
 # ty 0.0.95 — class 3: fleet-wide dev-tool pinning. ty is the gate's
 # primary type checker and its version CHANGES WHAT THE GATE REPORTS.
 # The 7-day cooldown above would therefore strand the whole fleet on a

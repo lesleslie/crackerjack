@@ -470,6 +470,5 @@ class SessionController:
         pipeline.session.initialize_session_tracking(options)
         pipeline._configure_session_cleanup(options)
         pipeline._configure_hook_manager_lsp(options)
-        pipeline._configure_hook_manager_lsp(options)
         pipeline._register_lsp_cleanup_handler(options)
         pipeline._log_workflow_startup_info(options)
