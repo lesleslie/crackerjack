@@ -10,6 +10,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from ._git_utils import get_git_tracked_files
+from ._ty_binary import resolve_ty_binary
 
 # foo.py:10:5: warning[unused-type-ignore-comment] Unused blanket `type: ignore` directive
 
@@ -73,7 +74,7 @@ def run_ty(package_root: Path) -> list[FixSite]:
     try:
         proc = subprocess.run(
             [
-                "ty",
+                resolve_ty_binary(),
                 "check",
                 "--output-format",
                 "concise",

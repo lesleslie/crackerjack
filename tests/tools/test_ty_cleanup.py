@@ -32,6 +32,7 @@ from unittest.mock import patch
 import pytest
 
 from crackerjack.tools import _git_utils, ty_cleanup
+from crackerjack.tools._ty_binary import resolve_ty_binary
 from crackerjack.tools.ty_cleanup import (
     AUTO_FIX_CODES,
     FileEdits,
@@ -204,7 +205,12 @@ def test_run_ty_skips_blank_and_malformed_lines(tmp_path: Path) -> None:
 
 def test_run_ty_passes_correct_cwd_and_args(tmp_path: Path) -> None:
     """The subprocess.run call gets the package-root parent as cwd and the
-    right ty CLI args."""
+    right ty CLI args.
+
+    ``cmd[0]`` is the *resolved* ty binary, not the bare name: the gate
+    must run the build its own environment pins, so that a stale ty
+    elsewhere on ``PATH`` cannot decide the gate's verdict.
+    """
     captured: dict[str, object] = {}
 
     def _capture(*args: object, **kwargs: object) -> object:
@@ -219,7 +225,8 @@ def test_run_ty_passes_correct_cwd_and_args(tmp_path: Path) -> None:
         run_ty(package_root)
     cmd = captured["args"]
     assert isinstance(cmd, list)
-    assert cmd[0] == "ty"
+    assert cmd[0] == resolve_ty_binary()
+    assert Path(str(cmd[0])).name == "ty"
     assert "check" in cmd
     assert captured["cwd"] == tmp_path
     assert captured["check"] is False

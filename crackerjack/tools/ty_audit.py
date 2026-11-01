@@ -9,6 +9,8 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 
+from ._ty_binary import resolve_ty_binary
+
 _SUPPRESSION_RE = re.compile(r"#\s*ty:\s*ignore\[([a-z0-9-]+)\]")
 
 
@@ -163,7 +165,7 @@ def detect_unused(
         try:
             proc = subprocess.run(
                 [
-                    "ty",
+                    resolve_ty_binary(),
                     "check",
                     str(file_path),
                     "--no-progress",

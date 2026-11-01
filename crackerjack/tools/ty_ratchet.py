@@ -7,6 +7,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+from crackerjack.tools._ty_binary import resolve_ty_binary
+
 _CONCISE_DIAGNOSTIC_PREFIX = re.compile(r"^[\w./-]+:\d+:\d+:\s+(?:error|warning)\[")
 _FOUND_DIAGNOSTICS_RE = re.compile(r"Found\s+(\d+)\s+diagnostics?")
 
@@ -78,7 +80,14 @@ def _count_diagnostics(output: str) -> int:
 
 def run_ty(target: str) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
-        ["ty", "check", "--output-format", "concise", "--no-progress", target],
+        [
+            resolve_ty_binary(),
+            "check",
+            "--output-format",
+            "concise",
+            "--no-progress",
+            target,
+        ],
         capture_output=True,
         text=True,
         check=False,

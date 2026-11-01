@@ -87,6 +87,24 @@ dependencies = [
     "ruff==0.16.0",
     "structlog>=26.1.0",
     "tomli-w>=1.2.0",
+    # The fleet's primary type checker. It is a Rust binary, not an
+    # importable module, so a plain "import ty" never resolves -- but
+    # the quality gate invokes it as an external CLI, and every repo
+    # that installs crackerjack must run the SAME build.
+    #
+    # This is a runtime dependency on purpose. A dependency group is not
+    # installed for consumers, so a pin that lived in one would never
+    # reach the repos that call crackerjack; a runtime dependency is
+    # transitive and does. That is what makes the fleet-wide pin
+    # possible from one place.
+    #
+    # A stale ty does not fail loudly -- it resolves SQLModel's
+    # ``Session.exec`` overloads differently and reports phantom errors
+    # against code that is correct (seven of them across session-buddy
+    # on 2026-10-31, from a ty that was five months stale). See
+    # ``crackerjack/tools/_ty_binary.py`` for the resolution order that
+    # keeps the pinned build authoritative.
+    "ty>=0.0.95",
     "typer>=0.27.2",
     "types-aiofiles>=25.1.0.20260518",
     "types-psutil>=7.2.2.20260906",
@@ -151,9 +169,12 @@ adapter-learning = [
 
 # Type-checking group: experimental type checkers.
 # pyrefly and ty are alternatives; install one to try them.
+# The ty floor is kept in sync with the runtime pin in
+# [project.dependencies] -- that pin is what reaches the consuming
+# repos, this one just keeps crackerjack's own checkout aligned.
 type-checking = [
     "pyrefly>=1.3.2",
-    "ty>=0.0.84",
+    "ty>=0.0.95",
 ]
 
 # neural group intentionally empty — sentence-transformers, torch, and
@@ -655,6 +676,16 @@ filelock = "2099-12-31T23:59:59Z"
 # under a separate distribution name, so it needs its own entry.
 fastmcp = "2099-12-31T23:59:59Z"
 fastmcp-slim = "2099-12-31T23:59:59Z"
+# ty 0.0.95 — class 3: fleet-wide dev-tool pinning. ty is the gate's
+# primary type checker and its version CHANGES WHAT THE GATE REPORTS.
+# The 7-day cooldown above would therefore strand the whole fleet on a
+# stale ty for up to a week after every release, and a stale ty fails
+# quietly: it resolves SQLModel's `Session.exec` overloads differently
+# and reports phantom errors against correct code (seven of them across
+# session-buddy on 2026-10-31). A type checker that is a week behind is
+# not a security posture -- it is a broken signal. The cooldown still
+# applies to every other package.
+ty = "2099-12-31T23:59:59Z"
 
 [tool.pip-audit]
 ignore-vuln = [
@@ -696,6 +727,9 @@ exclude-deps = [
     # Never imported by name, so creosote (which scans `import` statements)
     # cannot see them in use and would false-positive them as unused.
     "codespell",
+    # ty is the gate's type checker: a Rust binary invoked as an external
+    # CLI by crackerjack.tools._ty_binary, never imported by name.
+    "ty",
     # unidiff is invoked via tool wrappers, never imported by name;
     # flake8-bugbear dep is consumed indirectly via ruff tooling, not
     # imported by name.
