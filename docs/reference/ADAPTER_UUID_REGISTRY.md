@@ -136,6 +136,6 @@ Track progress updating each adapter:
 - [ ] sast/semgrep.py
 - [ ] security/gitleaks.py
 - [ ] type/pyrefly.py
-- [ ] type/ty.py
+- [ ] type/ty_adapter.py
 - [ ] type/zuban.py
 - [ ] utility/checks.py

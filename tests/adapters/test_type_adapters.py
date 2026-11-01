@@ -10,7 +10,7 @@ import pytest
 
 from crackerjack.adapters._tool_adapter_base import ToolExecutionResult
 from crackerjack.adapters.type.pyrefly import PyreflyAdapter, PyreflySettings
-from crackerjack.adapters.type.ty import TyAdapter, TySettings
+from crackerjack.adapters.type.ty_adapter import TyAdapter, TySettings
 
 
 class TestTyAdapter:

@@ -14,7 +14,7 @@ Static type checking with a stable Rust-backed default and one opt-in experiment
 | Module | Description | Status |
 | ------ | ----------- | ------ |
 | `pyrefly.py` | Python type checker with JSON diagnostics, baseline/suppress support | Experimental |
-| `ty.py` | Python type checker with concise output and native fix support | Experimental |
+| `ty_adapter.py` | Python type checker with concise output and native fix support | Experimental |
 
 ## Ty Settings
 

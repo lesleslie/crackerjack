@@ -8,7 +8,7 @@ import pytest
 
 from crackerjack.adapters._tool_adapter_base import ToolExecutionResult
 from crackerjack.adapters.type.pyrefly import PyreflyAdapter, PyreflySettings
-from crackerjack.adapters.type.ty import TyAdapter
+from crackerjack.adapters.type.ty_adapter import TyAdapter
 
 
 def _make_result(output: str) -> ToolExecutionResult:

@@ -36,7 +36,7 @@ from crackerjack.adapters.refactor.refurb import RefurbSettings
 from crackerjack.adapters.sast.bandit import BanditSettings
 from crackerjack.adapters.sast.semgrep import SemgrepSettings
 from crackerjack.adapters.type.pyrefly import PyreflySettings
-from crackerjack.adapters.type.ty import TySettings
+from crackerjack.adapters.type.ty_adapter import TySettings
 
 # The adapter name -> the settings class that adapter declares.
 ADAPTER_SETTINGS: dict[str, type[ToolAdapterSettings]] = {

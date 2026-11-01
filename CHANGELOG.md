@@ -10,6 +10,24 @@ blocks_on: []
 topic: changelog
 ---
 
+## [0.92.0] - 2026-11-01
+
+### Changed
+
+- logging: Drop the retired service's runtime import path
+- Remove every Dhara reference from crackerjack
+- Resolve Session-Buddy data paths via the XDG base directories
+
+### Fixed
+
+- deps: Bump pyasn1 to 0.6.5 for four quadratic-DoS advisories
+- Insert the parent result row so health snapshots honor the FK
+- Pin the type checker as a transitive runtime dependency
+
+### Internal
+
+- repo: Untrack the numbered backup artifacts
+
 ## [0.91.3] - 2026-10-29
 
 ### Performance

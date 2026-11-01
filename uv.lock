@@ -2281,7 +2281,7 @@ wheels = [
 
 [[package]]
 name = "mcp-common"
-version = "0.34.1"
+version = "0.34.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "cryptography" },
@@ -2302,9 +2302,9 @@ dependencies = [
     { name = "typer" },
     { name = "websockets" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/50/a9/cc9cc4e176e9a0a91883da6a4cffb11200fb8b059cb2b8d28a74ed969e79/mcp_common-0.34.1.tar.gz", hash = "sha256:79a85b5352bdf3acf403dc7464457c1d576899e5f17f847a80b4ea2fc7c04e67", size = 1074701, upload-time = "2026-10-29T19:58:37.029Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/6c/c5/c0aad9b3d080729845bfc614c69c9c208fe9e54df88a5aa99382e5fda23e/mcp_common-0.34.2.tar.gz", hash = "sha256:7f0e535b829c14f4a30c34bc69b222c0b37ab18f15a56b0ebfe800c95ae94243", size = 1076930, upload-time = "2026-11-01T07:02:24.853Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/0f/9d/56bf3a651fcff7c5039c8d577bf77f0097b00bfe19ecfc0dcd781133f370/mcp_common-0.34.1-py3-none-any.whl", hash = "sha256:bf774a796b3b4b20d0140cd37227c2b86bcdbe8ab93deb29d444e11aba69374f", size = 489930, upload-time = "2026-10-29T19:58:35.464Z" },
+    { url = "https://files.pythonhosted.org/packages/9f/93/bfb83c3f4369cfa7d8aeb5481fcce757b905eba10c7c04f7d16dc557d0eb/mcp_common-0.34.2-py3-none-any.whl", hash = "sha256:4a2fe5891ba8b7e8854f1ab15f28133e0f52ea99f651034dc3cb85edf1fc6a32", size = 489717, upload-time = "2026-11-01T07:02:23.268Z" },
 ]
 
 [[package]]
@@ -2692,7 +2692,7 @@ wheels = [
 
 [[package]]
 name = "oneiric"
-version = "0.33.6"
+version = "0.34.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aioboto3" },
@@ -2716,9 +2716,9 @@ dependencies = [
     { name = "typer" },
     { name = "watchfiles" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/d1/88/6988f346ba659f6b09530f010b489cc87ca688fdc593f748b33c31dd35eb/oneiric-0.33.6.tar.gz", hash = "sha256:8f4656936c47b8885f34400f26eb3f1a7edac186adc8d18bc44ee34403eca186", size = 1816862, upload-time = "2026-10-29T17:18:08.117Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/5b/51/ade9838000731840714d38c31f0e659dce35c18425d6c7ba9c87e69f9769/oneiric-0.34.0.tar.gz", hash = "sha256:d82ec3af7f1699965837bc476eeeb349d7d648606f1f454e5f8394e849b60369", size = 1808407, upload-time = "2026-11-01T07:27:38.698Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/4a/4f/b3bab46b125be76c1b677172f75b78841662f174533435d68172aa27c17c/oneiric-0.33.6-py3-none-any.whl", hash = "sha256:19f7e578ffcbc5e57e8a06f6765ca9926ab5ea99f9094790bf9a0e0c7ce4f25a", size = 514278, upload-time = "2026-10-29T17:18:05.745Z" },
+    { url = "https://files.pythonhosted.org/packages/8b/78/54aa55553f99ee4f5269f8e160a1e1fb8cea9d149e51bbf97fe3f45a9a24/oneiric-0.34.0-py3-none-any.whl", hash = "sha256:9016cd2117e384e66bb4d19f15cde7d95c161e66b1d321d2701e6c58198f5970", size = 509903, upload-time = "2026-11-01T07:27:36.664Z" },
 ]
 
 [[package]]
@@ -4057,7 +4057,7 @@ wheels = [
 
 [[package]]
 name = "session-buddy"
-version = "0.37.1"
+version = "0.38.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiofiles" },
@@ -4084,9 +4084,9 @@ dependencies = [
     { name = "typer" },
     { name = "websockets" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/51/64/bc24f58d47c81b71d61a242c47baff95ba2f5bb6b31ee3275f0484049344/session_buddy-0.37.1.tar.gz", hash = "sha256:730fa87b37e989233eafdc6484db21a9c731270d94349327bf8266d0c77ed28c", size = 3712385, upload-time = "2026-10-29T03:30:23.693Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/ad/fe/7bfe30945d058d26b965c40251d011fb71082eab890ff929edd3847018d6/session_buddy-0.38.0.tar.gz", hash = "sha256:8e14b7461f6f7db71c4f05c6ae5356892c4da2e6e8d9a907ecae252e820e31f1", size = 3812120, upload-time = "2026-11-01T06:57:51.898Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/96/93/b6a3e141bdb27437ccbfe01a3a671dba2e21256d550be14418eb5fb81114/session_buddy-0.37.1-py3-none-any.whl", hash = "sha256:caa8cfed99f2db4668fc4323feae38667c52f0b69eb71c26374db13b912d3c42", size = 1233757, upload-time = "2026-10-29T03:30:21.289Z" },
+    { url = "https://files.pythonhosted.org/packages/60/07/be4eee72af9ebca7f0ce99b925cfba8e8b0f67fbed7f97d74a69f2a890db/session_buddy-0.38.0-py3-none-any.whl", hash = "sha256:74a9da77f1ae5127f4311da3c48824c9ca45fd7d2f552cccc379dc4a16a85f6a", size = 1271145, upload-time = "2026-11-01T06:57:49.909Z" },
 ]
 
 [[package]]

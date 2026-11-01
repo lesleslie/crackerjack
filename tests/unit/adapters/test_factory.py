@@ -11,7 +11,7 @@ from crackerjack.adapters.sast.bandit import BanditAdapter
 from crackerjack.adapters.sast.semgrep import SemgrepAdapter
 from crackerjack.adapters.refactor.refurb import RefurbAdapter
 from crackerjack.adapters.type.pyrefly import PyreflyAdapter
-from crackerjack.adapters.type.ty import TyAdapter
+from crackerjack.adapters.type.ty_adapter import TyAdapter
 from crackerjack.models.protocols import AdapterProtocol
 
 

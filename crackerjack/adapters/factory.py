@@ -76,7 +76,7 @@ class DefaultAdapterFactory(AdapterFactoryProtocol):
 
             return PyreflySettings()
         if adapter_name == "Ty":
-            from crackerjack.adapters.type.ty import TySettings
+            from crackerjack.adapters.type.ty_adapter import TySettings
 
             return TySettings()
         return None
@@ -143,7 +143,7 @@ class DefaultAdapterFactory(AdapterFactoryProtocol):
             "Semgrep": ("sast.semgrep", "SemgrepAdapter"),
             "Refurb": ("refactor.refurb", "RefurbAdapter"),
             "Pyrefly": ("type.pyrefly", "PyreflyAdapter"),
-            "Ty": ("type.ty", "TyAdapter"),
+            "Ty": ("type.ty_adapter", "TyAdapter"),
         }
 
         if adapter_name not in adapters:
