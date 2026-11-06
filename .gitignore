@@ -364,7 +364,8 @@ docs/decisions/.archive/test-artifacts/**
 # >>> bodai-shared-gitignore >>>
 # Source of truth: crackerjack/templates/GITIGNORE_BODAI.md
 # Enforced by: crackerjack check `gitignore-conformance`
-# Fleet list: /Users/les/Projects/mahavishnu/BODAI_REPO_REGISTRY.md
+# Fleet list: BODAI_REPO_REGISTRY.md (maintained in the mahavishnu repo;
+# resolved via $CRACKERJACK_BODAI_REGISTRY or a sibling mahavishnu checkout)
 # Do NOT remove the marker line above — `crackerjack gitignore sync` uses it
 # to detect already-applied state.
 
@@ -429,6 +430,15 @@ test-results/
 # at docs/plans/ and docs/specs/ — committed under their canonical
 # paths, never under .superpowers/.
 .superpowers/
+
+# Understand-Anything knowledge graph (local-only, per-project runtime).
+# The `/understand` plugin writes its knowledge graph, structural
+# fingerprints, and scratch batches under `.ua/` in the analyzed project.
+# This is a local analysis artifact, regenerated on demand — it is not
+# source and must never be tracked. Carried here so the rule applies to
+# every Bodai repo that runs `/understand`, not just the one that
+# happened to need it first.
+.ua/
 
 # === Bodai `.claude/` policy ===
 # Default-deny the entire .claude/ tree, then narrow allowlist for the
