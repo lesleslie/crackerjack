@@ -68,6 +68,15 @@ test-results/
 # paths, never under .superpowers/.
 .superpowers/
 
+# Understand-Anything knowledge graph (local-only, per-project runtime).
+# The `/understand` plugin writes its knowledge graph, structural
+# fingerprints, and scratch batches under `.ua/` in the analyzed project.
+# This is a local analysis artifact, regenerated on demand — it is not
+# source and must never be tracked. Carried here so the rule applies to
+# every Bodai repo that runs `/understand`, not just the one that
+# happened to need it first.
+.ua/
+
 # === Bodai `.claude/` policy ===
 # Default-deny the entire .claude/ tree, then narrow allowlist for the
 # canonical durable subtrees. Settings.local.json + runtime artifacts
