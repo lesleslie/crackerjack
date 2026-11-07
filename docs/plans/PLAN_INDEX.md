@@ -37,7 +37,6 @@ _Regenerated 2026-11-07 by `crackerjack.tools.plan_index_sync` (phase)._
 | [`docs/plans/2026-10-28-path-disclosure-redaction.md`](2026-10-28-path-disclosure-redaction.md) | 2026-10-28 | `active` | `implementation` | `security` | Redact User Home Paths from Crackerjack Output and Resolve the Bodai Registry Dynamically |
 | [`docs/plans/2026-11-06-test-selection-and-run-state.md`](2026-11-06-test-selection-and-run-state.md) | 2026-11-06 | `complete` | `implementation` | `testing-infrastructure` | Test Selection and Run-State Tracking |
 | [`docs/plans/2026-11-07-except-comma-form-docstring-correction.md`](2026-11-07-except-comma-form-docstring-correction.md) | 2026-11-07 | `draft` | `implementation` | `documentation` | Correct the Misstated Python 3.14 `except A, B:` Semantics in Test Docstrings |
-| [`docs/plans/2026-11-07-gate-timeout-and-plan-index-stability.md`](2026-11-07-gate-timeout-and-plan-index-stability.md) | 2026-11-07 | `active` | `implementation` | `quality-gate` | Gate Timeout and Plan-Index Stability |
 | [`docs/plans/2026-11-07-pyscn-intel-marker-and-json-schema.md`](2026-11-07-pyscn-intel-marker-and-json-schema.md) | 2026-11-07 | `active` | `implementation` | `dependency-management` | Adopt pyscn >= 1.30 via an Intel-Skipping Dependency Marker |
 | [`docs/plans/2026-11-07-ruff-pin-range.md`](2026-11-07-ruff-pin-range.md) | 2026-11-07 | `draft` | `implementation` | `dependency-management` | Replace the Exact `ruff==0.16.0` Pin with a Bounded Version Range |
 | [`docs/plans/2026-11-07-xdg-runtime-paths-and-observability.md`](2026-11-07-xdg-runtime-paths-and-observability.md) | 2026-11-07 | `complete` | `implementation` | `testing-infrastructure` | XDG Runtime Paths and Run-State Observability |
@@ -89,8 +88,8 @@ _Regenerated 2026-11-07 by `crackerjack.tools.plan_index_sync` (phase)._
 | Role \\ Lifecycle | draft | active | partial | shipped | complete | Total |
 |---|---|---|---|---|---|---|
 | `canonical` | · | 10 | · | · | 2 | **12** |
-| `implementation` | 17 | 24 | · | · | 3 | **44** |
+| `implementation` | 17 | 23 | · | · | 3 | **43** |
 | `umbrella` | · | · | · | · | · | **0** |
 | `historical` | · | · | · | · | 1 | **1** |
 | `superseded` | · | · | · | · | · | **0** |
-| **Total** | **17** | **34** | **·** | **·** | **6** | **57** |
+| **Total** | **17** | **33** | **·** | **·** | **6** | **56** |

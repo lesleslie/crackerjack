@@ -10,6 +10,28 @@ blocks_on: []
 topic: changelog
 ---
 
+## [0.93.0] - 2026-11-07
+
+### Added
+
+- scripts: Add a fleet line-length convergence tool
+
+### Changed
+
+- Chore/gitignore-session-buddy -> main
+- Feat/pyscn-ruff-integration -> main
+- Feat/test-selection-run-state -> main
+- Feat/test-selection-run-state -> main
+- Feat/xdg-runtime-paths-and-observability -> main
+- Fix/gate-timeout-and-plan-index -> main
+- Fix/security-review-findings -> main
+- Fix/ty-rule-rename -> main
+
+### Internal
+
+- gitignore: Ignore the Understand-Anything knowledge graph
+- gitignore: Ignore the Understand-Anything knowledge graph
+
 ## [0.92.0] - 2026-11-01
 
 ### Changed
