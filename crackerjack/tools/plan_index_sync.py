@@ -332,7 +332,13 @@ def _render_distribution(entries: list[Entry]) -> str:
         counts[(e.status, e.role)] += 1
 
     rows: list[str] = ["## Lifecycle × Role Distribution", ""]
-    header = "| Role \\ Lifecycle | " + " | ".join(LIFECYCLE_VALUES) + " | Total |"
+    # The backslash is escaped the way mdformat escapes it. mdformat is
+    # the repo's formatter and it runs as a gate hook, so the generator
+    # has to emit what the formatter would produce: a file the
+    # formatter leaves alone is a file the gate stops rewriting on
+    # every run. Emitting the unescaped form made the two disagree,
+    # and every gate run flipped the header back and forth.
+    header = r"| Role \\ Lifecycle | " + " | ".join(LIFECYCLE_VALUES) + " | Total |"
     sep = "|---|" + "|".join(["---"] * (len(LIFECYCLE_VALUES) + 1)) + "|"
     rows.extend((header, sep))
 
@@ -350,14 +356,15 @@ def _render_distribution(entries: list[Entry]) -> str:
         col_sum = sum(counts.get((lifecycle, role), 0) for role in ROLE_VALUES)
         col_totals.append(str(col_sum) if col_sum else "·")
     grand_total = sum(int(t) if t.isdigit() else 0 for t in col_totals)
-    rows.extend(
-        (
-            "| **Total** | "
-            + " | ".join(f"**{t}**" for t in col_totals)
-            + f" | **{grand_total}** |",
-            "",
-        )
+    rows.append(
+        "| **Total** | "
+        + " | ".join(f"**{t}**" for t in col_totals)
+        + f" | **{grand_total}** |"
     )
+    # No trailing empty line: the caller joins the sections and adds
+    # the final newline, so an empty row here would leave the file
+    # with a blank line at the end -- which mdformat strips, and which
+    # made the gate rewrite the file on every run.
     return "\n".join(rows)
 
 

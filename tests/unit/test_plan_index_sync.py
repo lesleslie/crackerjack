@@ -95,6 +95,34 @@ def test_dry_run_detects_drift(tmp_path: Path) -> None:
     assert "would rewrite" in result.stdout
 
 
+def test_rendered_output_survives_mdformat_unchanged() -> None:
+    """The generator's output must be exactly what mdformat produces.
+
+    mdformat runs as a gate hook over ``docs/``, and ``PLAN_INDEX.md``
+    is not on its skip list. If the generator emits anything the
+    formatter would rewrite, the two disagree: the gate rewrites the
+    file on every run, the tree comes out dirty for a change nobody
+    made, and the index flips between two spellings depending on which
+    ran last.
+
+    This is not hypothetical. The generator wrote a single backslash in
+    the distribution header where mdformat writes an escaped one, and
+    left a blank line at the end of the file where mdformat leaves
+    none.
+    """
+    import mdformat
+
+    from crackerjack.tools import plan_index_sync as pis
+
+    rendered = pis.render_plan_index(REPO_ROOT)
+    formatted = mdformat.text(rendered)
+
+    assert formatted == rendered, (
+        "the generated index is not mdformat-stable; the gate will "
+        "rewrite it on every run"
+    )
+
+
 def test_rendered_contains_all_six_canonical_stores() -> None:
     """The regenerated body lists every canonical Bodai doc store section.
 

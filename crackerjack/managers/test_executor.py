@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 import errno
 import os
 import re
@@ -12,8 +13,6 @@ from pathlib import Path
 
 from rich.console import Console as RichConsole
 from rich.live import Live
-
-from crackerjack.models.protocols import ConsoleInterface
 
 from .test_progress import TestProgress
 
@@ -122,7 +121,6 @@ class TestExecutor:
             progress = self._initialize_progress()
 
         if self._should_try_xdist_fallback(cmd):
-
             return self._run_with_xdist_fallback(
                 cmd, progress, lambda _data: None, timeout
             )
@@ -247,10 +245,11 @@ class TestExecutor:
         from crackerjack.config.settings import CrackerjackSettings
 
         settings = load_settings(CrackerjackSettings)
-        xdist_timeout = settings.testing.xdist_timeout_seconds
+        xdist_stall_timeout = settings.testing.xdist_stall_timeout_seconds
 
         self.console.print(
-            f"[dim]Trying parallel execution with {xdist_timeout}s timeout (will fall back to sequential if xdist hangs)...[/dim]",
+            f"[dim]Trying parallel execution (stall timeout {xdist_stall_timeout}s, "
+            f"run budget {timeout}s; falls back to sequential if xdist hangs)...[/dim]",
         )
 
         env = self._setup_coverage_env()
@@ -259,7 +258,8 @@ class TestExecutor:
             env,
             progress,
             progress_callback,
-            xdist_timeout,
+            timeout,
+            stall_timeout=xdist_stall_timeout,
         )
 
         self.console.print(
@@ -304,9 +304,8 @@ class TestExecutor:
         error_indicators = [
             "worker crashed",
             "workers did not finish",
-            "xdist",
-            "timeout",
-            "hung",
+            "node down",
+            "worker timeout",
         ]
 
         combined_output = (result.stdout or "") + (result.stderr or "")
@@ -561,7 +560,21 @@ class TestExecutor:
         progress: TestProgress,
         progress_callback: t.Callable[[dict[str, t.Any]], None],
         timeout: int = 1800,
+        stall_timeout: int | None = None,
     ) -> subprocess.CompletedProcess[str]:
+        """Run *cmd*, streaming its output while it runs.
+
+        ``timeout`` is the run's total budget. ``stall_timeout`` is the
+        separate budget for *silence* -- how long the process may produce
+        no output before it is treated as hung. The two are different
+        questions: a slow run is not a hung run, and a parallel run
+        that is merely slower than expected must not be killed for it.
+
+        ``stall_timeout`` defaults to ``timeout``, which is the right
+        answer for a run with no shorter stall budget of its own.
+        """
+        stall = timeout if stall_timeout is None else stall_timeout
+
         process = subprocess.Popen(
             cmd,
             cwd=self._detect_target_project_dir(cmd),
@@ -575,9 +588,9 @@ class TestExecutor:
             process,
             progress,
             progress_callback,
-            timeout,
+            stall,
         )
-        stderr_lines = self._read_stderr_lines(process, timeout)
+        stderr_lines = self._read_stderr_lines(process, stall)
 
         return_code = self._wait_for_process_completion(process, timeout)
 
@@ -604,19 +617,33 @@ class TestExecutor:
 
         if not self._setup_nonblocking_io(t.cast("t.TextIO", process.stdout)):
             return self._read_stdout_blocking(
-                process, start_time, last_output_time, progress, progress_callback, timeout
+                process,
+                start_time,
+                last_output_time,
+                progress,
+                progress_callback,
+                timeout,
             )
 
-        return self._read_stdout_loop(process, stdout_lines, progress, progress_callback, start_time, last_output_time, timeout)
+        return self._read_stdout_loop(
+            process,
+            stdout_lines,
+            progress,
+            progress_callback,
+            start_time,
+            last_output_time,
+            timeout,
+        )
 
     def _setup_nonblocking_io(self, stream: t.TextIO) -> bool:
         import fcntl
+
         try:
             fd = stream.fileno()
             fl = fcntl.fcntl(fd, fcntl.F_GETFL)
             fcntl.fcntl(fd, fcntl.F_SETFL, fl | os.O_NONBLOCK)
             return True
-        except (AttributeError, OSError):
+        except AttributeError, OSError:
             return False
 
     def _read_stdout_blocking(
@@ -658,16 +685,46 @@ class TestExecutor:
     ) -> list[str]:
         while True:
             if self._process_has_terminated(process):
-                self._read_remaining_output(t.cast("t.TextIO", process.stdout), stdout_lines, progress, progress_callback)
+                self._read_remaining_output(
+                    t.cast("t.TextIO", process.stdout),
+                    stdout_lines,
+                    progress,
+                    progress_callback,
+                )
                 break
 
-            if not self._wait_for_readable_stdout(process, timeout, start_time, last_output_time):
+            if not self._wait_for_readable_stdout(
+                process, timeout, start_time, last_output_time
+            ):
                 break
 
-            line = self._read_line_with_timeout(t.cast("t.TextIO", process.stdout), timeout)
+            line = self._read_line_with_timeout(
+                t.cast("t.TextIO", process.stdout), timeout
+            )
             if not line:
-                break
-            self._process_line(line, stdout_lines, progress, progress_callback, last_output_time)
+                # An empty read is NOT end-of-stream. The pipe is
+                # non-blocking, so readline() returns "" whenever the
+                # writer has not produced a complete line yet -- which
+                # happens constantly, because pytest buffers its output
+                # between tests.
+                #
+                # Treating it as EOF ended the read loop at the first
+                # gap in output. Everything after that was lost: the
+                # per-test counts never arrived, the run state was
+                # never written, and the still-running process was left
+                # to be killed by the completion timeout -- which is
+                # what made a healthy parallel run look like a hung
+                # one.
+                #
+                # Only a terminated process means end-of-stream, and
+                # that case is handled at the top of the loop.
+                if self._process_has_terminated(process):
+                    break
+                time.sleep(0.05)
+                continue
+            last_output_time = self._process_line(
+                line, stdout_lines, progress, progress_callback, last_output_time
+            )
 
         return stdout_lines
 
@@ -699,8 +756,10 @@ class TestExecutor:
         last_output_time: float,
     ) -> bool:
         try:
-            readable, _, _ = select.select([t.cast("t.TextIO", process.stdout)], [], [], 1.0)
-        except (ValueError, select.error):
+            readable, _, _ = select.select(
+                [t.cast("t.TextIO", process.stdout)], [], [], 1.0
+            )
+        except OSError, ValueError:
             return False
 
         if not readable:
@@ -717,7 +776,7 @@ class TestExecutor:
     def _read_line_with_timeout(self, stdout: t.TextIO, timeout: int) -> str:
         try:
             return stdout.readline()
-        except IOError as e:
+        except OSError as e:
             if e.errno == errno.EAGAIN:
                 time.sleep(0.1)
                 return ""
@@ -730,13 +789,23 @@ class TestExecutor:
         progress: TestProgress,
         progress_callback: t.Callable[[dict[str, t.Any]], None],
         last_output_time: float,
-    ) -> None:
+    ) -> float:
+        """Record one output line; return the refreshed last-output time.
+
+        The timestamp has to come *back* to the caller. Assigning it to
+        the parameter updated a local copy, so the caller's
+        ``last_output_time`` never moved: the stall detector was
+        really measuring from the start of the run, and it terminated
+        any run that took longer than the stall budget, no matter how
+        much output the run was producing.
+        """
         line = line.strip()
         if line:
             stdout_lines.append(line)
             self._process_test_output_line(line, progress)
             self._emit_ai_progress(progress, progress_callback)
-            last_output_time = time.time()
+            return time.time()
+        return last_output_time
 
     def _read_stderr_lines(
         self, process: subprocess.Popen[str], timeout: int = 60
@@ -749,9 +818,13 @@ class TestExecutor:
             return stderr_lines
 
         if not self._setup_nonblocking_io(t.cast("t.TextIO", process.stderr)):
-            return self._read_stderr_blocking(process, start_time, last_output_time, timeout)
+            return self._read_stderr_blocking(
+                process, start_time, last_output_time, timeout
+            )
 
-        return self._read_stderr_loop(process, stderr_lines, start_time, last_output_time, timeout)
+        return self._read_stderr_loop(
+            process, stderr_lines, start_time, last_output_time, timeout
+        )
 
     def _read_stderr_blocking(
         self,
@@ -782,7 +855,9 @@ class TestExecutor:
     ) -> list[str]:
         while True:
             if process.poll() is not None:
-                self._read_remaining_stderr(t.cast("t.TextIO", process.stderr), stderr_lines)
+                self._read_remaining_stderr(
+                    t.cast("t.TextIO", process.stderr), stderr_lines
+                )
                 break
 
             if not self._wait_for_readable_stderr(process, last_output_time, timeout):
@@ -790,7 +865,12 @@ class TestExecutor:
 
             line = self._read_stderr_line(t.cast("t.TextIO", process.stderr))
             if not line:
-                break
+                # Same rule as stdout: on a non-blocking pipe an empty
+                # read means "nothing right now", not end-of-stream.
+                if process.poll() is not None:
+                    break
+                time.sleep(0.05)
+                continue
             stderr_lines.append(line)
             last_output_time = time.time()
 
@@ -812,8 +892,10 @@ class TestExecutor:
         timeout: int,
     ) -> bool:
         try:
-            readable, _, _ = select.select([t.cast("t.TextIO", process.stderr)], [], [], 1.0)
-        except (ValueError, select.error):
+            readable, _, _ = select.select(
+                [t.cast("t.TextIO", process.stderr)], [], [], 1.0
+            )
+        except OSError, ValueError:
             return False
 
         if not readable:
@@ -832,7 +914,7 @@ class TestExecutor:
             if not line:
                 return ""
             return line.strip()
-        except IOError as e:
+        except OSError as e:
             if e.errno == errno.EAGAIN:
                 time.sleep(0.1)
                 return ""

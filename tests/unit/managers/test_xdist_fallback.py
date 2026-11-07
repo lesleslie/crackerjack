@@ -4,7 +4,9 @@ Tests the intelligent fallback system that detects when pytest-xdist
 hangs or times out and automatically falls back to sequential execution.
 """
 
+import os
 import subprocess
+import sys
 from pathlib import Path
 from unittest.mock import Mock, MagicMock, patch
 
@@ -181,29 +183,29 @@ class TestXdistTimeoutDetection:
 
         assert executor._did_xdist_timeout(result, progress) is True
 
-    def test_did_timeout_xdist_keyword(self, executor, progress) -> None:
-        """Test timeout detection when xdist keyword appears in output."""
+    def test_did_timeout_worker_crashed_keyword(self, executor, progress) -> None:
+        """Test timeout detection when a worker crashes."""
         result = Mock()
         result.returncode = 1
-        result.stdout = "pytest-xdist: error distributing tests"
+        result.stdout = "worker crashed during initialization"
         result.stderr = ""
 
         assert executor._did_xdist_timeout(result, progress) is True
 
-    def test_did_timeout_timeout_keyword(self, executor, progress) -> None:
-        """Test timeout detection when timeout keyword appears in output."""
+    def test_did_timeout_worker_timeout_keyword(self, executor, progress) -> None:
+        """Test timeout detection when a worker times out."""
         result = Mock()
         result.returncode = 1
-        result.stdout = "TimeoutError: Test execution timed out"
+        result.stdout = "*** WORKER TIMEOUT ***"
         result.stderr = ""
 
         assert executor._did_xdist_timeout(result, progress) is True
 
-    def test_did_timeout_hung_keyword(self, executor, progress) -> None:
-        """Test timeout detection when hung keyword appears in output."""
+    def test_did_timeout_node_down_keyword(self, executor, progress) -> None:
+        """Test timeout detection when a node goes down."""
         result = Mock()
         result.returncode = 1
-        result.stdout = "Tests appear to be hung"
+        result.stdout = "node down: gw3"
         result.stderr = ""
 
         assert executor._did_xdist_timeout(result, progress) is True
@@ -232,7 +234,7 @@ class TestXdistTimeoutDetection:
         """
         calls: list[list[str]] = []
 
-        def fake_execute(cmd, env, prog, cb, timeout):
+        def fake_execute(cmd, env, prog, cb, timeout, stall_timeout=None):
             calls.append(list(cmd))
             result = Mock()
             result.returncode = 3 if len(calls) == 1 else 1
@@ -365,7 +367,7 @@ class TestXdistFallbackFlow:
 
         with patch("crackerjack.config.load_settings") as mock_load:
             mock_settings = Mock()
-            mock_settings.testing.xdist_timeout_seconds = 10
+            mock_settings.testing.xdist_stall_timeout_seconds = 10
             mock_load.return_value = mock_settings
 
             with patch.object(executor, "_execute_test_process_with_progress") as mock_execute:
@@ -375,16 +377,23 @@ class TestXdistFallbackFlow:
                 result = executor._run_with_xdist_fallback(cmd, progress, None, timeout)
 
                 assert mock_execute.call_count == 2
-                # First call should use xdist timeout (10s)
+                # The parallel attempt gets the run's full budget plus a
+                # separate stall budget. A slow run is not a hung run,
+                # and the old code conflated the two: the parallel
+                # attempt was killed at 60s no matter how healthy it was.
                 first_call = mock_execute.call_args_list[0]
-                # The timeout is the 5th positional argument (index 4)
-                assert first_call[0][4] == 10
+                # The total budget is the 5th positional argument (index 4)
+                assert first_call[0][4] == timeout
+                assert first_call[1]["stall_timeout"] == 10
 
                 # Second call should use full timeout (1800s) and sequential command
                 second_call = mock_execute.call_args_list[1]
                 sequential_cmd = second_call[0][0]
                 assert "-n" not in sequential_cmd
                 assert second_call[0][4] == timeout
+                # The sequential run has no stall budget of its own, so
+                # it falls back to the total one.
+                assert "stall_timeout" not in second_call[1]
 
     def test_no_fallback_on_success(self, executor, progress) -> None:
         """Test no fallback when xdist succeeds."""
@@ -399,7 +408,7 @@ class TestXdistFallbackFlow:
 
         with patch("crackerjack.config.load_settings") as mock_load:
             mock_settings = Mock()
-            mock_settings.testing.xdist_timeout_seconds = 10
+            mock_settings.testing.xdist_stall_timeout_seconds = 10
             mock_load.return_value = mock_settings
 
             with patch.object(executor, "_execute_test_process_with_progress") as mock_execute:
@@ -429,7 +438,7 @@ class TestXdistFallbackFlow:
 
         with patch("crackerjack.config.load_settings") as mock_load:
             mock_settings = Mock()
-            mock_settings.testing.xdist_timeout_seconds = 10
+            mock_settings.testing.xdist_stall_timeout_seconds = 10
             mock_load.return_value = mock_settings
 
             with patch.object(executor, "_execute_test_process_with_progress") as mock_execute:
@@ -456,3 +465,110 @@ class TestPreCollectionDisabled:
         cmd = ["pytest", "-v"]
         result = executor._pre_collect_tests(cmd)
         assert result == 0
+
+
+@pytest.mark.unit
+class TestFailureDetectionIsSpecific:
+    """The fallback must recognise a failure, not a keyword.
+
+    The detector used to look for the bare word ``"xdist"`` in the
+    output. pytest prints its plugin list in its own header -- ``plugins:
+    ..., xdist-3.8.0, ...`` -- so the match fired on *every* parallel
+    run: the executor threw the parallel result away and re-ran the
+    whole suite sequentially. The indicators have to name the failure.
+    """
+
+    @pytest.fixture
+    def executor(self, tmp_path):
+        from rich.console import Console
+        console = Console()
+        return TestExecutor(console=console, pkg_path=tmp_path)
+
+    def test_a_healthy_run_that_mentions_xdist_is_not_a_failure(self, executor) -> None:
+        result = Mock()
+        result.returncode = 1
+        result.stdout = (
+            "============================= test session starts ====================\n"
+            "platform darwin -- Python 3.14.10, pytest-9.1.1, pluggy-1.6.0\n"
+            "plugins: cov-7.1.0, testmon-2.3.0, xdist-3.8.0, timeout-2.4.0\n"
+            "1 failed, 262 passed\n"
+        )
+        result.stderr = ""
+
+        assert executor._did_xdist_timeout(result, TestProgress()) is False
+
+    def test_a_crashed_worker_is_a_failure(self, executor) -> None:
+        result = Mock()
+        result.returncode = 1
+        result.stdout = "worker crashed during initialization\n"
+        result.stderr = ""
+
+        assert executor._did_xdist_timeout(result, TestProgress()) is True
+
+
+@pytest.mark.unit
+class TestOutputStreamIsNotLost:
+    """A gap in the output stream is not end-of-stream.
+
+    The executor reads the child's stdout on a non-blocking pipe. On
+    such a pipe ``readline()`` returns ``""`` whenever the writer has
+    not produced a complete line yet -- which is the normal state
+    between two tests. The reader used to treat that as EOF, which ended
+    the read loop at the first gap: the per-test counts never arrived,
+    the run state was never written, and the still-running process was
+    then killed by the completion timeout. A healthy parallel run
+    looked exactly like a hung one.
+    """
+
+    @pytest.fixture
+    def executor(self, tmp_path):
+        from rich.console import Console
+        console = Console()
+        return TestExecutor(console=console, pkg_path=tmp_path)
+
+    def test_output_spanning_a_gap_is_fully_captured(self, executor) -> None:
+        """Lines written on both sides of a quiet period are both read."""
+        cmd = [
+            sys.executable,
+            "-c",
+            "import time; print('before the gap', flush=True); "
+            "time.sleep(1.0); print('after the gap', flush=True)",
+        ]
+
+        result = executor._execute_test_process_with_progress(
+            cmd,
+            os.environ.copy(),
+            TestProgress(),
+            None,
+            timeout=60,
+        )
+
+        assert result.returncode == 0
+        assert "before the gap" in result.stdout
+        assert "after the gap" in result.stdout
+
+    def test_a_silent_process_is_not_mistaken_for_a_finished_one(self, executor) -> None:
+        """The run's total budget is separate from its stall budget.
+
+        The parallel attempt used to be killed at the stall timeout even
+        when it was perfectly healthy, because the two budgets were the
+        same number and the stall timeout was also the completion
+        timeout.
+        """
+        cmd = [
+            sys.executable,
+            "-c",
+            "import time; time.sleep(2.0); print('done', flush=True)",
+        ]
+
+        result = executor._execute_test_process_with_progress(
+            cmd,
+            os.environ.copy(),
+            TestProgress(),
+            None,
+            timeout=60,
+            stall_timeout=30,
+        )
+
+        assert result.returncode == 0
+        assert "done" in result.stdout

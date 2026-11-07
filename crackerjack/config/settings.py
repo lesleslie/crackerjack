@@ -51,7 +51,7 @@ class TestSettings(OneiricMCPConfig):
     xcode_configuration: str = "Debug"
     xcode_destination: str = "platform=macOS"
     xdist_dist_mode: t.Literal["loadfile", "each", "loadscope", "no"] = "loadfile"
-    xdist_timeout_seconds: int = 60
+    xdist_stall_timeout_seconds: int = 300
     xdist_fallback_to_sequential: bool = True
 
 
