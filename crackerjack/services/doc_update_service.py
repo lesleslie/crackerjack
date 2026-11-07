@@ -253,7 +253,7 @@ class DocUpdateService:
         updates = []
 
         try:
-            import anthropic  # ty: ignore[unresolved-import]
+            import anthropic  # ty: ignore[import-not-found]
 
             client = anthropic.Anthropic(api_key=self.settings.api_key)
 

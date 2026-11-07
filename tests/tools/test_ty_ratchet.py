@@ -223,7 +223,7 @@ class TestCountDiagnosticsFallsBackToLineCount:
         output = (
             "crackerjack/foo.py:10:5: error[invalid-argument-type] Argument ...\n"
             "crackerjack/bar.py:42:9: warning[unused-type-ignore-comment] ...\n"
-            "crackerjack/baz.py:7:1: error[unresolved-import] Cannot find ...\n"
+            "crackerjack/baz.py:7:1: error[import-not-found] Cannot find ...\n"
             "Some unrelated text from the tool.\n"
         )
         # Three diagnostic-prefixed lines, no "Found N" line.

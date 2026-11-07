@@ -613,14 +613,17 @@ class TestApplyWhitespaceFixes:
             [str(file_path)], tmp_path
         )
 
-        # The trailing-whitespace subprocess is not wired up in this
-        # environment (the fixer intentionally no-ops when the subprocess
-        # binary is missing), so neither the file content nor the fix
-        # list reflects a change. Document the current behavior rather
-        # than a pre-existing bug that has been quiesced.
-        assert file_path.read_text(encoding="utf-8") == "x = 1   \ny = 2\n"
-        assert fixes == []
-        assert files_modified == []
+        # The trailing-whitespace subprocess really did rewrite the file
+        # (real subprocess, real mutation -- see the module docstring's
+        # "Pre-existing quirks" item 3).
+        assert file_path.read_text(encoding="utf-8") == "x = 1\ny = 2\n"
+        # ...but the fix it performed is NOT reported: that tool exits 1
+        # when it *fixed* something, and `_apply_whitespace_fixes` only
+        # records a fix on `returncode == 0`. The end-of-file check then
+        # exits 0 (nothing to fix) and IS recorded, opportunistically
+        # picking up the mtime bump left by the first, unreported call.
+        assert fixes == ["Fixed end-of-file formatting"]
+        assert files_modified == [str(file_path)]
 
     async def test_noop_on_already_clean_file_still_reports_misleading_fixes(
         self, tmp_path: Path
@@ -632,10 +635,12 @@ class TestApplyWhitespaceFixes:
             [str(file_path)], tmp_path
         )
 
-        # Nothing to fix and nothing fixed — the no-op path returns an
-        # empty fix list (the previously-documented misleading "Fixed ..."
-        # behavior has been quiesced).
-        assert fixes == []
+        # Nothing was fixed and the file is untouched, yet both tools
+        # exited 0 ("nothing to fix") so both fixes are reported --
+        # the misleading behavior the module docstring's "Pre-existing
+        # quirks" item 3 describes. `files_modified` correctly stays
+        # empty: no mtime changed.
+        assert fixes == ["Fixed trailing whitespace", "Fixed end-of-file formatting"]
         assert files_modified == []
         assert file_path.read_text(encoding="utf-8") == "x = 1\ny = 2\n"
 

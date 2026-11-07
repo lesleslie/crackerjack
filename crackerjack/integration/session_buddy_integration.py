@@ -580,7 +580,7 @@ class SessionBuddyDirectClient:
     ) -> t.Any:
 
         try:
-            from session_buddy.core.workflow_metrics import (  # ty: ignore[unresolved-import]
+            from session_buddy.core.workflow_metrics import (  # ty: ignore[import-not-found]
                 WorkflowMetricsStore,
             )
 

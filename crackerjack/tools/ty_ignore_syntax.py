@@ -17,7 +17,7 @@ KNOWN_TY_CODES: frozenset[str] = frozenset(
         "invalid-argument-type",
         "unresolved-attribute",
         "invalid-assignment",
-        "unresolved-import",
+        "import-not-found",
         "call-arg",
         "invalid-await",
         "invalid-return-type",

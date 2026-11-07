@@ -325,7 +325,7 @@ class HookManagerImpl:
             return
 
         try:
-            from crackerjack.orchestration.hook_orchestrator import (  # type: ignore[unresolved-import]
+            from crackerjack.orchestration.hook_orchestrator import (  # type: ignore[import-not-found]
                 HookOrchestratorAdapter,
                 HookOrchestratorSettings,
             )

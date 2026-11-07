@@ -19,7 +19,7 @@ _CODE_TO_TIER: dict[str, str] = {
     "unused-type-ignore-comment": TIER_1_MECHANICAL,
     "redundant-cast": TIER_1_MECHANICAL,
     "unresolved-reference": TIER_1_MECHANICAL,
-    "unresolved-import": TIER_1_MECHANICAL,
+    "import-not-found": TIER_1_MECHANICAL,
     "unsupported-operator": TIER_1_MECHANICAL,
     "not-subscriptable": TIER_1_MECHANICAL,
     "unsupported-right-operand": TIER_3_ITERATIVE,

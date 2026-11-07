@@ -51,6 +51,14 @@ class TestClassifyCode:
         # cases mechanically. The rest still fall through to tier 3.
         assert classify_code("unsupported-operator") == TIER_1_MECHANICAL
 
+    def test_import_not_found_is_tier_1(self) -> None:
+        # ty renamed this diagnostic ``unresolved-import`` ->
+        # ``import-not-found`` in 0.0.98/0.0.99. The table must carry the
+        # current name: with the retired one, a live ``import-not-found``
+        # diagnostic falls through to UNKNOWN_TIER (tier 3) instead of
+        # the tier-1 mechanical bucket it belongs in.
+        assert classify_code("import-not-found") == TIER_1_MECHANICAL
+
     def test_unresolved_attribute_is_tier_3(self) -> None:
         # Union attribute access — needs isinstance narrowing, multi-step.
         assert classify_code("unresolved-attribute") == TIER_3_ITERATIVE

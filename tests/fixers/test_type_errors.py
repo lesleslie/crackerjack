@@ -683,7 +683,7 @@ class TestPhaseGTyHandlers:
     def test_unresolved_import_adds_ty_ignore(self) -> None:
         content = "from crackerjack.foo import Bar\n"
         issue = self._issue(
-            "crackerjack/foo.py:1:6: error[unresolved-import] "
+            "crackerjack/foo.py:1:6: error[import-not-found] "
             "No module named 'crackerjack.foo'",
             1,
             file_path="crackerjack/baz.py",
@@ -691,13 +691,13 @@ class TestPhaseGTyHandlers:
         new_content, fixes = type_errors._fix_unresolved_import_with_ty_ignore(
             content, issue
         )
-        assert "# ty: ignore[unresolved-import]" in new_content
+        assert "# ty: ignore[import-not-found]" in new_content
         assert len(fixes) == 1
 
     def test_unresolved_import_no_op_when_ty_ignore_present(self) -> None:
-        content = "from crackerjack.foo import Bar  # ty: ignore[unresolved-import]\n"
+        content = "from crackerjack.foo import Bar  # ty: ignore[import-not-found]\n"
         issue = self._issue(
-            "crackerjack/foo.py:1:6: error[unresolved-import] "
+            "crackerjack/foo.py:1:6: error[import-not-found] "
             "No module named 'crackerjack.foo'",
             1,
             file_path="crackerjack/baz.py",

@@ -114,7 +114,16 @@ dependencies = [
     # on 2026-10-31, from a ty that was five months stale). See
     # ``crackerjack/tools/_ty_binary.py`` for the resolution order that
     # keeps the pinned build authoritative.
-    "ty>=0.0.95",
+    #
+    # Floor is 0.0.99, not 0.0.95: ty renamed the import diagnostic
+    # ``unresolved-import`` -> ``import-not-found`` in 0.0.98/0.0.99. The
+    # suppressions this repo writes (``crackerjack/fixers/type_errors.py``)
+    # use the current name, and a stale name is not a no-op -- ty reports
+    # ``warning[renamed-rule-in-ignore-comment]`` and stops applying the
+    # suppression, so the gate fails and the fix it was meant to make
+    # reappears. An older ty does not merely warn: it does not know
+    # ``import-not-found`` at all, so the import error goes unsuppressed.
+    "ty>=0.0.99",
     "typer>=0.27.2",
     "types-aiofiles>=25.1.0.20260518",
     "types-psutil>=7.2.2.20260906",
@@ -184,7 +193,7 @@ adapter-learning = [
 # repos, this one just keeps crackerjack's own checkout aligned.
 type-checking = [
     "pyrefly>=1.3.2",
-    "ty>=0.0.95",
+    "ty>=0.0.99",
 ]
 
 # neural group intentionally empty — sentence-transformers, torch, and

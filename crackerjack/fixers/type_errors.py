@@ -63,10 +63,12 @@ full scope is everything the pipeline (here, the ``run_fix`` sequence in
    changes).
 4. ``_fix_unresolved_import_with_ty_ignore``'s ``if "# type: ignore" in
    line: ... else: ...`` branches are byte-for-byte identical -- both just
-   append ``# ty: ignore[unresolved-import]`` regardless of which branch is
+   append ``# ty: ignore[import-not-found]`` regardless of which branch is
    taken. This looks like an incomplete original implementation (presumably
    intended to handle the "already has a mypy ignore" case differently), but
    it is preserved verbatim, not simplified/"fixed," per CLAUDE.md Rule 7.
+   (The rule name was updated from the retired ``unresolved-import`` when
+   ty renamed it in 0.0.98/0.0.99; the branch structure is untouched.)
 5. ``apply_type_fixes`` and ``fix_type_error_issue`` are declared
    ``async def`` despite containing no ``await`` anywhere in their bodies --
    this matches the original ``_apply_type_fixes``/``analyze_and_fix``
@@ -1109,7 +1111,7 @@ def _fix_unresolved_import_with_ty_ignore(
     content: str, issue: Issue
 ) -> tuple[str, list[str]]:
     msg = issue.message
-    if "unresolved-import" not in msg:
+    if "import-not-found" not in msg:
         return content, []
     if issue.line_number is None:
         return content, []
@@ -1129,14 +1131,14 @@ def _fix_unresolved_import_with_ty_ignore(
     # verbatim, not simplified. See the module docstring's "Preserved
     # quirks" section, item 4.
     if "# type: ignore" in line:
-        lines[idx] = f"{line.rstrip()} # ty: ignore[unresolved-import]"
+        lines[idx] = f"{line.rstrip()} # ty: ignore[import-not-found]"
     else:
-        lines[idx] = f"{line.rstrip()} # ty: ignore[unresolved-import]"
+        lines[idx] = f"{line.rstrip()} # ty: ignore[import-not-found]"
     return (
         "\n".join(lines),
         [
             (
-                f"Added # ty: ignore[unresolved-import] on line "
+                f"Added # ty: ignore[import-not-found] on line "
                 f"{issue.line_number} (intentionally-absent module)"
             )
         ],

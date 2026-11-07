@@ -518,7 +518,7 @@ class ConfigCleanupService:
 
         try:
             from crackerjack.services.config_service import (
-                _dump_toml,  # ty: ignore[unresolved-import] # type: ignore[attr-defined]
+                _dump_toml,  # ty: ignore[import-not-found] # type: ignore[attr-defined]
             )
 
             toml_content = _dump_toml(pyproject_config)  # type: ignore[attr-defined]
