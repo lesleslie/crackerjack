@@ -35,7 +35,7 @@ _Regenerated 2026-11-07 by `crackerjack.tools.plan_index_sync` (phase)._
 | [`docs/plans/2026-10-11-remove-zuban-skylos-lsp-from-crackerjack.md`](2026-10-11-remove-zuban-skylos-lsp-from-crackerjack.md) | 2026-10-11 | `active` | `implementation` | `architecture` | Remove Zuban + Skylos LSP Adapters from Crackerjack |
 | [`docs/plans/2026-10-28-oneiric-action-kit-adoption.md`](2026-10-28-oneiric-action-kit-adoption.md) | 2026-10-28 | `active` | `implementation` | `action-kit-adoption` | Crackerjack Oneiric Action-Kit Adoption Audit — Findings and Remediation Plan |
 | [`docs/plans/2026-10-28-path-disclosure-redaction.md`](2026-10-28-path-disclosure-redaction.md) | 2026-10-28 | `active` | `implementation` | `security` | Redact User Home Paths from Crackerjack Output and Resolve the Bodai Registry Dynamically |
-| [`docs/plans/2026-11-06-test-selection-and-run-state.md`](2026-11-06-test-selection-and-run-state.md) | 2026-11-06 | `active` | `implementation` | `testing-infrastructure` | Test Selection and Run-State Tracking |
+| [`docs/plans/2026-11-06-test-selection-and-run-state.md`](2026-11-06-test-selection-and-run-state.md) | 2026-11-06 | `complete` | `implementation` | `testing-infrastructure` | Test Selection and Run-State Tracking |
 
 ### Docs: specs
 
@@ -84,8 +84,8 @@ _Regenerated 2026-11-07 by `crackerjack.tools.plan_index_sync` (phase)._
 | Role \\ Lifecycle | draft | active | partial | shipped | complete | Total |
 |---|---|---|---|---|---|---|
 | `canonical` | · | 10 | · | · | 2 | **12** |
-| `implementation` | 15 | 23 | · | · | 1 | **39** |
+| `implementation` | 15 | 22 | · | · | 2 | **39** |
 | `umbrella` | · | · | · | · | · | **0** |
 | `historical` | · | · | · | · | 1 | **1** |
 | `superseded` | · | · | · | · | · | **0** |
-| **Total** | **15** | **33** | **·** | **·** | **4** | **52** |
+| **Total** | **15** | **32** | **·** | **·** | **5** | **52** |

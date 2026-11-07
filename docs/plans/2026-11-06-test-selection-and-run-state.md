@@ -1,6 +1,16 @@
-______________________________________________________________________
-
-## title: Replace the dead pytest-snob integration with pytest-testmon, and record per-test run state in a shared commit-keyed store description: The snob shell-out is a silent no-op (snob-lib has no cp314/cp315 wheel, the CLI is not installed, and the dependency group is empty). Swap it for pytest-testmon - pure-python, py3-none-any, requires-python >=3.10 - and make every crackerjack test run record per-test results into a crackerjack-owned SQLite store keyed by (repo, commit_sha, worktree), so "what was the test status at commit X" becomes a query instead of a full re-run. audience: crackerjack maintainer created: 2026-11-06 status: active role: implementation topic: testing-infrastructure date: 2026-11-06 last_reviewed: 2026-11-06 superseded_by: null blocks_on: []
+---
+title: Replace the dead pytest-snob integration with pytest-testmon, and record per-test run state in a shared commit-keyed store
+description: The snob shell-out is a silent no-op (snob-lib has no cp314/cp315 wheel, the CLI is not installed, and the dependency group is empty). Swap it for pytest-testmon - pure-python, py3-none-any, requires-python >=3.10 - and make every crackerjack test run record per-test results into a crackerjack-owned SQLite store keyed by (repo, commit_sha, worktree), so "what was the test status at commit X" becomes a query instead of a full re-run.
+audience: crackerjack maintainer
+created: 2026-11-06
+status: complete
+role: implementation
+topic: testing-infrastructure
+date: 2026-11-06
+last_reviewed: 2026-11-07
+superseded_by: null
+blocks_on: []
+---
 
 # Test Selection and Run-State Tracking
 
@@ -245,7 +255,13 @@ incremental, so the phase is removed.
 - **Triggered from:** every crackerjack invocation that runs the `tests`
   phase, with incremental selection enabled (the default).
 - **Returns to / updates:** `test_manager.run_tests()` returns `True` when
-  pytest exits 5 under incremental selection. Unchanged otherwise.
+  pytest exits 0. Unchanged otherwise.
+  (Superseded by Post-implementation correction 1: this contract originally
+  said the phase returns `True` when pytest exits 5 under incremental
+  selection. Exit 5 means pytest collected nothing — a broken test
+  configuration — and reporting it as success turned a misconfigured suite
+  into a green run. "Nothing was affected" is now detected from the empty
+  result set, not the exit code.)
 - **Demonstrable by:** with a `.testmondata` present and a change to one
   module, `crackerjack run -t` reports the deselected count and runs only
   the affected tests.
