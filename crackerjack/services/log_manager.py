@@ -12,9 +12,41 @@ from pathlib import Path
 
 from rich.console import Console
 
+from crackerjack.utils.legacy_paths import migrate_legacy_dir
 from crackerjack.utils.path_redaction import redact_path
+from crackerjack.utils.xdg_paths import state_dir
 
 console = Console()
+
+
+def migrate_legacy_logs(
+    project_dir: Path | None = None, app_name: str = "crackerjack"
+) -> bool:
+    """Move a project's log directory out of the project tree.
+
+    The logs used to live in ``<project>/.crackerjack/logs``, a
+    gitignored directory that ``git clean -fd`` destroys. They now live
+    under ``$XDG_STATE_HOME/crackerjack/logs``.
+
+    Args:
+        project_dir: The project whose logs should move. Defaults to
+            the current directory.
+        app_name: The application whose state directory holds them.
+
+    Returns:
+        ``True`` when something was moved.
+
+    Note:
+        This is called from the CLI's logging setup, not from
+        ``LogManager.__init__``. A module-level ``LogManager`` instance
+        is constructed when this module is imported, and a migration
+        that ran there would move the project's logs during an import -
+        and, in a test session that redirects ``XDG_STATE_HOME`` into a
+        temporary sandbox, move them somewhere that is about to be
+        deleted.
+    """
+    legacy = (project_dir or Path.cwd()) / ".crackerjack" / "logs"
+    return migrate_legacy_dir(legacy, state_dir(app_name) / "logs")
 
 
 class LogManager:
@@ -26,8 +58,16 @@ class LogManager:
     def _get_log_directory(self) -> Path:
         candidates: list[Path] = []
 
-        local_log_dir = Path.cwd() / ".crackerjack" / "logs"
-        candidates.append(local_log_dir)
+        # Logs are state and history: they grow without bound and they
+        # are worth keeping, so they belong under the XDG *state*
+        # directory rather than the cache tier. They used to live in
+        # the project's `.crackerjack/` directory, which is gitignored -
+        # so `git clean -fd` took them away.
+        candidates.append(state_dir(self.app_name) / "logs")
+
+        # The project-local directory stays in the chain as a fallback
+        # for a checkout that cannot write to the state directory.
+        candidates.append(Path.cwd() / ".crackerjack" / "logs")
 
         cache_home = os.environ.get("XDG_CACHE_HOME")
         base_dir = Path(cache_home) if cache_home else Path.home() / ".cache"

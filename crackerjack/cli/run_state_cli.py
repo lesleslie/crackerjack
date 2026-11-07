@@ -138,7 +138,8 @@ def show(
     )
     console.print(
         f"{run['passed']} passed, {run['failed']} failed, "
-        f"{run['skipped']} skipped of {run['total']} tests",
+        f"{run['skipped']} skipped of {run['total']} tests "
+        f"({_safe(run['selection_mode'])} selection)",
         soft_wrap=True,
     )
     for result in store.get_test_results(str(run["id"])):
@@ -147,6 +148,53 @@ def show(
             f"{_format_duration(result.get('duration'))}",
             soft_wrap=True,
         )
+
+
+@app.command()
+def stats(
+    repo: str | None = typer.Option(
+        None,
+        "--repo",
+        help="Project name (default: every project).",
+    ),
+    db_path: Path | None = typer.Option(
+        None,
+        "--db-path",
+        help="Run-state database (default: crackerjack's XDG data directory).",
+    ),
+) -> None:
+    """Show how the recorded runs were selected.
+
+    Every run records the selection mode it used, so this answers "how
+    often was the incremental path taken?" The coverage ratchet skips
+    exactly when a run was incremental, so the incremental count is also
+    the number of times the ratchet was skipped.
+    """
+    store = RunStateStore(_resolve_db_path(db_path))
+
+    summary = store.summarize(repo=repo)
+
+    if summary["runs"] == 0:
+        console.print("[yellow]No recorded runs[/yellow]")
+        return
+
+    scope = _safe(repo) if repo else "every project"
+    console.print(
+        f"[bold]{summary['runs']}[/bold] recorded runs for {scope}",
+        soft_wrap=True,
+    )
+    console.print(
+        f"  incremental: {summary['incremental']}  "
+        f"(the coverage ratchet was skipped this many times)",
+        soft_wrap=True,
+    )
+    console.print(f"  full: {summary['full']}", soft_wrap=True)
+    if summary["other"]:
+        console.print(f"  other: {summary['other']}", soft_wrap=True)
+    console.print(
+        f"  passed: {summary['passed_runs']}  failed: {summary['failed_runs']}",
+        soft_wrap=True,
+    )
 
 
 @app.command()

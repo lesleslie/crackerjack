@@ -19,7 +19,7 @@ from crackerjack.core.ai_fix_events import (
     RunFinished,
     RunStarted,
 )
-from crackerjack.core.ai_fix_sinks import JsonlSink
+from crackerjack.core.ai_fix_sinks import JsonlSink, runs_root
 
 
 def _format_event(event: AIFixEvent) -> str:
@@ -103,7 +103,7 @@ def render_replay(
     if not events_list:
         console.print(
             f"[red]No events.jsonl found for run_id={run_id!r}[/red]\n"
-            f"Checked: {(base_dir or Path.cwd()) / '.crackerjack' / 'runs' / run_id / 'events.jsonl'}"
+            f"Checked: {runs_root(base_dir) / run_id / 'events.jsonl'}"
         )
         return 1
 

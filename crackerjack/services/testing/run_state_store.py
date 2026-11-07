@@ -271,6 +271,61 @@ class RunStateStore:
 
         return [dict(row) for row in rows]
 
+    def summarize(self, repo: str | None = None) -> dict[str, int]:
+        """Aggregate the recorded runs.
+
+        Every run records the selection mode it used, so this is the
+        answer to "how often was the incremental path taken?" The
+        coverage ratchet skips exactly when a run was incremental, so
+        the incremental count is also the ratchet-skip count - no
+        separate record is needed for it.
+
+        Args:
+            repo: Narrow the aggregate to one project.
+
+        Returns:
+            A mapping with ``runs``, ``incremental``, ``full``,
+            ``other`` (any mode the store does not know), ``failed_runs``
+            and ``passed_runs``.
+        """
+        self._ensure_schema()
+
+        query = "SELECT selection_mode, exit_code FROM runs"
+        params: list[t.Any] = []
+        if repo is not None:
+            query += " WHERE repo = ?"
+            params.append(repo)
+
+        summary = {
+            "runs": 0,
+            "incremental": 0,
+            "full": 0,
+            "other": 0,
+            "failed_runs": 0,
+            "passed_runs": 0,
+        }
+
+        with self._connect() as conn:
+            rows = conn.execute(query, params).fetchall()
+
+        for row in rows:
+            summary["runs"] += 1
+            mode = row["selection_mode"]
+            if mode == "incremental":
+                summary["incremental"] += 1
+            elif mode == "full":
+                summary["full"] += 1
+            else:
+                # A mode this build does not know about still counts as
+                # a run; it is just not one of the two we can name.
+                summary["other"] += 1
+            if row["exit_code"] == 0:
+                summary["passed_runs"] += 1
+            else:
+                summary["failed_runs"] += 1
+
+        return summary
+
     def get_status_map(self, run_id: str) -> dict[str, str]:
         """Return ``{node_id: status}`` for a run - the diffing primitive."""
         return {

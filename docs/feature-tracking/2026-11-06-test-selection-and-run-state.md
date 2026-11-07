@@ -1,5 +1,5 @@
 ---
-status: wired
+status: adopted
 role: lifecycle
 topic: testing-infrastructure
 date: 2026-11-06
@@ -69,10 +69,7 @@ It is wired into the `tests` phase and queryable through
 | (none) | `draft` | 2026-11-06 | Entry created | plan `docs/plans/2026-11-06-test-selection-and-run-state.md` |
 | `draft` | `built` | 2026-11-06 | Store, CLI and testmon wiring landed | commit `ee99b10e` |
 | `built` | `wired` | 2026-11-07 | `tests` phase records run state; `crackerjack run-state show` / `diff` read it back | plan tasks 2.3 and 2.4; `run-state diff` reported status changes, disappeared tests (`absent`) and new tests against a recorded baseline |
-
-Not yet `adopted`: that state needs observability showing regular use
-across the target surface, and this feature's first production use is
-still ahead.
+| `wired` | `adopted` | 2026-11-07 | The selection mode became observable: every run records how it was selected, and `crackerjack run-state stats` aggregates it | commit `7888546f`; `run-state stats` reports the incremental and full counts, and the incremental count is the ratchet-skip count |
 
 ## Links
 
@@ -107,7 +104,11 @@ still ahead.
   commit and test counts; a `logger.warning` if recording fails.
 - **Query:** `crackerjack run-state show --commit <sha>` and
   `crackerjack run-state diff --base <sha> --commit <sha>`.
-- **Gap:** there is no metric or dashboard for "how often is the
-  incremental path taken" and "how often does the ratchet skip". That is
-  the observability that has to exist before this feature can be called
-  `adopted`.
+- **Selection mode:** `crackerjack run-state stats` — the runs counted
+  by selection mode. The coverage ratchet skips exactly when a run was
+  incremental, so the incremental count is also the number of times the
+  ratchet was skipped. `run-state show` reports the mode of one run.
+- **Deliberately not a Prometheus counter.** A counter in a process that
+  exits is weaker evidence than a durable row: it cannot be queried
+  after the fact, and it would have needed a second counter for the
+  ratchet skip that could only drift from the first.

@@ -8,6 +8,9 @@ from collections.abc import Iterator
 from pathlib import Path
 from typing import IO
 
+from crackerjack.utils.legacy_paths import migrate_legacy_dir
+from crackerjack.utils.xdg_paths import state_dir
+
 from .ai_fix_events import (
     AgentDispatched,
     AIFixEvent,
@@ -42,6 +45,27 @@ _EVENT_CLASSES: tuple[type[AIFixEvent], ...] = (
     TierTransitioned,
     FixSessionFinished,
 )
+
+
+def runs_root(base_dir: Path | None = None) -> Path:
+    """Where the AI-fix run history lives.
+
+    ``$XDG_STATE_HOME/crackerjack/runs`` by default. The run history is
+    append-only and grows without bound, so it is state, not a cache -
+    and it must not live in the project tree, where ``git clean -fd``
+    destroys it.
+
+    Args:
+        base_dir: A project root to keep the history beside instead.
+            An explicit value wins, so a caller that wants the run
+            directory somewhere specific keeps getting it.
+
+    Returns:
+        The directory that holds ``<run_id>/`` directories.
+    """
+    if base_dir is not None:
+        return base_dir / ".crackerjack" / "runs"
+    return state_dir("crackerjack") / "runs"
 
 
 class LoggingSink:
@@ -107,7 +131,7 @@ class LoggingSink:
 
 class JsonlSink:
     def __init__(self, base_dir: Path | None = None) -> None:
-        self._base_dir = base_dir or Path.cwd()
+        self._base_dir = base_dir
         self._file: IO[str] | None = None
         self._run_dir: Path | None = None
 
@@ -129,7 +153,7 @@ class JsonlSink:
             self._file = None
 
     def _open(self, run_id: str) -> None:
-        run_dir = self._base_dir / ".crackerjack" / "runs" / run_id
+        run_dir = runs_root(self._base_dir) / run_id
         run_dir.mkdir(parents=True, exist_ok=True)
         self._file = (run_dir / "events.jsonl").open("a", encoding="utf-8")
         self._run_dir = run_dir
@@ -152,7 +176,7 @@ class JsonlSink:
         run_id: str,
         base_dir: Path | None = None,
     ) -> Iterator[AIFixEvent]:
-        root = (base_dir or Path.cwd()) / ".crackerjack" / "runs" / run_id
+        root = runs_root(base_dir) / run_id
         jsonl_path = root / "events.jsonl"
         if not jsonl_path.exists():
             return
@@ -194,7 +218,7 @@ class DebugFileSink:
             self._file = None
 
     def _open(self) -> None:
-        run_dir = self._base_dir / ".crackerjack" / "runs" / self._run_id
+        run_dir = runs_root(self._base_dir) / self._run_id
         try:
             run_dir.mkdir(parents=True, exist_ok=True)
         except OSError as exc:
@@ -250,6 +274,24 @@ class MetricsSink:
         }
 
 
+def migrate_legacy_runs(project_dir: Path | None = None) -> bool:
+    """Move a project's run history out of the project tree.
+
+    The history used to live in ``<project>/.crackerjack/runs``, a
+    gitignored directory that ``git clean -fd`` destroys. It now lives
+    under ``$XDG_STATE_HOME/crackerjack/runs``.
+
+    Args:
+        project_dir: The project whose history should move. Defaults to
+            the current directory.
+
+    Returns:
+        ``True`` when something was moved.
+    """
+    legacy = (project_dir or Path.cwd()) / ".crackerjack" / "runs"
+    return migrate_legacy_dir(legacy, runs_root())
+
+
 def build_default_bus(base_dir: Path | None = None) -> object:
     from .ai_fix_event_bus import AIFixEventBus
 
@@ -261,7 +303,7 @@ def build_default_bus(base_dir: Path | None = None) -> object:
 
 
 def detect_orphan_sidecars(base_dir: Path | None = None) -> list[str]:
-    root = (base_dir or Path.cwd()) / ".crackerjack" / "runs"
+    root = runs_root(base_dir)
     if not root.exists():
         return []
     orphans: list[str] = []

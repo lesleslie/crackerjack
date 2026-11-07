@@ -163,13 +163,17 @@ async def create_mcp_server(config: dict[str, t.Any] | None = None) -> t.Any | N
     # the documented escape hatch).
     try:
         from crackerjack.config import CrackerjackSettings, load_settings
-        from crackerjack.mcp.persistence import AsyncTaskStore
+        from crackerjack.mcp.persistence import (
+            AsyncTaskStore,
+            migrate_legacy_async_task_store,
+        )
         from crackerjack.mcp.task_manager import AsyncTaskManager
         from crackerjack.mcp.tools.async_task_tools import (
             set_task_manager,
         )
 
         settings = load_settings(CrackerjackSettings)
+        migrate_legacy_async_task_store(settings.async_task.storage_path)
         store = AsyncTaskStore(settings.async_task.storage_path)
         task_manager = AsyncTaskManager(
             max_concurrent_tasks=10,

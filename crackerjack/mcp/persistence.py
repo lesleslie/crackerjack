@@ -28,7 +28,27 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from crackerjack.utils.legacy_paths import migrate_legacy_file
+
 logger = logging.getLogger(__name__)
+
+
+def migrate_legacy_async_task_store(target: Path) -> bool:
+    """Move the async task store out of ``~/.crackerjack/state/``.
+
+    The store used to resolve to ``~/.crackerjack/state/async_tasks.db``,
+    a path outside every XDG base directory. The file left there is
+    Crackerjack's own - nothing else reads it - so it is moved rather
+    than copied.
+
+    Args:
+        target: Where the store should live now.
+
+    Returns:
+        ``True`` when the legacy file was moved.
+    """
+    legacy = Path.home() / ".crackerjack" / "state" / "async_tasks.db"
+    return migrate_legacy_file(legacy, target)
 
 
 _VALID_STATUSES: frozenset[str] = frozenset(

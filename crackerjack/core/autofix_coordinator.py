@@ -24,7 +24,7 @@ from crackerjack.core.ai_fix_event_bus import AIFixEventBus
 from crackerjack.core.ai_fix_events import (
     RunStarted,
 )
-from crackerjack.core.ai_fix_sinks import build_default_bus
+from crackerjack.core.ai_fix_sinks import build_default_bus, migrate_legacy_runs
 from crackerjack.core.preflight import PreflightConfig, PreflightFixer
 from crackerjack.models.fix_plan import FixPlan
 from crackerjack.models.issues import Issue, IssueType
@@ -41,6 +41,7 @@ from crackerjack.services.pycharm_mcp_integration import (
 from crackerjack.services.refurb_fixer import SafeRefurbFixer
 from crackerjack.utils.issue_detection import extract_issue_lines
 from crackerjack.utils.path_redaction import redact_path
+from crackerjack.utils.xdg_paths import state_dir
 
 if t.TYPE_CHECKING:
     from crackerjack.agents.base import AgentContext
@@ -119,8 +120,12 @@ class AutofixCoordinator:
     ) -> None:
         self.console = console or Console()
         self.pkg_path = pkg_path or Path.cwd()
+        # The run history moves out of the project tree, where
+        # `git clean -fd` would destroy it. Anything already written
+        # there is migrated first.
+        migrate_legacy_runs(self.pkg_path)
         self._event_bus: AIFixEventBus = event_bus or t.cast(
-            AIFixEventBus, build_default_bus(self.pkg_path)
+            AIFixEventBus, build_default_bus()
         )
         self._run_id: str = ""
         self._preflight_config = preflight_config or PreflightConfig()
@@ -263,6 +268,7 @@ class AutofixCoordinator:
         from datetime import UTC, datetime
 
         log_dirs = [
+            state_dir("crackerjack") / "logs",
             self.pkg_path / ".crackerjack" / "logs",
             Path(tempfile.gettempdir()) / "crackerjack" / "logs",
         ]

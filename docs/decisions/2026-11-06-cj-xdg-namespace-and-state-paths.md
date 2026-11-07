@@ -87,14 +87,41 @@ the `project_path`-relative form the fixers rely on
   collision disappears.
 - Crackerjack's data stops appearing in Session-Buddy's XDG directory, so
   `ls ~/.local/share/session-buddy/` reflects Session-Buddy's own data.
-- Existing `~/.local/share/session-buddy/crackerjack_integration.db` content
-  is Crackerjack's and moves with the rename. The migration is a file move,
-  not a schema change. **Not yet performed** — see Status.
-- Run history survives `git clean -fd`. **Not yet true** — see Status.
+- Run history survives `git clean -fd`.
+
+## A correction to this record: the integration database is Session-Buddy's
+
+This record originally said:
+
+> Existing `~/.local/share/session-buddy/crackerjack_integration.db` content
+> is Crackerjack's and moves with the rename. The migration is a file move,
+> not a schema change.
+
+**That was wrong, and acting on it would have destroyed data.** The file
+holds both components' rows:
+
+| Table | Rows | Owner |
+|---|---|---|
+| `crackerjack_results` | 1389 | Session-Buddy's — it writes them from the crackerjack runs it drives |
+| `quality_metrics_history` (`build_status`, `lint_score`, `security_score`, `complexity_score`, `complexity_score`, `unavailable`) | 2222 | Session-Buddy's |
+| `quality_metrics_history` (`health_adapters`, `health_managers`, `health_services`) | 402 | Crackerjack's health snapshots |
+
+Moving the file would have taken Session-Buddy's 3611 rows with it. So the
+file **stays where it is**, and only Crackerjack's *new* writes go to
+`data_dir("crackerjack")`.
+
+The 402 historical health rows stay in Session-Buddy's file, and no copy
+is made: both of Session-Buddy's consumers filter by metric type, and
+`health_*` is in neither list — `quality_scoring._parse_metrics_history`
+keeps `code_coverage`, `lint_score`, `security_score` and
+`complexity_score`, and `analyze_quality_trends` keeps
+`test_pass_rate` and the same three. Nothing reads the rows Crackerjack
+writes, in either location.
 
 ## Status
 
-Active, and **partially implemented**.
+Active, and **implemented** — with two paths still outstanding, named
+below.
 
 Implemented:
 
@@ -108,25 +135,22 @@ Implemented:
   `data_dir("crackerjack") / "run_state.db"`.
 - The snapshot path is resolved when it is *used*, not captured at import
   time, so the test session's `XDG_*` redirect actually contains it.
+- **Rule 2.** `runs/` resolves under `$XDG_STATE_HOME/crackerjack/runs` and
+  `logs/` under `$XDG_STATE_HOME/crackerjack/logs`. Run history survives
+  `git clean -fd`. The on-disk shapes are unchanged:
+  `runs/<run_id>/events.jsonl` and `logs/{debug,error,audit}/`.
+- **The async task store** resolves under
+  `data_dir("crackerjack") / "async_tasks.db"`, and the file left at
+  `~/.crackerjack/state/async_tasks.db` is moved on first use.
 
-Not implemented:
+Still outstanding:
 
-- **Rule 2.** `runs/` and `logs/` still resolve to the project-local
-  `.crackerjack/` directory. Run history does **not** yet survive
-  `git clean -fd`. The move touches `crackerjack/core/ai_fix_sinks.py` and
-  `crackerjack/core/autofix_coordinator.py`, and the on-disk layout has to
-  keep its `runs/<run_id>/events.jsonl` and `logs/` shapes.
-- **The data migration.** The rename is in effect, but the old
-  `~/.local/share/session-buddy/crackerjack_integration.db` was left in
-  place rather than moved, so the new database under
-  `~/.local/share/crackerjack/` started empty and the older rows are
-  orphaned in Session-Buddy's directory until someone moves the file.
-- **Rule 1's other paths.** Three call sites still resolve outside XDG
-  entirely and are untouched by any of this:
-  `AsyncTaskSettings.storage_path` (`~/.crackerjack/state/async_tasks.db`),
-  the prompt-evolution store (`~/.cache/crackerjack/prompt_evolution`), and
-  the lock directory (`~/.crackerjack/locks`). Rule 1 as written — "every
-  Crackerjack-owned path" — does not hold for them yet.
+- **Two paths still resolve outside XDG**: the prompt-evolution store
+  (`~/.cache/crackerjack/prompt_evolution`) and the lock directory
+  (`~/.crackerjack/locks`). Rule 1 as written — "every Crackerjack-owned
+  path" — does not hold for those two yet.
+- **The integration database is not migrated**, for the reason given
+  above: it is Session-Buddy's file, and the rows in it are theirs.
 
 ## Not covered here
 

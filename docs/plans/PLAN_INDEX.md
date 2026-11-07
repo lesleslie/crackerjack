@@ -36,6 +36,7 @@ _Regenerated 2026-11-07 by `crackerjack.tools.plan_index_sync` (phase)._
 | [`docs/plans/2026-10-28-oneiric-action-kit-adoption.md`](2026-10-28-oneiric-action-kit-adoption.md) | 2026-10-28 | `active` | `implementation` | `action-kit-adoption` | Crackerjack Oneiric Action-Kit Adoption Audit — Findings and Remediation Plan |
 | [`docs/plans/2026-10-28-path-disclosure-redaction.md`](2026-10-28-path-disclosure-redaction.md) | 2026-10-28 | `active` | `implementation` | `security` | Redact User Home Paths from Crackerjack Output and Resolve the Bodai Registry Dynamically |
 | [`docs/plans/2026-11-06-test-selection-and-run-state.md`](2026-11-06-test-selection-and-run-state.md) | 2026-11-06 | `complete` | `implementation` | `testing-infrastructure` | Test Selection and Run-State Tracking |
+| [`docs/plans/2026-11-07-xdg-runtime-paths-and-observability.md`](2026-11-07-xdg-runtime-paths-and-observability.md) | 2026-11-07 | `complete` | `implementation` | `testing-infrastructure` | XDG Runtime Paths and Run-State Observability |
 
 ### Docs: specs
 
@@ -84,8 +85,8 @@ _Regenerated 2026-11-07 by `crackerjack.tools.plan_index_sync` (phase)._
 | Role \\ Lifecycle | draft | active | partial | shipped | complete | Total |
 |---|---|---|---|---|---|---|
 | `canonical` | · | 10 | · | · | 2 | **12** |
-| `implementation` | 15 | 22 | · | · | 2 | **39** |
+| `implementation` | 15 | 22 | · | · | 3 | **40** |
 | `umbrella` | · | · | · | · | · | **0** |
 | `historical` | · | · | · | · | 1 | **1** |
 | `superseded` | · | · | · | · | · | **0** |
-| **Total** | **15** | **32** | **·** | **·** | **5** | **52** |
+| **Total** | **15** | **32** | **·** | **·** | **6** | **53** |

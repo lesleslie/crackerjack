@@ -542,6 +542,14 @@ def _create_and_configure_options(local_vars: dict[str, t.Any]) -> Options:
 
 
 def _configure_logging(debug: bool) -> None:
+    # The log directory moves out of the project tree, where
+    # `git clean -fd` would take it away. The migration runs here -
+    # a real run - rather than in `LogManager.__init__`, which a
+    # module-level instance would trigger at import time.
+    from crackerjack.services.log_manager import migrate_legacy_logs
+
+    migrate_legacy_logs()
+
     if debug:
         os.environ["ACB_LOG_LEVEL"] = "DEBUG"
         os.environ["CRACKERJACK_DEBUG"] = "1"
