@@ -7,6 +7,8 @@ from oneiric.core.config import OneiricMCPConfig
 from oneiric.core.substrate_settings import SubstrateSettings
 from pydantic import Field, model_validator
 
+from crackerjack.utils.xdg_paths import data_dir
+
 from .validators import reshape_adapter_timeouts, warn_unknown_pyproject_subtables
 
 
@@ -481,6 +483,21 @@ class AsyncTaskSettings(OneiricMCPConfig):
         ge=3600,
         le=2592000,
         description="Tasks with registered_at older than this AND status in {pending, running} are reaped",
+    )
+
+
+class RunStateSettings(OneiricMCPConfig):
+    """Where the per-test run-state store lives.
+
+    Crackerjack owns this data, so it resolves under the XDG data
+    directory for the ``crackerjack`` app rather than under
+    Session-Buddy's namespace - see
+    ``docs/decisions/2026-11-06-cj-xdg-namespace-and-state-paths.md``.
+    """
+
+    storage_path: Path = Field(
+        default_factory=lambda: data_dir("crackerjack") / "run_state.db",
+        description="SQLite database file for the per-test run-state store",
     )
 
 

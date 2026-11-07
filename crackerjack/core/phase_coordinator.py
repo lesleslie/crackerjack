@@ -526,111 +526,6 @@ class PhaseCoordinator:
 
         return safe_failures
 
-    async def run_snob_tests_phase(self, options: OptionsProtocol) -> bool:
-        if getattr(options, "no_snob", False):
-            return True
-
-        affected = self._get_snob_affected_tests()
-        if not affected:
-            return True
-
-        self.console.print(
-            f"[cyan]🔍 SNOB[/cyan] Running {len(affected)} affected test(s)"
-        )
-
-        run_id = getattr(options, "run_id", "unknown")
-        await publish_test_started(
-            run_id,
-            "snob_tests",
-            total_tests=len(affected),
-            publisher=self._event_publisher,
-        )
-
-        passed = self._run_pytest_subset(affected)
-
-        if passed:
-            await publish_test_completed(
-                run_id,
-                tests_completed=len(affected),
-                tests_failed=0,
-                duration_seconds=0.0,
-                publisher=self._event_publisher,
-            )
-            return True
-
-        failures = (
-            self.test_manager.get_test_failures()
-            if hasattr(self, "test_manager")
-            else []
-        )
-        safe = self._classify_safe_test_failures(failures)
-
-        if not safe:
-            self.console.print("[yellow]⚠️[/yellow] Snob failures require manual review")
-            await publish_test_failed(
-                run_id,
-                "snob_tests",
-                "snob test failures detected",
-                "",
-                publisher=self._event_publisher,
-            )
-            return False
-
-        await publish_test_failed(
-            run_id,
-            "snob_tests",
-            "snob tests autofix did not recover",
-            "",
-            publisher=self._event_publisher,
-        )
-        return False
-
-    def _get_snob_affected_tests(self) -> list[Path]:
-        import subprocess
-
-        try:
-            git_result = subprocess.run(
-                ["git", "diff", "HEAD", "--name-only"],
-                capture_output=True,
-                text=True,
-                check=False,
-            )
-            if git_result.returncode != 0:
-                return []
-
-            changed_py = [
-                f
-                for f in git_result.stdout.strip().split("\n")
-                if f.endswith(".py") and not f.startswith("tests/")
-            ]
-            if not changed_py:
-                return []
-
-            snob_result = subprocess.run(
-                ["snob"],
-                input="\n".join(changed_py),
-                capture_output=True,
-                text=True,
-                check=False,
-            )
-            if snob_result.returncode != 0:
-                return []
-
-            return [
-                Path(t) for t in snob_result.stdout.strip().split("\n") if t.strip()
-            ]
-        except FileNotFoundError:
-            return []
-        except Exception:
-            return []
-
-    def _run_pytest_subset(self, paths: list[Path]) -> bool:
-        import subprocess
-
-        cmd = ["uv", "run", "python", "-m", "pytest"] + [str(p) for p in paths]
-        result = subprocess.run(cmd, capture_output=False, check=False)
-        return result.returncode == 0
-
     async def run_comprehensive_hooks_only(self, options: OptionsProtocol) -> bool:
         if options.skip_hooks:
             self.console.print(
@@ -709,6 +604,17 @@ class PhaseCoordinator:
             "[bold bright_white]Refreshing coverage ratchet[/bold bright_white]",
         )
         self.console.print(make_separator("-") + "\n")
+        if self.test_manager.last_run_was_incremental():
+            # An incremental run measures only the code its selected tests
+            # touch, so its coverage number is not comparable to the
+            # full-suite baseline the ratchet is calibrated against.
+            # Comparing them reports a regression that never happened.
+            self.console.print(
+                "[dim]⏭️ Skipping the coverage ratchet: the last test run was "
+                "incremental, so its coverage covers only the affected tests "
+                "and cannot be compared to the full-suite baseline.[/dim]",
+            )
+            return True
         return self.test_manager.coverage_manager.process_coverage_ratchet()  # type: ignore
 
     @handle_errors

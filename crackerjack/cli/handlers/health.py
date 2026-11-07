@@ -17,7 +17,7 @@ from crackerjack.utils.xdg_paths import data_dir
 logger = logging.getLogger(__name__)
 
 
-DEFAULT_INTEGRATION_DB_PATH = data_dir() / "crackerjack_integration.db"
+DEFAULT_INTEGRATION_DB_PATH = data_dir("crackerjack") / "crackerjack_integration.db"
 
 
 STATUS_COLORS = {

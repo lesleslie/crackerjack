@@ -53,6 +53,10 @@ settings/registry_metadata.local.yaml
 coverage.json
 complexipy*.json
 htmlcov/
+# pytest-testmon's per-checkout dependency map (test selection state).
+# The trailing glob also covers the SQLite sidecars testmon leaves behind
+# (.testmondata-shm, .testmondata-wal).
+.testmondata*
 # Vitest config timestamp cache
 vitest.config.js.timestamp-*.mjs
 # Playwright output cruft

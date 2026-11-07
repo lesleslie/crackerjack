@@ -1,5 +1,6 @@
 """Test configuration for new Crackerjack features."""
 
+import os
 import tempfile
 from collections.abc import Generator
 from logging import Logger
@@ -14,6 +15,49 @@ from rich.console import Console
 def pytest_configure(config) -> None:
     config.addinivalue_line("markers", "performance: mark test as a performance test")
     config.addinivalue_line("markers", "integration: mark test as an integration test")
+
+
+# ============================================================================
+# Runtime-data isolation
+# ============================================================================
+# Crackerjack's runtime data resolves under the XDG base directories, and
+# ``TestManager`` falls back to ``RunStateSettings().storage_path`` when no
+# store path is injected. That default is the *user's* real data directory,
+# so a test that runs the test phase would otherwise write a run-state row
+# into the user's database - noise that grows on every suite run.
+#
+# ``crackerjack.utils.xdg_paths`` resolves on every call, so redirecting the
+# ``XDG_*`` environment variables for the session is enough to contain it.
+
+
+@pytest.fixture(scope="session")
+def xdg_sandbox_root(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """Stand-in for the user's XDG base directories during the test session."""
+    return tmp_path_factory.mktemp("xdg")
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _isolate_xdg_runtime_data(
+    xdg_sandbox_root: Path,
+) -> Generator[None]:
+    """Point every XDG-resolved path at the test sandbox."""
+    variables = (
+        "XDG_DATA_HOME",
+        "XDG_STATE_HOME",
+        "XDG_CACHE_HOME",
+        "XDG_CONFIG_HOME",
+    )
+    previous = {name: os.environ.get(name) for name in variables}
+    for name in variables:
+        os.environ[name] = str(xdg_sandbox_root / name)
+    try:
+        yield
+    finally:
+        for name, value in previous.items():
+            if value is None:
+                os.environ.pop(name, None)
+            else:
+                os.environ[name] = value
 
 
 @pytest.fixture

@@ -629,6 +629,7 @@ class TestTestManagerProtocol:
         mock_manager.get_test_failures = MagicMock(return_value=[])
         mock_manager.validate_test_environment = MagicMock(return_value=True)
         mock_manager.get_coverage = MagicMock(return_value={})
+        mock_manager.last_run_was_incremental = MagicMock(return_value=False)
 
         assert isinstance(mock_manager, TestManagerProtocol)
 

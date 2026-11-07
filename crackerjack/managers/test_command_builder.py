@@ -1,5 +1,5 @@
 from __future__ import annotations
-import logging
+
 import os
 from pathlib import Path
 
@@ -8,8 +8,6 @@ from rich.console import Console
 
 from crackerjack.config.settings import CrackerjackSettings
 from crackerjack.models.protocols import OptionsProtocol
-
-logger = logging.getLogger(__name__)
 
 
 def parse_pytest_addopts(addopts: str | list) -> list[str]:
@@ -55,97 +53,39 @@ class TestCommandBuilder:
         self.console = console
         self.settings = settings
 
-    def _get_incremental_tests(self, options: OptionsProtocol) -> list[Path] | None:
+    def get_project_name(self) -> str:
+        """Stable identifier for the project, valid across worktrees.
 
-        if not getattr(options, "incremental_tests", True):
-            return None
+        The directory name is not: a worktree of this repo has its own
+        directory but is the same project. The package name declared in
+        pyproject.toml is stable across worktrees.
+        """
+        return self._detect_package_name()
 
-        try:
-            import subprocess
+    def get_json_report_path(self) -> Path:
+        """Path to the machine-readable pytest result file.
 
-            result = subprocess.run(
-                ["git", "diff", "--name-only", "HEAD~10"],
-                capture_output=True,
-                text=True,
-                check=False,
-            )
+        Per-test results are captured as structured data rather than scraped
+        out of the human-readable terminal output, so the run-state store
+        can query "what passed at commit X" without re-running anything.
+        """
+        return self.pkg_path / ".crackerjack" / "last-run.json"
 
-            if result.returncode != 0:
-                logger.debug("Not in git repo or no git changes, skipping incremental")
-                return None
-
-            changed_files = result.stdout.strip().split("\n")
-            logger.debug(f"Found {len(changed_files)} changed files")
-
-            changed_py_files = [
-                f
-                for f in changed_files
-                if f.endswith(".py") and not f.startswith("tests/")
-            ]
-
-            if not changed_py_files:
-                logger.info("No Python files changed in recent commits")
-                return []
-
-            logger.debug(f"Changed Python files: {changed_py_files}")
-
-            snob_input = "\n".join(changed_py_files)
-            snob_result = subprocess.run(
-                ["snob"],
-                input=snob_input,
-                capture_output=True,
-                text=True,
-                check=False,
-            )
-
-            if snob_result.returncode != 0:
-                logger.warning(
-                    f"snob failed: {snob_result.stderr}, falling back to full test run"
-                )
-                return None
-
-            test_paths = [
-                Path(t) for t in snob_result.stdout.strip().split("\n") if t and t != ""
-            ]
-
-            if not test_paths or not test_paths[0]:
-                logger.info("No tests affected by changes (snob found none)")
-                return []
-
-            logger.info(
-                f"snob found {len(test_paths)} tests affected by "
-                f"{len(changed_py_files)} changed files"
-            )
-
-            return test_paths
-
-        except FileNotFoundError:
-            logger.warning("snob not found, falling back to full test run")
-            return None
-        except Exception as e:
-            logger.warning(
-                f"Incremental test selection failed: {e}, falling back to full run"
-            )
-            return None
+    def _add_json_report_options(self, cmd: list[str]) -> None:
+        report_path = self.get_json_report_path()
+        report_path.parent.mkdir(parents=True, exist_ok=True)
+        cmd.append("--json-report")
+        cmd.append(f"--json-report-file={report_path}")
 
     def build_command(self, options: OptionsProtocol) -> list[str]:
         cmd = ["uv", "run", "python", "-m", "pytest"]
 
-        incremental_tests = self._get_incremental_tests(options)
+        if getattr(options, "incremental_tests", True):
+            # pytest-testmon deselects unaffected tests at collection time,
+            # so the full test path still reaches pytest below.
+            cmd.append("--testmon")
 
-        if incremental_tests is not None:
-            if not incremental_tests:
-                self.console.print(
-                    "[cyan]✓ No tests affected by recent changes, skipping test run[/cyan]"
-                )
-
-                return ["pytest", "--collect-only", "--co-quiet"]
-            else:
-                self.console.print(
-                    f"[cyan]Running {len(incremental_tests)} tests affected by changes "
-                    f"(snob)[/cyan]"
-                )
-                cmd.extend([str(t) for t in incremental_tests])
+        self._add_json_report_options(cmd)
 
         self._add_coverage_options(cmd, options)
         self._add_worker_options(cmd, options)
@@ -153,8 +93,7 @@ class TestCommandBuilder:
         self._add_timeout_options(cmd, options)
         self._add_verbosity_options(cmd, options)
 
-        if incremental_tests is None:
-            self._add_test_path(cmd)
+        self._add_test_path(cmd)
 
         return cmd
 

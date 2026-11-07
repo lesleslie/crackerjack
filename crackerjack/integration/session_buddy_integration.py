@@ -495,7 +495,8 @@ class SessionBuddyDirectClient:
         import os
 
         if db_path is None:
-            db_path = str(data_dir() / "workflow_metrics.db")
+            # Session-Buddy owns this file; Crackerjack only reads it.
+            db_path = str(data_dir("session-buddy") / "workflow_metrics.db")
         self.db_path = os.path.expanduser(db_path)
         self._conn: sqlite3.Connection | duckdb.DuckDBPyConnection | None = None
 
@@ -605,7 +606,8 @@ class CorrelationStorageSQLite:
         import os
 
         if db_path is None:
-            db_path = data_dir() / "correlation_insights.db"
+            # Session-Buddy owns this file; Crackerjack only writes it.
+            db_path = data_dir("session-buddy") / "correlation_insights.db"
         self.db_path = Path(os.path.expanduser(str(db_path)))
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
 

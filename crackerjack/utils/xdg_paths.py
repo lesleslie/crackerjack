@@ -1,18 +1,16 @@
-"""XDG Base Directory resolution for Session-Buddy owned runtime data.
+"""XDG Base Directory resolution for Crackerjack owned runtime data.
 
-Session-Buddy's runtime data used to live under ``~/.claude/data`` — a
-Claude-Code-specific directory.  Storing it there asserts that Claude Code
-owns the data, but Session-Buddy is harness-agnostic.  These helpers resolve
-the XDG Base Directory locations instead:
+Crackerjack's runtime data resolves under Crackerjack's own app name, so
+it never collides with the files Session-Buddy owns:
 
-* ``$XDG_DATA_HOME/session-buddy``   — persistent data
-* ``$XDG_STATE_HOME/session-buddy``  — state
-* ``$XDG_CACHE_HOME/session-buddy``  — regenerable caches
-* ``$XDG_CONFIG_HOME/session-buddy`` — settings
+* ``$XDG_DATA_HOME/crackerjack``   — persistent data
+* ``$XDG_STATE_HOME/crackerjack``  — state
+* ``$XDG_CACHE_HOME/crackerjack``  — regenerable caches
+* ``$XDG_CONFIG_HOME/crackerjack`` — settings
 
-The data owner is always ``session-buddy``, even in a repository that merely
-consumes Session-Buddy's data — the consuming repository's own app name is
-never used for Session-Buddy's files.
+``data_dir(app="session-buddy")`` remains available for the genuinely
+Session-Buddy-owned files that Crackerjack legitimately reads or writes,
+and must be passed explicitly at those call sites.
 
 Every repository carries its own copy of this module.  crackerjack,
 session-buddy and mahavishnu are released (non-editable) installs of one
@@ -50,7 +48,7 @@ def _xdg_root(env_var: str, fallback: str) -> Path:
     return Path(os.path.expanduser(fallback))
 
 
-def data_dir(app: str = "session-buddy") -> Path:
+def data_dir(app: str = "crackerjack") -> Path:
     """Return the XDG data directory for *app*.
 
     Args:
@@ -62,7 +60,7 @@ def data_dir(app: str = "session-buddy") -> Path:
     return _xdg_root("XDG_DATA_HOME", "~/.local/share") / app
 
 
-def state_dir(app: str = "session-buddy") -> Path:
+def state_dir(app: str = "crackerjack") -> Path:
     """Return the XDG state directory for *app*.
 
     Args:
@@ -74,7 +72,7 @@ def state_dir(app: str = "session-buddy") -> Path:
     return _xdg_root("XDG_STATE_HOME", "~/.local/state") / app
 
 
-def cache_dir(app: str = "session-buddy") -> Path:
+def cache_dir(app: str = "crackerjack") -> Path:
     """Return the XDG cache directory for *app*.
 
     Args:
@@ -86,7 +84,7 @@ def cache_dir(app: str = "session-buddy") -> Path:
     return _xdg_root("XDG_CACHE_HOME", "~/.cache") / app
 
 
-def config_dir(app: str = "session-buddy") -> Path:
+def config_dir(app: str = "crackerjack") -> Path:
     """Return the XDG config directory for *app*.
 
     Args:

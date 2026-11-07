@@ -629,7 +629,7 @@ CLI_OPTIONS = {
         True,
         "--incremental-tests/--full-tests",
         help=(
-            "Use incremental test execution via snob (default: enabled). "
+            "Use incremental test execution via pytest-testmon (default: enabled). "
             "Only runs tests affected by recent changes."
         ),
     ),

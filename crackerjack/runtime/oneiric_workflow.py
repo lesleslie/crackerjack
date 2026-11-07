@@ -288,12 +288,6 @@ def _register_tasks(
             verbose=verbose,
             error_provider=_make_error_provider("doc_updates"),
         ),
-        "snob_tests": lambda: _PhaseTask(
-            "snob_tests",
-            lambda: phases.run_snob_tests_phase(options),
-            verbose=verbose,
-            error_provider=_make_error_provider("snob_tests"),
-        ),
         "comprehensive_hooks": lambda: _PhaseTask(
             "comprehensive_hooks",
             lambda: phases.run_comprehensive_hooks_only(options),
@@ -369,9 +363,6 @@ def _build_workflow_steps(options: t.Any) -> list[str]:
     if _should_run_fast_hooks(options):
         steps.append("fast_hooks")
 
-    if _should_run_fast_hooks(options) and not getattr(options, "no_snob", False):
-        steps.append("snob_tests")
-
     if _should_run_tests(options) and _should_run_comprehensive_hooks(options):
         # ``enable_parallel_phases`` only changes DAG wiring downstream (see
         # ``_build_nodes_with_dependencies``); the step list itself is the
@@ -412,7 +403,7 @@ def _build_workflow_steps(options: t.Any) -> list[str]:
 # - **Parallel branches**: two phases sharing a common predecessor so they
 #   can overlap. Today this is the ``tests`` + ``comprehensive_hooks`` pair;
 #   when ``enable_parallel_phases=True`` both depend on the last step before
-#   the pair (typically ``fast_hooks`` or ``snob_tests``). The empty tuple
+#   the pair (typically ``fast_hooks``). The empty tuple
 #   here is the signal for ``_build_nodes_with_dependencies`` to apply that
 #   parallel-branch logic.
 # - **Sequential re-ordering**: any non-linear DAG edge (a phase that joins

@@ -1,9 +1,13 @@
 """Tests for ``crackerjack.utils.xdg_paths`` and the legacy data-path guard.
 
-Session-Buddy's runtime data used to live under ``~/.claude/data`` — a
-Claude-Code-specific directory.  The resolver module points those paths at
-the XDG Base Directory locations instead, and the guard test below fails if
-anybody reintroduces a hardcoded legacy data path in executable code.
+Runtime data used to live under ``~/.claude/data`` — a Claude-Code-specific
+directory.  The resolver module points those paths at the XDG Base Directory
+locations instead, and the guard test below fails if anybody reintroduces a
+hardcoded legacy data path in executable code.
+
+The default app name is ``crackerjack``: Crackerjack owns the files it
+resolves by default, and names the Session-Buddy-owned files explicitly
+(``data_dir("session-buddy")``) at the call sites that touch them.
 
 Docstrings and comments may still *name* the legacy path (they document the
 migration); code may not *contain* it.
@@ -86,7 +90,7 @@ def test_data_dir_honours_xdg_data_home(
     """``$XDG_DATA_HOME`` selects the root the app name is joined onto."""
     monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "xdg-data"))
 
-    assert data_dir() == tmp_path / "xdg-data" / "session-buddy"
+    assert data_dir() == tmp_path / "xdg-data" / "crackerjack"
 
 
 def test_state_dir_honours_xdg_state_home(
@@ -95,7 +99,7 @@ def test_state_dir_honours_xdg_state_home(
     """``$XDG_STATE_HOME`` selects the root the app name is joined onto."""
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "xdg-state"))
 
-    assert state_dir() == tmp_path / "xdg-state" / "session-buddy"
+    assert state_dir() == tmp_path / "xdg-state" / "crackerjack"
 
 
 def test_cache_dir_honours_xdg_cache_home(
@@ -104,7 +108,7 @@ def test_cache_dir_honours_xdg_cache_home(
     """``$XDG_CACHE_HOME`` selects the root the app name is joined onto."""
     monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path / "xdg-cache"))
 
-    assert cache_dir() == tmp_path / "xdg-cache" / "session-buddy"
+    assert cache_dir() == tmp_path / "xdg-cache" / "crackerjack"
 
 
 def test_config_dir_honours_xdg_config_home(
@@ -113,7 +117,7 @@ def test_config_dir_honours_xdg_config_home(
     """``$XDG_CONFIG_HOME`` selects the root the app name is joined onto."""
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "xdg-config"))
 
-    assert config_dir() == tmp_path / "xdg-config" / "session-buddy"
+    assert config_dir() == tmp_path / "xdg-config" / "crackerjack"
 
 
 def test_directories_fall_back_to_xdg_defaults(
@@ -128,10 +132,10 @@ def test_directories_fall_back_to_xdg_defaults(
     ):
         monkeypatch.delenv(variable, raising=False)
 
-    assert data_dir() == fake_home / ".local" / "share" / "session-buddy"
-    assert state_dir() == fake_home / ".local" / "state" / "session-buddy"
-    assert cache_dir() == fake_home / ".cache" / "session-buddy"
-    assert config_dir() == fake_home / ".config" / "session-buddy"
+    assert data_dir() == fake_home / ".local" / "share" / "crackerjack"
+    assert state_dir() == fake_home / ".local" / "state" / "crackerjack"
+    assert cache_dir() == fake_home / ".cache" / "crackerjack"
+    assert config_dir() == fake_home / ".config" / "crackerjack"
 
 
 def test_app_name_is_configurable(
@@ -141,6 +145,23 @@ def test_app_name_is_configurable(
     monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path))
 
     assert data_dir("some-other-app") == tmp_path / "some-other-app"
+
+
+def test_session_buddy_files_are_named_explicitly(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Session-Buddy-owned files keep their own namespace.
+
+    Crackerjack reads and writes two Session-Buddy-owned databases
+    (``workflow_metrics.db`` and ``correlation_insights.db``). Those must
+    resolve under ``session-buddy``; Crackerjack's own files resolve under
+    ``crackerjack``. The two used to share one directory, so the two
+    components wrote their tables into one file.
+    """
+    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path))
+
+    assert data_dir() == tmp_path / "crackerjack"
+    assert data_dir("session-buddy") == tmp_path / "session-buddy"
 
 
 def test_resolver_creates_no_directories(

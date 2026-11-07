@@ -59,7 +59,6 @@ def _make_options(**overrides):
         "run_tests": False,
         "test": False,
         "xcode_tests": False,
-        "no_snob": False,
         "enable_parallel_phases": False,
         "coverage_ratchet": False,
         "no_config_updates": True,  # suppress "configuration" so steps list stays narrow

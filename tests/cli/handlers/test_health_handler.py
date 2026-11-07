@@ -23,7 +23,6 @@ from crackerjack.cli.handlers.health import (
     _check_managers,
     _check_services,
     _output_json,
-    _record_health_snapshot,
     _output_table,
     _print_category_components,
     _print_category_details,
@@ -31,6 +30,7 @@ from crackerjack.cli.handlers.health import (
     _print_overall_status,
     _print_single_category,
     _print_timestamp,
+    _record_health_snapshot,
     handle_health_check,
 )
 from crackerjack.models.enums import HealthStatus
@@ -39,7 +39,6 @@ from crackerjack.models.health_check import (
     HealthCheckResult,
     SystemHealthReport,
 )
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -305,7 +304,7 @@ class TestHandleHealthCheckErrorHandling:
 class TestHandleHealthCheckOutput:
     def test_json_output_calls_output_json(self, tmp_path: Path, fake_console: Console) -> None:
         cat = _make_component_health(HealthStatus.HEALTHY, "adapters")
-        report = SystemHealthReport.from_category_health({"adapters": cat})
+        SystemHealthReport.from_category_health({"adapters": cat})
         with patch.object(health_mod, "_check_adapters", return_value=cat), patch.object(
             health_mod, "_output_json"
         ) as mock_json, patch.object(health_mod, "_output_table") as mock_table, patch.object(
@@ -324,7 +323,7 @@ class TestHandleHealthCheckOutput:
 
     def test_text_output_calls_output_table(self, tmp_path: Path) -> None:
         cat = _make_component_health(HealthStatus.HEALTHY, "adapters")
-        report = SystemHealthReport.from_category_health({"adapters": cat})
+        SystemHealthReport.from_category_health({"adapters": cat})
         with patch.object(health_mod, "_check_adapters", return_value=cat), patch.object(
             health_mod, "_output_table"
         ) as mock_table, patch.object(health_mod, "_output_json") as mock_json:
@@ -691,7 +690,7 @@ class TestIntegrationOutputs:
         self, tmp_path: Path
     ) -> None:
         cat = _make_component_health(HealthStatus.HEALTHY, "adapters")
-        report = SystemHealthReport.from_category_health({"adapters": cat})
+        SystemHealthReport.from_category_health({"adapters": cat})
 
         captured_console = Console(record=True, force_terminal=False, width=200)
 
@@ -1064,3 +1063,49 @@ class TestHealthSnapshotReferentialIntegrity:
 
         assert metric_rows == 0
         assert violations == []
+
+
+class TestXDGNamespace:
+    """Crackerjack's own data must not land in Session-Buddy's namespace.
+
+    Crackerjack and Session-Buddy both wrote the ``crackerjack_results``
+    and ``quality_metrics_history`` tables into one SQLite file under
+    Session-Buddy's XDG directory. The namespace decision separates them:
+    Crackerjack-owned paths resolve under ``data_dir(app="crackerjack")``,
+    and ``data_dir(app="session-buddy")`` is reserved for the files
+    Session-Buddy owns.
+    """
+
+    def test_default_integration_db_is_crackjack_owned(self) -> None:
+        path = health_mod.DEFAULT_INTEGRATION_DB_PATH
+
+        assert "session-buddy" not in str(path)
+        assert "crackerjack" in str(path)
+
+    def test_xdg_data_dir_defaults_to_crackerjack(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+    ) -> None:
+        from crackerjack.utils.xdg_paths import data_dir
+
+        monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path))
+
+        resolved = data_dir()
+
+        assert resolved.parent == tmp_path
+        assert resolved.name == "crackerjack"
+
+    def test_session_buddy_namespace_is_still_reachable(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+    ) -> None:
+        from crackerjack.utils.xdg_paths import data_dir
+
+        monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path))
+
+        resolved = data_dir("session-buddy")
+
+        assert resolved.parent == tmp_path
+        assert resolved.name == "session-buddy"

@@ -95,7 +95,7 @@ following are fixed in this extraction -- they are pre-existing behavior of
   ``_remove_dependency_from_deps``'s list branch does
   ``dep_name not in dep`` (a substring test against each dependency
   string), so e.g. checking whether ``"pytest"`` exists returns a false
-  positive against an entry like ``"pytest-snob>=0.1.0"``. Verified
+  positive against an entry like ``"pytest-asyncio>=1.4.0"``. Verified
   empirically that this does not cause an incorrect *removal*, though: the
   actual edit is always performed by the separately-scoped,
   exact-pattern-matching ``_remove_dependency_from_toml``, which correctly

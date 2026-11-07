@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import re
 import shutil
 import subprocess
@@ -8,14 +9,16 @@ import sys
 import time
 import typing as t
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
+from pytest import ExitCode
 from rich import box
 from rich.panel import Panel
 from rich.table import Table
 
 from crackerjack.config import get_console_width
+from crackerjack.config.settings import RunStateSettings
 from crackerjack.core.console import CrackerjackConsole
 from crackerjack.models.protocols import (
     ConsoleInterface,
@@ -25,6 +28,10 @@ from crackerjack.models.protocols import (
 )
 from crackerjack.services.coverage_badge_service import CoverageBadgeService
 from crackerjack.services.testing.coverage_manager import CoverageManager
+from crackerjack.services.testing.run_state_store import (
+    RunStateStore,
+    load_pytest_json_report,
+)
 from crackerjack.services.testing.test_result_parser import TestResultParser
 from crackerjack.services.testing.test_result_renderer import TestResultRenderer
 from crackerjack.utils.path_redaction import redact_path
@@ -37,6 +44,7 @@ if t.TYPE_CHECKING:
 
 ANSI_ESCAPE_RE = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
 root_path = Path.cwd()
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -59,6 +67,7 @@ class TestManager:
         result_parser: TestResultParser | None = None,
         result_renderer: TestResultRenderer | None = None,
         coverage_manager: CoverageManager | None = None,
+        run_state_db_path: Path | None = None,
     ) -> None:
         if console is None:
             console = CrackerjackConsole()
@@ -108,8 +117,10 @@ class TestManager:
 
         self.coverage_manager = coverage_manager
         self.coverage_ratchet = coverage_ratchet
+        self.run_state_db_path = run_state_db_path or RunStateSettings().storage_path
         self._coverage_badge_service = coverage_badge
         self._lsp_client = lsp_client
+        self._last_run_was_incremental: bool | None = None
 
         self._last_test_failures: list[str] = []
         self._progress_callback: t.Callable[[dict[str, t.Any]], None] | None = None
@@ -187,7 +198,7 @@ class TestManager:
         if current_pct > baseline + tolerance:
             self.coverage_ratchet.mirror_to_pyproject(current_pct)
             ratchet_data["current_minimum"] = current_pct
-            ratchet_data["last_updated"] = datetime.now().isoformat()
+            ratchet_data["last_updated"] = datetime.now(UTC).isoformat()
             self.coverage_ratchet.ratchet_file.write_text(
                 json.dumps(ratchet_data, indent=2)
             )
@@ -290,6 +301,30 @@ class TestManager:
         duration = time.time() - start_time
         workers = self.command_builder.get_optimal_workers(options, print_info=False)
 
+        incremental = bool(getattr(options, "incremental_tests", True))
+        observed_tests = self._record_run_state(result, options, start_time)
+        self._last_run_was_incremental = incremental
+
+        if result.returncode == ExitCode.NO_TESTS_COLLECTED and incremental:
+            # pytest-testmon deselected every test: the change affects none.
+            # This is a successful outcome, not a failure.
+            logger.info("No tests affected by recent changes; skipping test execution")
+            self.console.print(
+                "[cyan]✓ No tests affected by recent changes, skipping test run[/cyan]"
+            )
+            return True
+
+        if result.returncode == 0 and incremental and observed_tests == 0:
+            # pytest-testmon deselects *inside* pytest and normalises the
+            # resulting exit code 5 to 0, so "nothing was affected" arrives
+            # here as a successful run over an empty selection. Say so,
+            # rather than reporting a pass over zero tests.
+            logger.info("No tests affected by recent changes; skipping test execution")
+            self.console.print(
+                "[cyan]✓ No tests affected by recent changes, skipping test run[/cyan]"
+            )
+            return True
+
         if result.returncode == 0:
             return self._handle_test_success(result.stdout, duration, options, workers)
         return self._handle_test_failure(
@@ -299,6 +334,88 @@ class TestManager:
             options,
             workers,
         )
+
+    def last_run_was_incremental(self) -> bool:
+        """Whether the last test run selected a subset of the suite.
+
+        An incremental run measures only the code its selected tests touch,
+        so its coverage number is not comparable to the full-suite baseline
+        the coverage ratchet is calibrated against. ``False`` before any run
+        has happened.
+        """
+        return bool(self._last_run_was_incremental)
+
+    def _record_run_state(
+        self,
+        result: subprocess.CompletedProcess[str],
+        options: OptionsProtocol,
+        start_time: float,
+    ) -> int | None:
+        """Record this run's per-test results in the shared run-state store.
+
+        Returns the number of tests the run observed, or ``None`` when the
+        JSON report could not be read. A run that legitimately observed no
+        tests returns ``0`` - that is not the same as "no report".
+
+        Recording is a side effect of the run, never a gate on it: a store
+        failure is logged and swallowed so it can never turn a passing test
+        run into a failing one.
+        """
+        observed_tests: int | None = None
+        try:
+            report = load_pytest_json_report(
+                self.command_builder.get_json_report_path()
+            )
+            if report["available"]:
+                observed_tests = len(report["tests"])
+            commit_sha, branch = self._resolve_git_identity()
+            store = RunStateStore(self.run_state_db_path)
+            store.record_run(
+                repo=self.command_builder.get_project_name(),
+                commit_sha=commit_sha,
+                worktree=str(self.pkg_path),
+                branch=branch,
+                started_at=datetime.fromtimestamp(start_time, UTC),
+                finished_at=datetime.now(UTC),
+                exit_code=result.returncode,
+                selection_mode=(
+                    "incremental"
+                    if getattr(options, "incremental_tests", True)
+                    else "full"
+                ),
+                tests=report["tests"],
+            )
+        except Exception:
+            logger.exception(
+                "Could not record run state to %s", self.run_state_db_path
+            )
+        return observed_tests
+
+    def _resolve_git_identity(self) -> tuple[str, str | None]:
+        """Resolve the current commit and branch, tolerating a non-git tree."""
+        try:
+            commit = subprocess.run(
+                ["git", "rev-parse", "HEAD"],
+                cwd=self.pkg_path,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            if commit.returncode != 0:
+                return "unknown", None
+
+            branch = subprocess.run(
+                ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+                cwd=self.pkg_path,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            branch_name = branch.stdout.strip() if branch.returncode == 0 else ""
+            return commit.stdout.strip() or "unknown", branch_name or None
+        except Exception:
+            logger.exception("Could not resolve git identity")
+            return "unknown", None
 
     def _run_xcode_if_needed(
         self,
@@ -862,7 +979,7 @@ class TestManager:
                 return True
             return False
         except Exception as e:
-            logger.exception( # type: ignore
+            logger.exception(
                 "Structured parsing failed, falling back to standard formatting",
                 extra={"output_length": len(clean_output)}
             )
@@ -1596,7 +1713,7 @@ class TestManager:
             return not has_errors
 
         except Exception as e:
-            logger.exception( # type: ignore
+            logger.exception(
                 "LSP diagnostics failed",
                 extra={
                     "lsp_client": str(self.lsp_client) if self.lsp_client else None, # type: ignore
