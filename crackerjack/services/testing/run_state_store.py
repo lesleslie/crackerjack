@@ -39,6 +39,8 @@ from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
 
+from crackerjack.utils.path_redaction import redact_path
+
 logger = logging.getLogger(__name__)
 
 #: Statuses counted as failures when deriving the run's failure count.
@@ -200,7 +202,7 @@ class RunStateStore:
             run_id,
             repo,
             commit_sha[:8],
-            worktree,
+            redact_path(worktree),
             counts["total"],
             counts["passed"],
             counts["failed"],

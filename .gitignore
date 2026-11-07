@@ -420,6 +420,15 @@ settings/registry_metadata.local.yaml
 coverage.json
 complexipy*.json
 htmlcov/
+# pytest-testmon's per-checkout dependency map (test selection state).
+# The trailing glob also covers the SQLite sidecars testmon leaves behind
+# (.testmondata-shm, .testmondata-wal).
+.testmondata*
+# Crackerjack's project-local runtime directory: logs, AI-fix run history,
+# and the per-test JSON report the test phase writes
+# (.crackerjack/last-run-<uuid>.json). Runtime state, never source - a
+# `git add .` must not sweep a working tree's test results into a commit.
+.crackerjack/
 # Vitest config timestamp cache
 vitest.config.js.timestamp-*.mjs
 # Playwright output cruft

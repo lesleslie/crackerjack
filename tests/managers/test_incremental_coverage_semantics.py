@@ -72,8 +72,7 @@ def _options(**overrides: Any) -> SimpleNamespace:
     return SimpleNamespace(**base)
 
 
-def _write_report(project: Path, tests: list[dict[str, Any]]) -> None:
-    report_path = project / ".crackerjack" / "last-run.json"
+def _write_report(report_path: Path, tests: list[dict[str, Any]]) -> None:
     report_path.parent.mkdir(parents=True, exist_ok=True)
     report_path.write_text(
         json.dumps({"summary": {"total": len(tests)}, "tests": tests}),
@@ -99,12 +98,15 @@ class TestNothingAffected:
     ) -> None:
         """testmon deselected everything: say so, do not claim tests passed."""
         manager = _manager(project, console)
-        _write_report(project, [])
+
+        def _execute(options: Any) -> subprocess.CompletedProcess[str]:
+            # pytest writes the report while the run is in progress; the
+            # phase removes the previous run's report before starting.
+            _write_report(manager.command_builder.get_json_report_path(), [])
+            return _completed(0)
 
         with (
-            patch.object(
-                manager, "_execute_test_workflow", return_value=_completed(0)
-            ),
+            patch.object(manager, "_execute_test_workflow", side_effect=_execute),
             patch.object(manager, "_handle_test_success") as success_mock,
         ):
             result = manager._run_pytest_if_needed(True, _options(), 0.0)
@@ -117,15 +119,16 @@ class TestNothingAffected:
         self, project: Path, console: MagicMock
     ) -> None:
         manager = _manager(project, console)
-        _write_report(
-            project,
-            [{"nodeid": "tests/test_a.py::test_one", "outcome": "passed"}],
-        )
+
+        def _execute(options: Any) -> subprocess.CompletedProcess[str]:
+            _write_report(
+                manager.command_builder.get_json_report_path(),
+                [{"nodeid": "tests/test_a.py::test_one", "outcome": "passed"}],
+            )
+            return _completed(0)
 
         with (
-            patch.object(
-                manager, "_execute_test_workflow", return_value=_completed(0)
-            ),
+            patch.object(manager, "_execute_test_workflow", side_effect=_execute),
             patch.object(
                 manager, "_handle_test_success", return_value=True
             ) as success_mock,
@@ -142,12 +145,10 @@ class TestRunModeIsObservable:
         self, project: Path, console: MagicMock
     ) -> None:
         manager = _manager(project, console)
-        _write_report(project, [])
+        _write_report(manager.command_builder.get_json_report_path(), [])
 
         with (
-            patch.object(
-                manager, "_execute_test_workflow", return_value=_completed(0)
-            ),
+            patch.object(manager, "_execute_test_workflow", return_value=_completed(0)),
             patch.object(manager, "_handle_test_success", return_value=True),
         ):
             manager._run_pytest_if_needed(True, _options(incremental_tests=True), 0.0)
@@ -158,12 +159,10 @@ class TestRunModeIsObservable:
         self, project: Path, console: MagicMock
     ) -> None:
         manager = _manager(project, console)
-        _write_report(project, [])
+        _write_report(manager.command_builder.get_json_report_path(), [])
 
         with (
-            patch.object(
-                manager, "_execute_test_workflow", return_value=_completed(0)
-            ),
+            patch.object(manager, "_execute_test_workflow", return_value=_completed(0)),
             patch.object(manager, "_handle_test_success", return_value=True),
         ):
             manager._run_pytest_if_needed(True, _options(incremental_tests=False), 0.0)

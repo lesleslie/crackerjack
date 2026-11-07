@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import uuid
 from pathlib import Path
 
 import psutil
@@ -52,6 +53,7 @@ class TestCommandBuilder:
 
         self.console = console
         self.settings = settings
+        self._report_path: Path | None = None
 
     def get_project_name(self) -> str:
         """Stable identifier for the project, valid across worktrees.
@@ -63,13 +65,26 @@ class TestCommandBuilder:
         return self._detect_package_name()
 
     def get_json_report_path(self) -> Path:
-        """Path to the machine-readable pytest result file.
+        """Path to the machine-readable pytest result file for this run.
 
         Per-test results are captured as structured data rather than scraped
         out of the human-readable terminal output, so the run-state store
         can query "what passed at commit X" without re-running anything.
+
+        Each run gets its own file. A shared path would let two concurrent
+        runs in one checkout read each other's results, and a report left
+        behind by a run that was killed before pytest wrote its report
+        would be read as the next run's result.
         """
-        return self.pkg_path / ".crackerjack" / "last-run.json"
+        if self._report_path is None:
+            self._report_path = (
+                self.pkg_path / ".crackerjack" / f"last-run-{uuid.uuid4().hex}.json"
+            )
+        return self._report_path
+
+    def reset_report_path(self) -> None:
+        """Start a new run, which gets a fresh report path."""
+        self._report_path = None
 
     def _add_json_report_options(self, cmd: list[str]) -> None:
         report_path = self.get_json_report_path()
@@ -467,7 +482,7 @@ class TestCommandBuilder:
         for test_path in test_paths:
             full_path = self.pkg_path / test_path
             if full_path.exists() and full_path.is_dir():
-                cmd.append(full_path) # type: ignore
+                cmd.append(full_path)  # type: ignore
                 return
 
         cmd.append(str(self.pkg_path))

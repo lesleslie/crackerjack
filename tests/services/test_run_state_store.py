@@ -111,7 +111,10 @@ class TestRecordAndRetrieve:
         ]
         by_node = {result["node_id"]: result for result in results}
         assert by_node["tests/test_a.py::test_two"]["status"] == "failed"
-        assert by_node["tests/test_a.py::test_two"]["error_message"] == "AssertionError: boom"
+        assert (
+            by_node["tests/test_a.py::test_two"]["error_message"]
+            == "AssertionError: boom"
+        )
 
     def test_status_map_is_the_diffing_primitive(self, store: RunStateStore) -> None:
         run_id = _record(store)
@@ -133,14 +136,20 @@ class TestScoping:
         _record(store, worktree="/worktrees/one")
         _record(store, worktree="/worktrees/two")
 
-        one = store.get_run(repo="crackerjack", commit_sha="abc123", worktree="/worktrees/one")
-        two = store.get_run(repo="crackerjack", commit_sha="abc123", worktree="/worktrees/two")
+        one = store.get_run(
+            repo="crackerjack", commit_sha="abc123", worktree="/worktrees/one"
+        )
+        two = store.get_run(
+            repo="crackerjack", commit_sha="abc123", worktree="/worktrees/two"
+        )
 
         assert one is not None
         assert two is not None
         assert one["id"] != two["id"]
 
-    def test_get_run_returns_none_for_unknown_commit(self, store: RunStateStore) -> None:
+    def test_get_run_returns_none_for_unknown_commit(
+        self, store: RunStateStore
+    ) -> None:
         _record(store, commit_sha="abc123")
 
         run = store.get_run(repo="crackerjack", commit_sha="never-recorded")
@@ -154,7 +163,9 @@ class TestScoping:
 
         assert run is None
 
-    def test_list_runs_returns_every_run_for_a_commit(self, store: RunStateStore) -> None:
+    def test_list_runs_returns_every_run_for_a_commit(
+        self, store: RunStateStore
+    ) -> None:
         first = _record(store, worktree="/worktrees/one")
         second = _record(store, worktree="/worktrees/two")
 
@@ -241,3 +252,48 @@ class TestJsonReportLoading:
         assert parsed["tests"] == []
         assert parsed["available"] is True
         assert parsed["summary"] == {"total": 0, "collected": 0}
+
+
+class TestPathRedaction:
+    """A recorded run's log line must not disclose the OS account name.
+
+    The worktree path is absolute and lands in a log line that lands in
+    log files on disk. The repo has a standing rule against disclosing
+    home-directory paths in output (``crackerjack.utils.path_redaction``).
+    """
+
+    def test_the_recorded_run_log_does_not_disclose_the_home_directory(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        import logging
+
+        home = tmp_path / "home"
+        (home / "Projects" / "crackerjack").mkdir(parents=True)
+        monkeypatch.setenv("HOME", str(home))
+        worktree = home / "Projects" / "crackerjack"
+
+        store = RunStateStore(tmp_path / "run_state.db")
+        with caplog.at_level(
+            logging.INFO, logger="crackerjack.services.testing.run_state_store"
+        ):
+            store.record_run(
+                repo="crackerjack",
+                commit_sha="abc1234",
+                worktree=str(worktree),
+                branch="main",
+                started_at=datetime.now(UTC),
+                finished_at=datetime.now(UTC),
+                exit_code=0,
+                selection_mode="incremental",
+                tests=[{"node_id": "tests/test_a.py::test_one", "status": "passed"}],
+            )
+
+        assert str(home) not in caplog.text, (
+            f"the home directory leaked into the run-state log: {caplog.text}"
+        )
+        assert "~/Projects/crackerjack" in caplog.text, (
+            f"the worktree was not rendered home-relative: {caplog.text}"
+        )

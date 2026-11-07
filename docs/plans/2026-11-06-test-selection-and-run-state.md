@@ -46,11 +46,19 @@ baseline must self-describe its freshness).
    disables testmon collection.
 1. **Crackerjack-owned data lives under `data_dir(app="crackerjack")`.**
    `data_dir(app="session-buddy")` is reserved for files session-buddy owns.
+   A path that *is* XDG-resolved must be resolved when it is used, not
+   captured at import time — a module-level constant freezes one
+   resolution before the test session can redirect it, and the suite then
+   writes into the developer's real data directory. (See Post-implementation
+   correction 6.) The three paths that never used XDG at all are recorded
+   as not-yet-implemented in the decision doc's Status section.
 1. **No runtime `pip install` / `uv pip install` in library code.**
-1. **pytest exit code 5 ("no tests collected") is a success** for an
-   incremental run, not a failure. (See Post-implementation correction 1:
-   under testmon, exit code 5 is rewritten to 0 before it reaches the
-   caller, so the empty *result set* is the signal that actually fires.)
+1. **pytest exit code 5 ("no tests collected") is a failure**, in an
+   incremental run as much as in a full one. (See Post-implementation
+   correction 1: under testmon, the exit code that reaches the caller
+   discriminates "everything was deselected" (0) from "pytest collected
+   nothing" (5), and the empty *result set* is the signal that says the
+   change affects no test.)
 1. **Recording run state must never fail a test run.** The store is a side
    effect; a store error logs a warning and is swallowed.
 1. Pre-1.0 — direct commit to local `main`, no PR. No push without explicit
@@ -62,12 +70,12 @@ Three things the plan assumed, and the implementation found otherwise. Each
 is recorded here because the plan is the tracked spec of record: a reader
 who takes it at face value would rely on a premise that does not hold.
 
-**Correction 1 — pytest exit code 5 never reaches the caller under
-testmon.** Global Constraint 6 and Review Focus item 1 are both written
-around pytest exiting 5 when every test is deselected. That is what pytest
-*would* do: in `--testmon` select mode testmon empties the collected item
-list, so `testscollected == 0`. But testmon's own `pytest_sessionfinish`
-hook then rewrites the status:
+**Correction 1 — pytest exit code 5 means "pytest collected nothing",
+which is a failure, not a pass.** Global Constraint 6 and Review Focus
+item 1 are both written around pytest exiting 5 when every test is
+deselected. In `--testmon` select mode testmon empties the collected
+item list, so pytest computes `testscollected == 0` and *would* exit 5.
+But testmon's own `pytest_sessionfinish` hook rewrites that status:
 
 ```python
 def pytest_sessionfinish(self, session, exitstatus):
@@ -75,14 +83,22 @@ def pytest_sessionfinish(self, session, exitstatus):
         session.exitstatus = ExitCode.OK
 ```
 
-So "nothing was affected" arrives as **exit code 0 over an empty
-selection**. The Task 1.3 implementation still stands (exit 5 from a
-non-incremental run is a failure; exit 5 from an incremental run is a
-success), but it is not the mechanism that fires in practice. The
-mechanism that does fire is the empty *result set*, so
-`load_pytest_json_report` grew an `available` flag and the test phase
-treats an incremental run with zero observed tests as "no tests
-affected". Task 1.3's test remains correct and stays.
+The rewrite is conditional on testmon having **actually deselected
+something**. Measured on this tree:
+
+| Case | Exit | Meaning |
+|---|---|---|
+| testmon deselected every test | 0 | the change affects nothing — a pass |
+| pytest collected nothing at all | 5 | the test configuration is broken — a failure |
+
+So the exit code that reaches the caller discriminates the two cases,
+and it discriminates them the *other way round* from what this plan
+originally assumed. Exit 5 in an incremental run means the collection
+found nothing — a misconfigured test suite — and reporting that as a
+green run is a fail-open. The "nothing was affected" case is detected
+from the empty *result set* instead: `load_pytest_json_report` carries
+an `available` flag so a report that legitimately contains no tests is
+distinguishable from one that could not be read.
 
 **Correction 2 — an incremental run's coverage is partial, and must not
 be compared to a full-suite baseline.** This plan made the incremental
@@ -101,18 +117,63 @@ by the `cacheprovider` plugin, so `-p no:cacheprovider` makes
 `--testmon` die with an opaque `INTERNALERROR> KeyError: 'lf'`. Crackerjack
 never passes that flag; the constraint is recorded so it stays that way.
 
+**Correction 4 — the new code must obey the repo's own path-redaction
+rule.** The store logged the absolute worktree path, and the test phase
+logged the absolute store path on failure. Both name the OS account and
+both land in log files on disk. Every path a message interpolates goes
+through `crackerjack.utils.path_redaction` — including the traceback,
+whose exception text names the path too, so the store-failure line
+carries the exception *type* and no traceback.
+
+**Correction 5 — each run's report file belongs to that run.** A shared
+path let a report left behind by an earlier run — or by a run killed
+before pytest wrote it — be read as the next run's result, and let two
+concurrent runs read each other's. Each run writes its own
+`.crackerjack/last-run-<uuid>.json`, reads back exactly that file, and
+removes it once the run state is recorded. The fleet gitignore template
+carries `.crackerjack/` so the file can never be committed.
+
+**Correction 6 — a path that resolves must resolve when it is used.**
+`crackerjack/cli/handlers/health.py` held the health snapshot database at
+a module-level constant:
+
+```python
+DEFAULT_INTEGRATION_DB_PATH = data_dir("crackerjack") / "crackerjack_integration.db"
+```
+
+`data_dir` reads `XDG_DATA_HOME` on every call — its own docstring says
+so, and says why: so a test can redirect it. A module-level constant
+throws that away. The value is frozen during *collection*, before the
+session-scoped fixture can set the environment, so the path is always the
+developer's real one.
+
+Measured on this tree, with the suite running from 04:16:27:
+
+| File | Written at | Location |
+|---|---|---|
+| `~/.local/share/crackerjack/crackerjack_integration.db` | 04:19:08 | **the user's real data directory** |
+| `<sandbox>/XDG_DATA_HOME/crackerjack/run_state.db` | during the run | the sandbox |
+
+The run-state store was contained (it resolves through a Pydantic
+`default_factory`, i.e. at instantiation). The health snapshot database
+was not. The constant is replaced by `resolve_integration_db_path()`,
+called at the point of use.
+
 ## Review Focus
 
 Five failure modes the design implies but no happy-path test exercises.
 Each is pinned by a test named in the owning task.
 
 1. **All tests deselected.** A change touching only non-Python files, or a
-   `.testmondata` whose tracked sources all changed, yields pytest exit code
-   5\. A reasonable person expects "no tests affected" to be a *pass*.
-   → Task 1.3, `test_exit_code_five_is_success_when_incremental`.
-   (Post-implementation correction 1: testmon rewrites that exit code to
-   0, so the case is detected from the empty result set instead — see
-   `tests/managers/test_incremental_coverage_semantics.py`.)
+   `.testmondata` whose tracked sources all changed, yields an empty
+   selection. A reasonable person expects "no tests affected" to be a
+   *pass*.
+   → `test_an_empty_selection_is_reported_plainly` in
+   `tests/managers/test_incremental_coverage_semantics.py`.
+   (Post-implementation correction 1: the signal is the empty *result
+   set*, not the exit code — testmon rewrites the exit code 5 that an
+   empty selection would produce, so a 5 reaching the caller means pytest
+   collected nothing at all, which is a failure.)
 1. **Branch coverage enabled.** The moment anyone adds `--cov-branch`,
    testmon raises `TestmonException` and the whole test phase dies with an
    opaque error. Expected: a clear message naming the conflict.
@@ -216,7 +277,9 @@ incremental, so the phase is removed.
 ```python
 def test_pytest_testmon_is_a_main_dependency():
     data = tomllib.loads(Path("pyproject.toml").read_text())
-    assert any(d.startswith("pytest-testmon>=2.2.0") for d in data["project"]["dependencies"])
+    assert any(
+        d.startswith("pytest-testmon>=2.2.0") for d in data["project"]["dependencies"]
+    )
 
 
 def test_no_snob_dependency_group():
@@ -310,7 +373,14 @@ git add crackerjack/managers/test_command_builder.py tests/managers/test_test_co
 git commit --only crackerjack/managers/test_command_builder.py tests/managers/test_test_command_builder.py -m "feat(tests): select affected tests via pytest-testmon instead of the snob CLI"
 ```
 
-### Task 1.3 — Treat pytest exit code 5 as success
+### Task 1.3 — Treat pytest exit code 5 as a failure
+
+> **Superseded by Post-implementation correction 1.** This task originally
+> read "Treat pytest exit code 5 as success", on the premise that testmon
+> surfaces exit 5 when it deselects every test. It does the opposite: it
+> rewrites that exit code to 0, and lets 5 through only when pytest
+> collected *nothing*. The task text is kept for the record, with the
+> corrected behaviour below.
 
 **Files:**
 
@@ -323,32 +393,46 @@ git commit --only crackerjack/managers/test_command_builder.py tests/managers/te
 - Consumes: `subprocess.CompletedProcess.returncode`;
   `options.incremental_tests`.
 
-- Produces: `_run_pytest_if_needed` returns `True` when `returncode == 5`
-  and the run was incremental; `False` for every other non-zero code.
+- Produces: `_run_pytest_if_needed` returns `False` for `returncode == 5`
+  in every mode; the "change affects no test" case is signalled by an
+  empty *result set*, not by the exit code.
 
 - [ ] **Step 1: Write the failing tests**
 
 ```python
-def test_exit_code_five_is_success_when_incremental():
+def test_exit_code_five_is_failure_when_incremental():
     # _execute_test_workflow patched to return CompletedProcess(returncode=5)
-    assert manager._run_pytest_if_needed(True, SimpleNamespace(incremental_tests=True), 0.0) is True
+    assert (
+        manager._run_pytest_if_needed(
+            True, SimpleNamespace(incremental_tests=True), 0.0
+        )
+        is False
+    )
 
 
 def test_exit_code_five_is_failure_when_not_incremental():
-    assert manager._run_pytest_if_needed(True, SimpleNamespace(incremental_tests=False), 0.0) is False
+    assert (
+        manager._run_pytest_if_needed(
+            True, SimpleNamespace(incremental_tests=False), 0.0
+        )
+        is False
+    )
 ```
 
 - [ ] **Step 2: Run to verify they fail**
 
 Run: `pytest tests/managers/test_test_manager_exit_codes.py -v`
-Expected: FAIL — exit 5 currently falls into `_handle_test_failure`.
+Expected: FAIL — the incremental case currently falls into the success
+branch.
 
 - [ ] **Step 3: Implement**
 
-In `_run_pytest_if_needed`, before the `result.returncode == 0` branch:
+In `_run_pytest_if_needed`, an exit code of 5 falls through to
+`_handle_test_failure` in both modes. The "nothing was affected" case is
+detected from the observed test count:
 
 ```python
-if result.returncode == 5 and getattr(options, "incremental_tests", True):
+if result.returncode == 0 and incremental and observed_tests == 0:
     logger.info("No tests affected by recent changes; skipping test execution")
     return True
 ```
@@ -362,7 +446,7 @@ Expected: PASS.
 
 ```bash
 git add crackerjack/managers/test_manager.py tests/managers/test_test_manager_exit_codes.py
-git commit --only crackerjack/managers/test_manager.py tests/managers/test_test_manager_exit_codes.py -m "fix(tests): treat pytest exit code 5 as a successful incremental run"
+git commit --only crackerjack/managers/test_manager.py tests/managers/test_test_manager_exit_codes.py -m "fix(tests): treat pytest exit code 5 as a failure, in incremental runs too"
 ```
 
 ### Task 1.4 — Remove the `snob_tests` phase and the dead `no_snob` checks
@@ -470,7 +554,9 @@ git commit --only crackerjack/test_selection.py tests/test_test_selection.py -m 
 
 ```python
 def test_no_branch_coverage_with_testmon():
-    addopts = tomllib.loads(Path("pyproject.toml").read_text())["tool"]["pytest"]["ini_options"]["addopts"]
+    addopts = tomllib.loads(Path("pyproject.toml").read_text())["tool"]["pytest"][
+        "ini_options"
+    ]["addopts"]
     flat = " ".join(addopts) if isinstance(addopts, list) else addopts
     assert "--cov-branch" not in flat
 
@@ -569,13 +655,22 @@ makes the answer a query.
 ```python
 class RunStateStore:
     def __init__(self, db_path: Path) -> None: ...
-    def record_run(self, *, repo: str, commit_sha: str, worktree: str,
-                   branch: str | None, started_at: datetime,
-                   finished_at: datetime, exit_code: int,
-                   selection_mode: str,
-                   tests: list[dict[str, Any]]) -> str: ...
-    def get_run(self, repo: str, commit_sha: str,
-                worktree: str | None = None) -> dict[str, Any] | None: ...
+    def record_run(
+        self,
+        *,
+        repo: str,
+        commit_sha: str,
+        worktree: str,
+        branch: str | None,
+        started_at: datetime,
+        finished_at: datetime,
+        exit_code: int,
+        selection_mode: str,
+        tests: list[dict[str, Any]],
+    ) -> str: ...
+    def get_run(
+        self, repo: str, commit_sha: str, worktree: str | None = None
+    ) -> dict[str, Any] | None: ...
     def get_test_results(self, run_id: str) -> list[dict[str, Any]]: ...
 ```
 
@@ -696,11 +791,24 @@ git commit --only crackerjack/pyproject.toml crackerjack/managers/test_command_b
 ```python
 def test_record_run_then_get_run_roundtrips(tmp_path):
     store = RunStateStore(tmp_path / "run_state.db")
-    run_id = store.record_run(repo="crackerjack", commit_sha="abc123", worktree="/w",
-                              branch="main", started_at=now, finished_at=now,
-                              exit_code=0, selection_mode="full",
-                              tests=[{"node_id": "tests/test_a.py::t1", "status": "passed",
-                                      "duration": 0.1, "file_path": "tests/test_a.py"}])
+    run_id = store.record_run(
+        repo="crackerjack",
+        commit_sha="abc123",
+        worktree="/w",
+        branch="main",
+        started_at=now,
+        finished_at=now,
+        exit_code=0,
+        selection_mode="full",
+        tests=[
+            {
+                "node_id": "tests/test_a.py::t1",
+                "status": "passed",
+                "duration": 0.1,
+                "file_path": "tests/test_a.py",
+            }
+        ],
+    )
     run = store.get_run(repo="crackerjack", commit_sha="abc123")
     assert run["id"] == run_id
     assert run["total"] == 1

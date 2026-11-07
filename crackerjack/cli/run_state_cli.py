@@ -19,6 +19,7 @@ from pathlib import Path
 
 import typer
 from rich.console import Console
+from rich.markup import escape as escape_markup
 
 from crackerjack.config.settings import RunStateSettings
 from crackerjack.services.testing.run_state_store import RunStateStore
@@ -32,6 +33,19 @@ app = typer.Typer(
     no_args_is_help=True,
 )
 console = Console()
+
+
+def _safe(value: object) -> str:
+    """Render a repository-controlled value for terminal output.
+
+    Node ids come from the repository's own file names and the package
+    name from its ``pyproject.toml``, so neither is trusted. Rich reads
+    a bracketed sequence as a style tag, and a raw escape sequence would
+    be handed straight to the terminal. Control characters are dropped
+    and the markup is escaped, so the value is printed as text.
+    """
+    text = "".join(character for character in str(value) if character.isprintable())
+    return escape_markup(text)
 
 
 def _resolve_db_path(db_path: Path | None) -> Path:
@@ -112,12 +126,14 @@ def show(
 
     run = _find_run(store, repo_name, commit_sha, worktree_path)
     if run is None:
-        console.print(f"[yellow]No recorded run for {repo_name}@{commit_sha}[/yellow]")
+        console.print(
+            f"[yellow]No recorded run for {_safe(repo_name)}@{_safe(commit_sha)}[/yellow]"
+        )
         return
 
     console.print(
-        f"[bold]{repo_name}[/bold] @ [cyan]{commit_sha}[/cyan] "
-        f"(worktree {run['worktree']})",
+        f"[bold]{_safe(repo_name)}[/bold] @ [cyan]{_safe(commit_sha)}[/cyan] "
+        f"(worktree {_safe(run['worktree'])})",
         soft_wrap=True,
     )
     console.print(
@@ -127,7 +143,7 @@ def show(
     )
     for result in store.get_test_results(str(run["id"])):
         console.print(
-            f"  {result['node_id']}  {result['status']}  "
+            f"  {_safe(result['node_id'])}  {_safe(result['status'])}  "
             f"{_format_duration(result.get('duration'))}",
             soft_wrap=True,
         )
@@ -170,12 +186,16 @@ def diff(
 
     base_run = _find_run(store, repo_name, base, worktree_path)
     if base_run is None:
-        console.print(f"[yellow]No recorded run for {repo_name}@{base}[/yellow]")
+        console.print(
+            f"[yellow]No recorded run for {_safe(repo_name)}@{_safe(base)}[/yellow]"
+        )
         return
 
     head_run = _find_run(store, repo_name, commit_sha, worktree_path)
     if head_run is None:
-        console.print(f"[yellow]No recorded run for {repo_name}@{commit_sha}[/yellow]")
+        console.print(
+            f"[yellow]No recorded run for {_safe(repo_name)}@{_safe(commit_sha)}[/yellow]"
+        )
         return
 
     base_status = store.get_status_map(str(base_run["id"]))
@@ -189,9 +209,15 @@ def diff(
             changes.append((node_id, before, after))
 
     if not changes:
-        console.print(f"No status changes between {base} and {commit_sha}.")
+        console.print(
+            f"No status changes between {_safe(base)} and {_safe(commit_sha)}."
+        )
         return
 
-    console.print(f"Status changes between {base} and {commit_sha}:", soft_wrap=True)
+    console.print(
+        f"Status changes between {_safe(base)} and {_safe(commit_sha)}:", soft_wrap=True
+    )
     for node_id, before, after in changes:
-        console.print(f"  {node_id}  {before} -> {after}", soft_wrap=True)
+        console.print(
+            f"  {_safe(node_id)}  {_safe(before)} -> {_safe(after)}", soft_wrap=True
+        )

@@ -124,26 +124,53 @@ class TestJsonReport:
     out of the human-readable terminal output.
     """
 
-    def test_build_command_includes_json_report(self, builder: TestCommandBuilder) -> None:
+    def test_build_command_includes_json_report(
+        self, builder: TestCommandBuilder
+    ) -> None:
         cmd = builder.build_command(_options(incremental_tests=True))
 
         assert "--json-report" in cmd
 
-    def test_build_command_includes_json_report_file(self, builder: TestCommandBuilder) -> None:
+    def test_build_command_includes_json_report_file(
+        self, builder: TestCommandBuilder
+    ) -> None:
         cmd = builder.build_command(_options(incremental_tests=True))
 
-        assert any(
-            argument.startswith("--json-report-file=") for argument in cmd
-        )
+        assert any(argument.startswith("--json-report-file=") for argument in cmd)
 
-    def test_json_report_path_is_project_local(self, builder: TestCommandBuilder) -> None:
+    def test_json_report_path_is_project_local(
+        self, builder: TestCommandBuilder
+    ) -> None:
         path = builder.get_json_report_path()
 
-        assert path.name == "last-run.json"
+        assert path.name.startswith("last-run-")
+        assert path.suffix == ".json"
         assert path.parent.name == ".crackerjack"
         assert path.parent.parent == builder.pkg_path
 
-    def test_json_report_parent_directory_is_created(self, builder: TestCommandBuilder) -> None:
+    def test_each_run_gets_its_own_report_path(
+        self, builder: TestCommandBuilder
+    ) -> None:
+        """A shared path would let two concurrent runs read each other's results."""
+        first = builder.get_json_report_path()
+
+        builder.reset_report_path()
+        second = builder.get_json_report_path()
+
+        assert first != second
+        assert first.parent == second.parent
+
+    def test_the_report_path_is_stable_within_a_run(
+        self, builder: TestCommandBuilder
+    ) -> None:
+        """The command writes to the path the phase reads back."""
+        builder.build_command(_options(incremental_tests=True))
+
+        assert builder.get_json_report_path() == builder.get_json_report_path()
+
+    def test_json_report_parent_directory_is_created(
+        self, builder: TestCommandBuilder
+    ) -> None:
         builder.build_command(_options(incremental_tests=True))
 
         assert builder.get_json_report_path().parent.is_dir()

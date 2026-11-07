@@ -111,13 +111,16 @@ def _template_ignores(template: Path, filename: str) -> bool:
 
     Gitignore patterns without a slash match at any directory level, and
     ``*`` spans path separators - the same as :func:`fnmatch.fnmatchcase`
-    for the single-segment patterns this template uses.
+    for the single-segment patterns this template uses. A pattern that
+    ends in a slash names a directory, and covers everything under it.
     """
     for raw_line in template.read_text(encoding="utf-8").splitlines():
         line = raw_line.strip()
         if not line or line.startswith("#") or line.startswith("!"):
             continue
         if fnmatchcase(filename, line):
+            return True
+        if line.endswith("/") and filename.startswith(line):
             return True
     return False
 
@@ -153,4 +156,38 @@ class TestTestmonDataFilesAreIgnored:
         assert _template_ignores(GITIGNORE_TEMPLATE_PATH, filename), (
             f"{filename} is not ignored by templates/GITIGNORE_BODAI.md; every "
             f"Bodai repo that adopts pytest-testmon inherits the cruft"
+        )
+
+
+class TestRunStateReportIsIgnored:
+    """The JSON report the test phase writes must never be committable.
+
+    ``TestCommandBuilder`` writes the pytest JSON report to
+    ``<repo>/.crackerjack/last-run.json``. It holds per-test results for
+    the working tree, so it is runtime state, not source. The fleet
+    template has to carry the rule, or every Bodai repo that adopts the
+    run-state feature inherits an untracked file that a ``git add .``
+    would sweep into a commit.
+    """
+
+    REPORT_PATH = ".crackerjack/last-run.json"
+
+    def test_the_repo_gitignore_ignores_the_report(self) -> None:
+        result = subprocess.run(
+            ["git", "check-ignore", "--no-index", "-q", self.REPORT_PATH],
+            cwd=REPO_ROOT,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+        assert result.returncode == 0, (
+            f"{self.REPORT_PATH} is not ignored by .gitignore; the per-test "
+            f"results of the working tree can be swept into a commit"
+        )
+
+    def test_the_fleet_template_ignores_the_report(self) -> None:
+        assert _template_ignores(GITIGNORE_TEMPLATE_PATH, self.REPORT_PATH), (
+            f"{self.REPORT_PATH} is not ignored by templates/GITIGNORE_BODAI.md; "
+            f"every Bodai repo that adopts the run-state feature inherits it"
         )

@@ -89,12 +89,44 @@ the `project_path`-relative form the fixers rely on
   `ls ~/.local/share/session-buddy/` reflects Session-Buddy's own data.
 - Existing `~/.local/share/session-buddy/crackerjack_integration.db` content
   is Crackerjack's and moves with the rename. The migration is a file move,
-  not a schema change.
-- Run history survives `git clean -fd`.
+  not a schema change. **Not yet performed** — see Status.
+- Run history survives `git clean -fd`. **Not yet true** — see Status.
 
 ## Status
 
-Active. Implemented by the follow-up work on this decision.
+Active, and **partially implemented**.
+
+Implemented:
+
+- Rule 1's app-name default. `crackerjack/utils/xdg_paths.py` resolves under
+  `crackerjack` rather than `session-buddy`, and the two genuinely
+  Session-Buddy-owned files (`workflow_metrics.db`,
+  `correlation_insights.db`) are reached with `data_dir("session-buddy")`
+  passed explicitly.
+- The health snapshot database resolves under
+  `data_dir("crackerjack")`, and the run-state store under
+  `data_dir("crackerjack") / "run_state.db"`.
+- The snapshot path is resolved when it is *used*, not captured at import
+  time, so the test session's `XDG_*` redirect actually contains it.
+
+Not implemented:
+
+- **Rule 2.** `runs/` and `logs/` still resolve to the project-local
+  `.crackerjack/` directory. Run history does **not** yet survive
+  `git clean -fd`. The move touches `crackerjack/core/ai_fix_sinks.py` and
+  `crackerjack/core/autofix_coordinator.py`, and the on-disk layout has to
+  keep its `runs/<run_id>/events.jsonl` and `logs/` shapes.
+- **The data migration.** The rename is in effect, but the old
+  `~/.local/share/session-buddy/crackerjack_integration.db` was left in
+  place rather than moved, so the new database under
+  `~/.local/share/crackerjack/` started empty and the older rows are
+  orphaned in Session-Buddy's directory until someone moves the file.
+- **Rule 1's other paths.** Three call sites still resolve outside XDG
+  entirely and are untouched by any of this:
+  `AsyncTaskSettings.storage_path` (`~/.crackerjack/state/async_tasks.db`),
+  the prompt-evolution store (`~/.cache/crackerjack/prompt_evolution`), and
+  the lock directory (`~/.crackerjack/locks`). Rule 1 as written — "every
+  Crackerjack-owned path" — does not hold for them yet.
 
 ## Not covered here
 

@@ -169,6 +169,49 @@ class TestShow:
             "back into a pytest selector"
         )
 
+    def test_untrusted_values_are_not_interpreted_as_markup(
+        self, tmp_path: Path
+    ) -> None:
+        """Repository-controlled text must not reach the terminal as markup.
+
+        Node ids come from the repository's own file names, and the
+        package name comes from its ``pyproject.toml``. Rich would read
+        a bracketed sequence in either as a style tag, and a raw escape
+        sequence would be passed straight to the terminal.
+        """
+        db_path = tmp_path / "run_state.db"
+        hostile_node_id = "tests/[red]evil[/red]\x1b[2Jtest_one"
+        _record(
+            db_path,
+            commit_sha="abc123",
+            worktree=str(tmp_path),
+            tests=[_test(hostile_node_id, "passed")],
+        )
+
+        result = runner.invoke(
+            app,
+            [
+                "show",
+                "--commit",
+                "abc123",
+                "--repo",
+                "crackerjack",
+                "--worktree",
+                str(tmp_path),
+                "--db-path",
+                str(db_path),
+            ],
+        )
+
+        assert result.exit_code == 0, result.output
+        assert "[red]evil[/red]" in result.output, (
+            "the bracketed sequence was consumed as markup instead of being "
+            f"printed literally: {result.output!r}"
+        )
+        assert "\x1b" not in result.output, (
+            f"a raw escape sequence reached the terminal: {result.output!r}"
+        )
+
 
 class TestCLIRegistration:
     """``run-state`` must be reachable through the real ``crackerjack`` CLI.

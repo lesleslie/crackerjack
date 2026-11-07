@@ -1,12 +1,26 @@
 """Exit-code handling for the pytest test phase.
 
-pytest exits with 5 (``EXIT_NOTESTSCOLLECTED``) when a run collects no
-tests at all. Under pytest-testmon that is the *normal* outcome of an
-incremental run whose change affects no test: the suite is collected and
-every test is deselected. It must be a pass, not a red gate.
+pytest exits with 5 (``EXIT_NOTESTSCOLLECTED``) when it collects no
+tests at all. Under pytest-testmon that is *not* what "nothing was
+affected" looks like: testmon empties the collected item list, pytest
+computes ``testscollected == 0`` and would exit 5, but testmon's own
+``pytest_sessionfinish`` hook rewrites that status to 0 **only when it
+actually deselected something**:
 
-For a full (non-incremental) run, exit 5 still means something is wrong -
-the suite is non-empty but nothing was collected - so it stays a failure.
+    if len(self.deselected_tests) and exitstatus == ExitCode.NO_TESTS_COLLECTED:
+        session.exitstatus = ExitCode.OK
+
+So the exit code that actually reaches the caller discriminates the two
+cases:
+
+* **exit 0 with an empty result set** - testmon deselected every test.
+  The change affects nothing. This is a pass.
+* **exit 5** - testmon deselected *nothing* and pytest collected
+  *nothing*. The test configuration is broken. This is a failure, in an
+  incremental run as much as in a full one.
+
+Treating exit 5 as a success in an incremental run therefore turns a
+misconfigured test suite into a green run.
 """
 
 from __future__ import annotations
@@ -50,12 +64,17 @@ def _completed(returncode: int) -> subprocess.CompletedProcess[str]:
 
 
 class TestNoTestsCollected:
-    """Exit code 5 means "nothing was affected", not "the suite broke"."""
+    """Exit code 5 means "pytest collected nothing", which is a failure."""
 
-    def test_exit_code_five_is_success_when_incremental(
+    def test_exit_code_five_is_failure_when_incremental(
         self,
         manager: TestManager,
     ) -> None:
+        """A broken test configuration must not report a green run.
+
+        testmon rewrites exit 5 to 0 when it deselected everything, so a
+        5 that reaches the caller means pytest collected nothing at all.
+        """
         with patch.object(
             manager,
             "_execute_test_workflow",
@@ -67,7 +86,7 @@ class TestNoTestsCollected:
                 0.0,
             )
 
-        assert result is True
+        assert result is False
 
     def test_exit_code_five_is_failure_when_not_incremental(
         self,

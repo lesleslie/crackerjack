@@ -859,7 +859,9 @@ class TestRecordHealthSnapshot:
         report = SystemHealthReport.from_category_health({"adapters": cat})
         sandbox_db = tmp_path / "crackerjack_integration.db"
 
-        with patch.object(health_mod, "DEFAULT_INTEGRATION_DB_PATH", sandbox_db), patch.object(
+        with patch.object(
+            health_mod, "resolve_integration_db_path", return_value=sandbox_db
+        ), patch.object(
             health_mod, "_check_adapters", return_value=cat
         ), patch.object(
             SystemHealthReport, "from_category_health", return_value=report
@@ -913,7 +915,7 @@ class TestHealthSnapshotReferentialIntegrity:
             "services": _make_component_health(HealthStatus.HEALTHY, "services"),
         }
         with patch.object(
-            health_mod, "DEFAULT_INTEGRATION_DB_PATH", db_path
+            health_mod, "resolve_integration_db_path", return_value=db_path
         ), patch.object(
             health_mod, "_check_adapters", return_value=categories["adapters"]
         ), patch.object(
@@ -1077,10 +1079,51 @@ class TestXDGNamespace:
     """
 
     def test_default_integration_db_is_crackjack_owned(self) -> None:
-        path = health_mod.DEFAULT_INTEGRATION_DB_PATH
+        path = health_mod.resolve_integration_db_path()
 
         assert "session-buddy" not in str(path)
         assert "crackerjack" in str(path)
+
+    def test_integration_db_path_follows_the_current_xdg_data_home(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+    ) -> None:
+        """The path must follow the XDG data home in effect *now*.
+
+        ``data_dir`` resolves on every call precisely so a test can point
+        ``XDG_DATA_HOME`` somewhere else. A path captured at import time
+        ignores that, so the suite writes health snapshots into the
+        developer's real data directory.
+        """
+        monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path))
+
+        path = health_mod.resolve_integration_db_path()
+
+        assert path.parent == tmp_path / "crackerjack"
+        assert path.name == "crackerjack_integration.db"
+
+    def test_health_snapshot_lands_under_the_current_xdg_data_home(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+    ) -> None:
+        """The snapshot write must follow the XDG data home in effect now.
+
+        This is the property the import-time constant broke: the write
+        landed in the real ``~/.local/share/crackerjack/`` regardless of
+        what ``XDG_DATA_HOME`` pointed at.
+        """
+        monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path))
+        report = SystemHealthReport(
+            overall_status=HealthStatus.HEALTHY,
+            categories={"adapters": _make_component_health(HealthStatus.HEALTHY)},
+            summary="ok",
+        )
+
+        _record_health_snapshot(tmp_path, report)
+
+        assert (tmp_path / "crackerjack" / "crackerjack_integration.db").exists()
 
     def test_xdg_data_dir_defaults_to_crackerjack(
         self,

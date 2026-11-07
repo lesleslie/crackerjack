@@ -13,13 +13,39 @@ from unittest.mock import patch
 import pytest
 from typer.testing import CliRunner
 
-from crackerjack.checks.gitignore_conformance import GitignoreConformanceResult
+from crackerjack.checks.gitignore_conformance import (
+    TEMPLATE_PATH,
+    GitignoreConformanceResult,
+    _existing_canonical_patterns,
+    _parse_canonical_template,
+)
 from crackerjack.cli.gitignore_cli import app
 
 
 @pytest.fixture
 def runner() -> CliRunner:
     return CliRunner()
+
+
+def test_crackerjack_owns_every_canonical_gitignore_pattern() -> None:
+    """The fleet template and this repo's own ``.gitignore`` must agree.
+
+    The conformance check only runs at publish time, and only for
+    registered fleet paths, so a pattern added to the template can sit
+    missing from this repo's marker block until somebody publishes.
+    """
+    repo_root = Path(__file__).resolve().parents[2]
+    canonical = _parse_canonical_template(TEMPLATE_PATH)
+    existing = _existing_canonical_patterns(
+        (repo_root / ".gitignore").read_text(encoding="utf-8")
+    )
+
+    missing = [pattern for pattern in canonical if pattern not in existing]
+
+    assert not missing, (
+        f"crackerjack/.gitignore is missing canonical patterns: {missing}. "
+        f"Run `crackerjack gitignore sync`."
+    )
 
 
 @pytest.fixture

@@ -17,7 +17,21 @@ from crackerjack.utils.xdg_paths import data_dir
 logger = logging.getLogger(__name__)
 
 
-DEFAULT_INTEGRATION_DB_PATH = data_dir("crackerjack") / "crackerjack_integration.db"
+def resolve_integration_db_path() -> Path:
+    """Resolve the health snapshot database path.
+
+    Resolved on every call rather than captured at import time.
+    ``data_dir`` reads ``XDG_DATA_HOME`` from the environment on each
+    call so the location stays redirectable; a module-level constant
+    froze one resolution for the life of the process, which put the
+    snapshot database in the developer's real data directory no matter
+    what the environment said afterwards.
+
+    Returns:
+        ``$XDG_DATA_HOME/crackerjack/crackerjack_integration.db``,
+        falling back to ``~/.local/share/crackerjack/``.
+    """
+    return data_dir("crackerjack") / "crackerjack_integration.db"
 
 
 STATUS_COLORS = {
@@ -338,7 +352,7 @@ def _record_health_snapshot(
     report: SystemHealthReport,
     db_path: Path | None = None,
 ) -> None:
-    target = db_path or DEFAULT_INTEGRATION_DB_PATH
+    target = db_path or resolve_integration_db_path()
     try:
         target.parent.mkdir(parents=True, exist_ok=True)
         import sqlite3
