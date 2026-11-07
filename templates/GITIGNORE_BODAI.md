@@ -86,6 +86,12 @@ test-results/
 # happened to need it first.
 .ua/
 
+# Session-Buddy local SQLite store (local-only, per-project runtime).
+# `skills.db` and its WAL/SHM siblings are runtime state written by the
+# session-buddy MCP server; they are regenerated on demand and are never
+# source. Same rationale as `.ua/` above — never track them.
+.session-buddy/
+
 # === Bodai `.claude/` policy ===
 # Default-deny the entire .claude/ tree, then narrow allowlist for the
 # canonical durable subtrees. Settings.local.json + runtime artifacts
