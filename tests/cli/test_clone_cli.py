@@ -25,6 +25,23 @@ def runner() -> CliRunner:
     return CliRunner()
 
 
+@pytest.fixture(autouse=True)
+def _pyscn_version_probe(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Let the version-aware pyscn resolver find a qualifying binary.
+
+    The resolver probes each candidate with ``--version`` and skips any
+    whose version it cannot satisfy. Tests that patch ``subprocess.run``
+    wholesale would otherwise make that probe read the fake
+    CompletedProcess, find no version in it, and reject every candidate --
+    so the resolver raises instead of building a command.
+    """
+    from crackerjack.config import tool_commands
+
+    monkeypatch.setattr(
+        tool_commands, "_probe_tool_version", lambda _binary: (1, 33, 0)
+    )
+
+
 def _make_pyscn_report(path: Path, groups: list[dict[str, Any]]) -> Path:
     """Seed a ``.pyscn/reports/analyze_*.json`` file with the given groups."""
     report_dir = path / ".pyscn" / "reports"

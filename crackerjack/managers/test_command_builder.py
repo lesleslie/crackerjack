@@ -89,8 +89,7 @@ class TestCommandBuilder:
     def _add_json_report_options(self, cmd: list[str]) -> None:
         report_path = self.get_json_report_path()
         report_path.parent.mkdir(parents=True, exist_ok=True)
-        cmd.append("--json-report")
-        cmd.append(f"--json-report-file={report_path}")
+        cmd.extend(("--json-report", f"--json-report-file={report_path}"))
 
     def build_command(self, options: OptionsProtocol) -> list[str]:
         cmd = ["uv", "run", "python", "-m", "pytest"]
@@ -306,6 +305,9 @@ class TestCommandBuilder:
         return "crackerjack"
 
     def _add_coverage_options(self, cmd: list[str], options: OptionsProtocol) -> None:
+        if "--testmon" in cmd:
+            self._add_incremental_coverage_options(cmd)
+            return
 
         package_name = self._detect_package_name()
 
@@ -318,6 +320,41 @@ class TestCommandBuilder:
                 "--cov-fail-under=0",
             ],
         )
+
+    def _add_incremental_coverage_options(self, cmd: list[str]) -> None:
+        """Disable coverage collection for a run that selects tests.
+
+        pytest-testmon reuses pytest-cov's coverage instance, and refuses to
+        run while that instance is in branch mode: it raises
+        ``TestmonException``, which pytest reports as an INTERNALERROR and the
+        gate reads as a failed run that executed zero tests.
+
+        pytest-cov 7.1 offers no way to turn branch coverage *off* -- it has
+        ``--cov-branch`` to turn it on and nothing to turn it off -- so the
+        setting comes from the project's coverage config, where every Bodai
+        repo enables it (the fleet pyproject templates all carry
+        ``branch = true``). Disabling coverage collection is therefore the
+        only lever that lets an incremental run proceed.
+
+        Nothing measurable is lost. An incremental run measures only the
+        code its selected tests touch, and the coverage ratchet already
+        skips incremental runs, so that number was never a measurement. The
+        full run keeps the project's own coverage configuration, branch
+        coverage included.
+        """
+        cmd.append("--no-cov")
+        self._print_incremental_coverage_disabled_message()
+
+    def _print_incremental_coverage_disabled_message(self) -> None:
+        if self.console:
+            self.console.print(
+                "[yellow]⚠️ Coverage collection is off for this incremental run[/yellow]",
+            )
+            self.console.print(
+                "[cyan]🧪 pytest-testmon cannot run alongside branch coverage "
+                "(it raises TestmonException), and an incremental run's coverage "
+                "covers only the affected tests, so it is not a measurement.[/cyan]",
+            )
 
     def _check_project_disabled_xdist(self) -> bool:
         try:
@@ -482,7 +519,7 @@ class TestCommandBuilder:
         for test_path in test_paths:
             full_path = self.pkg_path / test_path
             if full_path.exists() and full_path.is_dir():
-                cmd.append(full_path)  # type: ignore
+                cmd.append(str(full_path))
                 return
 
         cmd.append(str(self.pkg_path))

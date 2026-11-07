@@ -1000,12 +1000,40 @@ class HookExecutor:
                 for issue in issues
             ]
         except Exception as exc:
+            from crackerjack.parsers.factory import ToolSchemaError
+
+            if isinstance(exc, ToolSchemaError):
+                # The tool produced a report this parser cannot read, which
+                # means it is the wrong version. Its findings cannot be
+                # recovered from the text output -- the text fallback reads
+                # `--json` output as zero findings -- so dropping them
+                # silently would turn a version mismatch into a silent
+                # pass. Surface it as an issue so the hook fails and names
+                # the cause.
+                logger.error(f"{tool_name} report schema is unsupported: {exc}")
+                return [f"{tool_name} report schema is unsupported: {exc}"]
+
+            if tool_name == "pyscn":
+                # Fail closed. The pyscn hook always runs `pyscn analyze
+                # --json`, so its output is JSON mode, and the text
+                # fallback cannot recover findings from that: it would
+                # return zero and the hook would pass with no complexity
+                # coverage at all. The fallback is only trustworthy when it
+                # actually recovers text findings (pyscn's `check` failure
+                # output), so it is used only when it produces something.
+                # An empty result after a parse failure means the findings
+                # are unknown -- not that there were none -- and that has
+                # to be reported.
+                findings = self._parse_pyscn_issues(output)
+                if findings:
+                    return findings
+                logger.error(f"pyscn report could not be parsed: {exc}")
+                return [f"pyscn report could not be parsed: {exc}"]
+
             logger.warning(
                 f"JSON parser path failed for {tool_name} ({exc}); "
                 f"falling back to text parser"
             )
-            if tool_name == "pyscn":
-                return self._parse_pyscn_issues(output)
             if tool_name == "complexipy":
                 return self._parse_complexipy_issues(output)
 

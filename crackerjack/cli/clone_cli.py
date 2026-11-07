@@ -12,6 +12,7 @@ from rich.table import Table
 from crackerjack.clone.classifier import ExtractionTargetClassifier
 from crackerjack.clone.grouper import CloneGrouper
 from crackerjack.clone.refactor_engine import CloneDecision, CloneRefactorEngine
+from crackerjack.config.tool_commands import preferred_binary_command_with_min_version
 from crackerjack.utils.path_redaction import redact_path
 
 app = typer.Typer(
@@ -23,8 +24,9 @@ console = Console()
 def _run_pyscn_json(path: Path, threshold: float = 0.9) -> dict[str, Any]:
     report_dir = path / ".pyscn" / "reports"
     result = subprocess.run(
-        [
+        preferred_binary_command_with_min_version(
             "pyscn",
+            "1.30",
             "analyze",
             "--json",
             "--select",
@@ -32,7 +34,7 @@ def _run_pyscn_json(path: Path, threshold: float = 0.9) -> dict[str, Any]:
             "--clone-threshold",
             str(threshold),
             str(path),
-        ],
+        ),
         capture_output=True,
         text=True,
         cwd=str(path),

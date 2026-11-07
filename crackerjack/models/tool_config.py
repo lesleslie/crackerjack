@@ -3,6 +3,21 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import StrEnum
 
+# Maximum cyclomatic complexity a function may have before the complexity
+# gates report it.
+#
+# pyscn >= 1.30 changed its complexity metric: the same function scores 13
+# under pyscn 1.5.0 and 23 under pyscn 1.33.0 (measured on
+# crackerjack/fixers/ast_transform/patterns/extract_method.py). The previous
+# threshold of 15 was calibrated against the pre-1.30 metric and was never
+# actually enforced -- pyscn 1.5.0 could not parse the repo's PEP 758
+# `except A, B:` files, and reported no complexity violations at all.
+#
+# 25 matches the threshold complexipy already enforces in this repo
+# (`--max-complexity-allowed 25`), so both complexity gates now express one
+# policy, and no function in the tree exceeds it under the current metric.
+PYSCN_MAX_COMPLEXITY = 25
+
 
 class OutputFormat(StrEnum):
     JSON = "json"

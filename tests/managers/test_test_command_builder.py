@@ -72,6 +72,58 @@ class TestIncrementalSelection:
         assert "--testmon" in cmd
 
 
+class TestIncrementalCoverageIsDisabled:
+    """testmon and branch coverage cannot share a pytest run.
+
+    testmon reuses pytest-cov's coverage instance and raises
+    ``TestmonException`` in branch mode, which pytest reports as an
+    INTERNALERROR and the gate reads as a failed run that executed zero
+    tests. Every Bodai repo enables branch coverage in its coverage
+    config -- the fleet pyproject templates all carry ``branch = true``
+    -- and pytest-cov 7.1 has no flag to turn it off again, so the
+    incremental run has to switch coverage collection off outright.
+
+    Nothing measurable is lost: an incremental run covers only the code
+    its selected tests touch, and the coverage ratchet already skips
+    incremental runs, so that number was never a measurement.
+    """
+
+    def test_the_incremental_run_disables_coverage_collection(
+        self,
+        builder: TestCommandBuilder,
+    ) -> None:
+        cmd = builder.build_command(_options(incremental_tests=True))
+
+        assert "--testmon" in cmd
+        assert "--no-cov" in cmd
+
+    def test_the_incremental_command_carries_no_coverage_flag(
+        self,
+        builder: TestCommandBuilder,
+    ) -> None:
+        """pytest-cov warns when a --cov flag follows --no-cov.
+
+        pytest prepends the project's addopts to the command, so
+        --no-cov has to be the last coverage-related flag in the
+        combined argv. Carrying no --cov flag of its own is what
+        guarantees that.
+        """
+        cmd = builder.build_command(_options(incremental_tests=True))
+
+        assert not [argument for argument in cmd if argument.startswith("--cov")]
+
+    def test_the_full_run_keeps_coverage_collection(
+        self,
+        builder: TestCommandBuilder,
+    ) -> None:
+        """A full run is the one whose coverage the ratchet compares."""
+        cmd = builder.build_command(_options(incremental_tests=False))
+
+        assert "--testmon" not in cmd
+        assert "--no-cov" not in cmd
+        assert any(argument.startswith("--cov=") for argument in cmd)
+
+
 class TestTestPath:
     """The test path always reaches pytest.
 

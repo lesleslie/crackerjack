@@ -649,20 +649,20 @@ class TestPyscnJSONParser:
         """Functions with complexity > max_complexity count as 1 each."""
         data = {
             "complexity": {
-                "Functions": [
+                "functions": [
                     {
-                        "Name": "small_fn",
-                        "FilePath": "crackerjack/a.py",
-                        "StartLine": 1,
-                        "Metrics": {"Complexity": 5},
-                        "RiskLevel": "low",
+                        "name": "small_fn",
+                        "file_path": "crackerjack/a.py",
+                        "start_line": 1,
+                        "metrics": {"complexity": 5},
+                        "risk_level": "low",
                     },
                     {
-                        "Name": "complex_fn",
-                        "FilePath": "crackerjack/a.py",
-                        "StartLine": 10,
-                        "Metrics": {"Complexity": 25},
-                        "RiskLevel": "high",
+                        "name": "complex_fn",
+                        "file_path": "crackerjack/a.py",
+                        "start_line": 10,
+                        "metrics": {"complexity": 25},
+                        "risk_level": "high",
                     },
                 ]
             }
@@ -677,7 +677,7 @@ class TestPyscnJSONParser:
     ) -> None:
         """Dead code blocks count as one issue each, no threshold."""
         data = {
-            "complexity": {"Functions": []},
+            "complexity": {"functions": []},
             "dead_code": {
                 "files": [
                     {
@@ -707,25 +707,25 @@ class TestPyscnJSONParser:
         """Both sections contribute; non-dict / non-int entries are ignored."""
         data = {
             "complexity": {
-                "Functions": [
+                "functions": [
                     {
-                        "Name": "fn1",
-                        "FilePath": "x.py",
-                        "StartLine": 1,
-                        "Metrics": {"Complexity": 20},
+                        "name": "fn1",
+                        "file_path": "x.py",
+                        "start_line": 1,
+                        "metrics": {"complexity": 20},
                     },
                     {
-                        "Name": "fn2",
-                        "FilePath": "x.py",
-                        "StartLine": 50,
-                        "Metrics": {"Complexity": 8},
+                        "name": "fn2",
+                        "file_path": "x.py",
+                        "start_line": 50,
+                        "metrics": {"complexity": 8},
                     },
                     "not-a-dict",  # ignored
                     {
-                        "Name": "fn3",
-                        "FilePath": "x.py",
-                        "StartLine": 100,
-                        "Metrics": {},  # no Complexity — ignored
+                        "name": "fn3",
+                        "file_path": "x.py",
+                        "start_line": 100,
+                        "metrics": {},  # no Complexity — ignored
                     },
                 ]
             },
@@ -755,7 +755,7 @@ class TestPyscnJSONParser:
     def test_get_issue_count_no_findings(self, parser: PyscnJSONParser) -> None:
         """Empty / absent sections yield 0."""
         assert parser.get_issue_count({}) == 0
-        assert parser.get_issue_count({"complexity": {"Functions": []}}) == 0
+        assert parser.get_issue_count({"complexity": {"functions": []}}) == 0
         assert (
             parser.get_issue_count({"dead_code": {"files": []}}) == 0
         )
@@ -765,7 +765,7 @@ class TestPyscnJSONParser:
     ) -> None:
         """pyscn emits ``"files": null`` when no dead code — must not crash."""
         data = {
-            "complexity": {"Functions": []},
+            "complexity": {"functions": []},
             "dead_code": {"files": None},
         }
         assert parser.get_issue_count(data) == 0
@@ -776,13 +776,13 @@ class TestPyscnJSONParser:
         """parse_json creates a COMPLEXITY Issue for high-complexity fns."""
         data = {
             "complexity": {
-                "Functions": [
+                "functions": [
                     {
-                        "Name": "do_work",
-                        "FilePath": "crackerjack/c.py",
-                        "StartLine": 10,
-                        "Metrics": {"Complexity": 30},
-                        "RiskLevel": "high",
+                        "name": "do_work",
+                        "file_path": "crackerjack/c.py",
+                        "start_line": 10,
+                        "metrics": {"complexity": 30},
+                        "risk_level": "high",
                     }
                 ]
             }
@@ -797,7 +797,7 @@ class TestPyscnJSONParser:
     ) -> None:
         """parse_json creates a DEAD_CODE Issue per block."""
         data = {
-            "complexity": {"Functions": []},
+            "complexity": {"functions": []},
             "dead_code": {
                 "files": [
                     {
@@ -826,12 +826,12 @@ class TestPyscnJSONParser:
         """Functions at-or-below max_complexity are filtered out."""
         data = {
             "complexity": {
-                "Functions": [
+                "functions": [
                     {
-                        "Name": "simple",
-                        "FilePath": "x.py",
-                        "StartLine": 1,
-                        "Metrics": {"Complexity": 5},
+                        "name": "simple",
+                        "file_path": "x.py",
+                        "start_line": 1,
+                        "metrics": {"complexity": 5},
                     }
                 ]
             }

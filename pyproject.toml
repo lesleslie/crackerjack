@@ -71,7 +71,19 @@ dependencies = [
     # is the router module's home version.
     "oneiric>=0.33",
     "pyleak>=0.2.0",
-    "pyscn==1.5.0",
+    # PyPI publishes NO macOS Intel (x86_64) wheel for pyscn past 1.5.0, and
+    # no sdist either, so `pip install pyscn` cannot be satisfied on an
+    # Intel Mac at all. The marker below skips the pip dependency there and
+    # expects the binary from Homebrew -- which builds pyscn from Go source,
+    # so it has no macOS-architecture constraint -- or from
+    # `go install github.com/ludo-technologies/pyscn/cmd/pyscn@latest`.
+    # Everywhere else pip installs a current pyscn.
+    #
+    # The floor is 1.30 because that is the release that switched the JSON
+    # report to snake_case keys ('complexity.functions' / 'metrics'), which
+    # PyscnJSONParser requires. Older reports (CamelCase) are rejected
+    # loudly rather than silently parsed as zero findings.
+    "pyscn>=1.30; sys_platform != 'darwin' or platform_machine != 'x86_64'",
     "pydantic>=2.13.5",
     "pytest>=9.1.1",
     "pytest-asyncio>=1.4.0",
@@ -94,7 +106,18 @@ dependencies = [
     "pyyaml>=6.0.3",
     "refurb>=2.3.1",
     "rich>=15.0.0",
-    "ruff==0.16.0",
+    # Bounded range, not an exact pin. The rule-set baseline that the
+    # 2026-08-06 ruff fix-policy spec was tuned against is a property of the
+    # 0.16.x MINOR series -- a patch release can never move it -- while
+    # uv.lock carries the exact resolved version for reproducible CI. An
+    # exact pin in [project].dependencies also force-installs that one
+    # linter into every consumer of the published wheel, which is why the
+    # fleet uses floors elsewhere (mahavishnu >=0.16.0, akosha >=0.8.0).
+    #
+    # Do NOT widen past <0.17 without a rule-list diff: 0.17.x is a MINOR
+    # bump, and the last minor bump is what moved ruff's default rule set
+    # from 59 to 413 rules. See docs/plans/2026-11-07-ruff-pin-range.md.
+    "ruff>=0.16.0,<0.17",
     "structlog>=26.1.0",
     "tomli-w>=1.2.0",
     # The fleet's primary type checker. It is a Rust binary, not an
@@ -713,6 +736,16 @@ pyasn1 = "2099-12-31T23:59:59Z"
 # not a security posture -- it is a broken signal. The cooldown still
 # applies to every other package.
 ty = "2099-12-31T23:59:59Z"
+# pytest-testmon 2.3.0 — class 3: fleet-wide dev-tool pinning. pytest-testmon
+# is the gate's test-selection plugin and its version CHANGES WHAT THE GATE
+# REPORTS: 2.2.0 is incompatible with pytest 9 and dies with
+# `KeyError: 'lf'` inside testmon's own configure.py, so pytest collects zero
+# tests, exits 5, and the test phase reports "test execution failed" having
+# run no tests at all. The gate's test signal is off, not red -- and the
+# 7-day cooldown above would keep it off until 2026-11-09. The declared
+# floor (`pytest-testmon>=2.2.0`) already permits 2.3.0; this entry only
+# unblocks the resolution the constraint already asks for.
+pytest-testmon = "2099-12-31T23:59:59Z"
 
 [tool.pip-audit]
 ignore-vuln = [

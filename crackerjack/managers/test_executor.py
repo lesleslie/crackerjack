@@ -17,6 +17,18 @@ from crackerjack.models.protocols import ConsoleInterface
 
 from .test_progress import TestProgress
 
+# pytest exit codes that mean the RUN ITSELF failed, rather than that some
+# tests failed:
+#   3 = INTERNALERROR -- xdist could not distribute the work. The common
+#       case is "Unexpectedly no active workers available", which xdist
+#       raises when there are fewer collected items than workers. With
+#       incremental selection that is easy to hit: a run that selects a
+#       handful of tests cannot fill a worker per CPU.
+#   4 = usage error.
+# Both are recoverable by running the same command sequentially, which is
+# exactly what the fallback below does.
+PYTEST_RUN_FAILED_EXIT_CODES = frozenset({3, 4})
+
 
 class TestExecutor:
     __test__ = False
@@ -255,8 +267,10 @@ class TestExecutor:
             f"_did_xdist_timeout={self._did_xdist_timeout(parallel_result, progress)}[/dim]"
         )
 
-        if parallel_result.returncode < 0 or self._did_xdist_timeout(
-            parallel_result, progress
+        if (
+            parallel_result.returncode < 0
+            or parallel_result.returncode in PYTEST_RUN_FAILED_EXIT_CODES
+            or self._did_xdist_timeout(parallel_result, progress)
         ):
             self.console.print(
                 "[yellow]⚠️ Parallel execution timed out or failed, falling back to sequential...[/yellow]",

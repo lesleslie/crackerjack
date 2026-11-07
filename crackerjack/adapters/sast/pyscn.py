@@ -17,8 +17,10 @@ from crackerjack.adapters._tool_adapter_base import (
     ToolIssue,
 )
 from crackerjack.clone.grouper import CloneGroup, CloneGrouper
+from crackerjack.config.tool_commands import preferred_binary_command_with_min_version
 from crackerjack.models.adapter_metadata import AdapterStatus
 from crackerjack.models.qa_results import QACheckType
+from crackerjack.models.tool_config import PYSCN_MAX_COMPLEXITY
 
 if t.TYPE_CHECKING:
     from crackerjack.models.qa_config import QACheckConfig
@@ -36,7 +38,7 @@ class PyscnSettings(ToolAdapterSettings):
     use_json_output: bool = False
     severity_threshold: str = "low"
     confidence_threshold: str = "low"
-    max_complexity: int = 15
+    max_complexity: int = PYSCN_MAX_COMPLEXITY
     exclude_rules: list[str] = Field(default_factory=list)
     include_rules: list[str] = Field(default_factory=list)
     recursive: bool = True
@@ -61,7 +63,7 @@ class PyscnAdapter(BaseToolAdapter):
             self.settings = PyscnSettings(
                 timeout_seconds=120,
                 max_workers=4,
-                max_complexity=15,
+                max_complexity=PYSCN_MAX_COMPLEXITY,
             )
             logger.info("Using default PyscnSettings")
         await super().init()
@@ -96,11 +98,14 @@ class PyscnAdapter(BaseToolAdapter):
             msg = "Settings not initialized"
             raise RuntimeError(msg)
 
-        cmd = [self.tool_name, "check"]
-
-        cmd.extend(["--max-complexity", str(self.settings.max_complexity)])
-
-        cmd.extend([str(f) for f in files])
+        cmd = preferred_binary_command_with_min_version(
+            self.tool_name,
+            "1.30",
+            "check",
+            "--max-complexity",
+            str(self.settings.max_complexity),
+            *[str(f) for f in files],
+        )
 
         logger.info(
             "Built Pyscn command",
@@ -209,8 +214,9 @@ class PyscnAdapter(BaseToolAdapter):
 
         try:
             subprocess.run(
-                [
+                preferred_binary_command_with_min_version(
                     "pyscn",
+                    "1.30",
                     "analyze",
                     "--json",
                     "--select",
@@ -218,13 +224,13 @@ class PyscnAdapter(BaseToolAdapter):
                     "--clone-threshold",
                     str(threshold),
                     str(repo_root),
-                ],
+                ),
                 capture_output=True,
                 text=True,
                 cwd=str(repo_root),
                 timeout=300,
             )
-        except (FileNotFoundError, subprocess.TimeoutExpired) as exc:
+        except (FileNotFoundError, RuntimeError, subprocess.TimeoutExpired) as exc:
             logger.warning("pyscn clone scan failed: %s", exc)
             return []
 
@@ -272,7 +278,7 @@ class PyscnAdapter(BaseToolAdapter):
             settings={
                 "severity_threshold": "medium",
                 "confidence_threshold": "medium",
-                "max_complexity": 15,
+                "max_complexity": PYSCN_MAX_COMPLEXITY,
                 "recursive": True,
             },
         )

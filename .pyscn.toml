@@ -101,7 +101,10 @@ group_clones = true              # Group related clones together
 # CBO (COUPLING BETWEEN OBJECTS) ANALYSIS
 # =============================================================================
 [cbo]
-enabled = true                   # Enable CBO analysis
+# NOTE: pyscn >= 1.30 rejects the "cbo.enabled" key ("unknown configuration
+# key") even though its own `pyscn init` template still writes it -- an
+# upstream bug. The thresholds below are still honoured; drive CBO from the
+# CLI (--min-cbo) instead.
 low_threshold = 5                # CBO values ≤ 5 are low risk
 medium_threshold = 10            # CBO values 6-10 are medium risk
                                 # CBO values > 10 are high risk

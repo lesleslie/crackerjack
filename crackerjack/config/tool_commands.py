@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import os
+import re
 import shutil
+import subprocess
 import sys
-from functools import lru_cache
+from collections.abc import Callable
+from functools import lru_cache, partial
 from pathlib import Path
 
 from crackerjack.config.per_file_ignores import build_inline_per_file_ignores
@@ -61,7 +64,7 @@ def _build_targets(package_name: str) -> list[str]:
     return [p for p in candidates if Path(p).is_dir()]
 
 
-def _preferred_binary_command(tool_name: str, *args: str) -> list[str]:
+def preferred_binary_command(tool_name: str, *args: str) -> list[str]:
     venv_tool = Path.cwd() / ".venv" / "bin" / tool_name
     if venv_tool.exists():
         return [str(venv_tool), *args]
@@ -73,7 +76,119 @@ def _preferred_binary_command(tool_name: str, *args: str) -> list[str]:
     return [tool_name, *args]
 
 
-def _preferred_binary_command_with_report(
+_VERSION_RE = re.compile(r"\b(\d+(?:\.\d+)*)\b")
+
+
+def _parse_version(raw: str) -> tuple[int, ...] | None:
+    """Extract the first dotted-number version from a ``--version`` output."""
+    match = _VERSION_RE.search(raw)
+    if not match:
+        return None
+    return tuple(int(part) for part in match.group(1).split("."))
+
+
+@lru_cache(maxsize=64)
+def _probe_tool_version(binary: str) -> tuple[int, ...] | None:
+    """Return the version a binary reports, or ``None`` if it cannot be probed.
+
+    Cached because resolution happens on every hook invocation and a
+    subprocess per invocation is not affordable.
+    """
+    try:
+        result = subprocess.run(
+            [binary, "--version"],
+            capture_output=True,
+            text=True,
+            timeout=20,
+            check=False,
+        )
+    except OSError, subprocess.SubprocessError:
+        return None
+    return _parse_version(f"{result.stdout}\n{result.stderr}")
+
+
+def _version_at_least(found: tuple[int, ...], minimum: tuple[int, ...]) -> bool:
+    width = max(len(found), len(minimum))
+    padded_found = found + (0,) * (width - len(found))
+    padded_minimum = minimum + (0,) * (width - len(minimum))
+    return padded_found >= padded_minimum
+
+
+def _binary_candidates(tool_name: str) -> list[str]:
+    """Every executable named ``tool_name`` visible to this process, in order.
+
+    ``shutil.which`` returns only the FIRST match. That is not enough when
+    the first match is too old to use: an unrelated project's venv on PATH
+    can shadow the binary the caller actually wants. The project venv is
+    preferred, then PATH is walked in order.
+    """
+    candidates: list[str] = []
+    seen: set[str] = set()
+
+    def _add(path: Path) -> None:
+        resolved = str(path)
+        if resolved not in seen:
+            seen.add(resolved)
+            candidates.append(resolved)
+
+    venv_tool = Path.cwd() / ".venv" / "bin" / tool_name
+    if venv_tool.exists():
+        _add(venv_tool)
+
+    for directory in os.environ.get("PATH", "").split(os.pathsep):
+        if not directory:
+            continue
+        candidate = Path(directory) / tool_name
+        try:
+            if candidate.is_file() and os.access(candidate, os.X_OK):
+                _add(candidate)
+        except OSError:
+            continue
+
+    return candidates
+
+
+def preferred_binary_command_with_min_version(
+    tool_name: str, min_version: str, *args: str
+) -> list[str]:
+    """Resolve ``tool_name`` to a binary reporting at least ``min_version``.
+
+    Candidates are tried in priority order (the project venv first, then
+    ``PATH``) and the first one whose reported version satisfies the floor
+    wins. A binary that is too old is *skipped*, not used: crackerjack's
+    pyscn report schema changed at 1.30, so an older binary produces output
+    the parser cannot read.
+
+    Raises ``RuntimeError`` when no candidate qualifies, naming every
+    candidate that was inspected and the version it reported.
+    """
+    minimum = _parse_version(min_version)
+    if minimum is None:
+        msg = f"Invalid minimum version {min_version!r} for {tool_name!r}"
+        raise ValueError(msg)
+
+    inspected: list[str] = []
+    for candidate in _binary_candidates(tool_name):
+        found = _probe_tool_version(candidate)
+        if found is None:
+            inspected.append(f"{candidate} (version unknown)")
+            continue
+        if _version_at_least(found, minimum):
+            return [candidate, *args]
+        rendered = ".".join(str(part) for part in found)
+        inspected.append(f"{candidate} (version {rendered})")
+
+    detail = ", ".join(inspected) if inspected else "no candidates found"
+    msg = (
+        f"{tool_name} >= {min_version} is required, but no installed "
+        f"{tool_name} satisfies that floor. Inspected: {detail}. "
+        f"Install a current {tool_name} (for pyscn: `brew install pyscn`) "
+        f"or remove the outdated binary from PATH."
+    )
+    raise RuntimeError(msg)
+
+
+def preferred_binary_command_with_report(
     tool_name: str, report_path: str, *args: str
 ) -> list[str]:
     """Build a command and ensure the report path's parent directory exists.
@@ -85,10 +200,12 @@ def _preferred_binary_command_with_report(
     command, so the binary can write the report without a separate bootstrap.
     """
     Path(report_path).parent.mkdir(parents=True, exist_ok=True)
-    return _preferred_binary_command(tool_name, *args)
+    return preferred_binary_command(tool_name, *args)
 
 
-def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
+def _build_tool_commands(
+    package_name: str,
+) -> dict[str, list[str] | Callable[[], list[str]]]:
     return {
         "plan-index-sync": _python_module_command(
             "crackerjack.tools.plan_index_sync",
@@ -105,7 +222,7 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             "--exclude",
             "tools",
         ),
-        "ty": _preferred_binary_command(
+        "ty": preferred_binary_command(
             "uv",
             "run",
             "python",
@@ -117,7 +234,7 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             "--test-dir",
             "tests",
         ),
-        "pyrefly": _preferred_binary_command(
+        "pyrefly": preferred_binary_command(
             "pyrefly",
             "check",
             "--output-format",
@@ -150,7 +267,7 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             "--suggest-gitignore",
         ),
         "uv-lock": ["uv", "lock"],
-        "betterleaks": _preferred_binary_command_with_report(
+        "betterleaks": preferred_binary_command_with_report(
             "betterleaks",
             ".cache/betterleaks-report.json",
             "dir",
@@ -160,7 +277,7 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             "--report-path",
             ".cache/betterleaks-report.json",
         ),
-        "gitleaks": _preferred_binary_command_with_report(
+        "gitleaks": preferred_binary_command_with_report(
             "gitleaks",
             ".cache/gitleaks-report.json",
             "protect",
@@ -183,7 +300,7 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             "tests",
             f"./{package_name}",
         ),
-        "semgrep": _preferred_binary_command(
+        "semgrep": preferred_binary_command(
             "semgrep",
             "scan",
             "--quiet",
@@ -232,7 +349,7 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
         "no-conflict-markers": _python_module_command(
             "crackerjack.tools.no_conflict_markers"
         ),
-        "creosote": _preferred_binary_command(
+        "creosote": preferred_binary_command(
             "creosote",
             "--venv",
             ".venv",
@@ -240,7 +357,7 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             package_name,
             "--include-deferred",
         ),
-        "complexipy": _preferred_binary_command(
+        "complexipy": preferred_binary_command(
             "complexipy",
             "--max-complexity-allowed",
             "25",
@@ -256,14 +373,14 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             "test_*.py",
             package_name,
         ),
-        "cohesion": _preferred_binary_command(
+        "cohesion": preferred_binary_command(
             "cohesion",
             "-d",
             package_name,
             "-b",
             "70",
         ),
-        "pymetrica": _preferred_binary_command(
+        "pymetrica": preferred_binary_command(
             "pymetrica",
             "run-all",
             f"./{package_name}",
@@ -277,8 +394,12 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             "--lockfile=uv.lock",
             "--format=json",
         ],
-        "pyscn": _preferred_binary_command(
+        # Resolved lazily via partial: the version probe spawns a subprocess,
+        # and this module builds its command table at import time.
+        "pyscn": partial(
+            preferred_binary_command_with_min_version,
             "pyscn",
+            "1.30",
             "analyze",
             "--select",
             "complexity,deadcode",
@@ -312,9 +433,25 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
 
 
 @lru_cache(maxsize=8)
-def _build_tool_commands_cached(package_name: str) -> dict[str, tuple[str, ...]]:
+def _build_tool_commands_cached(
+    package_name: str,
+) -> dict[str, tuple[str, ...] | Callable[[], list[str]]]:
     raw = _build_tool_commands(package_name)
-    return {k: tuple(v) for k, v in raw.items()}
+    return {k: (tuple(v) if isinstance(v, list) else v) for k, v in raw.items()}
+
+
+def _materialize_tool_command(
+    entry: tuple[str, ...] | Callable[[], list[str]],
+) -> list[str]:
+    """Resolve a tool command entry into a fresh, mutable argument list.
+
+    ``isinstance(entry, tuple)`` rather than ``callable(entry)``: a
+    ``callable()`` test does not narrow the union for a type checker, and
+    the tuple/callable split is exactly the distinction that matters here.
+    """
+    if isinstance(entry, tuple):
+        return list(entry)
+    return list(entry())
 
 
 _DEFAULT_CWD_STR = str(Path.cwd())
@@ -339,7 +476,7 @@ def get_tool_command(
         msg = f"Unknown hook name: {hook_name}"
         raise KeyError(msg)
 
-    cmd = list(tool_commands[hook_name])
+    cmd = _materialize_tool_command(tool_commands[hook_name])
 
     # Stage 2: when settings opt-in, inject --unsafe-fixes right after --fix
     # so the ruff-check command remains safe-by-default.

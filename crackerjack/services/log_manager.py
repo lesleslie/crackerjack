@@ -62,12 +62,15 @@ class LogManager:
         # are worth keeping, so they belong under the XDG *state*
         # directory rather than the cache tier. They used to live in
         # the project's `.crackerjack/` directory, which is gitignored -
-        # so `git clean -fd` took them away.
-        candidates.append(state_dir(self.app_name) / "logs")
-
-        # The project-local directory stays in the chain as a fallback
-        # for a checkout that cannot write to the state directory.
-        candidates.append(Path.cwd() / ".crackerjack" / "logs")
+        # so `git clean -fd` took them away. The project-local directory
+        # stays in the chain as a fallback for a checkout that cannot
+        # write to the state directory.
+        candidates.extend(
+            (
+                state_dir(self.app_name) / "logs",
+                Path.cwd() / ".crackerjack" / "logs",
+            )
+        )
 
         cache_home = os.environ.get("XDG_CACHE_HOME")
         base_dir = Path(cache_home) if cache_home else Path.home() / ".cache"

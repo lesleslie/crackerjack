@@ -6,6 +6,7 @@ import typing as t
 from pathlib import Path
 
 from crackerjack.models.issues import Issue, IssueType, Priority
+from crackerjack.models.tool_config import PYSCN_MAX_COMPLEXITY
 from crackerjack.parsers.base import JSONParser
 from crackerjack.parsers.factory import ParserFactory
 from crackerjack.services.testing.test_result_parser import TestResultParser
@@ -569,15 +570,15 @@ class ComplexipyJSONParser(JSONParser):
 
 
 class PyscnJSONParser(JSONParser):
-    def __init__(self, max_complexity: int = 15) -> None:
+    def __init__(self, max_complexity: int = PYSCN_MAX_COMPLEXITY) -> None:
         super().__init__()
         self.max_complexity = max_complexity
 
     def parse(self, output: str, tool_name: str) -> list[Issue]:
+        from crackerjack.parsers.factory import ParsingError
+
         json_path = self._find_json_path(output)
         if not json_path:
-            from crackerjack.parsers.factory import ParsingError
-
             raise ParsingError(
                 "pyscn output doesn't reference a JSON report "
                 "(cobra/text output or pre-write failure?)",
@@ -586,13 +587,23 @@ class PyscnJSONParser(JSONParser):
             )
         json_file = Path(json_path)
         if not json_file.exists():
-            logger.warning(f"pyscn JSON report not found: {redact_path(json_path)}")
-            return []
+            # Not a warning-and-empty: the report was announced, so its
+            # absence means the findings are unknown, not that there were
+            # none. Returning [] here would turn an unreadable report into
+            # a silent pass.
+            raise ParsingError(
+                f"pyscn JSON report not found: {redact_path(json_path)}",
+                tool_name=tool_name,
+                output=output[:200],
+            )
         try:
             data = json.loads(json_file.read_text())
         except Exception as e:
-            logger.error(f"Error reading/parsing pyscn JSON report: {e}")
-            return []
+            raise ParsingError(
+                f"Error reading/parsing pyscn JSON report: {e}",
+                tool_name=tool_name,
+                output=output[:200],
+            ) from e
         return self.parse_json(data)
 
     def _find_json_path(self, output: str) -> str | None:
@@ -630,17 +641,17 @@ class PyscnJSONParser(JSONParser):
         complexity_section = data.get("complexity")
         if not isinstance(complexity_section, dict):
             return 0
-        functions = complexity_section.get("Functions")
+        functions = complexity_section.get("functions")
         if not isinstance(functions, list):
             return 0
         count = 0
         for item in functions:
             if not isinstance(item, dict):
                 continue
-            metrics = item.get("Metrics")
+            metrics = item.get("metrics")
             if not isinstance(metrics, dict):
                 continue
-            complexity = metrics.get("Complexity")
+            complexity = metrics.get("complexity")
             if isinstance(complexity, int) and complexity > self.max_complexity:
                 count += 1
         return count
@@ -675,10 +686,20 @@ class PyscnJSONParser(JSONParser):
         if not isinstance(complexity_section, dict):
             logger.debug("pyscn JSON has no 'complexity' section")
             return []
-        functions = complexity_section.get("Functions")
+        functions = complexity_section.get("functions")
         if not isinstance(functions, list):
+            if "Functions" in complexity_section:
+                from crackerjack.parsers.factory import ToolSchemaError
+
+                raise ToolSchemaError(
+                    "pyscn report uses the pre-1.30 CamelCase complexity schema "
+                    "('complexity.Functions'). This parser requires pyscn >= 1.30, "
+                    "which emits snake_case ('complexity.functions').",
+                    tool_name="pyscn",
+                    output=", ".join(sorted(complexity_section)),
+                )
             logger.warning(
-                f"pyscn 'complexity.Functions' is not a list: {type(functions)}"
+                f"pyscn 'complexity.functions' is not a list: {type(functions)}"
             )
             return []
         issues: list[Issue] = []
@@ -750,15 +771,15 @@ class PyscnJSONParser(JSONParser):
         if not isinstance(item, dict):
             return None
         fn = t.cast("dict[str, t.Any]", item)
-        name = str(fn.get("Name", "<unknown>"))
-        file_path = str(fn.get("FilePath", ""))
-        line_number = fn.get("StartLine")
+        name = str(fn.get("name", "<unknown>"))
+        file_path = str(fn.get("file_path", ""))
+        line_number = fn.get("start_line")
         if not isinstance(line_number, int):
             line_number = None
-        metrics = fn.get("Metrics")
+        metrics = fn.get("metrics")
         if not isinstance(metrics, dict):
             return None
-        complexity = metrics.get("Complexity")
+        complexity = metrics.get("complexity")
         if not isinstance(complexity, int):
             return None
         if complexity <= self.max_complexity:
@@ -774,7 +795,7 @@ class PyscnJSONParser(JSONParser):
             details=[
                 f"function: {name}",
                 f"complexity: {complexity} (threshold: >{self.max_complexity})",
-                f"risk_level: {fn.get('RiskLevel', 'unknown')}",
+                f"risk_level: {fn.get('risk_level', 'unknown')}",
             ],
         )
 

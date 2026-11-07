@@ -220,6 +220,47 @@ class TestXdistTimeoutDetection:
 
         assert executor._did_xdist_timeout(result, progress) is False
 
+    def test_internal_error_exit_code_triggers_sequential_retry(self, executor) -> None:
+        """pytest INTERNALERROR (exit 3) means the run itself failed.
+
+        xdist raises "Unexpectedly no active workers available" when there
+        are fewer collected items than workers, which incremental selection
+        makes easy to hit: a run that selects a handful of tests cannot fill
+        a worker per CPU. The executor already has a sequential fallback,
+        but it did not recognise this exit code, so the phase reported
+        "test execution failed" with zero tests run.
+        """
+        calls: list[list[str]] = []
+
+        def fake_execute(cmd, env, prog, cb, timeout):
+            calls.append(list(cmd))
+            result = Mock()
+            result.returncode = 3 if len(calls) == 1 else 1
+            result.stdout = ""
+            result.stderr = ""
+            return result
+
+        with patch.object(
+            executor,
+            "_execute_test_process_with_progress",
+            side_effect=fake_execute,
+        ):
+            result = executor._run_with_xdist_fallback(
+                ["pytest", "-n", "auto", "--dist=loadfile", "tests"],
+                TestProgress(),
+                None,
+                600,
+            )
+
+        assert len(calls) == 2, (
+            f"an INTERNALERROR must trigger a sequential retry, got {len(calls)} calls"
+        )
+        assert "-n" not in calls[1], f"the retry must drop xdist: {calls[1]}"
+        assert "--dist=loadfile" not in calls[1], (
+            f"the retry must drop the distribution mode: {calls[1]}"
+        )
+        assert result.returncode == 1
+
     def test_did_timeout_success_case_insensitive(self, executor, progress) -> None:
         """Test timeout detection is case-insensitive."""
         result = Mock()

@@ -45,10 +45,12 @@ baseline must self-describe its freshness).
 1. **Python floor is 3.14.** The selection path must stay pure-python. Any
    compiled dependency that ships no cp314/cp315 wheel is disqualifying —
    this is exactly what disqualified `snob-lib` (107 wheels, max tag `cp313`).
-1. **`--cov-branch` must never be enabled while testmon is active.** testmon
+1. **testmon and branch coverage must never share a pytest run.** testmon
    raises `TestmonException` when pytest-cov runs in branch mode
-   (`testmon/testmon_core.py:513-553`). Branch coverage is off in every Bodai
-   repo today; this plan keeps it off and adds a guard test (Task 1.6).
+   (`testmon/testmon_core.py:513-553`). Branch coverage is *on* in every
+   Bodai repo — all three fleet pyproject templates carry `branch = true`
+   — so the conflict is resolved by the gate, which switches coverage
+   collection off for the incremental run. See correction 7.
 1. **Coverage collection must stay on, via pytest-cov.** testmon's
    `_get_nocollect_reasons` returns `[]` (collection active) when the
    `cov_plugin` is present, because testmon reuses pytest-cov's coverage
@@ -76,7 +78,7 @@ baseline must self-describe its freshness).
 
 ## Post-implementation corrections
 
-Three things the plan assumed, and the implementation found otherwise. Each
+Things the plan assumed, and the implementation found otherwise. Each
 is recorded here because the plan is the tracked spec of record: a reader
 who takes it at face value would rely on a premise that does not hold.
 
@@ -169,6 +171,61 @@ The run-state store was contained (it resolves through a Pydantic
 was not. The constant is replaced by `resolve_integration_db_path()`,
 called at the point of use.
 
+**Correction 7 — branch coverage is on in the fleet, so the gate has to
+neutralise it rather than forbid it.** Global Constraint 3 said "branch
+coverage is off in every Bodai repo today", and Task 1.6 added a guard
+test that read `--cov-branch` out of the pytest `addopts` and failed if
+it found it. The premise was wrong, and the guard was looking in the
+wrong place:
+
+- All three fleet pyproject templates (`pyproject-full.toml`,
+  `pyproject-library.toml`, `pyproject-minimal.toml`) set
+  `branch = true` under `[tool.coverage.run]`, and crackerjack's own
+  pyproject has carried it since January 2026.
+- The guard inspected `addopts`, which is where `--cov-branch` *would*
+  appear if a project enabled branch coverage that way. The setting
+  every repo actually uses is `[tool.coverage.run] branch = true`, and
+  the guard never looked there.
+
+So the conflict was live in every repo, and it was invisible to the
+guard. It surfaced on 2026-11-07, when the gate's test phase died with:
+
+```
+INTERNALERROR> testmon.testmon_core.TestmonException: testmon doesn't support
+INTERNALERROR> simultaneous run with pytest-cov when branch coverage is on.
+INTERNALERROR> Please disable branch coverage.
+```
+
+pytest reports that as an INTERNALERROR (exit 3), which with `-n auto`
+surfaces as xdist's "Unexpectedly no active workers available" — a
+failed run that executed **zero** tests and looked like a timeout.
+
+The resolution is in the gate, not in the projects:
+
+- pytest-cov 7.1 offers `--cov-branch` to turn branch coverage *on* and
+  nothing to turn it off, so a project that enables it in its coverage
+  config puts testmon in branch mode and there is no flag that escapes
+  it. The only remaining lever is to replace the coverage config file
+  wholesale via `--cov-config`, which would silently drop every other
+  coverage setting the project has.
+- `--no-cov` does escape it, because pytest-cov then registers its
+  plugin but never starts it, and testmon's branch check is guarded by
+  `cov_plugin._started` (`testmon/testmon_core.py:522`). testmon builds
+  its own `Coverage(config_file=False)` for the dependency map, so
+  selection still works.
+
+The incremental run therefore carries `--no-cov` and no coverage flag of
+its own, and the full run keeps the project's own coverage configuration
+— branch coverage included. Nothing measurable is lost: an incremental
+run covers only the code its selected tests touch, and the coverage
+ratchet already skips incremental runs (correction 2), so that number
+was never a measurement.
+
+The guard test is replaced by one that pins the resolution —
+`test_the_incremental_run_disables_coverage_collection` and
+`test_the_full_run_keeps_coverage_collection` in
+`tests/unit/test_testmon_compatibility.py`.
+
 ## Review Focus
 
 Five failure modes the design implies but no happy-path test exercises.
@@ -184,10 +241,11 @@ Each is pinned by a test named in the owning task.
    set*, not the exit code — testmon rewrites the exit code 5 that an
    empty selection would produce, so a 5 reaching the caller means pytest
    collected nothing at all, which is a failure.)
-1. **Branch coverage enabled.** The moment anyone adds `--cov-branch`,
-   testmon raises `TestmonException` and the whole test phase dies with an
-   opaque error. Expected: a clear message naming the conflict.
-   → Task 1.6, `test_no_branch_coverage_with_testmon`.
+1. **Branch coverage enabled.** testmon raises `TestmonException` in
+   branch mode and the whole test phase dies with an opaque error.
+   Expected: the incremental run neutralises it, so the phase still runs.
+   → Task 1.6, `test_the_incremental_run_disables_coverage_collection`
+   and `test_the_full_run_keeps_coverage_collection`.
 1. **First run after install.** `.testmondata` does not exist yet, so testmon
    must run the *full* suite and write the data file. A reasonable person
    expects a complete first run, not an empty one.

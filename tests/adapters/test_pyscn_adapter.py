@@ -9,6 +9,7 @@ import pytest
 
 from crackerjack.adapters._tool_adapter_base import ToolExecutionResult, ToolIssue
 from crackerjack.adapters.sast.pyscn import PyscnAdapter, PyscnSettings
+from crackerjack.models.tool_config import PYSCN_MAX_COMPLEXITY
 
 
 class TestPyscnAdapter:
@@ -38,10 +39,14 @@ class TestPyscnAdapter:
             files = [Path("file1.py"), Path("file2.py")]
             command = adapter.build_command(files)
 
-            expected = ["pyscn", "check", "--max-complexity", "15"]
-            expected.extend([str(f) for f in files])
-
-            assert command == expected
+            # The binary is resolved (prefer .venv/bin/pyscn, then PATH) so an
+            # Intel macOS can run a Homebrew-built pyscn instead of a pip wheel.
+            assert Path(command[0]).name == "pyscn"
+            assert command[1:] == [
+                "check",
+                "--max-complexity",
+                str(PYSCN_MAX_COMPLEXITY),
+            ] + [str(f) for f in files]
 
     @pytest.mark.asyncio
     async def test_build_command_with_options(self) -> None:
@@ -57,7 +62,7 @@ class TestPyscnAdapter:
             command = adapter.build_command(files)
 
             # Check that the command contains the expected elements
-            assert "pyscn" in command
+            assert Path(command[0]).name == "pyscn"
             assert "check" in command
             assert "--max-complexity" in command
             assert "20" in command

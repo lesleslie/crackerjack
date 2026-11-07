@@ -6,13 +6,17 @@ present). That reuse has one hard incompatibility: **branch mode**. With
 ``--cov-branch`` enabled, testmon raises ``TestmonException`` and the
 entire test phase dies with an opaque error.
 
-Branch coverage is off in every Bodai repo today. These tests keep it off
-by failing loudly if someone turns it on, and pin the two properties the
-selection path needs to work at all:
+Branch coverage *is* on in the Bodai fleet -- every pyproject template
+carries ``branch = true`` -- so the incompatibility is resolved by the
+gate rather than by asking projects to leave branch coverage off. These
+tests pin that resolution, plus the two properties the selection path
+needs to work at all:
 
-1. pytest-testmon is installed (it auto-registers via the ``pytest11``
+1. The incremental run disables coverage collection, so branch mode
+   cannot reach testmon.
+2. pytest-testmon is installed (it auto-registers via the ``pytest11``
    entry-point group).
-2. The first run in a checkout with no ``.testmondata`` runs the *full*
+3. The first run in a checkout with no ``.testmondata`` runs the *full*
    suite and writes the data file, rather than selecting nothing.
 """
 
@@ -21,29 +25,17 @@ from __future__ import annotations
 import importlib.metadata
 import subprocess
 import sys
-import tomllib
 from fnmatch import fnmatchcase
 from pathlib import Path
-from typing import Any
+from types import SimpleNamespace
 
 import pytest
+
+from crackerjack.managers.test_command_builder import TestCommandBuilder
 
 PYPROJECT_PATH = Path(__file__).resolve().parents[2] / "pyproject.toml"
 REPO_ROOT = PYPROJECT_PATH.parent
 GITIGNORE_TEMPLATE_PATH = REPO_ROOT / "templates" / "GITIGNORE_BODAI.md"
-
-
-def _pyproject() -> dict[str, Any]:
-    with PYPROJECT_PATH.open("rb") as handle:
-        return tomllib.load(handle)
-
-
-def _pytest_addopts() -> str:
-    ini_options = _pyproject().get("tool", {}).get("pytest", {}).get("ini_options", {})
-    addopts = ini_options.get("addopts", "")
-    if isinstance(addopts, list):
-        return " ".join(addopts)
-    return addopts
 
 
 class TestTestmonInstall:
@@ -51,17 +43,48 @@ class TestTestmonInstall:
         assert importlib.metadata.version("pytest-testmon")
 
 
-class TestBranchCoverageGuard:
-    def test_no_branch_coverage_with_testmon(self) -> None:
-        """Branch coverage makes testmon raise TestmonException."""
-        addopts = _pytest_addopts()
+class TestBranchCoverageIsNeutralised:
+    """Branch coverage is allowed; the incremental run has to survive it.
 
-        assert "--cov-branch" not in addopts, (
-            "branch coverage is incompatible with pytest-testmon: testmon "
-            "reuses pytest-cov's coverage instance and raises "
-            "TestmonException in branch mode (testmon/testmon_core.py). "
-            "Remove --cov-branch from the pytest addopts."
+    pytest-cov 7.1 offers ``--cov-branch`` to turn branch coverage on and
+    nothing to turn it off, so a project that enables it in
+    ``[tool.coverage.run]`` puts testmon in branch mode, where it raises
+    ``TestmonException``. The gate therefore switches coverage collection
+    off for the incremental run. These tests pin that resolution, so a
+    later change cannot quietly reintroduce the INTERNALERROR that made
+    the gate report a failed run that executed zero tests.
+    """
+
+    def test_the_incremental_run_disables_coverage_collection(self) -> None:
+        builder = TestCommandBuilder(pkg_path=REPO_ROOT)
+        options = SimpleNamespace(
+            incremental_tests=True,
+            test_workers=1,
+            benchmark=False,
+            verbose=False,
         )
+
+        cmd = builder.build_command(options)
+
+        assert "--testmon" in cmd
+        assert "--no-cov" in cmd
+        assert not [argument for argument in cmd if argument.startswith("--cov")]
+
+    def test_the_full_run_keeps_coverage_collection(self) -> None:
+        """The full run is the one whose coverage the ratchet compares."""
+        builder = TestCommandBuilder(pkg_path=REPO_ROOT)
+        options = SimpleNamespace(
+            incremental_tests=False,
+            test_workers=1,
+            benchmark=False,
+            verbose=False,
+        )
+
+        cmd = builder.build_command(options)
+
+        assert "--testmon" not in cmd
+        assert "--no-cov" not in cmd
+        assert any(argument.startswith("--cov=") for argument in cmd)
 
 
 class TestFirstRunBehaviour:

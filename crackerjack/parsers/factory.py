@@ -40,6 +40,18 @@ class ParsingError(Exception):
         return "\n".join(parts)
 
 
+class ToolSchemaError(ParsingError):
+    """Raised when a tool's output uses a schema this parser cannot read.
+
+    A distinct subclass because the distinction matters to the caller. A
+    schema mismatch means the tool is the wrong version: its findings
+    cannot be recovered from the text output, so dropping them silently
+    would turn a version mismatch into a silent pass. A generic parse
+    failure may still be recoverable from the tool's text output, so that
+    case keeps its text fallback.
+    """
+
+
 class ParserFactory:
     def __init__(self) -> None:
         self._json_parsers: dict[str, type[JSONParser]] = {}

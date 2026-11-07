@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import logging
 import shutil
+from contextlib import suppress
 from pathlib import Path
 
 from crackerjack.utils.path_redaction import redact_path
@@ -124,11 +125,9 @@ def migrate_legacy_dir(legacy: Path, target: Path) -> bool:
         logger.info(
             "Migrated the contents of %s to %s", legacy.name, redact_path(target)
         )
-        try:
+        # A directory that is not empty any more, or that cannot be
+        # removed, is harmless. The contents are already moved.
+        with suppress(OSError):
             if not any(legacy.iterdir()):
                 legacy.rmdir()
-        except OSError:
-            # A directory that is not empty any more, or that cannot be
-            # removed, is harmless. The contents are already moved.
-            pass
     return moved

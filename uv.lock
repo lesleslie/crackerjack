@@ -21,6 +21,7 @@ filelock = "2099-12-31T23:59:59Z"
 mcp-common = "2099-12-31T23:59:59Z"
 oneiric = "2099-12-31T23:59:59Z"
 pyasn1 = "2099-12-31T23:59:59Z"
+pytest-testmon = "2099-12-31T23:59:59Z"
 session-buddy = "2099-12-31T23:59:59Z"
 ty = "2099-12-31T23:59:59Z"
 uv = "2099-12-31T23:59:59Z"
@@ -879,7 +880,7 @@ dependencies = [
     { name = "pyleak" },
     { name = "pymetrica" },
     { name = "pypistats" },
-    { name = "pyscn" },
+    { name = "pyscn", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
     { name = "pytest-benchmark" },
@@ -961,7 +962,7 @@ requires-dist = [
     { name = "pyleak", specifier = ">=0.2.0" },
     { name = "pymetrica", specifier = ">=1.6.0" },
     { name = "pypistats", specifier = ">=1.14.0" },
-    { name = "pyscn", specifier = "==1.5.0" },
+    { name = "pyscn", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'", specifier = ">=1.30" },
     { name = "pytest", specifier = ">=9.1.1" },
     { name = "pytest-asyncio", specifier = ">=1.4.0" },
     { name = "pytest-benchmark", specifier = ">=5.3.0" },
@@ -975,7 +976,7 @@ requires-dist = [
     { name = "redbaron", specifier = ">=0.9.2" },
     { name = "refurb", specifier = ">=2.3.1" },
     { name = "rich", specifier = ">=15.0.0" },
-    { name = "ruff", specifier = "==0.16.0" },
+    { name = "ruff", specifier = ">=0.16.0,<0.17" },
     { name = "sqlmodel", specifier = ">=0.0.47" },
     { name = "structlog", specifier = ">=26.1.0" },
     { name = "syrupy", specifier = ">=6.1.1" },
@@ -3420,13 +3421,13 @@ wheels = [
 
 [[package]]
 name = "pyscn"
-version = "1.5.0"
+version = "1.33.1"
 source = { registry = "https://pypi.org/simple" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/06/ee/7a85df3a47ad8a3665882d89229d23d01cd217e6d3fad10233e8eadaa3cd/pyscn-1.5.0-py3-none-macosx_10_9_x86_64.whl", hash = "sha256:d8a0f15c3c23cb8f313705445f42f0fc412334aa58caaf51de026a3cd5b037dd", size = 7293461, upload-time = "2025-12-07T15:41:43.936Z" },
-    { url = "https://files.pythonhosted.org/packages/de/8d/56f421077c672617107e2911da30cc0d37f4c9c04367a0185aa53623daa3/pyscn-1.5.0-py3-none-macosx_11_0_arm64.whl", hash = "sha256:3167841cf8bca62dd44f67c8f429bdf8f2140299189ab60909149e9799f50c3e", size = 6809362, upload-time = "2025-12-07T15:41:45.526Z" },
-    { url = "https://files.pythonhosted.org/packages/c6/52/74bb4de661e67e7c6249e4367e8acf8ed1ee417f1b49534722ee0b4c7b3d/pyscn-1.5.0-py3-none-manylinux_2_17_x86_64.whl", hash = "sha256:d098d8cbad10d8abe0fdf462e8386206be86453e36a98b8b92220f1440fe6fd9", size = 7310105, upload-time = "2025-12-07T15:41:47.108Z" },
-    { url = "https://files.pythonhosted.org/packages/dd/80/ecfe1fadb9c5d54b05b2b4c72541bda2586dafdeb1cc6d848c5d3daacf3a/pyscn-1.5.0-py3-none-win_amd64.whl", hash = "sha256:6b4c07f65246db45592a1549b54fd559d19dd44947697a503ff0cbc30288a7d7", size = 7597220, upload-time = "2025-12-07T15:41:49.726Z" },
+    { url = "https://files.pythonhosted.org/packages/84/e1/c0aad8f17f57b73888fc5ff12345c984594b8053f7876185b218cc3c3c1f/pyscn-1.33.1-py3-none-macosx_11_0_arm64.whl", hash = "sha256:46dd95d49015e1173fda97af4363bb3dc8c018509b41d290e8661ddc352ea524", size = 10319678, upload-time = "2026-10-29T07:58:42.636Z" },
+    { url = "https://files.pythonhosted.org/packages/5c/a2/f27c9e1be52b61b1b5021ced008bd8286c8899637153261f3bf94ea5e285/pyscn-1.33.1-py3-none-manylinux_2_34_aarch64.whl", hash = "sha256:738fc54ea43bb002ebcae99964f33c7713709582f7edbe57409f77f93bb10474", size = 10133971, upload-time = "2026-10-29T07:58:44.98Z" },
+    { url = "https://files.pythonhosted.org/packages/0d/e5/e34713a67ccedd709384d7eff3e975996244ca92fee6aec9830e8456997e/pyscn-1.33.1-py3-none-manylinux_2_34_x86_64.whl", hash = "sha256:6b920c49ce671bcd888e4364b06fb67463730a968ab0564afdbb6e503590f749", size = 11266253, upload-time = "2026-10-29T07:58:47.608Z" },
+    { url = "https://files.pythonhosted.org/packages/5e/30/bfc93c71a75feadb55498b3f8a8dcae43be0906ee25b9dcbe378cea3493f/pyscn-1.33.1-py3-none-win_amd64.whl", hash = "sha256:ab7b4ad7062a8af3f148628f768ad7c876879b92876bb5a33c438f4f8c64fccd", size = 12240772, upload-time = "2026-10-29T07:58:49.91Z" },
 ]
 
 [[package]]
@@ -3523,15 +3524,15 @@ wheels = [
 
 [[package]]
 name = "pytest-testmon"
-version = "2.2.0"
+version = "2.3.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "coverage" },
     { name = "pytest" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/4d/1d/3e4230cc67cd6205bbe03c3527500c0ccaf7f0c78b436537eac71590ee4a/pytest_testmon-2.2.0.tar.gz", hash = "sha256:01f488e955ed0e0049777bee598bf1f647dd524e06f544c31a24e68f8d775a51", size = 23108, upload-time = "2025-12-01T07:30:24.76Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/10/c5/12ad97c49648f24768449822c5b032f87215060efa8c0cb214a1464d46d0/pytest_testmon-2.3.0.tar.gz", hash = "sha256:7bcd50afce305393edc6b530ee77a61c91949efafe0c54f799f12fe3da999623", size = 24373, upload-time = "2026-11-02T13:07:10.334Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/61/55/ebb3c2f59fb089f08d00f764830d35780fc4e4c41dffcadafa3264682b65/pytest_testmon-2.2.0-py3-none-any.whl", hash = "sha256:2604ca44a54d61a2e830d9ce828b41a837075e4ebc1f81b148add8e90d34815b", size = 25199, upload-time = "2025-12-01T07:30:23.623Z" },
+    { url = "https://files.pythonhosted.org/packages/1b/f1/0312fca79f6695ce17426e8d30df0c4c2f6efa297094ea6fd81fe7a257b4/pytest_testmon-2.3.0-py3-none-any.whl", hash = "sha256:fd541506efa483e5a217e6cc5c07c73b382619c218d1ed4ffa80584c34defd77", size = 26512, upload-time = "2026-11-02T13:07:09.07Z" },
 ]
 
 [[package]]

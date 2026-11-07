@@ -4,6 +4,7 @@ Tests the core HookExecutor class that handles hook execution logic.
 """
 
 import asyncio
+import json
 import subprocess
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -731,12 +732,116 @@ class TestHookExecutorOutputParsing:
         )
         assert "type_error_specialist.py:241" in issues[0]
         assert "is too complex" in issues[0]
+        # The finding must come from the TEXT parser, not from a parse
+        # error whose preview happens to echo the output: a ParsingError
+        # embeds the first 200 characters of the output in its message, so
+        # asserting on the file path alone would pass vacuously.
+        assert "schema is unsupported" not in issues[0]
+        assert "could not be parsed" not in issues[0]
         # Help-text sentinels must NOT appear in the issues list.
         for sentry in ("Usage:", "Flags:", "--max-complexity", "--help"):
             for issue in issues:
                 assert sentry not in issue, (
                     f"pyscn dispatch leaked help-text {sentry!r}: {issue}"
                 )
+
+    def test_pyscn_schema_mismatch_fails_loudly(
+        self, executor: HookExecutor, tmp_path: Path
+    ) -> None:
+        """A report in a schema the parser cannot read must not degrade to
+        zero findings.
+
+        pyscn 1.30 switched its JSON report to snake_case. A report from an
+        older pyscn raises ``ToolSchemaError``; the hook must surface it as
+        an issue so the gate fails, instead of falling back to a text parser
+        that reads ``--json`` output as zero findings and lets the hook pass
+        with no complexity coverage at all.
+        """
+        report_dir = tmp_path / ".pyscn" / "reports"
+        report_dir.mkdir(parents=True, exist_ok=True)
+        report = report_dir / "analyze_001.json"
+        report.write_text(
+            json.dumps(
+                {
+                    "complexity": {
+                        "Functions": [
+                            {
+                                "Name": "complex_fn",
+                                "FilePath": "a.py",
+                                "StartLine": 1,
+                                "Metrics": {"Complexity": 17},
+                                "RiskLevel": "high",
+                            }
+                        ]
+                    }
+                }
+            )
+        )
+        output = f"📊 Unified JSON report generated: {report}\n"
+        hook = HookDefinition(name="pyscn", command=[], is_formatting=False)
+        process_result = subprocess.CompletedProcess(
+            args=[], returncode=0, stdout="", stderr=output
+        )
+
+        issues = executor._extract_issues_from_process_output(
+            hook, process_result, status="passed"
+        )
+
+        assert len(issues) == 1, (
+            f"the schema mismatch must surface as one issue, got {len(issues)}: {issues}"
+        )
+        assert "schema is unsupported" in issues[0]
+        assert "CamelCase" in issues[0]
+
+    def test_pyscn_missing_report_fails_loudly(
+        self, executor: HookExecutor, tmp_path: Path
+    ) -> None:
+        """An announced-but-unreadable report means unknown findings, not none.
+
+        The pyscn hook always runs ``pyscn analyze --json``. If the report it
+        announced cannot be read, the complexity findings are unknown, and
+        reporting zero would turn an unreadable report into a silent pass.
+        """
+        missing = tmp_path / ".pyscn" / "reports" / "analyze_001.json"
+        output = f"📊 Unified JSON report generated: {missing}\n"
+        hook = HookDefinition(name="pyscn", command=[], is_formatting=False)
+        process_result = subprocess.CompletedProcess(
+            args=[], returncode=0, stdout="", stderr=output
+        )
+
+        issues = executor._extract_issues_from_process_output(
+            hook, process_result, status="passed"
+        )
+
+        assert len(issues) == 1, (
+            f"an unreadable report must surface as one issue, got {len(issues)}: {issues}"
+        )
+        assert "could not be parsed" in issues[0]
+
+    def test_pyscn_unparsable_output_fails_loudly(
+        self, executor: HookExecutor
+    ) -> None:
+        """Output with no recoverable findings must not pass silently.
+
+        The text fallback cannot recover findings from ``--json`` output, so
+        an empty fallback result after a parse failure means the findings
+        are UNKNOWN -- not that there were none. Reporting zero would let
+        the gate pass with no complexity coverage at all.
+        """
+        output = "🔍 Running quality check (complexity, deadcode)...\n✅ All clean\n"
+        hook = HookDefinition(name="pyscn", command=[], is_formatting=False)
+        process_result = subprocess.CompletedProcess(
+            args=[], returncode=0, stdout="", stderr=output
+        )
+
+        issues = executor._extract_issues_from_process_output(
+            hook, process_result, status="passed"
+        )
+
+        assert len(issues) == 1, (
+            f"unparsable pyscn output must surface as one issue, got {issues}"
+        )
+        assert "could not be parsed" in issues[0]
 
     def test_ty_dispatched_through_reporting_tools(
         self, executor: HookExecutor
