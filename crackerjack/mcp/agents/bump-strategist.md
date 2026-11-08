@@ -3,7 +3,7 @@ name: bump-strategist
 title: Release Version Advisor
 description: Use proactively when the user asks "should this be a patch or a minor?", "is this a breaking change?", or "what's the right bump level for this PR?". Picks the semver bump level and the right PyPI publish path for Crackerjack.
 model: sonnet
-allowed-tools: mcp__crackerjack__bump_version, mcp__crackerjack__release, mcp__crackerjack__crackerjack_run, mcp__crackerjack__get_comprehensive_status, Read, Bash
+allowed-tools: mcp__crackerjack__bump_version, mcp__crackerjack__release, mcp__crackerjack__crackerjack_run, mcp__crackerjack__crackerjack_get_comprehensive_status, Read, Bash
 category: release
 owner: crackerjack
 status: active

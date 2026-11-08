@@ -102,12 +102,12 @@ class TestRegisterSemanticTools:
         register_semantic_tools(mock_app)
 
         for name in (
-            "index_file_semantic",
-            "search_semantic",
-            "get_semantic_stats",
-            "remove_file_from_semantic_index",
-            "get_embeddings",
-            "calculate_similarity_semantic",
+            "crackerjack_index_file_semantic",
+            "crackerjack_search_semantic",
+            "crackerjack_get_semantic_stats",
+            "crackerjack_remove_file_from_semantic_index",
+            "crackerjack_get_embeddings",
+            "crackerjack_calculate_similarity_semantic",
         ):
             assert name in registered
 
@@ -381,7 +381,7 @@ class TestGenerateEmbeddingsForTexts:
         mock_svc.generate_embedding.assert_not_called()
 
 
-# ─── tool: index_file_semantic (via register) ──────────────────────────────
+# ─── tool: crackerjack_index_file_semantic (via register) ─────────────────────────────
 
 
 @pytest.mark.unit
@@ -399,9 +399,9 @@ class TestIndexFileSemantic:
         mock_app.tool = decorator  # type: ignore[method-assign]
         register_semantic_tools(mock_app)
         for fn in captured:
-            if fn.__name__ == "index_file_semantic":
+            if fn.__name__ == "crackerjack_index_file_semantic":
                 return fn
-        raise AssertionError("index_file_semantic not registered")
+        raise AssertionError("crackerjack_index_file_semantic not registered")
 
     def test_invalid_path(self, tmp_path: Path) -> None:
         tool = self._tool()
@@ -464,7 +464,7 @@ class TestIndexFileSemantic:
         assert "db down" in out["error"]
 
 
-# ─── tool: search_semantic ─────────────────────────────────────────────────
+# ─── tool: crackerjack_search_semantic ────────────────────────────────────────────────
 
 
 @pytest.mark.unit
@@ -482,9 +482,9 @@ class TestSearchSemantic:
         mock_app.tool = decorator  # type: ignore[method-assign]
         register_semantic_tools(mock_app)
         for fn in captured:
-            if fn.__name__ == "search_semantic":
+            if fn.__name__ == "crackerjack_search_semantic":
                 return fn
-        raise AssertionError("search_semantic not registered")
+        raise AssertionError("crackerjack_search_semantic not registered")
 
     def test_invalid_query(self) -> None:
         tool = self._tool()
@@ -559,7 +559,7 @@ class TestSearchSemantic:
         assert "boom" in out["error"]
 
 
-# ─── tool: get_semantic_stats ──────────────────────────────────────────────
+# ─── tool: crackerjack_get_semantic_stats ─────────────────────────────────────────────
 
 
 @pytest.mark.unit
@@ -577,9 +577,9 @@ class TestGetSemanticStats:
         mock_app.tool = decorator  # type: ignore[method-assign]
         register_semantic_tools(mock_app)
         for fn in captured:
-            if fn.__name__ == "get_semantic_stats":
+            if fn.__name__ == "crackerjack_get_semantic_stats":
                 return fn
-        raise AssertionError("get_semantic_stats not registered")
+        raise AssertionError("crackerjack_get_semantic_stats not registered")
 
     def test_success(self) -> None:
         tool = self._tool()
@@ -636,7 +636,7 @@ class TestGetSemanticStats:
         assert "x" in out["error"]
 
 
-# ─── tool: remove_file_from_semantic_index ─────────────────────────────────
+# ─── tool: crackerjack_remove_file_from_semantic_index ────────────────────────────────
 
 
 @pytest.mark.unit
@@ -654,9 +654,11 @@ class TestRemoveFileFromIndex:
         mock_app.tool = decorator  # type: ignore[method-assign]
         register_semantic_tools(mock_app)
         for fn in captured:
-            if fn.__name__ == "remove_file_from_semantic_index":
+            if fn.__name__ == "crackerjack_remove_file_from_semantic_index":
                 return fn
-        raise AssertionError("remove_file_from_semantic_index not registered")
+        raise AssertionError(
+            "crackerjack_remove_file_from_semantic_index not registered",
+        )
 
     def test_invalid_path(self) -> None:
         tool = self._tool()
@@ -727,7 +729,7 @@ class TestRemoveFileFromIndex:
         assert "x" in out["error"]
 
 
-# ─── tool: get_embeddings ──────────────────────────────────────────────────
+# ─── tool: crackerjack_get_embeddings ─────────────────────────────────────────────────
 
 
 @pytest.mark.unit
@@ -745,9 +747,9 @@ class TestGetEmbeddings:
         mock_app.tool = decorator  # type: ignore[method-assign]
         register_semantic_tools(mock_app)
         for fn in captured:
-            if fn.__name__ == "get_embeddings":
+            if fn.__name__ == "crackerjack_get_embeddings":
                 return fn
-        raise AssertionError("get_embeddings not registered")
+        raise AssertionError("crackerjack_get_embeddings not registered")
 
     def test_invalid_texts_json(self) -> None:
         tool = self._tool()
@@ -801,7 +803,7 @@ class TestGetEmbeddings:
         assert "x" in out["error"]
 
 
-# ─── tool: calculate_similarity_semantic ───────────────────────────────────
+# ─── tool: crackerjack_calculate_similarity_semantic ──────────────────────────────────
 
 
 @pytest.mark.unit
@@ -819,9 +821,9 @@ class TestCalculateSimilarity:
         mock_app.tool = decorator  # type: ignore[method-assign]
         register_semantic_tools(mock_app)
         for fn in captured:
-            if fn.__name__ == "calculate_similarity_semantic":
+            if fn.__name__ == "crackerjack_calculate_similarity_semantic":
                 return fn
-        raise AssertionError("calculate_similarity_semantic not registered")
+        raise AssertionError("crackerjack_calculate_similarity_semantic not registered")
 
     def test_invalid_json(self) -> None:
         tool = self._tool()

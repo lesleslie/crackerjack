@@ -487,5 +487,5 @@ class TestExecuteCrackerjackWorkflow:
             )
         assert "job_id" in out
         assert out["status"] == "running"
-        assert "get_job_progress" in out["message"]
+        assert "crackerjack_get_job_progress" in out["message"]
         assert "timestamp" in out

@@ -430,7 +430,7 @@ class TestRegisterMonitoringTools:
         assert mcp_app.tool.call_count == 6
 
     def test_registers_stage_status_tool(self) -> None:
-        """Test registers get_stage_status tool."""
+        """Test registers crackerjack_get_stage_status tool."""
         mcp_app = MagicMock()
 
         register_monitoring_tools(mcp_app)
@@ -438,7 +438,7 @@ class TestRegisterMonitoringTools:
         assert mcp_app.tool.called
 
     def test_registers_next_action_tool(self) -> None:
-        """Test registers get_next_action tool."""
+        """Test registers crackerjack_get_next_action tool."""
         mcp_app = MagicMock()
 
         register_monitoring_tools(mcp_app)
@@ -446,7 +446,7 @@ class TestRegisterMonitoringTools:
         assert mcp_app.tool.called
 
     def test_registers_server_stats_tool(self) -> None:
-        """Test registers get_server_stats tool."""
+        """Test registers crackerjack_get_server_stats tool."""
         mcp_app = MagicMock()
 
         register_monitoring_tools(mcp_app)
@@ -454,7 +454,7 @@ class TestRegisterMonitoringTools:
         assert mcp_app.tool.called
 
     def test_registers_comprehensive_status_tool(self) -> None:
-        """Test registers get_comprehensive_status tool."""
+        """Test registers crackerjack_get_comprehensive_status tool."""
         mcp_app = MagicMock()
 
         register_monitoring_tools(mcp_app)
@@ -462,7 +462,7 @@ class TestRegisterMonitoringTools:
         assert mcp_app.tool.called
 
     def test_registers_list_slash_commands_tool(self) -> None:
-        """Test registers list_slash_commands tool."""
+        """Test registers crackerjack_list_slash_commands tool."""
         mcp_app = MagicMock()
 
         register_monitoring_tools(mcp_app)
@@ -470,7 +470,7 @@ class TestRegisterMonitoringTools:
         assert mcp_app.tool.called
 
     def test_registers_filtered_status_tool(self) -> None:
-        """Test registers get_filtered_status tool."""
+        """Test registers crackerjack_get_filtered_status tool."""
         mcp_app = MagicMock()
 
         register_monitoring_tools(mcp_app)

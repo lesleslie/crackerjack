@@ -51,11 +51,15 @@ def register_crackerjack_health(mcp_app: FastMCP) -> None:
     probes (``get_liveness``, ``get_readiness``, ``health_check_service``,
     ``health_check_all``, ``wait_for_dependency``, ``wait_for_all_dependencies``).
 
-    Also registers :func:`crackerjack_get_health` — the MCP-tool
+    Also registers :func:`get_health` — the MCP-tool
     counterpart of the ``/health`` HTTP route. Both surfaces route
     through :func:`crackerjack.mcp.health.build_health_envelope` so
     they agree on the same feed-state (REQ-HC-003 in
     ``docs/plans/2026-10-09-mcp-health-check-enrichment.md``).
+
+    ``get_health`` is a fleet-wide shared name (it returns the canonical
+    HealthSnapshot envelope on akosha, mahavishnu and session-buddy
+    too), so it stays bare rather than taking the component prefix.
     """
     register_health_tools(
         mcp_app,
@@ -66,7 +70,7 @@ def register_crackerjack_health(mcp_app: FastMCP) -> None:
     )
 
     @mcp_app.tool()  # type: ignore[untyped-decorator]
-    async def crackerjack_get_health() -> dict[str, Any]:
+    async def get_health() -> dict[str, Any]:
         """Return the canonical HealthSnapshot envelope for Crackerjack.
 
         Wire-shape matches the ``/health`` HTTP route on the same

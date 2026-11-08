@@ -195,13 +195,14 @@ def register_language_tools(mcp_app: FastMCP) -> None:
     3. ASSIGN TIER — language_tools added to FULL_REGISTRATIONS (Task 7.6)
     4. TEST — verified via ``mcp_app.list_tools()`` in tests/mcp/tools/
 
-    Mutation tools (``swift_bump_version``) require auth (per spec MCP F5).
-    ``swift_list_hooks`` is renamed from Rev 1's ``swift_run_hooks``: it is a
-    metadata tool that returns hook configs, not a runner.
+    Mutation tools (``crackerjack_swift_bump_version``) require auth (per
+    spec MCP F5). ``crackerjack_swift_list_hooks`` is renamed from Rev 1's
+    ``swift_run_hooks``: it is a metadata tool that returns hook configs, not
+    a runner.
     """
 
     @mcp_app.tool()
-    async def swift_bump_version(
+    async def crackerjack_swift_bump_version(
         project_root: str,
         level: Literal["major", "minor", "patch"] = "minor",
         release: bool = False,
@@ -224,12 +225,12 @@ def register_language_tools(mcp_app: FastMCP) -> None:
         )
 
     @mcp_app.tool()
-    async def swift_list_hooks(project_root: str) -> dict[str, dict]:
+    async def crackerjack_swift_list_hooks(project_root: str) -> dict[str, dict]:
         """Return the configured Swift hooks for the project.
 
         Renamed from Rev 1's ``swift_run_hooks``: this is a metadata tool that
         lists hook configs (cli_command, autofix, timeout). It does NOT
-        execute hooks — see the spec's ``swift_bump_version`` for that.
+        execute hooks — see the spec's ``crackerjack_swift_bump_version`` for that.
 
         No auth required (read-only).
         """
@@ -246,7 +247,7 @@ def register_language_tools(mcp_app: FastMCP) -> None:
         }
 
     @mcp_app.tool()
-    async def detect_languages(project_root: str) -> dict[str, bool]:
+    async def crackerjack_detect_languages(project_root: str) -> dict[str, bool]:
         """Return which language adapters detect the project at project_root.
 
         Phase 2: returns ``{'python': bool, 'swift': bool}``. Phase 3+ adds Kotlin,
@@ -259,7 +260,7 @@ def register_language_tools(mcp_app: FastMCP) -> None:
         return {name: adapter.detect(root) for name, adapter in adapters.items()}
 
     @mcp_app.tool()
-    async def kotlin_bump_version(
+    async def crackerjack_kotlin_bump_version(
         level: Literal["major", "minor", "patch"],
         project_root: str,
         dry_run: bool = False,
@@ -323,7 +324,7 @@ def register_language_tools(mcp_app: FastMCP) -> None:
         }
 
     @mcp_app.tool()
-    async def kotlin_list_hooks(project_root: str) -> dict[str, dict]:
+    async def crackerjack_kotlin_list_hooks(project_root: str) -> dict[str, dict]:
         """Return Kotlin/Gradle hook metadata for the given project.
 
         Probes ``./gradlew tasks --all`` to detect which plugins are
@@ -367,7 +368,7 @@ def register_language_tools(mcp_app: FastMCP) -> None:
         }
 
     @mcp_app.tool()
-    async def check_web_lint(project_root: str) -> dict:
+    async def crackerjack_check_web_lint(project_root: str) -> dict:
         """Return Web hook metadata for the given project (read-only, no auth).
 
         Activates the Web adapter (requires ``package.json`` at root OR
@@ -404,7 +405,7 @@ def register_language_tools(mcp_app: FastMCP) -> None:
         return {"adapter": "web", "enabled": True, "hooks": hooks}
 
     @mcp_app.tool()
-    async def format_jinja_templates(
+    async def crackerjack_format_jinja_templates(
         projects: list[str],
         dry_run: bool = True,
     ) -> dict:

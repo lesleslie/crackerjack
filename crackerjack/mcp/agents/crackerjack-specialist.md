@@ -3,7 +3,7 @@ name: crackerjack-specialist
 title: Crackerjack Quality Specialist
 description: Use proactively for Crackerjack quality-gate operations: full 47-tool Crackerjack surface (pyright, ty, bandit, complexipy, ruff, pytest, semantic, otel, pycharm, language, monitoring), autoconfigure (`crackerjack --autoconfig -p <level>`), hook ordering, and quality-gate triage. Adjacent to mcp-integration-expert; this agent adds Crackerjack-specific tool selection, autoconfigure, and quality-gate triage.
 model: sonnet
-allowed-tools: mcp__crackerjack__crackerjack_run, mcp__crackerjack__get_comprehensive_status, mcp__crackerjack__suggest_patterns, mcp__crackerjack__smart_error_analysis, mcp__crackerjack__bump_version, mcp__crackerjack__release, mcp__crackerjack__autoconfig, mcp__crackerjack__list_quality_hooks, mcp__crackerjack__run_specific_tool, mcp__crackerjack__bump_python, Read, Bash
+allowed-tools: mcp__crackerjack__crackerjack_run, mcp__crackerjack__crackerjack_get_comprehensive_status, mcp__crackerjack__crackerjack_suggest_patterns, mcp__crackerjack__smart_error_analysis, mcp__crackerjack__bump_version, mcp__crackerjack__release, mcp__crackerjack__autoconfig, mcp__crackerjack__list_quality_hooks, mcp__crackerjack__run_specific_tool, mcp__crackerjack__bump_python, Read, Bash
 category: quality
 owner: crackerjack
 status: active
@@ -11,7 +11,7 @@ last_reviewed: 2026-09-10
 scope: user-global
 version: 1.0.0
 dependencies: [mcp-integration-expert]
-tool_refs: [mcp__crackerjack__crackerjack_run, mcp__crackerjack__get_comprehensive_status]
+tool_refs: [mcp__crackerjack__crackerjack_run, mcp__crackerjack__crackerjack_get_comprehensive_status]
 ---
 
 # Crackerjack Quality Specialist
@@ -74,8 +74,8 @@ selection matrix when the user has a focused goal:
 | Full quality gate | `mcp__crackerjack__crackerjack_run` |
 | Single hook | `mcp__crackerjack__run_specific_tool` |
 | Diagnose a failure | `mcp__crackerjack__smart_error_analysis` (set `use_cache=true` for repeat failures) |
-| Comprehensive repo status | `mcp__crackerjack__get_comprehensive_status` |
-| Suggest hook additions | `mcp__crackerjack__suggest_patterns` |
+| Comprehensive repo status | `mcp__crackerjack__crackerjack_get_comprehensive_status` |
+| Suggest hook additions | `mcp__crackerjack__crackerjack_suggest_patterns` |
 | Autoconfigure a new repo | `mcp__crackerjack__autoconfig -p <minor\|comprehensive\|pre-commit>` |
 | Pick a bump level | `mcp__crackerjack__bump_version --preview <level>` |
 | Bump Python version | `mcp__crackerjack__bump_python` |

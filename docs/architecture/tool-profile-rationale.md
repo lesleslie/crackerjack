@@ -38,7 +38,7 @@ See `2026-08-18-mcp-tool-profile-adoption-design` for the full plan.
   disabled, so the tool is absent from STANDARD on default configs. We
   exclude it from STANDARD to avoid surprising callers who import the
   tool name without enabling the publisher.
-- **`progress_tools`** registers `get_job_progress` + `session_management`,
+- **`progress_tools`** registers `crackerjack_get_job_progress` + `crackerjack_session_management`,
   which write `current_session.json` and `job-<id>.json` to disk. The
   statefulness creates local-file side effects that don't belong in a
   read-mostly STANDARD profile (operators who only need exec/utility/doc

@@ -21,8 +21,8 @@ def _resolve_local_search_root() -> Path:
 
     Prefers the MCP server context's configured ``project_path`` (set in
     ``crackerjack/mcp/server_core.py:_setup_server_context``), then falls back
-    to ``Path.cwd()``. This keeps ``search_code`` deterministic regardless of
-    which working directory the MCP client launched from.
+    to ``Path.cwd()``. This keeps ``crackerjack_search_code`` deterministic
+    regardless of which working directory the MCP client launched from.
     """
     try:
         ctx = get_context()
@@ -71,7 +71,7 @@ def _create_error_response(message: str, **extra: t.Any) -> str:
 def _register_get_ide_diagnostics_tool(mcp_app: t.Any) -> None:
 
     @mcp_app.tool()
-    async def get_ide_diagnostics(
+    async def crackerjack_get_ide_diagnostics(
         file_path: str,
         errors_only: bool = False,
     ) -> str:
@@ -224,7 +224,7 @@ def _local_regex_search(
 def _register_search_code_tool(mcp_app: t.Any) -> None:
 
     @mcp_app.tool()
-    async def search_code(
+    async def crackerjack_search_code(
         pattern: str,
         file_pattern: str | None = None,
     ) -> str:
@@ -233,7 +233,7 @@ def _register_search_code_tool(mcp_app: t.Any) -> None:
         Returns a JSON string with `results` (the matches), `count`, `status`
         ("ok" when there are matches, "degraded" when there are none), and
         `source` ("pycharm_adapter" or "local_fallback"). Do NOT use for
-        meaning-based lookup — use `search_semantic` for that; this tool
+        meaning-based lookup — use `crackerjack_search_semantic` for that; this tool
         matches literal regular expressions only. Fails soft: when the PyCharm
         connection is unavailable it falls back to a local file scan, and a
         pattern that matches nothing returns `count` 0 with `status`
@@ -292,7 +292,7 @@ def _register_search_code_tool(mcp_app: t.Any) -> None:
 def _register_get_symbol_info_tool(mcp_app: t.Any) -> None:
 
     @mcp_app.tool()
-    async def get_symbol_info(
+    async def crackerjack_get_symbol_info(
         symbol_name: str,
         include_usages: bool = False,
     ) -> str:
@@ -324,7 +324,7 @@ def _register_get_symbol_info_tool(mcp_app: t.Any) -> None:
 def _register_find_usages_tool(mcp_app: t.Any) -> None:
 
     @mcp_app.tool()
-    async def find_usages(
+    async def crackerjack_find_usages(
         symbol_name: str,
         file_path: str | None = None,
         limit: int = 50,
@@ -367,7 +367,7 @@ def _register_pycharm_health_tool(mcp_app: t.Any) -> None:
         ("healthy", or "degraded" when the circuit breaker is open after
         repeated failures). A probe that raises returns `success` false with
         an `error` field. Do NOT use to diagnose a specific file — use
-        `get_ide_diagnostics` for that; this tool reports connection state
+        `crackerjack_get_ide_diagnostics` for that; this tool reports connection state
         only. Side effect: none; probes the connection only.
         """
         # Implements: REQ-MCPTD-001

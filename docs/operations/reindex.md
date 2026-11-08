@@ -11,7 +11,7 @@ topic: operations
 
 # Semantic Search Index — Reindex Procedure
 
-When `mcp__crackerjack__search_semantic` returns `status="degraded"` with
+When `mcp__crackerjack__crackerjack_search_semantic` returns `status="degraded"` with
 `hint` mentioning this doc, the on-disk semantic index at
 `.crackerjack/semantic_index.db` is empty. This file documents the
 supported procedure to populate it.
@@ -19,10 +19,10 @@ supported procedure to populate it.
 ## Why the index is empty
 
 The crackerjack project does **not** auto-index a workspace. The semantic
-search surface (`search_semantic`) is a thin wrapper over a SQLite-backed
+search surface (`crackerjack_search_semantic`) is a thin wrapper over a SQLite-backed
 `VectorStore` at `<cwd>/.crackerjack/semantic_index.db` (one file per
 working directory). Nothing writes to that file until an operator calls
-`index_file_semantic` (MCP) or `crackerjack index <path>` (CLI).
+`crackerjack_index_file_semantic` (MCP) or `crackerjack index <path>` (CLI).
 
 The fallback design: crackerjack is a quality-gate tool that runs over the
 caller's repo on demand. There is no cron job, no startup-time reindex, no
@@ -34,7 +34,7 @@ discovery scan. Every index entry is explicitly placed.
 
 ```python
 # from any MCP client (Claude Code, etc.)
-await client.call_tool("index_file_semantic", {
+await client.call_tool("crackerjack_index_file_semantic", {
     "file_path": "/abs/path/to/file.py",
 })
 ```
@@ -44,7 +44,7 @@ into the current working directory's index. Repeat per file.
 
 ### Option B — MCP tool, walk a directory
 
-The MCP tool `index_file_semantic` indexes one file. To walk a directory,
+The MCP tool `crackerjack_index_file_semantic` indexes one file. To walk a directory,
 loop from the caller side:
 
 ```python
@@ -53,7 +53,7 @@ from pathlib import Path
 for py_file in Path("crackerjack").rglob("*.py"):
     if ".venv" in py_file.parts or "node_modules" in py_file.parts:
         continue
-    await client.call_tool("index_file_semantic", {"file_path": str(py_file)})
+    await client.call_tool("crackerjack_index_file_semantic", {"file_path": str(py_file)})
 ```
 
 ### Option C — CLI: `crackerjack index`
@@ -69,9 +69,9 @@ file, printing per-file chunk counts.
 
 ## Verifying the index is populated
 
-After a reindex, the `status` field of `search_semantic` responses should
+After a reindex, the `status` field of `crackerjack_search_semantic` responses should
 flip from `"degraded"` to `"ok"`. The MCP tool
-`mcp__crackerjack__get_semantic_stats` reports `total_files` and
+`mcp__crackerjack__crackerjack_get_semantic_stats` reports `total_files` and
 `total_chunks` directly.
 
 ## Operational notes

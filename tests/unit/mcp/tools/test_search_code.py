@@ -1,4 +1,4 @@
-"""Wire-envelope regression tests for ``mcp__crackerjack__search_code``.
+"""Wire-envelope regression tests for ``mcp__crackerjack__crackerjack_search_code``.
 
 Per REQ-003 + REQ-012 of
 ``mahavishnu/docs/plans/2026-10-09-bodai-search-infrastructure-fix.md``,
@@ -88,7 +88,7 @@ class TestSearchCodeWireEnvelope:
 
         async with Client(app) as client:
             result = await client.call_tool(
-                "search_code",
+                "crackerjack_search_code",
                 {"pattern": "def test_", "file_pattern": "*.py"},
             )
 
@@ -120,7 +120,7 @@ class TestSearchCodeWireEnvelope:
 
         async with Client(app) as client:
             result = await client.call_tool(
-                "search_code",
+                "crackerjack_search_code",
                 {
                     "pattern": non_matching,
                     "file_pattern": "*.py",
@@ -143,7 +143,7 @@ class TestSearchCodeWireEnvelope:
 
         async with Client(app) as client:
             result = await client.call_tool(
-                "search_code",
+                "crackerjack_search_code",
                 {"pattern": "def test_", "file_pattern": "*.py"},
             )
 

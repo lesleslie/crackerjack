@@ -360,7 +360,7 @@ Following our **Clean Code Philosophy** where every line of code is a liability:
   - Use standard orchestrator for MCP compatibility (not advanced orchestrator)
   - WebSocket progress reporting requires proper iteration boundaries
   - Real-time progress available at `ws://localhost:8675/ws/progress/{job_id}`
-  - MCP tools: `execute_crackerjack`, `get_job_progress`, `get_comprehensive_status`
+  - MCP tools: `execute_crackerjack`, `crackerjack_get_job_progress`, `crackerjack_get_comprehensive_status`
 
 ## AI Assistant Self-Maintenance
 

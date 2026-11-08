@@ -114,8 +114,8 @@ async def test_standard_has_core_execution_utility_doc(
     assert "crackerjack_doc_frontmatter_validate" in names
     # FULL-only tools dropped
     assert "publish_to_eventbridge" not in names
-    assert "session_management" not in names
+    assert "crackerjack_session_management" not in names
     assert "pycharm_health" not in names
-    assert "search_semantic" not in names
+    assert "crackerjack_search_semantic" not in names
     # discover_tools is always registered by the W0 helper
     assert "discover_tools" in names

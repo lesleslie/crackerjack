@@ -108,7 +108,7 @@ _STATIC_AGENTS: list[dict[str, Any]] = [
         "scope": "user-global",
         "tool_refs": [
             "mcp__crackerjack__crackerjack_run",
-            "mcp__crackerjack__get_comprehensive_status",
+            "mcp__crackerjack__crackerjack_get_comprehensive_status",
         ],
         "dependencies": ["mcp-integration-expert"],
     },

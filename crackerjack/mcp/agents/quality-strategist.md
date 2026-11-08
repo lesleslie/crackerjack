@@ -3,7 +3,7 @@ name: quality-strategist
 title: Quality Strategy Advisor
 description: Use proactively when the user asks "what should our quality floor be?", "which hooks should we enable?", or "how strict should mypy/pyright be for this project?". Decides min-score thresholds and hook ordering for projects before invoking Crackerjack.
 model: sonnet
-allowed-tools: mcp__crackerjack__crackerjack_run, mcp__crackerjack__autoconfig, mcp__crackerjack__list_quality_hooks, mcp__crackerjack__suggest_patterns, Read, Bash
+allowed-tools: mcp__crackerjack__crackerjack_run, mcp__crackerjack__autoconfig, mcp__crackerjack__list_quality_hooks, mcp__crackerjack__crackerjack_suggest_patterns, Read, Bash
 category: strategy
 owner: crackerjack
 status: active

@@ -1308,8 +1308,8 @@ under `[tool.crackerjack.jinja]` in `pyproject.toml` (six keys:
 `block_start` / `block_end` / `variable_start` / `variable_end` /
 `comment_start` / `comment_end`).
 
-MCP exposure: `check_web_lint(project_root)` returns the resolved hook
-metadata (read-only); `format_jinja_templates(projects, dry_run=True)`
+MCP exposure: `crackerjack_check_web_lint(project_root)` returns the resolved hook
+metadata (read-only); `crackerjack_format_jinja_templates(projects, dry_run=True)`
 previews / applies Tier 1 rewrites (mutation; `dry_run` defaults to
 `True`). See `docs/MCP_TOOLS_SPECIFICATION.md` §3.6 (`language_tools`).
 
@@ -1444,7 +1444,7 @@ keyring set https://upload.pypi.org/legacy/ __token__
 **Job Execution & Monitoring:**
 
 - **execute_crackerjack\`**: Start iterative auto-fixing with job tracking
-- **get_job_progress\`**: Real-time progress for running jobs
+- **crackerjack_get_job_progress\`**: Real-time progress for running jobs
 - **run_crackerjack_stage\`**: Execute specific quality stages (fast, comprehensive, tests)
 
 **Error Analysis:**
@@ -1454,9 +1454,9 @@ keyring set https://upload.pypi.org/legacy/ __token__
 
 **Session Management:**
 
-- **get_stage_status\`**: Check current status of quality stages
-- **get_next_action\`**: Get optimal next action based on session state
-- **session_management\`**: Manage sessions with checkpoints and resume capability
+- **crackerjack_get_stage_status\`**: Check current status of quality stages
+- **crackerjack_get_next_action\`**: Get optimal next action based on session state
+- **crackerjack_session_management\`**: Manage sessions with checkpoints and resume capability
 
 ### Slash Commands
 
@@ -1807,7 +1807,7 @@ python -m crackerjack start
 }
 ```
 
-**Available tools:** `execute_crackerjack` (the primary entry point), `run_crackerjack_stage`, `get_job_progress`, `get_stage_status`, `smart_error_analysis`, `analyze_crackerjack`, `get_next_action`, `session_management`. The Workflow tool (`.claude/workflows/ai-fix-loop.js`) handles auto-fix dispatch.
+**Available tools:** `execute_crackerjack` (the primary entry point), `run_crackerjack_stage`, `crackerjack_get_job_progress`, `crackerjack_get_stage_status`, `smart_error_analysis`, `analyze_crackerjack`, `crackerjack_get_next_action`, `crackerjack_session_management`. The Workflow tool (`.claude/workflows/ai-fix-loop.js`) handles auto-fix dispatch.
 
 ## Complementary Tools
 
@@ -1955,7 +1955,7 @@ python -m crackerjack start --verbose
 
 - **GitHub Issues**: [Report bugs](https://github.com/lesleslie/crackerjack/issues)
 - **Command Help**: `python -m crackerjack run --help`
-- **MCP Tools**: Use `execute_crackerjack` to invoke the workflow; `get_next_action` returns a state-machine hint when stuck
+- **MCP Tools**: Use `execute_crackerjack` to invoke the workflow; `crackerjack_get_next_action` returns a state-machine hint when stuck
 
 ## Contributing
 

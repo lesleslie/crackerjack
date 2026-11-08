@@ -219,11 +219,11 @@ async def _handle_session_management(
 
 def register_progress_tools(mcp_app: t.Any) -> None:
     @mcp_app.tool()
-    async def get_job_progress(job_id: str) -> str:
+    async def crackerjack_get_job_progress(job_id: str) -> str:
         return _handle_get_job_progress(job_id)
 
     @mcp_app.tool()
-    async def session_management(
+    async def crackerjack_session_management(
         action: str,
         checkpoint_name: str | None = None,
     ) -> str:

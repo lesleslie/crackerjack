@@ -42,8 +42,8 @@ Tools are organized into specialized modules:
 
 - **execute_crackerjack**: Start iterative auto-fixing with job tracking
 - **run_crackerjack_stage**: Execute specific quality stages (fast, comprehensive, tests)
-- **get_comprehensive_status**: Full project status including health metrics
-- **session_management**: Session lifecycle (start, checkpoint, resume, end)
+- **crackerjack_get_comprehensive_status**: Full project status including health metrics
+- **crackerjack_session_management**: Session lifecycle (start, checkpoint, resume, end)
 
 ### Execution Tools (`tools/execution_tools.py`)
 
@@ -60,13 +60,13 @@ Tools are organized into specialized modules:
 
 ### Progress Tools (`tools/progress_tools.py`)
 
-- **get_job_progress**: Real-time progress for running jobs
-- **get_stage_status**: Current status of quality stages
+- **crackerjack_get_job_progress**: Real-time progress for running jobs
+- **crackerjack_get_stage_status**: Current status of quality stages
 - Job metadata and completion tracking
 
 ### Intelligence Tools (`tools/intelligence_tools.py`)
 
-- **get_next_action**: Optimal next action based on session state
+- **crackerjack_get_next_action**: Optimal next action based on session state
 - **smart_error_analysis**: Advanced error analysis with context
 - Intelligent recommendations and fix suggestions
 
@@ -200,7 +200,7 @@ From Claude or other MCP clients:
 execute_crackerjack(command="test", ai_agent_mode=True, timeout=600)
 
 # Get job progress
-progress = get_job_progress(job_id="abc123")
+progress = crackerjack_get_job_progress(job_id="abc123")
 
 # Analyze errors with AI
 analysis = analyze_errors_with_caching(
@@ -208,7 +208,7 @@ analysis = analyze_errors_with_caching(
 )
 
 # Get smart recommendations
-action = get_next_action(session_id="xyz789")
+action = crackerjack_get_next_action(session_id="xyz789")
 ```
 
 ## Slash Commands
@@ -274,7 +274,7 @@ Typical MCP server performance:
 ## Best Practices
 
 1. **Use Job IDs**: Always track jobs by their UUIDs
-1. **Monitor Progress**: Use `get_job_progress` tool for job status
+1. **Monitor Progress**: Use `crackerjack_get_job_progress` tool for job status
 1. **Handle Errors**: Check job status and error messages
 1. **Cache Patterns**: Let error caching learn common issues
 1. **Session Management**: Use checkpoints for resumability
@@ -299,10 +299,10 @@ python -m crackerjack restart
 
 ```bash
 # Check job status
-get_job_progress(job_id="abc123")
+crackerjack_get_job_progress(job_id="abc123")
 
 # View comprehensive status
-get_comprehensive_status()
+crackerjack_get_comprehensive_status()
 
 # If necessary, restart server
 python -m crackerjack restart

@@ -34,7 +34,10 @@ async def execute_crackerjack_workflow(
     return {
         "job_id": job_id,
         "status": "running",
-        "message": "Execution started. Use get_job_progress(job_id) to monitor progress.",
+        "message": (
+            "Execution started. Use crackerjack_get_job_progress(job_id) "
+            "to monitor progress."
+        ),
         "timestamp": time.time(),
     }
 

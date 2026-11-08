@@ -88,7 +88,7 @@ class CrackerjackMCPClient:
         return response.json()
 
     async def get_project_status(self) -> dict:
-        payload = {"tool": "get_stage_status", "arguments": {}}
+        payload = {"tool": "crackerjack_get_stage_status", "arguments": {}}
 
         response = await self.client.post(f"{self.server_url} / execute", json=payload)
         return response.json()

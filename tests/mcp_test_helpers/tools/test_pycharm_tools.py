@@ -1,6 +1,7 @@
 """Integration tests for PyCharm MCP tools.
 
-Tests cover get_ide_diagnostics, search_code, get_symbol_info, find_usages,
+Tests cover crackerjack_get_ide_diagnostics, crackerjack_search_code,
+crackerjack_get_symbol_info, crackerjack_find_usages,
 and pycharm_health tools with mocked PyCharmMCPAdapter.
 
 Coverage includes:
@@ -256,7 +257,7 @@ class TestPyCharmMCPAdapterCaching:
 
 
 class TestGetIDEDiagnosticsTool:
-    """Tests for get_ide_diagnostics MCP tool."""
+    """Tests for crackerjack_get_ide_diagnostics MCP tool."""
 
     @pytest.fixture
     def mock_adapter(self) -> MagicMock:
@@ -398,7 +399,7 @@ class TestGetIDEDiagnosticsTool:
         file_path: str,
         errors_only: bool,
     ) -> str:
-        """Helper to call get_ide_diagnostics logic."""
+        """Helper to call crackerjack_get_ide_diagnostics logic."""
         try:
             problems = await adapter.get_file_problems(file_path, errors_only)
         except Exception as e:
@@ -433,7 +434,7 @@ class TestGetIDEDiagnosticsTool:
 
 
 class TestSearchCodeTool:
-    """Tests for search_code MCP tool."""
+    """Tests for crackerjack_search_code MCP tool."""
 
     @pytest.fixture
     def mock_adapter(self) -> MagicMock:
@@ -553,7 +554,7 @@ class TestSearchCodeTool:
         pattern: str,
         file_pattern: str | None,
     ) -> str:
-        """Helper to call search_code logic."""
+        """Helper to call crackerjack_search_code logic."""
         try:
             results = await adapter.search_regex(pattern, file_pattern)
         except Exception as e:
@@ -582,7 +583,7 @@ class TestSearchCodeTool:
 
 
 class TestGetSymbolInfoTool:
-    """Tests for get_symbol_info MCP tool."""
+    """Tests for crackerjack_get_symbol_info MCP tool."""
 
     @pytest.fixture
     def mock_adapter(self) -> MagicMock:
@@ -642,7 +643,7 @@ class TestGetSymbolInfoTool:
         adapter: MagicMock,
         symbol_name: str,
     ) -> str:
-        """Helper to call get_symbol_info logic."""
+        """Helper to call crackerjack_get_symbol_info logic."""
         health = await adapter.health_check()
         if not health.get("mcp_available"):
             return pycharm_tools._create_error_response(
@@ -659,7 +660,7 @@ class TestGetSymbolInfoTool:
 
 
 class TestFindUsagesTool:
-    """Tests for find_usages MCP tool."""
+    """Tests for crackerjack_find_usages MCP tool."""
 
     @pytest.fixture
     def mock_adapter(self) -> MagicMock:
@@ -718,7 +719,7 @@ class TestFindUsagesTool:
         file_path: str | None = None,
         limit: int = 50,
     ) -> str:
-        """Helper to call find_usages logic."""
+        """Helper to call crackerjack_find_usages logic."""
         health = await adapter.health_check()
         if not health.get("mcp_available"):
             return pycharm_tools._create_error_response(
@@ -909,10 +910,10 @@ class TestToolRegistration:
         pycharm_tools.register_pycharm_tools(mock_app)
 
         expected_tools = [
-            "get_ide_diagnostics",
-            "search_code",
-            "get_symbol_info",
-            "find_usages",
+            "crackerjack_get_ide_diagnostics",
+            "crackerjack_search_code",
+            "crackerjack_get_symbol_info",
+            "crackerjack_find_usages",
             "pycharm_health",
         ]
 
@@ -1032,7 +1033,7 @@ class TestEdgeCases:
         file_path: str,
         errors_only: bool,
     ) -> str:
-        """Helper to call get_ide_diagnostics logic."""
+        """Helper to call crackerjack_get_ide_diagnostics logic."""
         try:
             problems = await adapter.get_file_problems(file_path, errors_only)
         except Exception as e:
@@ -1071,7 +1072,7 @@ class TestEdgeCases:
         pattern: str,
         file_pattern: str | None,
     ) -> str:
-        """Helper to call search_code logic."""
+        """Helper to call crackerjack_search_code logic."""
         try:
             results = await adapter.search_regex(pattern, file_pattern)
         except Exception as e:

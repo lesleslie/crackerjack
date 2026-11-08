@@ -372,7 +372,7 @@ class TestRegisterSemanticTools:
         assert mcp_app.tool.call_count == 6
 
     def test_registers_index_file_tool(self) -> None:
-        """Test registers index_file_semantic tool."""
+        """Test registers crackerjack_index_file_semantic tool."""
         mcp_app = MagicMock()
 
         register_semantic_tools(mcp_app)
@@ -380,7 +380,7 @@ class TestRegisterSemanticTools:
         assert mcp_app.tool.called
 
     def test_registers_search_semantic_tool(self) -> None:
-        """Test registers search_semantic tool."""
+        """Test registers crackerjack_search_semantic tool."""
         mcp_app = MagicMock()
 
         register_semantic_tools(mcp_app)
@@ -388,7 +388,7 @@ class TestRegisterSemanticTools:
         assert mcp_app.tool.called
 
     def test_registers_get_semantic_stats_tool(self) -> None:
-        """Test registers get_semantic_stats tool."""
+        """Test registers crackerjack_get_semantic_stats tool."""
         mcp_app = MagicMock()
 
         register_semantic_tools(mcp_app)
@@ -396,7 +396,7 @@ class TestRegisterSemanticTools:
         assert mcp_app.tool.called
 
     def test_registers_remove_file_tool(self) -> None:
-        """Test registers remove_file_from_semantic_index tool."""
+        """Test registers crackerjack_remove_file_from_semantic_index tool."""
         mcp_app = MagicMock()
 
         register_semantic_tools(mcp_app)
@@ -404,7 +404,7 @@ class TestRegisterSemanticTools:
         assert mcp_app.tool.called
 
     def test_registers_get_embeddings_tool(self) -> None:
-        """Test registers get_embeddings tool."""
+        """Test registers crackerjack_get_embeddings tool."""
         mcp_app = MagicMock()
 
         register_semantic_tools(mcp_app)
@@ -412,7 +412,7 @@ class TestRegisterSemanticTools:
         assert mcp_app.tool.called
 
     def test_registers_calculate_similarity_tool(self) -> None:
-        """Test registers calculate_similarity_semantic tool."""
+        """Test registers crackerjack_calculate_similarity_semantic tool."""
         mcp_app = MagicMock()
 
         register_semantic_tools(mcp_app)

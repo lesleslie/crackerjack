@@ -52,7 +52,7 @@ class TestRegisterExecutionTools:
             "execute_crackerjack",
             "smart_error_analysis",
             "init_crackerjack",
-            "suggest_agents",
+            "crackerjack_suggest_agents",
         ):
             assert name in registered
 
@@ -526,7 +526,7 @@ class TestInitCrackerjackTool:
 @pytest.mark.unit
 class TestSuggestAgentsTool:
     def test_success(self) -> None:
-        tool = _captured_tool("suggest_agents")
+        tool = _captured_tool("crackerjack_suggest_agents")
         out = json.loads(
             tool("improve security and fix imports", "python", ""),
         )
@@ -535,7 +535,7 @@ class TestSuggestAgentsTool:
         assert "SecurityAgent" in names or "ImportOptimizationAgent" in names
 
     def test_exception(self) -> None:
-        tool = _captured_tool("suggest_agents")
+        tool = _captured_tool("crackerjack_suggest_agents")
         with patch(
             "crackerjack.mcp.tools.execution_tools._generate_agent_recommendations",
             side_effect=RuntimeError("x"),

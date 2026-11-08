@@ -127,7 +127,7 @@ python -m crackerjack --start-mcp-server
 The platform includes an MCP (Model Context Protocol) server for AI agent integration:
 
 - WebSocket-based with real-time progress streaming
-- Available tools: execute_crackerjack, get_job_progress, analyze_errors, etc.
+- Available tools: execute_crackerjack, crackerjack_get_job_progress, analyze_errors, etc.
 - Configurable endpoints at ws://localhost:8675
 
 ## Troubleshooting

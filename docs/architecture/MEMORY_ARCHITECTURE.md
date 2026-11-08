@@ -39,7 +39,7 @@ ______________________________________________________________________
 Crackerjack persists state across **eight logical stores**: five SQLite
 files (one of them currently broken on the shipped schema), one JSON
 file per workflow checkpoint, one JSON file for the in-process
-`StateManager` (used by `session_management`), and an in-process
+`StateManager` (used by `crackerjack_session_management`), and an in-process
 `ErrorCache` (error patterns keyed by Ruff/Pyright/Bandit signatures). The
 single anchor for cross-store joins is the **project path** plus the
 **Crackerjack version** (`crackerjack_version: str` is on every
@@ -57,7 +57,7 @@ EventBridge envelope).
 | **fix-strategy strategy_effectiveness mirror** | SQLite (same DB) | `agent_strategy` PK | same as fix-attempts | Tracked alongside fix_attempts; updated by `FixStrategyStorage.update_strategy_effectiveness` (called from `crackerjack/skills/coverage.py` and after `record_attempt`). |
 | **Oneiric workflow checkpoints** | SQLite (managed by `oneiric`) | `workflow_key` (composite of DAG run id + workflow name) | `.crackerjack/oneiric_cache/workflow_checkpoints.sqlite` (fallback to `${tempdir}/crackerjack/oneiric_cache/`) | `crackerjack/runtime/oneiric_workflow.py::_resolve_workflow_checkpoints_path` resolves; `WorkflowPipeline._clear_oneiric_cache` wipes `workflow_key="crackerjack"` runs at the start of every `run_complete_workflow` |
 | **AI fix error pattern cache** | JSON file (in-process dict + atomic write) | `error_hash` (sha256 of pattern) | `~/.cache/crackerjack-mcp/error_patterns.json` + `fix_results.json` (configurable via `MCPServerConfig.cache_dir`) | `crackerjack/mcp/cache.py::ErrorCache` — extracted from Ruff/Pyright/Bandit output via `_extract_ruff_info` / `_extract_pyright_info` / `_extract_bandit_info`; consumed by `crackerjack/mcp/tools/error_analyzer.py::analyze_errors_with_caching` (via `smart_error_analysis`). The same JSON file backs `crackerjack/mcp/state.py::StateManager` (session / checkpoint / issue history). |
-| **session / checkpoint state** | JSON file (in-process dict + `BatchedStateSaver`) | `job_id` (UUID) | `~/.cache/crackerjack-mcp/current_session.json` + `checkpoints/<name>.json` (same dir as cache) | `crackerjack/mcp/state.py` — `StateManager.start_session`, `save_checkpoint`, `complete_session`; `BatchedStateSaver` debounces writes 1s. Read via `get_job_progress`, `session_management`. |
+| **session / checkpoint state** | JSON file (in-process dict + `BatchedStateSaver`) | `job_id` (UUID) | `~/.cache/crackerjack-mcp/current_session.json` + `checkpoints/<name>.json` (same dir as cache) | `crackerjack/mcp/state.py` — `StateManager.start_session`, `save_checkpoint`, `complete_session`; `BatchedStateSaver` debounces writes 1s. Read via `crackerjack_get_job_progress`, `crackerjack_session_management`. |
 | **In-process skill registry** | Python `dict` (no disk persistence) | `skill_id` (`"skill_<8hex>"` for `AgentSkill`, named for `MCPSkill`) | lives in `_skill_registries` module global in `crackerjack/mcp/tools/skill_tools.py` | Three registries: `AgentSkillRegistry` (`crackerjack/skills/agent_skills.py`), `MCPSkillRegistry` (`crackerjack/skills/mcp_skills.py`), `HybridSkillRegistry` (`crackerjack/skills/hybrid_skills.py`). Re-initialized on every MCP server start via `crackerjack/skills/registration.py::register_all_skills`. |
 | **CI patterns** | JSON file | `pattern_id` (sha256-derived from error line) | `.crackerjack/ci_patterns.json` | `crackerjack/ci_feedback.py::CIFeedbackAnalyzer` — pattern catalog + fix suggestions; not on the MCP surface but consumed by `crackerjack run` exit-handling. |
 
@@ -117,7 +117,7 @@ erDiagram
 | `workflow_checkpoints` | Oneiric workflow_bridge (resumable DAG) | `register_crackerjack_workflow` | `crackerjack` workflow_key is wiped by `WorkflowPipeline._clear_oneiric_cache` at the start of every `run_complete_workflow` |
 | `error_patterns` | `analyze_errors_with_caching` (via `smart_error_analysis`) | `ErrorCache.add_pattern` (extracted from Ruff/Pyright/Bandit output) | `cleanup_old_patterns(older_than_days)` exists but is not scheduled |
 | `fix_results` | `ErrorCache.get_fix_success_rate(pattern_id)` | `ErrorCache.add_fix_result` after each autofix | Same as `error_patterns` |
-| `session_state` | `get_job_progress`, `session_management` (start/checkpoint/complete/reset) | `StateManager.start_session`, `add_issue`, `save_checkpoint` | `BatchedStateSaver` debounces writes 1s |
+| `session_state` | `crackerjack_get_job_progress`, `crackerjack_session_management` (start/checkpoint/complete/reset) | `StateManager.start_session`, `add_issue`, `save_checkpoint` | `BatchedStateSaver` debounces writes 1s |
 | `agent_skills` (registry) | `find_best_skill`, `get_skills_for_issue`, `agent_performance_analysis` | `initialize_skills` at MCP server startup (calls `register_all_skills` → `register_agent_skills`) | In-process only; no persistence across restarts |
 | `mcp_skills` (registry) | `search_skills`, `list_skills`, `get_skill_statistics` | Same `initialize_skills` call; reads from `MCP_SKILL_GROUPS` literal in `crackerjack/skills/mcp_skills.py` | Same as `agent_skills` |
 
@@ -149,7 +149,7 @@ ______________________________________________________________________
 
 Crackerjack's MCP write surface is **medium-sized but gated by lifecycle**.
 Writes flow through three layers: (1) directly-mutating tools
-(`init_crackerjack`, `session_management`, `index_*`, `remove_*`,
+(`init_crackerjack`, `crackerjack_session_management`, `index_*`, `remove_*`,
 `record_*`); (2) tools that write as a side-effect of running hooks
 (`execute_crackerjack`, `run_crackerjack_stage`, `smart_error_analysis`,
 `analyze_errors`); (3) tools that write via in-process registries
@@ -180,8 +180,8 @@ Each is a separate `_register_*_tools` function imported from
 | `validate_claude_md(args, kwargs)` | `utility_tools` | Hook during `crackerjack init` | May call `InitializationService.initialize_project_full` (writes `CLAUDE.md`) if `update=true` is in args and validation fails |
 | `crackerjack_doc_frontmatter_validate(pkg_path, strict, allow_nonstandard, validate_links, store)` | `doc_tools` | `crackerjack init` documentation phase | May write to `store` (defaults to in-memory `Dict`; if `store="path"`, writes to that path) |
 | `publish_to_eventbridge(topic, payload, async_callback=False)` | `eventbridge_tools` | Mahavishnu `bodai_subscriber` integration via the `enabled=true` toggle in `crackerjack.yaml` | None locally — the publisher is `set_eventbridge_publisher(publisher)` at startup; when wired, the publisher (a `Oneiric EventBridge` instance) writes to the Bodai EventBridge (Mahavishnu consumes from there). When `enabled=false` (default in `settings/crackerjack.yaml:295`), the tool returns `{"status": "no_publisher"}` and writes nothing. |
-| `get_job_progress(job_id)` | `progress_tools` | Operator / Mahavishnu status surface | Writes `progress_dir/job-<id>.json` (atomic write via `_update_progress`) |
-| `session_management(action, checkpoint_name=None)` | `progress_tools` | Operator / state resume | Calls `StateManager.start_session` / `save_checkpoint` / `complete_session` / `reset_session` — writes `current_session.json` + `<name>.json` |
+| `crackerjack_get_job_progress(job_id)` | `progress_tools` | Operator / Mahavishnu status surface | Writes `progress_dir/job-<id>.json` (atomic write via `_update_progress`) |
+| `crackerjack_session_management(action, checkpoint_name=None)` | `progress_tools` | Operator / state resume | Calls `StateManager.start_session` / `save_checkpoint` / `complete_session` / `reset_session` — writes `current_session.json` + `<name>.json` |
 
 ### Skill / coverage write surface
 
@@ -200,12 +200,12 @@ Each is a separate `_register_*_tools` function imported from
 
 | Tool | Group | What it writes |
 |------|-------|-----------------|
-| `index_file_semantic(file_path, config_json="")` | `semantic_tools` | `crackerjack/.crackerjack/semantic_index.db` — `embeddings` row + `file_tracking` row (one chunk per `chunk_size=512` lines of the file) |
-| `remove_file_from_semantic_index(file_path, config_json="")` | `semantic_tools` | Deletes rows from `embeddings` and `file_tracking` for that file |
-| `search_semantic(query, max_results, min_similarity, file_types, config_json)` | `semantic_tools` | None (read-only vector search) |
-| `get_semantic_stats(config_json="")` | `semantic_tools` | None |
-| `get_embeddings(texts, config_json="")` | `semantic_tools` | None (calls `EmbeddingService.generate_embedding` or `generate_embeddings_batch`) |
-| `calculate_similarity_semantic(embedding1, embedding2, config_json="")` | `semantic_tools` | None |
+| `crackerjack_index_file_semantic(file_path, config_json="")` | `semantic_tools` | `crackerjack/.crackerjack/semantic_index.db` — `embeddings` row + `file_tracking` row (one chunk per `chunk_size=512` lines of the file) |
+| `crackerjack_remove_file_from_semantic_index(file_path, config_json="")` | `semantic_tools` | Deletes rows from `embeddings` and `file_tracking` for that file |
+| `crackerjack_search_semantic(query, max_results, min_similarity, file_types, config_json)` | `semantic_tools` | None (read-only vector search) |
+| `crackerjack_get_semantic_stats(config_json="")` | `semantic_tools` | None |
+| `crackerjack_get_embeddings(texts, config_json="")` | `semantic_tools` | None (calls `EmbeddingService.generate_embedding` or `generate_embeddings_batch`) |
+| `crackerjack_calculate_similarity_semantic(embedding1, embedding2, config_json="")` | `semantic_tools` | None |
 | `index_git_history(days_back, repository_path="")` | `git_semantic_tools` | `embeddings` + `file_tracking` (one row per git event) |
 | `search_git_history(query, limit, days_back, repository_path="")` | `git_semantic_tools` | None (read-only semantic search over git events) |
 | `find_workflow_patterns(pattern_description, days_back, min_frequency, repository_path="")` | `git_semantic_tools` | None |
@@ -217,7 +217,7 @@ Each is a separate `_register_*_tools` function imported from
 |------|-------|-----------------|
 | `agent_performance_analysis()` | `intelligence_tool_registry` | None (read-only; pulls `learning_system.get_learning_summary` + `orchestrator.get_execution_stats`) |
 | `execute_smart_task(...)` | `intelligence_tool_registry` | Writes `fix_attempts` (via `_record_fix_attempt` after every agent) |
-| `get_comprehensive_status()` | `monitoring_tools` | None — but `get_filtered_status(components="jobs")` reads `progress_dir/*.json` |
+| `crackerjack_get_comprehensive_status()` | `monitoring_tools` | None — but `crackerjack_get_filtered_status(components="jobs")` reads `progress_dir/*.json` |
 | `query_local_traces(task_class, system_id, start_time, end_time, limit, dry_run)` | `otel_tools` | None — proxies to Akosha MCP `query_local_traces` over HTTP; writes nothing locally |
 | `get_cross_project_git_dashboard(...)` / `get_repository_health(...)` / `get_velocity_comparison(...)` / `get_cross_project_patterns(...)` | (moved to `crackerjack-mahavishnu-git-analytics` MCP server 2026-09-09) | None — see `crackerjack/mahavishnu/mcp/tools/git_analytics.py` for the live surface; `mahavishnu_tools.py` was removed |
 | `create_workspace(...)` / `list_workspaces(...)` / `get_workspace_info(...)` / `remove_workspace(...)` | (removed 2026-09-09 — workspace concept obsolete in favor of native git worktrees) | None — `workspace_tools.py` was removed; see §9.1 removal log in `MCP_TOOLS_SPECIFICATION.md` |
@@ -310,7 +310,7 @@ ______________________________________________________________________
 The Crackerjack read surface is **large and grouped by access pattern**.
 The hot path is `execute_crackerjack` / `run_crackerjack_stage` (called
 by Mahavishnu workers on every dispatch), followed by the monitoring
-cluster (`get_comprehensive_status`, `get_server_stats`) for dashboards.
+cluster (`crackerjack_get_comprehensive_status`, `crackerjack_get_server_stats`) for dashboards.
 
 ### Hot-path execution + quality
 
@@ -328,31 +328,31 @@ cluster (`get_comprehensive_status`, `get_server_stats`) for dashboards.
 | `get_agent_recommendation(task_description, context_type, include_analysis)` | Same | Suggest (don't run) the best agent |
 | `intelligence_system_status()` | Same | Operator dashboard |
 | `agent_performance_analysis()` | `learning_system._learning_insights`, `orchestrator.get_execution_stats` | Per-agent effectiveness rollup |
-| `get_comprehensive_status(verbosity, client_id, client_ip)` | `progress_dir/*.json`, `state_manager`, `server_manager` (process scan), `agent_suggestions` from `_suggest_agent_for_context` | Mahavishnu `ecosystem_status` consumer + operator dashboard |
-| `get_filtered_status(components)` | Same, filtered | Lightweight dashboards |
-| `get_server_stats()` | Same | Minimal liveness snapshot |
-| `get_stage_status()` | `state_manager.stages` | Fine-grained stage status |
-| `get_next_action()` | Same | State-machine next-step hint |
-| `list_slash_commands()` | Static dict | Self-description |
+| `crackerjack_get_comprehensive_status(verbosity, client_id, client_ip)` | `progress_dir/*.json`, `state_manager`, `server_manager` (process scan), `agent_suggestions` from `_suggest_agent_for_context` | Mahavishnu `ecosystem_status` consumer + operator dashboard |
+| `crackerjack_get_filtered_status(components)` | Same, filtered | Lightweight dashboards |
+| `crackerjack_get_server_stats()` | Same | Minimal liveness snapshot |
+| `crackerjack_get_stage_status()` | `state_manager.stages` | Fine-grained stage status |
+| `crackerjack_get_next_action()` | Same | State-machine next-step hint |
+| `crackerjack_list_slash_commands()` | Static dict | Self-description |
 
 ### Code search + IDE integration
 
 | Tool | Reads | Use when |
 |------|-------|----------|
-| `search_code(pattern, file_pattern=None)` | `PyCharmMCPAdapter.search_regex` (returns `SearchResult[]`); errors when PyCharm MCP is not running → `"MCP server not connected"` | Cross-IDE regex search |
-| `get_ide_diagnostics(file_path, errors_only=False)` | `PyCharmMCPAdapter.get_file_problems` | Inline IDE problem pull |
-| `get_symbol_info(symbol_name, include_usages=False)` | PyCharm MCP — **not yet implemented**, always returns `status: not_implemented` (see [Contract 5.9](#contract-59--crackerjack-pycharm-symbol_info-and-find_usages-tools-are-stubs)) | Symbol-level queries (intentionally limited) |
-| `find_usages(symbol_name, file_path=None, limit=50)` | Same as above (stub) | Reference lookups (intentionally limited) |
+| `crackerjack_search_code(pattern, file_pattern=None)` | `PyCharmMCPAdapter.search_regex` (returns `SearchResult[]`); errors when PyCharm MCP is not running → `"MCP server not connected"` | Cross-IDE regex search |
+| `crackerjack_get_ide_diagnostics(file_path, errors_only=False)` | `PyCharmMCPAdapter.get_file_problems` | Inline IDE problem pull |
+| `crackerjack_get_symbol_info(symbol_name, include_usages=False)` | PyCharm MCP — **not yet implemented**, always returns `status: not_implemented` (see [Contract 5.9](#contract-59--crackerjack-pycharm-symbol_info-and-crackerjack_find_usages-tools-are-stubs)) | Symbol-level queries (intentionally limited) |
+| `crackerjack_find_usages(symbol_name, file_path=None, limit=50)` | Same as above (stub) | Reference lookups (intentionally limited) |
 | `pycharm_health()` | `PyCharmMCPAdapter.health_check` | PyCharm MCP connection check (returns `status: healthy | degraded`) |
 | `search_git_history(query, limit, days_back, repository_path="")` | `GitSemanticSearchConfig` + `embeddings` rows for git events | "When was this last touched?" — semantic over commit messages + diffs |
 | `find_workflow_patterns(pattern_description, days_back, min_frequency, repository_path="")` | Same + pattern frequency | Detect recurring patterns across commits |
 | `recommend_git_practices(focus_area, days_back, repository_path="")` | Same, grouped by `focus_area` | Coaching recommendations |
 | `index_git_history(days_back, repository_path="")` | `git log` over the window | Build the git-events semantic index |
 | `query_local_traces(task_class, system_id, start_time, end_time, limit, dry_run)` | Akosha MCP `query_local_traces` over HTTP | Cross-component OTel trace recall |
-| `search_semantic(query, max_results, min_similarity, file_types, config_json="")` | `VectorStore.search` (TF-IDF or sentence-transformers on `crackerjack/.crackerjack/semantic_index.db`) | Natural-language code search |
-| `get_semantic_stats(config_json="")` | Same | Index coverage |
-| `get_embeddings(texts, config_json="")` | `EmbeddingService` (one-off, no DB write) | Custom embedding generation |
-| `calculate_similarity_semantic(embedding1, embedding2, config_json="")` | Same | Custom similarity scoring |
+| `crackerjack_search_semantic(query, max_results, min_similarity, file_types, config_json="")` | `VectorStore.search` (TF-IDF or sentence-transformers on `crackerjack/.crackerjack/semantic_index.db`) | Natural-language code search |
+| `crackerjack_get_semantic_stats(config_json="")` | Same | Index coverage |
+| `crackerjack_get_embeddings(texts, config_json="")` | `EmbeddingService` (one-off, no DB write) | Custom embedding generation |
+| `crackerjack_calculate_similarity_semantic(embedding1, embedding2, config_json="")` | Same | Custom similarity scoring |
 
 ### Skill discovery + utilities
 
@@ -373,8 +373,8 @@ cluster (`get_comprehensive_status`, `get_server_stats`) for dashboards.
 | `config_crackerjack(args, kwargs)` | `CrackerjackSettings` | Settings introspection |
 | `analyze_crackerjack(args, kwargs)` | None (mock) | Currently a stub — see [Contract 5.6](#contract-56--analyze_crackerjack-is-mocked) |
 | `validate_claude_md(args, kwargs)` | `CLAUDE.md` | Operator validation |
-| `get_job_progress(job_id)` | `progress_dir/job-<id>.json` | Watch a running job |
-| `session_management(action, checkpoint_name)` | `StateManager` (in-process + JSON) | Session lifecycle |
+| `crackerjack_get_job_progress(job_id)` | `progress_dir/job-<id>.json` | Watch a running job |
+| `crackerjack_session_management(action, checkpoint_name)` | `StateManager` (in-process + JSON) | Session lifecycle |
 | `publish_to_eventbridge(topic, payload, async_callback)` | Oneiric EventBridge publisher (set at startup) | Cross-component event emission |
 
 ### Read groups by access pattern
@@ -386,13 +386,13 @@ flowchart LR
         Q2[run_crackerjack_stage]
     end
     subgraph MON["Monitoring (dashboards)"]
-        Q3[get_comprehensive_status]
-        Q4[get_server_stats]
-        Q5[get_filtered_status]
+        Q3[crackerjack_get_comprehensive_status]
+        Q4[crackerjack_get_server_stats]
+        Q5[crackerjack_get_filtered_status]
     end
     subgraph CODE["Code intelligence"]
-        Q6[search_code]
-        Q7[search_semantic]
+        Q6[crackerjack_search_code]
+        Q7[crackerjack_search_semantic]
         Q8[search_git_history]
         Q9[find_workflow_patterns]
     end
@@ -428,12 +428,12 @@ which Crackerjack reads from Session-Buddy.
 
 | Consumer | Surface | Reads from Crackerjack | Writes to Crackerjack |
 |----------|---------|------------------------|------------------------|
-| **Mahavishnu** | `mcp__crackerjack__*` (50+ tools); `crackerjack run` CLI as worker fallback; `mcp__mahavishnu__self_improvement_*` (Mahavishnu's own tools, separate from Crackerjack's) | `execute_crackerjack` (status); `get_comprehensive_status`; `agent_performance_analysis`; `collect_git_metrics`; `publish_to_eventbridge` (Mahavishnu → Crackerjack publisher — see below) | `execute_crackerjack` (returns results); `session_management`; `clean_crackerjack`; `config_crackerjack`; `publish_to_eventbridge` (Mahavishnu invokes the tool — but the **publisher** inside is Crackerjack's Oneiric EventBridge, so Crackerjack emits onto the Bus, which Mahavishnu's bodai_subscriber then consumes; this is a routing convention, not a true Mahavishnu → Crackerjack write) |
+| **Mahavishnu** | `mcp__crackerjack__*` (50+ tools); `crackerjack run` CLI as worker fallback; `mcp__mahavishnu__self_improvement_*` (Mahavishnu's own tools, separate from Crackerjack's) | `execute_crackerjack` (status); `crackerjack_get_comprehensive_status`; `agent_performance_analysis`; `collect_git_metrics`; `publish_to_eventbridge` (Mahavishnu → Crackerjack publisher — see below) | `execute_crackerjack` (returns results); `crackerjack_session_management`; `clean_crackerjack`; `config_crackerjack`; `publish_to_eventbridge` (Mahavishnu invokes the tool — but the **publisher** inside is Crackerjack's Oneiric EventBridge, so Crackerjack emits onto the Bus, which Mahavishnu's bodai_subscriber then consumes; this is a routing convention, not a true Mahavishnu → Crackerjack write) |
 | **Session-Buddy** | Distilled-skill distillation; conscious-agent reflection storage | `crackerjack_run` results via `mcp__session-buddy__store_reflection` from `FailureRecorder` (cross-process via SB MCP); `crackerjack/skills/coverage.py::skill_coverage_report` (calls `mcp__session-buddy__distilled_skill_health`) | None (read-only consumer) |
 | **Akosha** | `mcp__akosha__analyze_changepoints` (proxied from `FailureRecorder.classify_failure_trend`); `query_local_traces` proxy in `crackerjack/mcp/tools/otel_tools.py` | None (read-only consumer) | None |
 | **Oneiric** | Config + adapter factory paths | None (read-only consumer) | None (config-only consumer) |
 | **Claude Code** | MCP client + slash commands + hooks | `crackerjack_run` results (via `mcp__crackerjack__*`); the `/crackerjack:run` prompt is just `commands/crackerjack-run.md` loaded as a `mcp_app.prompt` (3 prompts: `run`, `init`, `status`) | Same as Mahavishnu (all tools) |
-| **PyCharm MCP** (external) | Bridged via `crackerjack/mcp/tools/pycharm_tools.py` | `search_code`, `get_ide_diagnostics` (calls `PyCharmMCPAdapter.search_regex`, `get_file_problems`) | None (PyCharm side is read-only IDE introspection) |
+| **PyCharm MCP** (external) | Bridged via `crackerjack/mcp/tools/pycharm_tools.py` | `crackerjack_search_code`, `crackerjack_get_ide_diagnostics` (calls `PyCharmMCPAdapter.search_regex`, `get_file_problems`) | None (PyCharm side is read-only IDE introspection) |
 
 ### What Crackerjack does NOT store
 
@@ -567,7 +567,7 @@ named `crackerjack_run` or `run_crackerjack`. The actual surface has
 - `run_crackerjack_stage(args, kwargs)` — single stage (`fast | comprehensive | tests | cleaning | init`) from the legacy `core_tools.py:336-346`. **As of 2026-07, this tool returns `{"error": "Workflow orchestration removed in Phase 2 (legacy runtime removal). Will be reimplemented in Phase 3 (Oneiric integration).", "success": false}`** — i.e., it is currently a stub awaiting Oneiric wiring. See [Contract 5.10](#contract-510--run_crackerjack_stage-is-currently-a-phase-2-removal-stub).
 
 **Contract**: A single canonical entry point `mcp__crackerjack__execute_crackerjack`
-returns a `job_id`; consumers poll `get_job_progress(job_id)` for
+returns a `job_id`; consumers poll `crackerjack_get_job_progress(job_id)` for
 status. `run_crackerjack_stage` MUST NOT be called for production
 workflows until Phase 3 lands.
 
@@ -703,7 +703,7 @@ pins the return shape (`{"improvement_job_id", "status": "generating"}`).
 Add `test_maybe_generate_returns_none_until_diff_pipeline_is_wired` to
 pin the honest behavior.
 
-### Contract 5.9 — Crackerjack PyCharm `symbol_info` and `find_usages` tools are stubs
+### Contract 5.9 — Crackerjack PyCharm `symbol_info` and `crackerjack_find_usages` tools are stubs
 
 **Bug**: `crackerjack/mcp/tools/pycharm_tools.py::_register_get_symbol_info_tool`
 and `_register_find_usages_tool` both return:
@@ -722,10 +722,10 @@ non-implemented behavior. The same is true of the IDE-side MCP extension
 that would supply these.
 
 **Contract**: Either complete the PyCharm MCP integration on the IDE
-side or document the tools as intentionally limited to `search_code`
-and `get_ide_diagnostics`. Today, callers see
-`{"success": false, "error": "not yet implemented"}` for `get_symbol_info`
-and `find_usages`.
+side or document the tools as intentionally limited to `crackerjack_search_code`
+and `crackerjack_get_ide_diagnostics`. Today, callers see
+`{"success": false, "error": "not yet implemented"}` for `crackerjack_get_symbol_info`
+and `crackerjack_find_usages`.
 
 **Regression test**:
 `tests/mcp_test_helpers/tools/test_pycharm_tools.py` already pins
@@ -878,9 +878,9 @@ mcp__crackerjack__execute_crackerjack(
 )
 ```
 
-Returns `{"job_id": "<8hex>", "status": "running", "message": "Execution started. Use get_job_progress(job_id) to monitor progress."}`.
+Returns `{"job_id": "<8hex>", "status": "running", "message": "Execution started. Use crackerjack_get_job_progress(job_id) to monitor progress."}`.
 The workflow runs as a background `asyncio.create_task`; poll
-`mcp__crackerjack__get_job_progress(job_id=...)` for state.
+`mcp__crackerjack__crackerjack_get_job_progress(job_id=...)` for state.
 
 ### Q2 — Run a single fast-hooks stage (CI gate)
 
@@ -936,7 +936,7 @@ fixes_applied, files_modified, execution_time_ms).
 **Goal**: Mahavishnu's `ecosystem_status` is collecting Crackerjack's view.
 
 ```python
-mcp__crackerjack__get_comprehensive_status()
+mcp__crackerjack__crackerjack_get_comprehensive_status()
 ```
 
 Returns `{"services": {...}, "jobs": [...], "server_stats": {...}, "collection_info": {...}, "agent_suggestions": {...}}`.
@@ -967,7 +967,7 @@ row to `git_metrics` per call.
 **Goal**: Find files similar to "subprocess security validation".
 
 ```python
-mcp__crackerjack__search_semantic(
+mcp__crackerjack__crackerjack_search_semantic(
     query="subprocess security validation",
     max_results=10,
     min_similarity=0.6,
@@ -977,7 +977,7 @@ mcp__crackerjack__search_semantic(
 
 Returns `{"success": true, "query": "...", "results_count": N, "results": [{"file_path": ..., "content": ..., "similarity_score": ...}]}`.
 Backed by `crackerjack/.crackerjack/semantic_index.db`; if the index is
-empty, `index_file_semantic` must be called first per file.
+empty, `crackerjack_index_file_semantic` must be called first per file.
 
 ### Q8 — Search commit history semantically
 
@@ -1177,7 +1177,7 @@ ______________________________________________________________________
 | `adapter_attempts` | `min_attempts=5`; no TTL | `crackerjack/integration/adapter_learning.py::SQLiteAdapterLearner` | No built-in retention |
 | `error_patterns` | `cleanup_old_patterns(30 days)` (method exists; not scheduled) | `ErrorCache.cleanup_old_patterns(days)` | Manual cleanup; the function is defined but not called by any background task |
 | `fix_results` | None | `ErrorCache.add_fix_result` | Same as `error_patterns` |
-| `session_state` | Per-session; manual cleanup | `BatchedStateSaver` debounces writes 1s | `session_management(action="reset")` clears |
+| `session_state` | Per-session; manual cleanup | `BatchedStateSaver` debounces writes 1s | `crackerjack_session_management(action="reset")` clears |
 | `ai-fix-errors-<timestamp>.json` | None | `crackerjack/ai_fix/` | Manual cleanup; consider logrotate |
 | `oneiric_cache/workflow_checkpoints.sqlite` | `crackerjack` key wiped per `run_complete_workflow`; other keys persist | `WorkflowPipeline._clear_oneiric_cache` | Crackerjack does NOT clean up other workflow keys |
 | `ci_patterns.json` | None | `CIFeedbackAnalyzer` | Same |
@@ -1192,11 +1192,11 @@ ______________________________________________________________________
 | Comprehensive hooks (single `cr run --skip-tests`) | 60-300 s | Yes | `complexipy_timeout=720 s` default |
 | Tests (single `cr run --run-tests`) | 60-1800 s depending on test count and parallelism | Yes | `test_workers=0` auto-detects; `--max-workers 8` |
 | `publish_to_eventbridge` (when wired) | 1-10 ms | No (rarely called directly) | `set_eventbridge_publisher` once at startup |
-| `get_comprehensive_status` | 50-200 ms | Yes (Mahavishnu `ecosystem_status` consumer) | Reads `progress_dir/*.json` (globs) |
-| `get_server_stats` | 10-50 ms | Yes | Same |
+| `crackerjack_get_comprehensive_status` | 50-200 ms | Yes (Mahavishnu `ecosystem_status` consumer) | Reads `progress_dir/*.json` (globs) |
+| `crackerjack_get_server_stats` | 10-50 ms | Yes | Same |
 | `list_skills` | 1-5 ms (in-memory registry) | No | |
 | `execute_skill` | variable (depends on skill) | Yes (when invoked by Mahavishnu) | Bounded by `timeout` kwarg |
-| `search_semantic` | 5-50 ms (TF-IDF) or 50-200 ms (sentence-transformers) | No | |
+| `crackerjack_search_semantic` | 5-50 ms (TF-IDF) or 50-200 ms (sentence-transformers) | No | |
 | `search_git_history` | 5-100 ms (post `index_git_history`) | No | `index_git_history(days_back=30)` is the precondition |
 | `collect_git_metrics` | 5-30 s for `days_back=30` (live `git log`) | No (operator-only) | |
 | `get_repository_health` (moved to `crackerjack-mahavishnu-git-analytics`) | n/a | n/a | Struck 2026-09-09; use `mcp__crackerjack-mahavishnu-git-analytics__get_repository_health_dashboard` |
@@ -1205,7 +1205,7 @@ ______________________________________________________________________
 | `find_best_skill` | 5-20 ms (in-memory `can_handle` eval) | Yes (when invoked) | |
 | `analyze_crackerjack` | n/a (mock) | No | Returns the mock payload; see [Contract 5.6](#contract-56--analyze_crackerjack-is-mocked) |
 | `clean_crackerjack` | 50-500 ms (depending on `progress_dir` size) | No | |
-| `get_job_progress` | 1-5 ms (single file read) | Yes (poll path) | |
+| `crackerjack_get_job_progress` | 1-5 ms (single file read) | Yes (poll path) | |
 
 ### Failure modes
 
@@ -1238,10 +1238,10 @@ ______________________________________________________________________
   branch is skipped (only `count >= MIN_FAILURES_BEFORE_IMPROVEMENT`
   fires).
 - **PyCharm MCP unavailable**: `pycharm_health()` returns
-  `status: degraded`; `search_code` and `get_ide_diagnostics`
+  `status: degraded`; `crackerjack_search_code` and `crackerjack_get_ide_diagnostics`
   return `{"error": "MCP server not connected", "success": false}`.
-  `get_symbol_info` and `find_usages` are stubs (see
-  [Contract 5.9](#contract-59--crackerjack-pycharm-symbol_info-and-find_usages-tools-are-stubs)).
+  `crackerjack_get_symbol_info` and `crackerjack_find_usages` are stubs (see
+  [Contract 5.9](#contract-59--crackerjack-pycharm-symbol_info-and-crackerjack_find_usages-tools-are-stubs)).
 - **Embedding model unavailable** (`sentence-transformers` not
   installed): `crackerjack/memory/issue_embedder.py::get_issue_embedder`
   returns a `FallbackIssueEmbedder` (TF-IDF via `scikit-learn`). The
@@ -1390,22 +1390,22 @@ ______________________________________________________________________
   `crackerjack/mcp/tools/skill_tools.py`).
 - `crackerjack/mcp/state.py` — `StateManager` + `BatchedStateSaver` (session / checkpoint persistence).
 - `crackerjack/mcp/cache.py` — `ErrorCache` (Ruff/Pyright/Bandit pattern cache; `error_patterns.json` + `fix_results.json`).
-- `crackerjack/mcp/tools/execution_tools.py` — `execute_crackerjack` + `smart_error_analysis` + `init_crackerjack` + `suggest_agents`.
+- `crackerjack/mcp/tools/execution_tools.py` — `execute_crackerjack` + `smart_error_analysis` + `init_crackerjack` + `crackerjack_suggest_agents`.
 - `crackerjack/mcp/tools/skill_tools.py` — `list_skills` + `get_skill_info` + `search_skills` + `get_skills_for_issue` + `get_skill_statistics` + `execute_skill` + `find_best_skill`.
-- `crackerjack/mcp/tools/monitoring_tools.py` — `get_stage_status` + `get_next_action` + `get_server_stats` + `get_comprehensive_status` + `list_slash_commands` + `get_filtered_status` (the secure-status path; backed by `StatusSecurityManager`).
+- `crackerjack/mcp/tools/monitoring_tools.py` — `crackerjack_get_stage_status` + `crackerjack_get_next_action` + `crackerjack_get_server_stats` + `crackerjack_get_comprehensive_status` + `crackerjack_list_slash_commands` + `crackerjack_get_filtered_status` (the secure-status path; backed by `StatusSecurityManager`).
 - `crackerjack/mcp/tools/git_metrics_tools.py` — `collect_git_metrics` + `get_repository_velocity` + `get_repository_health` + `get_conventional_compliance`.
 - `crackerjack/mcp/tools/mahavishnu_tools.py` — *removed 2026-09-09.* Superseded by `crackerjack/mahavishnu/mcp/tools/git_analytics.py` (the standalone `crackerjack-mahavishnu-git-analytics` MCP server), which exposes `get_portfolio_velocity_dashboard`, `get_repository_health_dashboard`, `get_repository_comparison`, `get_cross_project_conflicts`, `get_active_branches_analysis`, `get_workflow_recommendations`, and `get_best_practices_propagation` over the same shared `crackerjack.integration.mahavishnu_integration` aggregator.
 - `crackerjack/mcp/tools/otel_tools.py` — `query_local_traces` (HTTP proxy to Akosha).
 - `crackerjack/mcp/tools/eventbridge_tools.py` — `publish_to_eventbridge` (the only EventBridge-emit tool; gated by `enabled`).
 - `crackerjack/mcp/tools/workspace_tools.py` — *removed 2026-09-09.* Workspace concept obsolete in favor of native git worktrees. See [Contract 5.7](#contract-57--struck-2026-09-09) for the closure log.
-- `crackerjack/mcp/tools/semantic_tools.py` — `index_file_semantic` + `search_semantic` + `get_semantic_stats` + `remove_file_from_semantic_index` + `get_embeddings` + `calculate_similarity_semantic`.
+- `crackerjack/mcp/tools/semantic_tools.py` — `crackerjack_index_file_semantic` + `crackerjack_search_semantic` + `crackerjack_get_semantic_stats` + `crackerjack_remove_file_from_semantic_index` + `crackerjack_get_embeddings` + `crackerjack_calculate_similarity_semantic`.
 - `crackerjack/mcp/tools/git_semantic_tools.py` — `search_git_history` + `find_workflow_patterns` + `recommend_git_practices` + `index_git_history`.
-- `crackerjack/mcp/tools/pycharm_tools.py` — `get_ide_diagnostics` + `search_code` + `get_symbol_info` (stub) + `find_usages` (stub) + `pycharm_health`.
+- `crackerjack/mcp/tools/pycharm_tools.py` — `crackerjack_get_ide_diagnostics` + `crackerjack_search_code` + `crackerjack_get_symbol_info` (stub) + `crackerjack_find_usages` (stub) + `pycharm_health`.
 - `crackerjack/mcp/tools/utility_tools.py` — `clean_crackerjack` + `config_crackerjack` + `analyze_crackerjack` (mock) + `validate_claude_md`.
-- `crackerjack/mcp/tools/progress_tools.py` — `get_job_progress` + `session_management`.
+- `crackerjack/mcp/tools/progress_tools.py` — `crackerjack_get_job_progress` + `crackerjack_session_management`.
 - `crackerjack/mcp/tools/intelligence_tool_registry.py` — `execute_smart_task` + `get_agent_recommendation` + `intelligence_system_status` + `agent_performance_analysis` (thin wrappers over `crackerjack/intelligence/integration.py`).
 - `crackerjack/mcp/tools/doc_tools.py` — `crackerjack_doc_frontmatter_validate` (the only doc tool).
-- `crackerjack/mcp/tools/proactive_tools.py` — `plan_development` + `validate_architecture` + `suggest_patterns`.
+- `crackerjack/mcp/tools/proactive_tools.py` — `crackerjack_plan_development` + `crackerjack_validate_architecture` + `crackerjack_suggest_patterns`.
 - `crackerjack/mcp/tools/core_tools.py` — `run_crackerjack_stage` (Phase-2 stub) + `analyze_errors` (legacy).
 - `crackerjack/mcp/tools/eventbridge_tools.py::register_eventbridge_tools` — gated by `enabled=False` in `settings/crackerjack.yaml:295`; the default is no-op.
 - `crackerjack/config/settings.py` — `CrackerjackSettings` (the Pydantic root; every other Crackerjack module imports defaults from here).
@@ -1436,10 +1436,10 @@ ______________________________________________________________________
 - `tests/unit/config/test_eventbridge_settings.py` — `EventBridgeSettings` defaults (the `enabled=False` / `dry_run=True` defaults).
 - `tests/unit/test_eventbridge_publisher.py` — `publish_test_started` / `completed` / `failed` round-trip + envelope shape.
 - `tests/unit/test_eventbridge_adapter.py` — `EventBridgeAdapter` round-trip.
-- `tests/mcp_test_helpers/tools/test_pycharm_tools.py` — Documents the `not_implemented` status of `get_symbol_info` and `find_usages` (see [Contract 5.9](#contract-59--crackerjack-pycharm-symbol_info-and-find_usages-tools-are-stubs)).
-- `tests/mcp_test_helpers/tools/test_semantic_tools.py` — Documents the `Path`-serialization bug in `index_file_semantic` and `remove_file_from_semantic_index` (the tests pin the bug; the success path leaks into the exception branch).
-- `tests/mcp_test_helpers/tools/test_execution_tools.py` — `execute_crackerjack` + `smart_error_analysis` + `init_crackerjack` + `suggest_agents` (uses `get_context`; `init_crackerjack` is the constructor that fails gracefully).
-- `tests/mcp_test_helpers/tools/test_monitoring_tools.py` — `get_stage_status` / `get_next_action` / `get_server_stats` / `get_comprehensive_status` / `get_filtered_status` (the `auth_fails` + `security_validation_fails` paths).
+- `tests/mcp_test_helpers/tools/test_pycharm_tools.py` — Documents the `not_implemented` status of `crackerjack_get_symbol_info` and `crackerjack_find_usages` (see [Contract 5.9](#contract-59--crackerjack-pycharm-symbol_info-and-crackerjack_find_usages-tools-are-stubs)).
+- `tests/mcp_test_helpers/tools/test_semantic_tools.py` — Documents the `Path`-serialization bug in `crackerjack_index_file_semantic` and `crackerjack_remove_file_from_semantic_index` (the tests pin the bug; the success path leaks into the exception branch).
+- `tests/mcp_test_helpers/tools/test_execution_tools.py` — `execute_crackerjack` + `smart_error_analysis` + `init_crackerjack` + `crackerjack_suggest_agents` (uses `get_context`; `init_crackerjack` is the constructor that fails gracefully).
+- `tests/mcp_test_helpers/tools/test_monitoring_tools.py` — `crackerjack_get_stage_status` / `crackerjack_get_next_action` / `crackerjack_get_server_stats` / `crackerjack_get_comprehensive_status` / `crackerjack_get_filtered_status` (the `auth_fails` + `security_validation_fails` paths).
 - `tests/mcp_test_helpers/tools/test_workflow_executor.py` — `execute_crackerjack_workflow` lifecycle; the `_run_workflow_iterations` test pins the `result is False` → `workflow-task-failed: <name>` behavior.
 - `tests/skills/test_mcp_skills.py` / `test_agent_skills.py` / `test_agent_skills_edge_cases.py` / `test_skill_metrics.py` — the three skill-registry unit suites.
 - `tests/mcp/test_mahavishnu_tools.py` — `mahavishnu_tools` aggregator-cached tests (4 tools × 2-3 cases each = 22 tests).

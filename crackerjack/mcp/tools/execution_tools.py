@@ -137,7 +137,7 @@ def _register_init_crackerjack_tool(mcp_app: t.Any) -> None:
 
 def _register_agent_suggestions_tool(mcp_app: t.Any) -> None:
     @mcp_app.tool()  # type: ignore[misc]
-    def suggest_agents(
+    def crackerjack_suggest_agents(
         task_description: str = "",
         project_type: str = "python",
         current_context: str = "",

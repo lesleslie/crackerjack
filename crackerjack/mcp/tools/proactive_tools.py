@@ -328,7 +328,7 @@ def _register_proactive_tools(mcp_app: t.Any) -> None:
 
 def _register_plan_development_tool(mcp_app: t.Any) -> None:
     @mcp_app.tool()
-    async def plan_development(args: str, kwargs: str) -> str:
+    async def crackerjack_plan_development(args: str, kwargs: str) -> str:
         import json
 
         try:
@@ -341,7 +341,7 @@ def _register_plan_development_tool(mcp_app: t.Any) -> None:
 
 def _register_validate_architecture_tool(mcp_app: t.Any) -> None:
     @mcp_app.tool()
-    async def validate_architecture(args: str, kwargs: str) -> str:
+    async def crackerjack_validate_architecture(args: str, kwargs: str) -> str:
         import json
 
         try:
@@ -358,7 +358,7 @@ def _register_validate_architecture_tool(mcp_app: t.Any) -> None:
 
 def _register_suggest_patterns_tool(mcp_app: t.Any) -> None:
     @mcp_app.tool()
-    async def suggest_patterns(args: str, kwargs: str) -> str:
+    async def crackerjack_suggest_patterns(args: str, kwargs: str) -> str:
         import json
 
         try:

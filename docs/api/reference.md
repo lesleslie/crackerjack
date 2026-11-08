@@ -136,7 +136,7 @@ parameter) is **not** present in Rev 1 — deferred to a future phase.
 ### Related constants
 
 - `JINJA_SUFFIXES = frozenset({".html", ".j2", ".jinja"})` —
-  extensions considered "Jinja" by the MCP `format_jinja_templates` tool.
+  extensions considered "Jinja" by the MCP `crackerjack_format_jinja_templates` tool.
 - `DEFAULT_DELIMITERS` — the standard six-key delimiter mapping; pass
   `delimiters=DEFAULT_DELIMITERS` to `format_template` to opt out of
   per-project overrides.
@@ -145,10 +145,10 @@ parameter) is **not** present in Rev 1 — deferred to a future phase.
 
 Both surfaces are also exposed as MCP tools:
 
-- `check_web_lint(project_root) -> dict` — read-only; returns
+- `crackerjack_check_web_lint(project_root) -> dict` — read-only; returns
   `{adapter: "web", enabled: bool, hooks: [{name, cli_command, timeout_seconds}]}`.
   See [`MCP_TOOLS_SPECIFICATION.md` §3.6](../MCP_TOOLS_SPECIFICATION.md).
-- `format_jinja_templates(projects, dry_run=True) -> dict` — mutation;
+- `crackerjack_format_jinja_templates(projects, dry_run=True) -> dict` — mutation;
   `dry_run` defaults to `True`. Returns `{files, errors, mode}`.
 
 ## See Also

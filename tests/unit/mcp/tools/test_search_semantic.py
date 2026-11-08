@@ -1,4 +1,4 @@
-"""Wire-envelope regression tests for ``mcp__crackerjack__search_semantic``.
+"""Wire-envelope regression tests for ``mcp__crackerjack__crackerjack_search_semantic``.
 
 Per REQ-004 + REQ-012 of
 ``mahavishnu/docs/plans/2026-10-09-bodai-search-infrastructure-fix.md``,
@@ -45,7 +45,7 @@ KNOWN_PHRASE_TEXT = (
 
 
 def _make_app_with_empty_index(tmp_path: Path) -> FastMCP:
-    """Build a FastMCP app where ``search_semantic`` reads from an empty
+    """Build a FastMCP app where ``crackerjack_search_semantic`` reads from an empty
     SQLite DB at ``<tmp>/.crackerjack/semantic_index.db``.
 
     Mirrors ``crackerjack/mcp/server_core.py:_setup_server_context`` —
@@ -61,7 +61,7 @@ def _make_app_with_empty_index(tmp_path: Path) -> FastMCP:
 
 
 def _make_config() -> SemanticConfig:
-    """Build the default config used by the search_semantic handler."""
+    """Build the default config used by the crackerjack_search_semantic handler."""
     return SemanticConfig(
         embedding_model="sentence-transformers/all-MiniLM-L6-v2",
         chunk_size=512,
@@ -107,7 +107,7 @@ class TestSearchSemanticWireEnvelope:
         app = _make_app_with_empty_index(tmp_path)
         async with Client(app) as client:
             result = await client.call_tool(
-                "search_semantic",
+                "crackerjack_search_semantic",
                 {"query": "python", "min_similarity": 0.3},
             )
 
@@ -122,7 +122,7 @@ class TestSearchSemanticWireEnvelope:
     async def test_search_semantic_finds_indexed_phrase(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """After indexing a known snippet, ``search_semantic`` returns
+        """After indexing a known snippet, ``crackerjack_search_semantic`` returns
         ``results_count >= 1`` for the phrase at ``min_similarity=0.3``
         and ``status="ok"``."""
         db_path = tmp_path / ".crackerjack" / "semantic_index.db"
@@ -135,7 +135,7 @@ class TestSearchSemanticWireEnvelope:
         app = _make_app_with_empty_index(tmp_path)
         async with Client(app) as client:
             result = await client.call_tool(
-                "search_semantic",
+                "crackerjack_search_semantic",
                 {
                     "query": "embeddings chunk similarity search",
                     "min_similarity": 0.3,
@@ -163,7 +163,7 @@ class TestSearchSemanticWireEnvelope:
         app = _make_app_with_empty_index(tmp_path)
         async with Client(app) as client:
             result = await client.call_tool(
-                "search_semantic",
+                "crackerjack_search_semantic",
                 {"query": "python", "min_similarity": 0.3},
             )
 

@@ -366,13 +366,13 @@ class TestBuildFilteredStatus:
         assert "resources" in out
 
 
-# ─── Tool: get_stage_status ────────────────────────────────────────────────
+# ─── Tool: crackerjack_get_stage_status ───────────────────────────────────────────────
 
 
 @pytest.mark.unit
 class TestGetStageStatusTool:
     def test_no_context(self) -> None:
-        tool = _captured_tool("get_stage_status")
+        tool = _captured_tool("crackerjack_get_stage_status")
         with patch(
             "crackerjack.mcp.tools.monitoring_tools.validate_status_request",
             new=AsyncMock(),
@@ -385,7 +385,7 @@ class TestGetStageStatusTool:
         assert "Server context" in out["error"]
 
     def test_no_state_manager(self) -> None:
-        tool = _captured_tool("get_stage_status")
+        tool = _captured_tool("crackerjack_get_stage_status")
         ctx = MagicMock(spec=[])  # no state_manager attribute
         with patch(
             "crackerjack.mcp.tools.monitoring_tools.validate_status_request",
@@ -399,7 +399,7 @@ class TestGetStageStatusTool:
         assert "State manager" in out["error"]
 
     def test_success(self) -> None:
-        tool = _captured_tool("get_stage_status")
+        tool = _captured_tool("crackerjack_get_stage_status")
         sm = MagicMock()
         sm.get_stage_status = MagicMock(
             side_effect=lambda s: {
@@ -433,7 +433,7 @@ class TestGetStageStatusTool:
         assert "stages" in out
 
     def test_exception_returns_error(self) -> None:
-        tool = _captured_tool("get_stage_status")
+        tool = _captured_tool("crackerjack_get_stage_status")
         with patch(
             "crackerjack.mcp.tools.monitoring_tools.validate_status_request",
             new=AsyncMock(side_effect=RuntimeError("boom")),
@@ -444,13 +444,13 @@ class TestGetStageStatusTool:
         assert "Failed to get stage status" in out or parsed.get("error")
 
 
-# ─── Tool: get_next_action ─────────────────────────────────────────────────
+# ─── Tool: crackerjack_get_next_action ────────────────────────────────────────────────
 
 
 @pytest.mark.unit
 class TestGetNextActionTool:
     def test_no_context(self) -> None:
-        tool = _captured_tool("get_next_action")
+        tool = _captured_tool("crackerjack_get_next_action")
         with patch(
             "crackerjack.mcp.tools.monitoring_tools.validate_status_request",
             new=AsyncMock(),
@@ -462,7 +462,7 @@ class TestGetNextActionTool:
         assert out["success"] is False
 
     def test_no_state_manager_returns_initialize(self) -> None:
-        tool = _captured_tool("get_next_action")
+        tool = _captured_tool("crackerjack_get_next_action")
         ctx = MagicMock(spec=[])
         with patch(
             "crackerjack.mcp.tools.monitoring_tools.validate_status_request",
@@ -475,7 +475,7 @@ class TestGetNextActionTool:
         assert out["recommended_action"] == "initialize"
 
     def test_success(self) -> None:
-        tool = _captured_tool("get_next_action")
+        tool = _captured_tool("crackerjack_get_next_action")
         sm = MagicMock()
         sm.get_stage_status = MagicMock(return_value="pending")
         ctx = MagicMock()
@@ -499,7 +499,7 @@ class TestGetNextActionTool:
         assert out["recommended_action"] == "run_stage"
 
     def test_exception(self) -> None:
-        tool = _captured_tool("get_next_action")
+        tool = _captured_tool("crackerjack_get_next_action")
         with patch(
             "crackerjack.mcp.tools.monitoring_tools.validate_status_request",
             new=AsyncMock(side_effect=RuntimeError("x")),
@@ -509,13 +509,13 @@ class TestGetNextActionTool:
         assert "Failed to determine next action" in out
 
 
-# ─── Tool: get_server_stats ───────────────────────────────────────────────
+# ─── Tool: crackerjack_get_server_stats ───────────────────────────────────────────────
 
 
 @pytest.mark.unit
 class TestGetServerStatsTool:
     def test_no_context_returns_formatted_error(self) -> None:
-        tool = _captured_tool("get_server_stats")
+        tool = _captured_tool("crackerjack_get_server_stats")
 
         @asynccontextmanager_noop
         async def _sec():
@@ -551,7 +551,7 @@ class TestGetServerStatsTool:
         assert "error" in out
 
     def test_exception_returns_error(self) -> None:
-        tool = _captured_tool("get_server_stats")
+        tool = _captured_tool("crackerjack_get_server_stats")
 
         class _CM:
             async def __aenter__(self) -> None:
@@ -579,13 +579,13 @@ class TestGetServerStatsTool:
         assert "error" in out
 
 
-# ─── Tool: get_comprehensive_status ────────────────────────────────────────
+# ─── Tool: crackerjack_get_comprehensive_status ───────────────────────────────────────
 
 
 @pytest.mark.unit
 class TestComprehensiveStatusTool:
     def test_exception(self) -> None:
-        tool = _captured_tool("get_comprehensive_status")
+        tool = _captured_tool("crackerjack_get_comprehensive_status")
 
         class _CM:
             async def __aenter__(self) -> None:
@@ -613,13 +613,13 @@ class TestComprehensiveStatusTool:
         assert "error" in out
 
 
-# ─── Tool: list_slash_commands ─────────────────────────────────────────────
+# ─── Tool: crackerjack_list_slash_commands ────────────────────────────────────────────
 
 
 @pytest.mark.unit
 class TestListSlashCommandsTool:
     def test_success(self) -> None:
-        tool = _captured_tool("list_slash_commands")
+        tool = _captured_tool("crackerjack_list_slash_commands")
         out = json.loads(_run(tool()))
         assert "available_commands" in out
         # Note: the source has a typo — the keys are "/ crackerjack: ..." (with
@@ -628,7 +628,7 @@ class TestListSlashCommandsTool:
         assert out["total_commands"] == 3
 
     def test_exception(self) -> None:
-        tool = _captured_tool("list_slash_commands")
+        tool = _captured_tool("crackerjack_list_slash_commands")
         # Patch ``json.dumps`` only on the FIRST call.  The source catches
         # the resulting exception and emits its own error response using
         # ``json.dumps`` again — by then we want the patched function to
@@ -651,13 +651,13 @@ class TestListSlashCommandsTool:
         assert "x" in json.loads(out)["error"]
 
 
-# ─── Tool: get_filtered_status ─────────────────────────────────────────────
+# ─── Tool: crackerjack_get_filtered_status ────────────────────────────────────────────
 
 
 @pytest.mark.unit
 class TestGetFilteredStatusTool:
     def test_invalid_components(self) -> None:
-        tool = _captured_tool("get_filtered_status")
+        tool = _captured_tool("crackerjack_get_filtered_status")
         with patch(
             "crackerjack.mcp.tools.monitoring_tools.validate_status_request",
             new=AsyncMock(),
@@ -671,7 +671,7 @@ class TestGetFilteredStatusTool:
         assert "error" in out
 
     def test_all_routes_to_comprehensive(self) -> None:
-        tool = _captured_tool("get_filtered_status")
+        tool = _captured_tool("crackerjack_get_filtered_status")
 
         class _CM:
             async def __aenter__(self) -> None:
@@ -703,7 +703,7 @@ class TestGetFilteredStatusTool:
         assert "services" in out
 
     def test_components_routes_to_filtered(self) -> None:
-        tool = _captured_tool("get_filtered_status")
+        tool = _captured_tool("crackerjack_get_filtered_status")
 
         class _CM:
             async def __aenter__(self) -> None:
@@ -737,7 +737,7 @@ class TestGetFilteredStatusTool:
         assert "jobs" in out
 
     def test_exception(self) -> None:
-        tool = _captured_tool("get_filtered_status")
+        tool = _captured_tool("crackerjack_get_filtered_status")
         with patch(
             "crackerjack.mcp.tools.monitoring_tools.validate_status_request",
             new=AsyncMock(side_effect=RuntimeError("x")),
@@ -948,12 +948,12 @@ class TestRegisterMonitoringTools:
         mock_app.tool = decorator  # type: ignore[method-assign]
         register_monitoring_tools(mock_app)
         for name in (
-            "get_stage_status",
-            "get_next_action",
-            "get_server_stats",
-            "get_comprehensive_status",
-            "list_slash_commands",
-            "get_filtered_status",
+            "crackerjack_get_stage_status",
+            "crackerjack_get_next_action",
+            "crackerjack_get_server_stats",
+            "crackerjack_get_comprehensive_status",
+            "crackerjack_list_slash_commands",
+            "crackerjack_get_filtered_status",
         ):
             assert name in registered
 

@@ -167,10 +167,11 @@ class RuntimeFactsBuilder:
         """Infer a category bucket from a tool's registered name.
 
         FastMCP tool names registered by Crackerjack use a flat
-        ``<verb>_<noun>`` shape (e.g. ``crackerjack_run``,
-        ``search_code``, ``mcp_health``). The first underscore-split
-        token is treated as the category when it is a known prefix;
-        otherwise the whole name is bucketed as ``"unknown"``.
+        ``<component>_<verb>_<noun>`` shape (e.g. ``crackerjack_run``,
+        ``crackerjack_search_code``, ``get_health``). The
+        first underscore-split token is treated as the category when it
+        is a known prefix; otherwise the whole name is bucketed as
+        ``"unknown"``.
         """
         if not tool_name:
             return RuntimeFactsBuilder.CATEGORY_UNKNOWN

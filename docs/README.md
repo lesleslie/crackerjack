@@ -82,7 +82,7 @@ All functions must maintain cognitive complexity \<= 15 as enforced by complexip
 ## Agent-Aware Workflow
 
 - Trigger quality sweeps: `/crackerjack:run`.
-- Monitor progress: `get_job_progress`.
+- Monitor progress: `crackerjack_get_job_progress`.
 - Verify readiness: `/crackerjack:status`.
 - Update `.mcp.json` for new servers and document new capabilities in `docs/` and the MCP manifest.
 

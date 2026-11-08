@@ -45,6 +45,6 @@ topic: lifecycle
 
 ## Agent-Aware Workflow
 
-- Trigger quality sweeps with `/crackerjack:run`, monitor using `get_job_progress`, and verify readiness via `/crackerjack:status`.
+- Trigger quality sweeps with `/crackerjack:run`, monitor using `crackerjack_get_job_progress`, and verify readiness via `/crackerjack:status`.
 - Update `.mcp.json` when wiring new servers, and document fresh agent capabilities in `docs/` plus the MCP manifest.
 - Keep structured outputs (`test-results.xml`, `coverage.json`) current to support downstream dashboards and release gates.
