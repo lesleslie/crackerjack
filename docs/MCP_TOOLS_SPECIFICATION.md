@@ -161,7 +161,7 @@ return the documented error JSON).
 
 | Tool | Signature | Description |
 |---|---|---|
-| `query_local_traces(task_class: str, time_range_minutes: int = 60, system_id: str \| None = None, limit: int = 100) -> list[dict]` | Proxies to `mcp__akosha__query_local_traces` over HTTP at `$AKOSHA_MCP_ENDPOINT` (default `http://localhost:8682`). | Read-only proxy. Errors are swallowed and `[]` is returned. |
+| `query_local_traces(task_class: str, system_id: str | None = None, start_time: str | None = None, end_time: str | None = None, limit: int = 100, dry_run: bool = False) -> list[dict]` | Proxies to `mcp__akosha__query_local_traces` over HTTP at `$AKOSHA_MCP_ENDPOINT` (default `http://localhost:8682`). | Read-only proxy. Errors are swallowed and `[]` is returned. |
 
 ### 3.9 `progress_tools` (`progress_tools.py`) — FULL
 

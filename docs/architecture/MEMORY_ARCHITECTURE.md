@@ -218,7 +218,7 @@ Each is a separate `_register_*_tools` function imported from
 | `agent_performance_analysis()` | `intelligence_tool_registry` | None (read-only; pulls `learning_system.get_learning_summary` + `orchestrator.get_execution_stats`) |
 | `execute_smart_task(...)` | `intelligence_tool_registry` | Writes `fix_attempts` (via `_record_fix_attempt` after every agent) |
 | `get_comprehensive_status()` | `monitoring_tools` | None — but `get_filtered_status(components="jobs")` reads `progress_dir/*.json` |
-| `query_local_traces(task_class, time_range_minutes, system_id, limit)` | `otel_tools` | None — proxies to Akosha MCP `query_local_traces` over HTTP; writes nothing locally |
+| `query_local_traces(task_class, system_id, start_time, end_time, limit, dry_run)` | `otel_tools` | None — proxies to Akosha MCP `query_local_traces` over HTTP; writes nothing locally |
 | `get_cross_project_git_dashboard(...)` / `get_repository_health(...)` / `get_velocity_comparison(...)` / `get_cross_project_patterns(...)` | (moved to `crackerjack-mahavishnu-git-analytics` MCP server 2026-09-09) | None — see `crackerjack/mahavishnu/mcp/tools/git_analytics.py` for the live surface; `mahavishnu_tools.py` was removed |
 | `create_workspace(...)` / `list_workspaces(...)` / `get_workspace_info(...)` / `remove_workspace(...)` | (removed 2026-09-09 — workspace concept obsolete in favor of native git worktrees) | None — `workspace_tools.py` was removed; see §9.1 removal log in `MCP_TOOLS_SPECIFICATION.md` |
 
@@ -348,7 +348,7 @@ cluster (`get_comprehensive_status`, `get_server_stats`) for dashboards.
 | `find_workflow_patterns(pattern_description, days_back, min_frequency, repository_path="")` | Same + pattern frequency | Detect recurring patterns across commits |
 | `recommend_git_practices(focus_area, days_back, repository_path="")` | Same, grouped by `focus_area` | Coaching recommendations |
 | `index_git_history(days_back, repository_path="")` | `git log` over the window | Build the git-events semantic index |
-| `query_local_traces(task_class, time_range_minutes, system_id, limit)` | Akosha MCP `query_local_traces` over HTTP | Cross-component OTel trace recall |
+| `query_local_traces(task_class, system_id, start_time, end_time, limit, dry_run)` | Akosha MCP `query_local_traces` over HTTP | Cross-component OTel trace recall |
 | `search_semantic(query, max_results, min_similarity, file_types, config_json="")` | `VectorStore.search` (TF-IDF or sentence-transformers on `crackerjack/.crackerjack/semantic_index.db`) | Natural-language code search |
 | `get_semantic_stats(config_json="")` | Same | Index coverage |
 | `get_embeddings(texts, config_json="")` | `EmbeddingService` (one-off, no DB write) | Custom embedding generation |

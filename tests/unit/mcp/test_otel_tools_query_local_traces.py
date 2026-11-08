@@ -257,7 +257,8 @@ class TestQueryLocalTracesToolRegistration:
 
             result = await tools_registered["query_local_traces"](
                 task_class="code_generation",
-                time_range_minutes=30,
+                start_time="2026-06-05T00:00:00+00:00",
+                end_time="2026-06-05T01:00:00+00:00",
                 limit=50,
             )
 
@@ -265,7 +266,8 @@ class TestQueryLocalTracesToolRegistration:
             tool_name, arguments = captured_calls[0]
             assert tool_name == "query_local_traces"
             assert arguments["task_class"] == "code_generation"
-            assert arguments["time_range_minutes"] == 30
+            assert arguments["start_time"] == "2026-06-05T00:00:00+00:00"
+            assert arguments["end_time"] == "2026-06-05T01:00:00+00:00"
             assert arguments["limit"] == 50
             assert "system_id" not in arguments
 
@@ -335,8 +337,8 @@ class TestQueryLocalTracesToolRegistration:
             assert "system_id" not in captured["arguments"]
 
     @pytest.mark.asyncio
-    async def test_default_time_range_is_60(self) -> None:
-        """Default time_range_minutes should be 60."""
+    async def test_no_window_arguments_by_default(self) -> None:
+        """With no explicit window, no start_time/end_time is forwarded."""
         from crackerjack.mcp.tools import otel_tools
 
         captured: dict[str, Any] = {}
@@ -364,7 +366,51 @@ class TestQueryLocalTracesToolRegistration:
             # Call with only required task_class
             await tools_registered["query_local_traces"](task_class="quick_task")
 
-            assert captured["arguments"]["time_range_minutes"] == 60
+            assert "start_time" not in captured["arguments"]
+            assert "end_time" not in captured["arguments"]
+            assert captured["arguments"]["dry_run"] is False
+
+    @pytest.mark.asyncio
+    async def test_dry_run_is_forwarded(self) -> None:
+        """``dry_run`` must reach Akosha, which owns the scope decision.
+
+        Akosha's implementation keeps the caller's filters in force when
+        ``dry_run`` is set, so the flag has to be forwarded rather than
+        dropped on the way through the proxy.
+        """
+        from crackerjack.mcp.tools import otel_tools
+
+        captured: dict[str, Any] = {}
+
+        async def capture_call(tool_name: str, arguments: dict[str, Any]) -> list[dict[str, Any]]:
+            captured["arguments"] = arguments
+            return []
+
+        with patch(
+            "crackerjack.mcp.tools.otel_tools._call_akosha_mcp_tool", new=capture_call
+        ):
+            mock_mcp_app = MagicMock()
+            tools_registered: dict[str, Any] = {}
+
+            def capture_tool():
+                def decorator(fn: Any) -> Any:
+                    tools_registered[fn.__name__] = fn
+                    return fn
+
+                return decorator
+
+            mock_mcp_app.tool = capture_tool
+            otel_tools.register_otel_tools(mock_mcp_app)
+
+            await tools_registered["query_local_traces"](
+                task_class="quick_task",
+                system_id="mahavishnu",
+                dry_run=True,
+            )
+
+            assert captured["arguments"]["dry_run"] is True
+            assert captured["arguments"]["task_class"] == "quick_task"
+            assert captured["arguments"]["system_id"] == "mahavishnu"
 
     @pytest.mark.asyncio
     async def test_default_limit_is_100(self) -> None:

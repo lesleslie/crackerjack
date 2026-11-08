@@ -228,6 +228,19 @@ def _register_search_code_tool(mcp_app: t.Any) -> None:
         pattern: str,
         file_pattern: str | None = None,
     ) -> str:
+        """Search the codebase with a regular expression.
+
+        Returns a JSON string with `results` (the matches), `count`, `status`
+        ("ok" when there are matches, "degraded" when there are none), and
+        `source` ("pycharm_adapter" or "local_fallback"). Do NOT use for
+        meaning-based lookup — use `search_semantic` for that; this tool
+        matches literal regular expressions only. Fails soft: when the PyCharm
+        connection is unavailable it falls back to a local file scan, and a
+        pattern that matches nothing returns `count` 0 with `status`
+        "degraded" and a `hint`, not an error. Side effect: none; reads files
+        only.
+        """
+        # Implements: REQ-MCPTD-001
         adapter = _get_adapter()
 
         results: list[t.Any] = []
@@ -343,6 +356,21 @@ def _register_pycharm_health_tool(mcp_app: t.Any) -> None:
 
     @mcp_app.tool()
     async def pycharm_health() -> str:
+        """Report whether the PyCharm MCP integration is reachable.
+
+        Returns a JSON string. When the PyCharm MCP context was never
+        initialised the payload carries `healthy` false,
+        `pycharm_mcp_available` false, `circuit_breaker_open`,
+        `failure_count`, `cache_size`, and an `error` field. When the
+        context is up it carries `mcp_available` (not `healthy`),
+        `circuit_breaker_open`, `failure_count`, `cache_size`, and `status`
+        ("healthy", or "degraded" when the circuit breaker is open after
+        repeated failures). A probe that raises returns `success` false with
+        an `error` field. Do NOT use to diagnose a specific file — use
+        `get_ide_diagnostics` for that; this tool reports connection state
+        only. Side effect: none; probes the connection only.
+        """
+        # Implements: REQ-MCPTD-001
         adapter = _get_adapter()
 
         if adapter is None:
