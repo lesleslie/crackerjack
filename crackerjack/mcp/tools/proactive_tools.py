@@ -329,6 +329,29 @@ def _register_proactive_tools(mcp_app: t.Any) -> None:
 def _register_plan_development_tool(mcp_app: t.Any) -> None:
     @mcp_app.tool()
     async def crackerjack_plan_development(args: str, kwargs: str) -> str:
+        """Produce an architectural plan and proactive recommendations.
+
+        Assesses the requested feature and its stated complexity, then
+        returns the agents that should be involved and the strategy to
+        follow — architecture-first by default.
+
+        Parameters
+        ----------
+        args
+            Free-text description of the feature or work being planned.
+        kwargs
+            JSON object string. ``feature`` names the feature and
+            ``complexity`` (``medium`` by default, ``high`` or
+            ``complex`` add a refactoring specialist) tunes the
+            recommendations.
+
+        Returns
+        -------
+        str
+            JSON string with ``feature``, ``complexity``, ``context``,
+            ``proactive_recommendations`` (agent, priority, reason,
+            action, benefits) and ``planning_strategy``.
+        """
         import json
 
         try:
@@ -342,6 +365,28 @@ def _register_plan_development_tool(mcp_app: t.Any) -> None:
 def _register_validate_architecture_tool(mcp_app: t.Any) -> None:
     @mcp_app.tool()
     async def crackerjack_validate_architecture(args: str, kwargs: str) -> str:
+        """Check a file against Crackerjack's architectural compliance rules.
+
+        Reports the compliance checks that apply (cognitive complexity,
+        clean-code patterns, security patterns, type annotations) with the
+        message each check requires and the recommended next steps.
+
+        Parameters
+        ----------
+        args
+            Path of the file to validate. Falls back to ``file_path``
+            from ``kwargs`` when empty.
+        kwargs
+            JSON object string; ``file_path`` is used when ``args`` is
+            empty.
+
+        Returns
+        -------
+        str
+            JSON string with ``file_path``, ``validation_results``,
+            ``architectural_compliance``, ``recommendations`` and
+            ``next_steps``.
+        """
         import json
 
         try:
@@ -359,6 +404,26 @@ def _register_validate_architecture_tool(mcp_app: t.Any) -> None:
 def _register_suggest_patterns_tool(mcp_app: t.Any) -> None:
     @mcp_app.tool()
     async def crackerjack_suggest_patterns(args: str, kwargs: str) -> str:
+        """Suggest design patterns for a described coding problem.
+
+        Matches keywords in the problem description against the
+        complexity, DRY, performance and security pattern families and
+        returns the matching patterns with guidance on applying them.
+
+        Parameters
+        ----------
+        args
+            Free-text description of the problem to solve.
+        kwargs
+            JSON object string; parsed for validity but currently unused.
+
+        Returns
+        -------
+        str
+            JSON string with ``context``, ``recommended_patterns`` (each
+            with ``pattern``, ``description`` and ``benefits``),
+            ``implementation_guidance`` and ``specialist_agents``.
+        """
         import json
 
         try:

@@ -192,6 +192,20 @@ def _function_registers_tool(
     if re.search(r"\b(?:mcp(?:_app)?|app)\.tool\s*\(", func_text):
         return True
 
+    # A call to an mcp-common factory (``build_register_agents_tools``,
+    # ``build_register_skills_tools``) registers tools through the
+    # ``register(app)`` closure it returns. The factory is imported from
+    # mcp_common rather than defined here, so there is no local body to
+    # inspect — the call itself is the proof. Without this branch the
+    # factory-based registrars look like no-op stubs.
+    for node in ast.walk(ast.parse(func_text)):
+        if (
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Name)
+            and node.func.id.startswith("build_register_")
+        ):
+            return True
+
     # Indirect: ``func`` calls a ``_register_<helper>(mcp_app)`` and that
     # helper carries the decorator. One level of indirection is enough for
     # the Crackerjack tools directory.

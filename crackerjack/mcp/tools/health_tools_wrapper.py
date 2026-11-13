@@ -63,7 +63,7 @@ def register_crackerjack_health(mcp_app: FastMCP) -> None:
     """
     register_health_tools(
         mcp_app,
-        service_name="crackerjack",
+        server_name="crackerjack",
         version=_crackerjack_version(),
         start_time=SERVICE_START_TIME,
         dependencies=_HEALTH_DEPENDENCIES,

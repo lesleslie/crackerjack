@@ -281,6 +281,19 @@ def register_monitoring_tools(mcp_app: t.Any) -> None:
 def _register_stage_status_tool(mcp_app: t.Any) -> None:
     @mcp_app.tool()  # type: ignore[misc] # type: ignore[misc]
     async def crackerjack_get_stage_status() -> str:
+        """Report the completion status of each Crackerjack workflow stage.
+
+        Reads the per-stage status (``fast``, ``comprehensive``, ``tests``,
+        ``cleaning``) from the server's state manager alongside the current
+        session counters.
+
+        Returns
+        -------
+        str
+            JSON string with ``stages`` (stage name to status),
+            ``session`` (total and current iteration, whether the session
+            is active) and a ``timestamp``.
+        """
         client_id = "mcp_client"
 
         try:
@@ -318,6 +331,19 @@ async def _build_stage_status(state_manager: t.Any) -> dict[str, t.Any]:
 def _register_next_action_tool(mcp_app: t.Any) -> None:
     @mcp_app.tool()  # type: ignore[misc] # type: ignore[misc]
     async def crackerjack_get_next_action() -> str:
+        """Recommend the next Crackerjack stage to run.
+
+        Inspects the stage statuses in priority order (fast, tests,
+        comprehensive) and returns the first stage that has not
+        completed, or a completion signal when every stage is done.
+
+        Returns
+        -------
+        str
+            JSON string with ``recommended_action`` (``run_stage`` or
+            ``complete``), ``parameters`` (the ``stage`` to run, empty
+            when complete) and a human-readable ``reason``.
+        """
         client_id = "mcp_client"
 
         try:
@@ -347,6 +373,19 @@ def _register_next_action_tool(mcp_app: t.Any) -> None:
 def _register_server_stats_tool(mcp_app: t.Any) -> None:
     @mcp_app.tool()  # type: ignore[misc] # type: ignore[misc]
     async def crackerjack_get_server_stats() -> str:
+        """Report server-level statistics for the running MCP server.
+
+        Collects the project path, rate-limiter configuration, temporary
+        and progress file counts, state-manager counters and the security
+        manager status, then redacts absolute paths before returning.
+
+        Returns
+        -------
+        str
+            JSON string with ``server_info``, ``rate_limiting``,
+            ``resource_usage``, ``state_manager``, ``security_status``
+            and a ``timestamp``.
+        """
         client_id = "mcp_client"
 
         try:
@@ -403,6 +442,19 @@ async def _build_server_stats_secure(context: t.Any) -> dict[str, t.Any]:
 def _register_comprehensive_status_tool(mcp_app: t.Any) -> None:
     @mcp_app.tool()  # type: ignore[misc]
     async def crackerjack_get_comprehensive_status() -> str:
+        """Report the server's comprehensive status in one call.
+
+        Aggregates service health, active jobs, server statistics and
+        collection metadata, and adds an agent suggestion derived from the
+        current state. Requires an authenticated status request.
+
+        Returns
+        -------
+        str
+            JSON string with ``services``, ``jobs``, ``server_stats``,
+            ``collection_info`` (timestamp, duration, completeness and
+            collection errors) and ``agent_suggestions``.
+        """
         client_id = "mcp_client"
         client_ip = "127.0.0.1"
 
@@ -438,6 +490,19 @@ def _register_comprehensive_status_tool(mcp_app: t.Any) -> None:
 def _register_command_help_tool(mcp_app: t.Any) -> None:
     @mcp_app.tool()  # type: ignore[misc]
     async def crackerjack_list_slash_commands() -> str:
+        """List the available Crackerjack slash commands and their usage.
+
+        Describes the ``/crackerjack:run``, ``/crackerjack:status`` and
+        ``/crackerjack:init`` commands with their parameters and
+        features, so a caller can pick the right one.
+
+        Returns
+        -------
+        str
+            JSON string with ``available_commands``, ``command_details``
+            (per-command description, usage, kwargs and features) and
+            ``total_commands``.
+        """
         try:
             commands = {
                 "/ crackerjack: run": {
@@ -555,6 +620,24 @@ async def _build_filtered_status(
 def _register_filtered_status_tool(mcp_app: t.Any) -> None:
     @mcp_app.tool()  # type: ignore[misc]
     async def crackerjack_get_filtered_status(components: str = "all") -> str:
+        """Report only the status components that were asked for.
+
+        Comma-separated component names select which parts of the
+        comprehensive status to collect; ``all`` returns everything.
+
+        Parameters
+        ----------
+        components
+            Comma-separated subset of ``services``, ``jobs``,
+            ``resources``, or ``all`` (the default).
+
+        Returns
+        -------
+        str
+            JSON string containing only the requested sections, plus a
+            ``timestamp``. An invalid component name returns an error
+            naming the valid set.
+        """
         client_id = "mcp_client"
 
         try:

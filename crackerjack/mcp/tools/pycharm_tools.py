@@ -75,6 +75,28 @@ def _register_get_ide_diagnostics_tool(mcp_app: t.Any) -> None:
         file_path: str,
         errors_only: bool = False,
     ) -> str:
+        """Report the IDE diagnostics PyCharm has for a file.
+
+        Queries the PyCharm MCP adapter for the problems the IDE has
+        recorded against the file and normalises them into a common issue
+        shape. Requires PyCharm to be running with its MCP server enabled.
+
+        Parameters
+        ----------
+        file_path
+            Path of the file to inspect.
+        errors_only
+            Keep only severity ``error`` issues, dropping warnings and
+            informational entries.
+
+        Returns
+        -------
+        str
+            JSON string with ``success`` and ``issues`` (file path, line,
+            column, message, code, severity, suggestion, source) plus
+            ``count``. An unreachable IDE returns ``success`` false with
+            an ``error``.
+        """
         adapter = _get_adapter()
 
         if adapter is None:
@@ -296,6 +318,27 @@ def _register_get_symbol_info_tool(mcp_app: t.Any) -> None:
         symbol_name: str,
         include_usages: bool = False,
     ) -> str:
+        """Look up information about a symbol in the project.
+
+        Requires the PyCharm MCP server to be connected. The actual
+        symbol lookup is not implemented yet, so a connected IDE still
+        returns a ``not_implemented`` status rather than symbol data.
+
+        Parameters
+        ----------
+        symbol_name
+            Name of the symbol to look up.
+        include_usages
+            Reserved; when the lookup is implemented this requests the
+            symbol's usages alongside its definition.
+
+        Returns
+        -------
+        str
+            JSON string with ``success`` false and an ``error`` message.
+            A connected-but-unimplemented IDE returns ``status``
+            ``not_implemented``.
+        """
         adapter = _get_adapter()
 
         if adapter is None:
@@ -329,6 +372,28 @@ def _register_find_usages_tool(mcp_app: t.Any) -> None:
         file_path: str | None = None,
         limit: int = 50,
     ) -> str:
+        """Find the usages of a symbol in the project.
+
+        Requires the PyCharm MCP server to be connected. The actual usage
+        search is not implemented yet, so a connected IDE still returns a
+        ``not_implemented`` status rather than usage locations.
+
+        Parameters
+        ----------
+        symbol_name
+            Name of the symbol whose usages are wanted.
+        file_path
+            Optional path scoping the search to a single file.
+        limit
+            Maximum number of usages to return.
+
+        Returns
+        -------
+        str
+            JSON string with ``success`` false and an ``error`` message.
+            A connected-but-unimplemented IDE returns ``status``
+            ``not_implemented``.
+        """
         adapter = _get_adapter()
 
         if adapter is None:

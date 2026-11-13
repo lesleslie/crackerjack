@@ -29,6 +29,28 @@ def _register_index_file_tool(mcp_app: t.Any) -> None:
         file_path: str,
         config_json: str = "",
     ) -> str:
+        """Index a file into the semantic search index.
+
+        Chunks the file, embeds each chunk and stores the vectors in the
+        persistent index, making the file's content retrievable by
+        ``crackerjack_search_semantic``.
+
+        Parameters
+        ----------
+        file_path
+            Path of the file to index. Validated against path traversal.
+        config_json
+            Optional JSON object overriding the semantic config
+            (embedding model, chunk size, chunk overlap, similarity
+            threshold, embedding dimension). Defaults to the standard
+            MiniLM configuration.
+
+        Returns
+        -------
+        str
+            JSON string with ``success``, ``chunks_processed``,
+            ``file_path``, ``embedding_dimension`` and a ``message``.
+        """
         try:
             validator = get_input_validator()
 
@@ -81,6 +103,38 @@ def _register_search_semantic_tool(mcp_app: t.Any) -> None:
         file_types: str = "",
         config_json: str = "",
     ) -> str:
+        """Search indexed code by meaning rather than by literal text.
+
+        Embeds the query and returns the indexed chunks closest to it in
+        embedding space. Use this for conceptual lookups; use
+        ``crackerjack_search_code`` for literal regular expressions.
+
+        Parameters
+        ----------
+        query
+            Natural-language description of what to find.
+        max_results
+            Maximum number of results to return (1-100, default 10).
+        min_similarity
+            Minimum cosine similarity a chunk must reach to be returned
+            (0.0-1.0, default 0.7).
+        file_types
+            Comma-separated file extensions to restrict results to.
+            Empty means any file type.
+        config_json
+            Optional JSON object overriding the semantic config. It must
+            match the config used when the index was built, or the
+            embeddings will not compare.
+
+        Returns
+        -------
+        str
+            JSON string with ``success``, ``query``, ``results_count``,
+            ``max_results``, ``min_similarity`` and ``results`` (file
+            path, content, similarity score, start and end line, file
+            type, chunk id). ``status`` is ``degraded`` when the index is
+            empty, otherwise ``ok``.
+        """
         try:
             sanitized_query, query_error = _validate_search_query(query)
             if query_error:
@@ -147,6 +201,26 @@ def _register_search_semantic_tool(mcp_app: t.Any) -> None:
 def _register_get_semantic_stats_tool(mcp_app: t.Any) -> None:
     @mcp_app.tool()  # type: ignore[misc]
     async def crackerjack_get_semantic_stats(config_json: str = "") -> str:
+        """Report statistics about the semantic index.
+
+        Summarises the indexed corpus: how many files and chunks are
+        held, the on-disk size, the average chunks per file and the
+        embedding configuration in use.
+
+        Parameters
+        ----------
+        config_json
+            Optional JSON object overriding the semantic config, so the
+            stats describe the index that config points at.
+
+        Returns
+        -------
+        str
+            JSON string with ``success``, ``total_files``,
+            ``total_chunks``, ``index_size_mb``,
+            ``average_chunks_per_file``, ``embedding_model``,
+            ``embedding_dimension`` and ``last_updated``.
+        """
         try:
             config = _parse_semantic_config(config_json)
             if isinstance(config, str):
@@ -190,6 +264,26 @@ def _register_remove_file_from_index_tool(mcp_app: t.Any) -> None:
         file_path: str,
         config_json: str = "",
     ) -> str:
+        """Remove a file's content from the semantic index.
+
+        Drops every chunk belonging to the file so it stops appearing in
+        semantic search results. The file itself is not touched on disk.
+
+        Parameters
+        ----------
+        file_path
+            Path of the file to remove from the index. Validated against
+            path traversal.
+        config_json
+            Optional JSON object overriding the semantic config. It must
+            match the config used when the file was indexed.
+
+        Returns
+        -------
+        str
+            JSON string with ``success``, ``file_path`` and a
+            ``message`` reporting whether the removal took effect.
+        """
         try:
             validator = get_input_validator()
 
@@ -236,6 +330,26 @@ def _register_get_embeddings_tool(mcp_app: t.Any) -> None:
         texts: str,
         config_json: str = "",
     ) -> str:
+        """Generate embedding vectors for a list of texts.
+
+        Embeds each text with the configured embedding model, batching
+        the work when more than one text is supplied. Use the returned
+        vectors with ``crackerjack_calculate_similarity_semantic``.
+
+        Parameters
+        ----------
+        texts
+            JSON array of strings to embed.
+        config_json
+            Optional JSON object overriding the semantic config
+            (embedding model and embedding dimension).
+
+        Returns
+        -------
+        str
+            JSON string with ``success``, ``texts_count``,
+            ``embedding_dimension`` and the ``embeddings`` themselves.
+        """
         try:
             texts_list, parse_error = _parse_texts_input(texts)
             if parse_error:
@@ -265,6 +379,28 @@ def _register_calculate_similarity_tool(mcp_app: t.Any) -> None:
         embedding2: str,
         config_json: str = "",
     ) -> str:
+        """Calculate the similarity between two embedding vectors.
+
+        Compares two embeddings with the configured embedding service and
+        returns the similarity score. Obtain the vectors from
+        ``crackerjack_get_embeddings``.
+
+        Parameters
+        ----------
+        embedding1
+            JSON array of floats — the first embedding vector.
+        embedding2
+            JSON array of floats — the second embedding vector.
+        config_json
+            Optional JSON object overriding the semantic config, so the
+            service uses the same model that produced the vectors.
+
+        Returns
+        -------
+        str
+            JSON string with ``success``, ``similarity_score``,
+            ``embedding1_dimension`` and ``embedding2_dimension``.
+        """
         try:
             try:
                 emb1 = json.loads(embedding1)

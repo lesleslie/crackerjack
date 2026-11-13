@@ -21,6 +21,32 @@ def _register_frontmatter_validate_tool(mcp_app: t.Any) -> None:
         validate_links: bool = True,
         store: str | None = None,
     ) -> str:
+        """Validate YAML frontmatter across the project's Markdown documents.
+
+        Scans the files discovered by the frontmatter validator and checks
+        them against the project's frontmatter schema, optionally
+        validating links and tolerating nonstandard keys.
+
+        Parameters
+        ----------
+        pkg_path
+            Root directory to scan. Defaults to the current directory.
+        strict
+            Treat warnings as failures.
+        allow_nonstandard
+            Accept nonstandard frontmatter keys instead of flagging them.
+        validate_links
+            Also validate the links referenced by each document.
+        store
+            Optional documentation store to scan alongside the package files.
+
+        Returns
+        -------
+        str
+            JSON string with ``success``, ``files_scanned``, ``errors``,
+            ``warnings`` and ``duration_ms``. On a validator crash it
+            returns ``success`` false with a ``reason`` and the raw errors.
+        """
         from crackerjack.services.frontmatter_validator import (
             FrontmatterValidationError,
             FrontmatterValidator,

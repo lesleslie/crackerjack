@@ -951,7 +951,7 @@ requires-dist = [
     { name = "keyring", specifier = ">=25.7.0" },
     { name = "libcst", specifier = ">=1.9.0" },
     { name = "linkcheckmd", specifier = ">=1.4.0" },
-    { name = "mcp-common", specifier = ">=0.33.1" },
+    { name = "mcp-common", specifier = ">=0.35.0" },
     { name = "mdformat", specifier = ">=1.0.0" },
     { name = "mdformat-ruff", specifier = ">=0.1.3" },
     { name = "numpy", specifier = ">=2.5.3" },
@@ -2283,7 +2283,7 @@ wheels = [
 
 [[package]]
 name = "mcp-common"
-version = "0.34.2"
+version = "0.35.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "cryptography" },
@@ -2304,9 +2304,9 @@ dependencies = [
     { name = "typer" },
     { name = "websockets" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/6c/c5/c0aad9b3d080729845bfc614c69c9c208fe9e54df88a5aa99382e5fda23e/mcp_common-0.34.2.tar.gz", hash = "sha256:7f0e535b829c14f4a30c34bc69b222c0b37ab18f15a56b0ebfe800c95ae94243", size = 1076930, upload-time = "2026-11-01T07:02:24.853Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/7b/eb/867412a52bb7f6ecdd7861abcbd6468998cd6b9be0bd82f6a2a9c2723a4f/mcp_common-0.35.0.tar.gz", hash = "sha256:33640e044165c6b32dd9cbc3d6fa921cb848d843133d1485b53ae965d047cd8c", size = 1087037, upload-time = "2026-11-13T08:23:33.266Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/9f/93/bfb83c3f4369cfa7d8aeb5481fcce757b905eba10c7c04f7d16dc557d0eb/mcp_common-0.34.2-py3-none-any.whl", hash = "sha256:4a2fe5891ba8b7e8854f1ab15f28133e0f52ea99f651034dc3cb85edf1fc6a32", size = 489717, upload-time = "2026-11-01T07:02:23.268Z" },
+    { url = "https://files.pythonhosted.org/packages/8d/f9/e6e304b0295f115437edcbe426551878afe4092c26315d3f3b54a2d75584/mcp_common-0.35.0-py3-none-any.whl", hash = "sha256:29faac18f884ae43f8d5087d8f40729e982bec507e86a5137d9643b93c61f79e", size = 490473, upload-time = "2026-11-13T08:23:31.138Z" },
 ]
 
 [[package]]

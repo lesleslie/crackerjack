@@ -220,6 +220,25 @@ async def _handle_session_management(
 def register_progress_tools(mcp_app: t.Any) -> None:
     @mcp_app.tool()
     async def crackerjack_get_job_progress(job_id: str) -> str:
+        """Report the progress of a running Crackerjack job.
+
+        Reads the job's progress file and returns the recorded status,
+        iteration counters, stage, percentages and error counts. The job
+        id comes from ``crackerjack_execute``.
+
+        Parameters
+        ----------
+        job_id
+            Identifier of the job whose progress is wanted.
+
+        Returns
+        -------
+        str
+            JSON string with ``status``, ``iteration``,
+            ``max_iterations``, ``overall_progress``, ``current_stage``,
+            ``stage_progress``, ``message``, ``timestamp`` and
+            ``error_counts``. An unknown job id returns an ``error``.
+        """
         return _handle_get_job_progress(job_id)
 
     @mcp_app.tool()
@@ -227,4 +246,25 @@ def register_progress_tools(mcp_app: t.Any) -> None:
         action: str,
         checkpoint_name: str | None = None,
     ) -> str:
+        """Control the Crackerjack session lifecycle.
+
+        Starts, checkpoints, completes or resets the server's session
+        state. ``checkpoint`` saves a named snapshot that can be
+        restored later.
+
+        Parameters
+        ----------
+        action
+            One of ``start``, ``checkpoint``, ``complete`` or ``reset``.
+        checkpoint_name
+            Name for the checkpoint. Defaults to a timestamped name when
+            the action is ``checkpoint``.
+
+        Returns
+        -------
+        str
+            JSON string with ``status`` and ``action`` (plus ``name``
+            for a checkpoint). An invalid action returns an ``error``
+            listing the valid actions.
+        """
         return await _handle_session_management(action, checkpoint_name)

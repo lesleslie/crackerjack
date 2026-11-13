@@ -335,6 +335,27 @@ def _execute_init_stage(orchestrator: WorkflowPipeline) -> bool:
 def register_core_tools(mcp_app: t.Any) -> None:
     @mcp_app.tool(name="crackerjack_run_stage")  # type: ignore[misc]
     async def run_crackerjack_stage(args: str, kwargs: str) -> str:
+        """Run a named Crackerjack quality stage through the MCP server.
+
+        Validates the request against the server context and the rate
+        limiter, then reports that workflow orchestration was removed in
+        Phase 2 (the runtime is slated to return with the Oneiric
+        integration).
+
+        Parameters
+        ----------
+        args
+            Stage selector: one of ``fast``, ``comprehensive``, ``tests``,
+            ``cleaning`` or ``init``.
+        kwargs
+            JSON object string of extra keyword arguments for the stage.
+
+        Returns
+        -------
+        str
+            JSON string carrying ``success`` and ``error`` keys. The
+            stage is not executed while the runtime remains removed.
+        """
         context = get_context()
         rate_limiter = context.rate_limiter if context else None
 

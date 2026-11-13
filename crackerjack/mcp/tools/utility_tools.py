@@ -128,6 +128,29 @@ def _check_file_eligibility(file: Path, cutoff: t.Any) -> tuple[int, bool] | Non
 def _register_clean_tool(mcp_app: t.Any) -> None:
     @mcp_app.tool(name="crackerjack_clean")
     async def clean_crackerjack(args: str = "", kwargs: str = "{}") -> str:
+        """Delete Crackerjack's temporary and progress files.
+
+        Removes the log and coverage files from the temp directory and
+        the JSON progress files from the server's progress directory,
+        skipping anything newer than the age threshold.
+
+        Parameters
+        ----------
+        args
+            Cleanup scope: ``temp``, ``progress`` or ``all`` (the
+            default).
+        kwargs
+            JSON object string. ``dry_run`` reports what would be
+            deleted without deleting it; ``older_than`` sets the age
+            threshold in hours (default 24).
+
+        Returns
+        -------
+        str
+            JSON string with ``success``, ``scope``, ``dry_run``,
+            ``older_than_hours``, ``files_cleaned``, ``total_size_bytes``
+            and the list of cleaned ``files``.
+        """
         context = get_context()
         if not context:
             return _create_error_response("Server context not available")
@@ -283,6 +306,26 @@ def _create_cleanup_response(
 def _register_config_tool(mcp_app: t.Any) -> None:
     @mcp_app.tool(name="crackerjack_config")
     async def config_crackerjack(args: str = "", kwargs: str = "{}") -> str:
+        """Read or validate the effective Crackerjack configuration.
+
+        Loads the layered settings and returns the whole configuration, a
+        single key, or a validation verdict.
+
+        Parameters
+        ----------
+        args
+            The action and its argument: ``list`` (the default),
+            ``get <key>``, or ``validate``.
+        kwargs
+            JSON object string; parsed for validity before the action
+            runs.
+
+        Returns
+        -------
+        str
+            JSON string holding the configuration dump, the value of the
+            requested key, or a ``{"status": "valid"}`` verdict.
+        """
         from crackerjack.config import CrackerjackSettings
 
         context = get_context()
@@ -332,6 +375,25 @@ async def analyze_project(
 def _register_analyze_tool(mcp_app: t.Any) -> None:
     @mcp_app.tool(name="crackerjack_analyze")
     async def analyze_crackerjack(args: str = "", kwargs: str = "{}") -> str:
+        """Analyse the project and return a quality summary.
+
+        Runs the project analysis over the requested scope and returns the
+        summary report.
+
+        Parameters
+        ----------
+        args
+            Analysis scope. Defaults to ``all``.
+        kwargs
+            JSON object string. ``report_format`` selects the output
+            format (default ``summary``).
+
+        Returns
+        -------
+        str
+            JSON string with ``success``, ``scope``, ``report_format``,
+            ``timestamp`` and the ``analysis`` payload.
+        """
         context = get_context()
         if not context:
             return _create_error_response("Server context not available")
@@ -369,6 +431,29 @@ def _register_analyze_tool(mcp_app: t.Any) -> None:
 def _register_claude_md_validator_tool(mcp_app: t.Any) -> None:
     @mcp_app.tool(name="crackerjack_validate_claude_md")
     async def validate_claude_md(args: str = "", kwargs: str = "{}") -> str:
+        """Validate the project's CLAUDE.md file.
+
+        Checks that CLAUDE.md exists, that it carries the Crackerjack
+        integration section, and that the section states the core quality
+        principles. With the update flag it also rewrites the file when
+        validation failed.
+
+        Parameters
+        ----------
+        args
+            Pass ``--update`` to rewrite CLAUDE.md when validation fails.
+        kwargs
+            JSON object string. ``update`` enables the same rewrite and
+            ``project_path`` selects the project to validate (defaults to
+            the current directory).
+
+        Returns
+        -------
+        str
+            JSON string with ``success``, ``project_path``,
+            ``timestamp`` and the ``validation`` result (``valid``,
+            ``issues``, ``suggestions``).
+        """
         context = get_context()
         if not context:
             return _create_error_response("Server context not available")

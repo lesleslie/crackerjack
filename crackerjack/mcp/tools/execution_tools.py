@@ -17,6 +17,28 @@ def register_execution_tools(mcp_app: t.Any) -> None:
 def _register_execute_crackerjack_tool(mcp_app: t.Any) -> None:
     @mcp_app.tool(name="crackerjack_execute")  # type: ignore[misc]
     async def execute_crackerjack(args: str, kwargs: str) -> str:
+        """Start a Crackerjack quality workflow and return its job id.
+
+        Runs the workflow in the background and hands back a ``job_id``
+        immediately; poll ``crackerjack_get_job_progress`` with that id to
+        follow the run. Requests are checked against the server context
+        and the rate limiter before dispatch.
+
+        Parameters
+        ----------
+        args
+            Arguments for the workflow, as a free-form string.
+        kwargs
+            JSON object string of extra keyword arguments. A default
+            ``execution_timeout`` is added when absent (1200s when tests
+            are requested, otherwise 900s).
+
+        Returns
+        -------
+        str
+            JSON string with ``job_id``, ``status`` (``running``), a
+            ``message`` pointing at the progress tool, and a ``timestamp``.
+        """
         try:
             context = get_context()
             validation_error = await _handle_context_validation(context)
@@ -103,6 +125,26 @@ def _handle_general_error(error: Exception) -> str:
 def _register_smart_error_analysis_tool(mcp_app: t.Any) -> None:
     @mcp_app.tool(name="crackerjack_analyze_errors")  # type: ignore[misc]
     async def smart_error_analysis(use_cache: bool = True) -> str:
+        """Analyse cached error patterns and suggest fixes.
+
+        Reads the error patterns the server has cached from recent runs
+        and turns them into a per-category breakdown with fix suggestions
+        and an urgency level.
+
+        Parameters
+        ----------
+        use_cache
+            Read the server's cached error patterns. When ``False`` no
+            patterns are loaded, so the analysis reports a clean
+            execution history.
+
+        Returns
+        -------
+        str
+            JSON string with ``status``, ``patterns_found``,
+            ``error_categories``, ``fix_suggestions``, ``urgency_level``,
+            ``recommendations`` and a ``message``.
+        """
         context = get_context()
 
         try:
@@ -121,6 +163,29 @@ def _register_smart_error_analysis_tool(mcp_app: t.Any) -> None:
 def _register_init_crackerjack_tool(mcp_app: t.Any) -> None:
     @mcp_app.tool(name="crackerjack_init")  # type: ignore[misc]
     def init_crackerjack(args: str = "", kwargs: str = "{}") -> str:
+        """Initialise or update the Crackerjack configuration for a project.
+
+        Runs the project initialisation service, which merges (or, with
+        ``force``, overwrites) the generated configuration, documentation
+        and MCP wiring into the target directory.
+
+        Parameters
+        ----------
+        args
+            Target path to initialise. Defaults to the current directory.
+        kwargs
+            JSON object string. ``force`` overwrites existing
+            configuration, ``template`` selects an initialisation
+            template, and ``interactive`` (default ``True``) controls
+            prompting.
+
+        Returns
+        -------
+        str
+            JSON string with ``status``, ``message`` and the
+            initialisation ``result``; ``initialized`` reports whether the
+            project was set up.
+        """
         try:
             target_path, force, template, interactive, error = _parse_init_arguments(
                 args, kwargs
@@ -142,6 +207,31 @@ def _register_agent_suggestions_tool(mcp_app: t.Any) -> None:
         project_type: str = "python",
         current_context: str = "",
     ) -> str:
+        """Recommend the specialist agents and workflows for a described task.
+
+        Matches keywords in the task description against known problem
+        categories (testing, security, performance, documentation,
+        dependencies) and returns the matching agents with the reasoning
+        behind each choice.
+
+        Parameters
+        ----------
+        task_description
+            Free-text description of the task to be carried out.
+        project_type
+            The project language or kind, e.g. ``python``. Python projects
+            additionally get the Python workflow recommendations.
+        current_context
+            Optional extra context about the surrounding work.
+
+        Returns
+        -------
+        str
+            JSON string with ``status``, ``task_analysis``,
+            ``suggested_agents`` (each with ``name``, ``reason`` and
+            ``confidence``), ``workflow_recommendations`` and
+            ``reasoning``.
+        """
         try:
             recommendations = _generate_agent_recommendations(
                 task_description,
