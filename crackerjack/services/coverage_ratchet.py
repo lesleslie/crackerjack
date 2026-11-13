@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import json
+import re
 import typing as t
 from contextlib import suppress
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 from rich.console import Console
@@ -12,6 +13,22 @@ from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn
 from crackerjack.models.protocols import CoverageRatchetProtocol
 from crackerjack.services.filesystem import FileSystemService
 from crackerjack.services.regex_patterns import update_coverage_requirement
+
+
+def _update_fail_under_mirror(content: str, coverage: float) -> str:
+    """Update the ``[tool.coverage.report].fail_under`` mirror site.
+
+    pytest-cov enforces the floor through ``--cov-fail-under`` in
+    ``addopts``; coverage.py enforces it through ``fail_under`` in the
+    ``[tool.coverage.report]`` block. Both are present in most repos,
+    so both have to carry the same number — otherwise the two
+    entry-points enforce different floors and the repo's real
+    requirement is whichever one nobody looked at.
+    """
+    coverage_pattern = r"(fail_under\s*=\s*)\d+(?:\.\d+)?"
+    if not re.search(coverage_pattern, content):
+        return content
+    return re.sub(coverage_pattern, rf"\g<1>{coverage}", content, count=1)
 
 
 class CoverageRatchetService(CoverageRatchetProtocol):
@@ -76,10 +93,10 @@ class CoverageRatchetService(CoverageRatchetProtocol):
             "baseline": initial_coverage,
             "current_minimum": initial_coverage,
             "target": 100.0,
-            "last_updated": datetime.now().isoformat(),
+            "last_updated": datetime.now(UTC).isoformat(),
             "history": [
                 {
-                    "date": datetime.now().isoformat(),
+                    "date": datetime.now(UTC).isoformat(),
                     "coverage": initial_coverage,
                     "commit": "baseline",
                     "milestone": False,
@@ -112,9 +129,17 @@ class CoverageRatchetService(CoverageRatchetProtocol):
         Both conditions must hold for a ratchet to be trustworthy. The
         ratchet itself does not enforce this — readers do. See
         ``.claude/decisions/2026-10-13-ratchet-staleness.md``.
+
+        ``generated_at`` is written as a timezone-aware UTC timestamp.
+        The reader parses it with ``datetime.fromisoformat`` and
+        normalizes a naive value to UTC, but a naive *local* timestamp
+        is not UTC: on a machine west of Greenwich it reads as hours
+        in the past, which shortens the staleness window by exactly
+        that offset. Aware UTC is unambiguous wherever the file is
+        written or read.
         """
         metadata: dict[str, t.Any] = {
-            "generated_at": datetime.now().isoformat(),
+            "generated_at": datetime.now(UTC).isoformat(),
         }
         coverage_file = self.pkg_path / "coverage.json"
         if coverage_file.exists():
@@ -125,6 +150,52 @@ class CoverageRatchetService(CoverageRatchetProtocol):
                 metadata["coverage_data_path"] = str(coverage_file.resolve())
                 metadata["coverage_data_mtime"] = coverage_file.stat().st_mtime
         return metadata
+
+    def _refresh_freshness(self) -> bool:
+        """Refresh the staleness metadata after a fresh measurement.
+
+        The floor did not move, but a measurement was taken, and the
+        reader in ``crackerjack.checks.release_audit`` judges the
+        ratchet on that measurement rather than on the floor:
+
+        - ``generated_at`` older than the staleness window reads as
+          time-stale;
+        - a recorded ``coverage_data_mtime`` that no longer matches the
+          on-disk ``coverage.json`` reads as data-stale.
+
+        Every test run rewrites ``coverage.json``, so a ratchet that is
+        only written when the baseline *improves* goes data-stale the
+        next time the suite runs — and time-stale 30 days later — even
+        when nothing about the code changed. Both failure modes surface
+        as "ratchet file could not be read", which is misleading: the
+        file is present and perfectly readable.
+
+        The write is skipped when ``coverage.json`` has not been
+        re-measured since the last write, so a run that does not touch
+        the test suite leaves the file alone.
+
+        Returns True when the file was rewritten.
+        """
+        data = self.get_ratchet_data()
+        if not data:
+            return False
+
+        coverage_file = self.pkg_path / "coverage.json"
+        if not coverage_file.exists():
+            return False
+        try:
+            current_mtime = coverage_file.stat().st_mtime
+        except OSError:
+            return False
+
+        recorded_mtime = data.get("coverage_data_mtime")
+        if isinstance(recorded_mtime, (int, float)) and recorded_mtime == current_mtime:
+            return False  # no new measurement since the last write
+
+        data["last_updated"] = datetime.now(UTC).isoformat()
+        data.update(self._ratchet_metadata())
+        self.ratchet_file.write_text(json.dumps(data, indent=2))
+        return True
 
     def get_ratchet_data(self) -> dict[str, t.Any]:
         if not self.ratchet_file.exists():
@@ -177,6 +248,7 @@ class CoverageRatchetService(CoverageRatchetProtocol):
 
         tolerance_threshold = current_baseline - self.TOLERANCE_MARGIN
         if new_coverage < tolerance_threshold:
+            self._refresh_freshness()
             return {
                 "status": "regression",
                 "message": f"Coverage decreased from {current_baseline:.0f}% to {new_coverage:.0f}% (below {self.TOLERANCE_MARGIN}% tolerance margin)",
@@ -209,6 +281,7 @@ class CoverageRatchetService(CoverageRatchetProtocol):
                 "baseline_updated": True,
             }
 
+        self._refresh_freshness()
         return {
             "status": "maintained",
             "message": f"Coverage maintained at {new_coverage:.0f}% (within {self.TOLERANCE_MARGIN}% tolerance margin)",
@@ -246,11 +319,11 @@ class CoverageRatchetService(CoverageRatchetProtocol):
     ) -> None:
         data["baseline"] = new_coverage
         data["current_minimum"] = new_coverage
-        data["last_updated"] = datetime.now().isoformat()
+        data["last_updated"] = datetime.now(UTC).isoformat()
 
         data["history"].append(
             {
-                "date": datetime.now().isoformat(),
+                "date": datetime.now(UTC).isoformat(),
                 "coverage": new_coverage,
                 "commit": "current",
                 "milestone": milestones_hit,
@@ -271,11 +344,34 @@ class CoverageRatchetService(CoverageRatchetProtocol):
 
         self.ratchet_file.write_text(json.dumps(data, indent=2))
 
+    def raise_floor(self, new_coverage: float) -> None:
+        """Raise the enforced floor to ``new_coverage`` and rewrite the ratchet.
+
+        The counterpart to :meth:`lower_baseline` for the case where
+        coverage improved. Both floor fields are written together and
+        the staleness metadata is refreshed, so a ratchet written here
+        is as trustworthy as one written by :meth:`update_coverage`.
+
+        Callers must not write ``.coverage-ratchet.json`` directly:
+        a hand-written ratchet carries neither the fresh metadata nor
+        both floor fields, which is what makes the release audit and
+        the ratchet gate disagree.
+        """
+        data = self.get_ratchet_data()
+        if not data:
+            return
+        data["baseline"] = new_coverage
+        data["current_minimum"] = new_coverage
+        data["last_updated"] = datetime.now(UTC).isoformat()
+        data.update(self._ratchet_metadata())
+        self.ratchet_file.write_text(json.dumps(data, indent=2))
+
     def _update_pyproject_requirement(self, new_coverage: float) -> None:
         try:
             content = self.pyproject_file.read_text()
 
             updated_content = update_coverage_requirement(content, new_coverage)
+            updated_content = _update_fail_under_mirror(updated_content, new_coverage)
 
             if updated_content != content:
                 updated_content = (
@@ -426,6 +522,19 @@ class CoverageRatchetService(CoverageRatchetProtocol):
             }
 
     def lower_baseline(self, new_coverage: float, reason: str) -> None:
+        """Lower the enforced coverage floor, with a recorded reason.
+
+        ``baseline`` and ``current_minimum`` are two names for the same
+        enforced floor, but they are read by different gates: the
+        release audit reads ``current_minimum`` while
+        ``update_coverage()`` reads ``baseline``. Writing only one of
+        them leaves the two gates disagreeing about what the floor is —
+        the audit would accept a coverage the gate still calls a
+        regression, which is how a lowered ratchet could end up
+        blocking the very publish it was lowered to unblock.
+
+        Both fields are therefore written together here.
+        """
         if not reason or not reason.strip():
             msg = "lower_baseline requires a non-empty reason"
             raise ValueError(msg)
@@ -433,11 +542,12 @@ class CoverageRatchetService(CoverageRatchetProtocol):
         if not data:
             msg = "Coverage ratchet not initialized"
             raise ValueError(msg)
+        data["baseline"] = new_coverage
         data["current_minimum"] = new_coverage
-        data["last_updated"] = datetime.now().isoformat()
+        data["last_updated"] = datetime.now(UTC).isoformat()
         data["history"].append(
             {
-                "date": datetime.now().isoformat(),
+                "date": datetime.now(UTC).isoformat(),
                 "coverage": new_coverage,
                 "commit": "lower",
                 "milestone": False,
@@ -456,8 +566,6 @@ class CoverageRatchetService(CoverageRatchetProtocol):
         must agree, since either entry-point (pytest or `coverage report`) can
         enforce the floor.
         """
-        import re
-
         content = self.pyproject_file.read_text()
         pattern = r"--cov-fail-under=\d+(?:\.\d+)?"
         replacement = f"--cov-fail-under={coverage}"
@@ -494,9 +602,7 @@ class CoverageRatchetService(CoverageRatchetProtocol):
                 f'{content}\n[tool.pytest.ini_options]\naddopts = "{replacement}"\n'
             )
         # Mirror #2: [tool.coverage.report].fail_under (coverage.py 7.x canonical)
-        coverage_pattern = r"(fail_under\s*=\s*)\d+(?:\.\d+)?"
-        if re.search(coverage_pattern, content):
-            content = re.sub(coverage_pattern, rf"\g<1>{coverage}", content, count=1)
+        content = _update_fail_under_mirror(content, coverage)
         self.pyproject_file.write_text(content)
 
     def report_status(self) -> str:

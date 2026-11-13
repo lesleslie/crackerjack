@@ -40,6 +40,8 @@ FIXTURES = _find_fixtures()
 @pytest.fixture
 def good_project(tmp_path: Path) -> Path:
     """Symlink the fixtures into a tmp dir for test isolation."""
+    import datetime
+    import json
     import shutil
 
     if FIXTURES is None:
@@ -47,6 +49,20 @@ def good_project(tmp_path: Path) -> Path:
 
     dst = tmp_path / "fixtures"
     shutil.copytree(FIXTURES, dst)
+
+    # The checked-in fixture ratchet predates the staleness metadata
+    # (2026-10-13), so it carries no ``generated_at`` and reads as
+    # stale — the floor is then unusable and every coverage claim
+    # fails. Stamp a fresh timestamp into the *copy* rather than into
+    # the fixture: a static date in the fixture would go stale again
+    # after the staleness window and break these tests on a timer.
+    ratchet_path = dst / "ratchet.json"
+    ratchet_data = json.loads(ratchet_path.read_text())
+    ratchet_data["generated_at"] = datetime.datetime.now(
+        datetime.UTC
+    ).isoformat()
+    ratchet_path.write_text(json.dumps(ratchet_data, indent=2))
+
     return dst
 
 

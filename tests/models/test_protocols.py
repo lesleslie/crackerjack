@@ -548,6 +548,7 @@ class TestCoverageRatchetProtocol:
         mock_ratchet.get_coverage_report = MagicMock(return_value="Report")
         mock_ratchet.check_and_update_coverage = MagicMock(return_value={})
         mock_ratchet.get_ratchet_data = MagicMock(return_value={})
+        mock_ratchet.raise_floor = MagicMock(return_value=None)
         mock_ratchet.mirror_to_pyproject = MagicMock(return_value=None)
         # ServiceProtocol inherited methods (all 12) — required by
         # CoverageRatchetProtocol(ServiceProtocol) inheritance.

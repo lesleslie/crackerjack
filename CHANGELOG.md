@@ -10,6 +10,57 @@ blocks_on: []
 topic: changelog
 ---
 
+## [Unreleased]
+
+### Fixed
+
+- coverage: The release audit refused a present, readable coverage ratchet
+  with "ratchet file could not be read". `update_coverage()` only wrote
+  `.coverage-ratchet.json` on the *improved* path, so a repo whose
+  coverage is flat between releases never advanced `generated_at` and
+  went time-stale after 30 days — and went data-stale as soon as the
+  next test run rewrote `coverage.json`, because the recorded
+  `coverage_data_mtime` no longer matched. `_refresh_freshness()` now
+  rewrites the staleness metadata whenever `coverage.json` has been
+  re-measured since the last write, on the *maintained* and *regression*
+  paths as well. The write is skipped when no new measurement happened,
+  so a run that does not touch the test suite leaves the file alone.
+- release-audit: A stale ratchet is now reported as stale, with the
+  remedy, instead of reusing the "could not be read" message that a
+  genuinely missing file gets. The two need different fixes, and
+  reporting a present, readable file as unreadable sends the operator
+  looking for a file that is right there.
+- tests: The release-audit fixture ratchet in mcp-common predates the
+  staleness metadata, so it carries no `generated_at` and reads as
+  stale — the floor is unusable and every coverage claim fails. The
+  fixture now stamps a fresh timestamp into the copy it makes for the
+  test, so it cannot go stale on a timer the way a checked-in date
+  would.
+- coverage: `lower_baseline()` wrote only `current_minimum`, leaving
+  `baseline` at the old value. The release audit reads
+  `current_minimum` while the ratchet gate reads `baseline`, so the
+  two gates disagreed about the enforced floor — the audit would
+  accept a coverage that the gate still called a regression, and a
+  ratchet lowered to unblock a publish could block it anyway. Both
+  floor fields are now written together.
+- coverage: `_update_pyproject_requirement()` updated only the
+  `--cov-fail-under` mirror site in `addopts`, leaving
+  `[tool.coverage.report].fail_under` stale. pytest-cov and coverage.py
+  are two enforcement points for the same floor, so the repo enforced
+  whichever number nobody looked at. Both sites are now written
+  together, through the same helper `mirror_to_pyproject()` uses.
+- coverage: The ratchet wrote `generated_at` and `last_updated` as
+  naive local timestamps, but the release audit parses them and
+  normalizes a naive value to UTC — so on a machine west of Greenwich
+  the ratchet read as hours in the past, shortening the 30-day
+  staleness window by the machine's UTC offset. The timestamps are now
+  timezone-aware UTC.
+- test-manager: The legacy ratchet gate wrote `.coverage-ratchet.json`
+  directly, carrying neither fresh staleness metadata nor both floor
+  fields, so a ratchet written that way was data-stale the moment it
+  was written. The write now goes through `CoverageRatchetService.
+  raise_floor()`, so there is a single writer for the ratchet file.
+
 ## [0.93.0] - 2026-11-07
 
 ### Added

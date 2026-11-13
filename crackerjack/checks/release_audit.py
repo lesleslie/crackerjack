@@ -385,6 +385,39 @@ def _read_pyproject_version(path: Path) -> str | None:
     return m.group(1) if m else None
 
 
+def _load_ratchet(path: Path) -> tuple[dict[str, object] | None, str | None]:
+    """Load the ratchet and report why it cannot be trusted.
+
+    Returns ``(data, None)`` when the ratchet is sound, and
+    ``(None, defect)`` otherwise. ``defect`` is one of:
+
+    - ``"missing"`` — the file does not exist.
+    - ``"malformed"`` — the file is not JSON, is not an object, or has
+      no ``current_minimum``.
+    - ``"stale"`` — the file parses but no longer describes the
+      measured coverage (see :func:`_is_ratchet_stale`).
+    """
+    import json
+
+    try:
+        raw = path.read_text()
+    except FileNotFoundError:
+        return None, "missing"
+
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError:
+        return None, "malformed"
+
+    if not isinstance(data, dict) or "current_minimum" not in data:
+        return None, "malformed"
+
+    if _is_ratchet_stale(data, project_root=path.parent):
+        return None, "stale"
+
+    return data, None
+
+
 def _read_ratchet_floor(path: Path) -> float | None:
     """Extract `current_minimum` from .coverage-ratchet.json.
 
@@ -397,20 +430,38 @@ def _read_ratchet_floor(path: Path) -> float | None:
     ``.claude/decisions/2026-10-13-ratchet-staleness.md`` for the
     policy.
     """
-    import json
-
-    try:
-        data = json.loads(path.read_text())
-    except FileNotFoundError, json.JSONDecodeError:
+    data, _defect = _load_ratchet(path)
+    if data is None:
         return None
 
-    if not isinstance(data, dict) or "current_minimum" not in data:
-        return None
+    floor = data["current_minimum"]
+    if isinstance(floor, str):
+        try:
+            return float(floor)
+        except ValueError:
+            return None
+    if isinstance(floor, (int, float)):
+        return float(floor)
+    return None
 
-    if _is_ratchet_stale(data, project_root=path.parent):
-        return None
 
-    return float(data["current_minimum"])
+def _ratchet_defect_message(ratchet_path: Path) -> str:
+    """Describe why the ratchet could not certify a coverage claim.
+
+    The distinction matters: a missing file and a stale file need
+    different remedies, and reporting both as "could not be read" sends
+    the operator looking for a file that is present and perfectly
+    readable.
+    """
+    _data, defect = _load_ratchet(ratchet_path)
+    if defect == "stale":
+        return (
+            "is stale — it no longer describes the measured coverage. "
+            "Regenerate it with `crackerjack run --publish` before releasing."
+        )
+    if defect == "malformed":
+        return "could not be read (malformed JSON)"
+    return "could not be read (file not found)"
 
 
 # Maximum age for a ratchet file to be considered trustworthy. After
@@ -560,7 +611,8 @@ def _verify_coverage(claim: ClaudeClaim, ratchet_path: Path) -> VerifyResult:
             False,
             "claude_md",
             claim,
-            f"CLAUDE.md claims {claim.value}% coverage but ratchet file could not be read",
+            f"CLAUDE.md claims {claim.value}% coverage but {ratchet_path.name} "
+            f"{_ratchet_defect_message(ratchet_path)}",
         )
     claim_value = float(claim.value)
     if claim_value < floor:

@@ -190,11 +190,7 @@ class TestManager:
 
         if current_pct > baseline + tolerance:
             self.coverage_ratchet.mirror_to_pyproject(current_pct)
-            ratchet_data["current_minimum"] = current_pct
-            ratchet_data["last_updated"] = datetime.now(UTC).isoformat()
-            self.coverage_ratchet.ratchet_file.write_text(
-                json.dumps(ratchet_data, indent=2)
-            )
+            self.coverage_ratchet.raise_floor(current_pct)
 
         return RatchetResult(exit_code=0, message=f"Coverage: {current_pct:.2f}%")
 

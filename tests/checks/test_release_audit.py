@@ -1227,3 +1227,68 @@ def test_main_block_fail_project(tmp_path: Path, monkeypatch: pytest.MonkeyPatch
         cwd=str(tmp_path),
     )
     assert rc == 1
+
+
+# ---------------------------------------------------------------------------
+# Ratchet defect reporting
+# ---------------------------------------------------------------------------
+
+
+def test_verify_coverage_stale_ratchet_says_stale(tmp_path: Path) -> None:
+    """A stale ratchet is reported as stale, not as an unreadable file.
+
+    The ratchet is present and perfectly readable — it was rejected
+    because its metadata no longer describes the measured coverage.
+    Reporting that as "could not be read" sends the operator looking
+    for a file that is right there.
+    """
+    p = tmp_path / "ratchet.json"
+    p.write_text(
+        json.dumps(
+            {
+                "current_minimum": 89.5,
+                "generated_at": "2020-01-01T00:00:00",
+            }
+        )
+    )
+    claim = ClaudeClaim(kind="coverage", value="92")
+    r = _verify_coverage(claim, p)
+    assert r.passed is False
+    assert "stale" in r.message
+    assert "could not be read" not in r.message
+
+
+def test_verify_coverage_missing_ratchet_says_not_found(tmp_path: Path) -> None:
+    """A missing ratchet still reports that it could not be read."""
+    claim = ClaudeClaim(kind="coverage", value="92")
+    r = _verify_coverage(claim, tmp_path / "missing.json")
+    assert r.passed is False
+    assert "could not be read" in r.message
+
+
+def test_verify_coverage_malformed_ratchet_says_malformed(tmp_path: Path) -> None:
+    """A ratchet that is not JSON reports as malformed, not as missing."""
+    p = tmp_path / "ratchet.json"
+    p.write_text("{not json")
+    claim = ClaudeClaim(kind="coverage", value="92")
+    r = _verify_coverage(claim, p)
+    assert r.passed is False
+    assert "malformed" in r.message
+
+
+def test_read_ratchet_floor_non_numeric_current_minimum_returns_none(
+    tmp_path: Path,
+) -> None:
+    """A non-numeric floor must not raise — it reads as unusable."""
+    import datetime
+
+    p = tmp_path / "ratchet.json"
+    p.write_text(
+        json.dumps(
+            {
+                "current_minimum": "not-a-number",
+                "generated_at": datetime.datetime.now(datetime.UTC).isoformat(),
+            }
+        )
+    )
+    assert _read_ratchet_floor(p) is None
