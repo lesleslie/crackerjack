@@ -179,12 +179,13 @@ class TestToolConfigsRegistry:
     def test_tool_configs_total_count(self) -> None:
         """Verify expected number of tool configurations.
 
-        Updated from 15 to 17 as ``betterleaks`` and ``check-jsonschema``
-        were added to TOOL_CONFIGS (these hooks also joined the
-        comprehensive strategy around the same time — see
-        ``crackerjack/config/hooks.py``).
+        Updated from 17 to 16 when the unreachable ``pyright`` adapter
+        was deleted (2026-11-14, commit 46417595) -- it was the last
+        registry entry without a hook behind it, and the hooks that
+        remain are the ones ``crackerjack/config/hooks.py`` still
+        schedules.
         """
-        assert len(TOOL_CONFIGS) == 17
+        assert len(TOOL_CONFIGS) == 16
 
     def test_tool_config_ruff(self) -> None:
         """Verify ruff configuration."""

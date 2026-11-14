@@ -626,8 +626,11 @@ class TestAdapterTimeouts:
     def test_default_values(self):
         """Test default adapter timeouts."""
         settings = AdapterTimeouts()
-        assert settings.mypy_timeout == 120.0
-        assert settings.vulture_timeout == 900
+        # The mypy and vulture adapters were deleted (46417595, 2026-11-14).
+        # ty took over mypy's 120-second slot, and vulture's 900-second
+        # budget is the one complexipy now carries.
+        assert settings.ty_timeout == 120
+        assert settings.complexipy_timeout == 900
         assert settings.bandit_timeout == 300
         assert settings.semgrep_timeout == 300
 

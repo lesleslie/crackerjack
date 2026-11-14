@@ -148,11 +148,20 @@ def test_rendered_contains_all_six_canonical_stores() -> None:
 
 
 def test_default_stores_match_akosha_canonical_set() -> None:
-    """Crackerjack's stores mirror the akosha/Bodai canonical 6.
+    """Crackerjack's stores mirror the akosha/Bodai canonical set.
 
     If this test fails after adding a new store, run the akosha-side
     regenerator locally and confirm the crackerjack tool still parses
     the new file shape; both repos should drift together.
+
+    The canonical set is five *distinct* stores. akosha's own tuple
+    lists ``docs/plans/`` twice -- once for "Plans & Specifications"
+    and once for "Superpowers Plans", which share the directory -- and
+    its renderer collapses that through the ``STORE_LABELS`` mapping.
+    Crackerjack's renderer walks ``DEFAULT_STORES`` directly and emits
+    one section per entry, so a repeated entry would render the same
+    section twice. Both repos index five stores today; this pins the
+    de-duplicated form.
     """
     from crackerjack.tools import plan_index_sync as pis
 
@@ -160,7 +169,6 @@ def test_default_stores_match_akosha_canonical_set() -> None:
         "docs/adr/",
         "docs/plans/",
         "docs/specs/",
-        "docs/plans/",
         ".claude/decisions/",
         "docs/followups/",
     )

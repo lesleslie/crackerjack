@@ -363,7 +363,11 @@ class TestGitInterface:
 
     def test_git_interface_is_runtime_checkable(self) -> None:
         """Verify GitInterface can be checked with isinstance."""
-        mock_git = MagicMock()
+        # ``spec=`` is what makes the isinstance check pass: since
+        # Python 3.12 a runtime_checkable protocol's instance check
+        # reads the members with ``getattr_static``, which does not see
+        # the attributes a bare MagicMock creates on demand.
+        mock_git = MagicMock(spec=GitInterface)
         mock_git.is_git_repo = MagicMock(return_value=True)
         mock_git.get_changed_files = MagicMock(return_value=["file1.py", "file2.py"])
         mock_git.commit = MagicMock(return_value=True)
@@ -399,6 +403,9 @@ class TestGitInterface:
             def checkout_files(self, files: list[str]) -> bool:
                 return True
 
+            def rm_files(self, files: list[str]) -> bool:
+                return True
+
         git = SimpleGit()
         assert isinstance(git, GitInterface)
         assert git.is_git_repo() is True
@@ -415,7 +422,8 @@ class TestHookManager:
 
     def test_hook_manager_is_runtime_checkable(self) -> None:
         """Verify HookManager can be checked with isinstance."""
-        mock_manager = MagicMock()
+        # ``spec=`` for the same reason as the GitInterface check above.
+        mock_manager = MagicMock(spec=HookManager)
         mock_manager.run_fast_hooks = MagicMock(return_value=[])
         mock_manager.run_comprehensive_hooks = MagicMock(return_value=[])
         mock_manager.install_hooks = MagicMock(return_value=True)
@@ -447,6 +455,9 @@ class TestHookManager:
             ) -> t.Any:
                 return {}
 
+            def set_active_tool(self, tool: str) -> None:
+                pass
+
         manager = SimpleHookManager()
         assert isinstance(manager, HookManager)
 
@@ -456,7 +467,8 @@ class TestSecurityAwareHookManager:
 
     def test_security_aware_hook_manager_is_runtime_checkable(self) -> None:
         """Verify SecurityAwareHookManager can be checked with isinstance."""
-        mock_manager = MagicMock()
+        # ``spec=`` for the same reason as the GitInterface check above.
+        mock_manager = MagicMock(spec=SecurityAwareHookManager)
         # HookManager methods
         mock_manager.run_fast_hooks = MagicMock(return_value=[])
         mock_manager.run_comprehensive_hooks = MagicMock(return_value=[])
@@ -507,6 +519,9 @@ class TestSecurityAwareHookManager:
                 comprehensive_results: list[t.Any],
             ) -> dict[str, t.Any]:
                 return {}
+
+            def set_active_tool(self, tool: str) -> None:
+                pass
 
         manager = SecureManager()
         assert isinstance(manager, SecurityAwareHookManager)

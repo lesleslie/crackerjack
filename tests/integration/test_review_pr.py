@@ -410,10 +410,28 @@ class TestSkillRegistered:
         assert entry["body_filename"] == "review-pr.md"
 
     def test_skill_metadata_round_trip(self) -> None:
-        """Build the metadata via the same path the MCP tool uses."""
-        from crackerjack.mcp.tools.skill_registry import _build_unsigned_metadata
+        """Build the metadata via the same path the MCP tool uses.
 
-        metadata = _build_unsigned_metadata("review-pr")
+        The builder lives in ``mcp_common.skills_tools`` -- the factory
+        that ``register_skill_registry`` delegates to -- and takes the
+        catalog entry plus the loaded body. Crackerjack owns the entry
+        and the body; the factory owns the schema.
+        """
+        from mcp_common.skills_tools import (
+            _build_unsigned_metadata,
+            _strip_body,
+        )
+
+        from crackerjack.mcp.tools.skill_registry import (
+            _STATIC_SKILLS_BY_NAME,
+            _body_loader,
+        )
+
+        metadata = _build_unsigned_metadata(
+            _STATIC_SKILLS_BY_NAME["review-pr"],
+            server_key="crackerjack",
+            body=_strip_body(_body_loader("review-pr")),
+        )
         assert metadata.server == "crackerjack"
         assert metadata.name == "review-pr"
         assert metadata.version == "1.0.0"
