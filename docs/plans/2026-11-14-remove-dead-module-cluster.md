@@ -55,7 +55,7 @@ inventory too.
    not a silent delete.** `safe_code_modifier`, `validation_rate_limiter`, the
    self-improvement loop, and the `SafeCodeModifier` `.bak`-sibling guarantee
    are claimed by live documentation. Deleting the code while leaving the
-   documentation is a new inconsistency. See *Decisions that need a call*.
+   documentation is a new inconsistency. See *Resolved decisions* below.
 9. **Never `git add -A`.** Commit with explicit pathspecs; other sessions have
    work in this tree.
 
@@ -66,9 +66,11 @@ inventory too.
    `crackerjack/services/regex_patterns.py` still exports `SAFE_PATTERNS`;
    `len(SAFE_PATTERNS) >= 180`.
 3. `crackerjack/mahavishnu/mcp/tools/git_analytics.py` no longer exists at that
-   path, and its eight tools are reachable from a registered MCP surface
-   (either a new `crackerjack/mahavishnu-git-analytics` console script with a
-   `main()` that calls `mcp.run()`, or the `crackerjack/mcp/tools/` tree).
+   path, and **either** its eight tools are reachable from a registered MCP
+   surface and answer with real data **or** they are not registered at all.
+   A registered tool that raises `NotImplementedError` fails this
+   condition -- the relocation alone does not satisfy it, because the two
+   modules the tools depend on are stubs.
 4. `grep -rn "sys.path.insert" tests/` returns no match that inserts
    `<repo>/crackerjack`.
 5. `pyproject.toml`'s wheel include no longer matches `crackerjack/tests/**`,
@@ -225,10 +227,59 @@ process, while six live documents describe it as live. It is also the *only*
 consumer of `crackerjack/integration/mahavishnu_integration.py` and
 `crackerjack/memory/git_metrics_collector.py`.
 
-### Decisions that need a call
+### Resolved decisions (operator, 2026-11-14)
 
-These are the only genuinely open questions. Everything else in this plan is
-mechanical.
+All four open questions were answered on 2026-11-14. Each was decided the
+recommended way, and each is now a constraint on the phases below.
+
+1. **The `crackerjack/mahavishnu/` forks: delete them and their tests.**
+   The three forks go with their three test files (~513 lines) and the
+   `sys.path` shim that shadows the real upstream `mahavishnu` package for
+   the rest of the pytest session. The namespace does not survive in any
+   form. (Re-forking from upstream's current APIs was the alternative;
+   that is feature work with a clear owner, not cleanup.)
+
+2. **`git_analytics.py`: relocate into `crackerjack/mcp/tools/` and wire
+   the eight tools into `crackerjack/mcp/tools/profiles.py`.** Reachable on
+   the existing crackerjack MCP wire (port 8676), no new process to
+   supervise, and it matches how every other crackerjack MCP tool is
+   registered.
+
+   **But the relocation is not sufficient on its own.** Both of the
+   module's dependencies are type-checker stubs whose runtime bodies raise
+   `NotImplementedError`:
+   `crackerjack/integration/mahavishnu_integration.py` (the whole
+   `MahavishnuAggregator` class) and
+   `crackerjack/memory/git_metrics_collector.py` (`collect_commit_metrics`,
+   `collect_branch_activity`, `collect_merge_patterns`). Verified by
+   calling all eight tools: `get_portfolio_velocity_dashboard` raises
+   `NotImplementedError` outright; the other seven swallow it into an
+   error payload whose message is the stub's own. The stub's error text
+   pointed at `get_repository_health_dashboard` as the way to get real
+   data — which routes back through the same stub.
+
+   So Phase 6 relocates the module and registers the tools, and the
+   eight tools will fail there exactly as they fail here. **Either the
+   collection bodies are implemented (real feature work, outside this
+   plan) or the surface is dropped.** Phase 6 must not leave eight
+   registered tools that raise.
+
+3. **The four documented-but-unwired features: delete the code and
+   correct the documentation.** The `.bak`-sibling guarantee, the
+   `validation_rate_limiter` core-security component, the self-improvement
+   loop, and the `MemoryOptimizerProtocol` injection are removed, and
+   the documentation that claims them is rewritten to say they were never
+   wired.
+
+4. **`crackerjack.exceptions` and `crackerjack.contracts`: delete both,
+   and fix `CONTRIBUTING.md` in the same commit.** Pre-1.0, replace not
+   extend. The contributing guide already names two exception classes
+   that do not exist.
+
+### Decisions that were open when this plan was written
+
+These were the genuinely open questions; they are recorded above as the
+operator's answers.
 
 1. **The `crackerjack/mahavishnu/` namespace.** The tree is not a vendored
    copy of upstream `mahavishnu/` — it is a **fork with drifted APIs**. Three
@@ -794,21 +845,33 @@ since evolved past them; the crackerjack copies have not been touched since
      goes, and `tests/unit/mahavishnu/` with it.
 3. **`git_analytics.py` is relocated to `crackerjack/mcp/tools/git_analytics.py`
    and its eight tools are wired into `crackerjack/mcp/tools/profiles.py`.**
-   This is option (b) from *Decisions that need a call*: it makes the tools
-   reachable on the existing crackerjack MCP wire (port 8676) with no new
-   process to supervise, no plist, and no `mcp.run()` launcher to write. It
-   also matches how every other crackerjack MCP tool is registered. Option
-   (a) — a separate console script and launchd plist — adds a supervised
-   process for eight tools that the existing server can serve.
+   This is the operator's answer to *Decisions that were open when this plan
+   was written*: it makes the tools reachable on the existing crackerjack MCP
+   wire (port 8676) with no new process to supervise, no plist, and no
+   `mcp.run()` launcher to write. It also matches how every other crackerjack
+   MCP tool is registered.
+
+   **The relocation is a wiring job, not a working-surface job.** Both
+   dependencies are type-checker stubs whose runtime bodies raise
+   `NotImplementedError`, so the eight tools will be registered and will
+   still fail — one of them outright, the other seven by swallowing the
+   error into a payload. Phase 6 therefore has two acceptable endings:
+   the collection bodies are implemented (feature work, tracked
+   separately), or the eight tools are **not** registered and the surface
+   is dropped. Registering eight tools that raise is the one outcome this
+   phase must not produce.
 4. **The two dependencies `git_analytics.py` needs move with it**:
    `crackerjack/integration/mahavishnu_integration.py` (156 lines) and
    `crackerjack/memory/git_metrics_collector.py` (120 lines) are its only
    consumers' only consumers. Since `git_analytics.py` becomes live, both
    become live, and they leave the dead set.
-5. **The six stale documents are corrected** to describe the tools where they
-   now live, and `MEMORY_ARCHITECTURE.md:54`'s reference to
+5. **The six stale documents are corrected** — done on 2026-11-14, ahead of
+   the relocation, because the claims were wrong *now* and not only after
+   the move. They now say the module is not callable and that its analytics
+   are unimplemented, rather than describing it as a live surface.
+   `MEMORY_ARCHITECTURE.md:54`'s reference to
    `crackerjack/memory/git_metrics_storage.py` — a module that no longer
-   exists — is corrected.
+   exists — is corrected too.
 
 ### Risks
 

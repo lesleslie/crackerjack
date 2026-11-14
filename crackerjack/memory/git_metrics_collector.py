@@ -10,11 +10,18 @@ call sites in ``crackerjack/mahavishnu/mcp/tools/git_analytics.py``
 (lines 180, 586, 1868, 2113) have the surface they need at
 static-analysis time.
 
-The runtime bodies raise ``NotImplementedError``; production deployments
-should rely on the real ``get_repository_health_dashboard`` MCP tool
-exposed via the ``crackerjack-mahavishnu-git-analytics`` FastMCP server
-in ``crackerjack/mahavishnu/mcp/tools/git_analytics.py`` rather than
-importing this stub.
+The runtime bodies raise ``NotImplementedError``. The advice in the old
+docstring -- use the ``get_repository_health_dashboard`` MCP tool instead --
+was circular: that tool is in
+``crackerjack/mahavishnu/mcp/tools/git_analytics.py`` and routes back
+through this stub, so it fails the same way.
+
+The module also declares its own ``FastMCP("crackerjack-mahavishnu-git-analytics")``
+object with no ``mcp.run()``, no console script, and no MCP registration, so
+nothing serves it today either. Relocating it onto the crackerjack MCP wire
+is planned (phase 6 of
+``docs/plans/2026-11-14-remove-dead-module-cluster.md``); implementing the
+collection bodies is not, and until then the tools fail.
 
 TODO(mcpretentious-removed): restore full module once vishnu MCP wire-up is verified
 """

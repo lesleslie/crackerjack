@@ -57,9 +57,8 @@ conditional — the `publish_to_eventbridge` tool only appears when
 
 No orphan groups exist as of 2026-09-09. All tool groups in
 `crackerjack/mcp/tools/` are wired through `REGISTRATION_MAP` and assigned
-to a profile tier. Removed 2026-09-09: `mahavishnu_tools` (superseded by
-the standalone `crackerjack-mahavishnu-git-analytics` MCP server at
-`crackerjack/mahavishnu/mcp/tools/git_analytics.py`) and `workspace_tools`
+to a profile tier. Removed 2026-09-09: `mahavishnu_tools` (superseded by the
+git-analytics module at `crackerjack/mahavishnu/mcp/tools/git_analytics.py` — eight tool functions, but **not currently callable**. The module declares its own `FastMCP("crackerjack-mahavishnu-git-analytics")` object with no `mcp.run()`, no console script, and no MCP registration, so no client can reach it. Its analytics are unimplemented too: every one of the eight tools routes through `crackerjack/integration/mahavishnu_integration.py` and `crackerjack/memory/git_metrics_collector.py`, both of which are type-checker stubs whose runtime bodies raise `NotImplementedError`. Phase 6 of `docs/plans/2026-11-14-remove-dead-module-cluster.md` relocates the module onto the crackerjack MCP wire; until those stubs are implemented, the tools will fail there as well.) and `workspace_tools`
 (stubbed backend never landed; no replacement planned). See §9.1 for the
 removal log.
 
@@ -249,7 +248,7 @@ ______________________________________________________________________
 | `query_local_traces` | `mcp__akosha__query_local_traces` | HTTP POST to `AKOSHA_MCP_ENDPOINT/mcp` (JSON-RPC 2.0) | Swallowed errors → `[]` returned. |
 | `crackerjack_search_code`, `crackerjack_get_ide_diagnostics`, `pycharm_health` | PyCharm MCP | HTTP via `PyCharmMCPAdapter` (timeout 30s) | Structured error JSON when PyCharm MCP unreachable; circuit-breaker trips after repeated failures. |
 | `crackerjack_get_symbol_info`, `crackerjack_find_usages` | PyCharm MCP (planned) | HTTP via `PyCharmMCPAdapter` | Returns `status: "not_implemented"`; pending PyCharm MCP extension. |
-| `get_cross_project_*`, `get_repository_health`, `get_velocity_comparison` (moved to `crackerjack-mahavishnu-git-analytics`) | Mahavishnu aggregator | In-process via `crackerjack.integration.mahavishnu_integration` | Moved 2026-09-09: lives on the standalone `crackerjack-mahavishnu-git-analytics` MCP server (see `crackerjack/mahavishnu/mcp/tools/git_analytics.py`). Not part of the crackerjack MCP wire surface. |
+| `get_cross_project_*`, `get_repository_health`, `get_velocity_comparison` (moved to `crackerjack-mahavishnu-git-analytics`) | Mahavishnu aggregator | In-process via `crackerjack.integration.mahavishnu_integration` | Moved 2026-09-09. The equivalent surface is `crackerjack/mahavishnu/mcp/tools/git_analytics.py` — eight tool functions, but **not currently callable**. The module declares its own `FastMCP("crackerjack-mahavishnu-git-analytics")` object with no `mcp.run()`, no console script, and no MCP registration, so no client can reach it. Its analytics are unimplemented too: every one of the eight tools routes through `crackerjack/integration/mahavishnu_integration.py` and `crackerjack/memory/git_metrics_collector.py`, both of which are type-checker stubs whose runtime bodies raise `NotImplementedError`. Phase 6 of `docs/plans/2026-11-14-remove-dead-module-cluster.md` relocates the module onto the crackerjack MCP wire; until those stubs are implemented, the tools will fail there as well. |
 
 ______________________________________________________________________
 
@@ -310,7 +309,7 @@ The mechanical single source of truth, mirroring `REGISTRATION_MAP` in
 
 | Tool group | Tools | Removal log |
 |---|---|---|
-| `mahavishnu_tools` | `get_cross_project_git_dashboard`, `get_repository_health`, `get_cross_project_patterns`, `get_velocity_comparison` | Removed 2026-09-09. Superseded by the standalone `crackerjack-mahavishnu-git-analytics` MCP server (`crackerjack/mahavishnu/mcp/tools/git_analytics.py`), which exposes an equivalent surface (`get_portfolio_velocity_dashboard`, `get_repository_health_dashboard`, etc.) over the same shared `crackerjack.integration.mahavishnu_integration` aggregator. |
+| `mahavishnu_tools` | `get_cross_project_git_dashboard`, `get_repository_health`, `get_cross_project_patterns`, `get_velocity_comparison` | Removed 2026-09-09. The equivalent surface is `crackerjack/mahavishnu/mcp/tools/git_analytics.py` — eight tool functions, but **not currently callable**. The module declares its own `FastMCP("crackerjack-mahavishnu-git-analytics")` object with no `mcp.run()`, no console script, and no MCP registration, so no client can reach it. Its analytics are unimplemented too: every one of the eight tools routes through `crackerjack/integration/mahavishnu_integration.py` and `crackerjack/memory/git_metrics_collector.py`, both of which are type-checker stubs whose runtime bodies raise `NotImplementedError`. Phase 6 of `docs/plans/2026-11-14-remove-dead-module-cluster.md` relocates the module onto the crackerjack MCP wire; until those stubs are implemented, the tools will fail there as well. It exposes an equivalent surface (`get_portfolio_velocity_dashboard`, `get_repository_health_dashboard`, etc.) over the same shared `crackerjack.integration.mahavishnu_integration` aggregator. |
 | `workspace_tools` | `create_workspace`, `list_workspaces`, `get_workspace_info`, `remove_workspace` | Removed 2026-09-09. The module was a Phase 3 placeholder with `_get_manager()` raising `NotImplementedError` because the Oneiric workspace backend was removed in Phase 2. No replacement planned; the workspace concept was deemed obsolete in favor of native git worktrees. `MEMORY_ARCHITECTURE.md` Contract 5.7 was struck at the same time. |
 
 ______________________________________________________________________

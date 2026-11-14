@@ -10,9 +10,8 @@ ______________________________________________________________________
 > `crackerjack/mcp/tools/mahavishnu_tools.py`) was struck — the 4
 > orphan tools (`get_cross_project_git_dashboard`, `get_repository_health`,
 > `get_cross_project_patterns`, `get_velocity_comparison`) were never
-> wired and are now removed. The equivalent live surface lives on
-> the standalone `crackerjack-mahavishnu-git-analytics` MCP server
-> (`crackerjack/mahavishnu/mcp/tools/git_analytics.py`). Phase 3.6
+> wired and are now removed. The equivalent surface is `crackerjack/mahavishnu/mcp/tools/git_analytics.py` — eight tool functions, but **not currently callable**. The module declares its own `FastMCP("crackerjack-mahavishnu-git-analytics")` object with no `mcp.run()`, no console script, and no MCP registration, so no client can reach it. Its analytics are unimplemented too: every one of the eight tools routes through `crackerjack/integration/mahavishnu_integration.py` and `crackerjack/memory/git_metrics_collector.py`, both of which are type-checker stubs whose runtime bodies raise `NotImplementedError`. Phase 6 of `docs/plans/2026-11-14-remove-dead-module-cluster.md` relocates the module onto the crackerjack MCP wire; until those stubs are implemented, the tools will fail there as well.
+> Phase 3.6
 > ("workspace_tools" with stubbed `_get_manager` raising
 > `NotImplementedError`) was likewise struck. Inline code references
 > to the orphans below are kept as historical artifacts.

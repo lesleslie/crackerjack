@@ -51,7 +51,7 @@ EventBridge envelope).
 |-------|--------|--------------|--------------|-----------------|
 | **fix-attempt memory** | SQLite (stdlib `sqlite3`, thread-local conn) | `fix_attempts.issue_fingerprint` (`sha256("hook::issue_type::<file-replaced-error>")`) | `.crackerjack/fix_strategy_memory.db` (overridable via `CrackerjackSettings.fix_strategy_memory.db_path`; default in `crackerjack/config/settings.py:69`) | `crackerjack/memory/fix_strategy_storage.py::FixStrategyStorage` — every Crackerjack agent invocation records a row (`record_attempt`); `crackerjack/memory/strategy_recommender.py::StrategyRecommender` reads it back. Triggered by `crackerjack/intelligence/agent_orchestrator.py:_record_fix_attempt` after each `analyze_and_fix` returns. |
 | **strategy effectiveness** | SQLite (same DB) | `strategy_effectiveness.agent_strategy` (PK, `"agent:strategy"`) | same | `fix_strategy_schema.sql` trigger `update_strategy_effectiveness_after_insert` (note: trigger only fires when the row already exists; first insert is a no-op — `update_strategy_effectiveness` is the canonical full-rebuild path) |
-| **git-metrics time-series** | SQLite (stdlib `sqlite3`, thread-local conn) | `(repository_path, timestamp, metric_type)` (composite PK) | `.crackerjack/git_metrics.db` (or `.git/git_metrics.db` per repo) | `crackerjack/memory/git_metrics_storage.py::GitMetricsStorage` (Pydantic `GitMetric` dataclass + raw SQL); consumed by `crackerjack/memory/git_metrics_collector.py::GitMetricsCollector` and `crackerjack/mcp/tools/git_metrics_tools.py` (`collect_git_metrics`, `get_repository_velocity`, `get_repository_health`, `get_conventional_compliance`) |
+| **git-metrics time-series** | SQLite (stdlib `sqlite3`, thread-local conn) | `(repository_path, timestamp, metric_type)` (composite PK) | `.crackerjack/git_metrics.db` (or `.git/git_metrics.db` per repo) | `crackerjack/memory/git_metrics_storage.py::GitMetricsStorage` (Pydantic `GitMetric` dataclass + raw SQL) — **this module no longer exists**; consumed by `crackerjack/memory/git_metrics_collector.py::GitMetricsCollector` (itself a stub whose runtime bodies raise `NotImplementedError`) and `crackerjack/mcp/tools/git_metrics_tools.py` (`collect_git_metrics`, `get_repository_velocity`, `get_repository_health`, `get_conventional_compliance`) |
 | **git events log** | SQLite (same DB as git-metrics) | `(repository_path, timestamp, event_type)` (composite PK) | same | `git_metrics_schema.sql` table `git_events`; written by `_GitRepository._check_merge_conflicts` and `get_reflog_events`. **The shipped schema has a SQL syntax error** that prevents `executescript` from running (see [Contract 5.1](#contract-51--crackerjackmemorygit_metrics_schemasql-fails-executescript)). |
 | **adapter learning** | SQLite (local, stdlib `sqlite3`) | `adapter_attempts.adapter_name` + `file_type` | `.crackerjack/adapter_learning.db` (override via `LearningSettings.adapter_learning_db`; default in `crackerjack/config/settings.py:354`) | `crackerjack/integration/adapter_learning.py::SQLiteAdapterLearner` — every hook adapter (Ruff, Pyright, Bandit, etc.) records `(adapter_name, file_type, success, execution_time_ms)`. PhaseCoordinator wires this through `PhaseCoordinator.__init__` (`crackerjack/core/phase_coordinator.py:107-125`) and feeds it back to `HookManagerImpl` for tool selection. |
 | **fix-strategy strategy_effectiveness mirror** | SQLite (same DB) | `agent_strategy` PK | same as fix-attempts | Tracked alongside fix_attempts; updated by `FixStrategyStorage.update_strategy_effectiveness` (called from `crackerjack/skills/coverage.py` and after `record_attempt`). |
@@ -219,7 +219,7 @@ Each is a separate `_register_*_tools` function imported from
 | `execute_smart_task(...)` | `intelligence_tool_registry` | Writes `fix_attempts` (via `_record_fix_attempt` after every agent) |
 | `crackerjack_get_comprehensive_status()` | `monitoring_tools` | None — but `crackerjack_get_filtered_status(components="jobs")` reads `progress_dir/*.json` |
 | `query_local_traces(task_class, system_id, start_time, end_time, limit, dry_run)` | `otel_tools` | None — proxies to Akosha MCP `query_local_traces` over HTTP; writes nothing locally |
-| `get_cross_project_git_dashboard(...)` / `get_repository_health(...)` / `get_velocity_comparison(...)` / `get_cross_project_patterns(...)` | (moved to `crackerjack-mahavishnu-git-analytics` MCP server 2026-09-09) | None — see `crackerjack/mahavishnu/mcp/tools/git_analytics.py` for the live surface; `mahavishnu_tools.py` was removed |
+| `get_cross_project_git_dashboard(...)` / `get_repository_health(...)` / `get_velocity_comparison(...)` / `get_cross_project_patterns(...)` | (moved to `crackerjack-mahavishnu-git-analytics` MCP server 2026-09-09) | None — The equivalent surface is `crackerjack/mahavishnu/mcp/tools/git_analytics.py` — eight tool functions, but **not currently callable**. The module declares its own `FastMCP("crackerjack-mahavishnu-git-analytics")` object with no `mcp.run()`, no console script, and no MCP registration, so no client can reach it. Its analytics are unimplemented too: every one of the eight tools routes through `crackerjack/integration/mahavishnu_integration.py` and `crackerjack/memory/git_metrics_collector.py`, both of which are type-checker stubs whose runtime bodies raise `NotImplementedError`. Phase 6 of `docs/plans/2026-11-14-remove-dead-module-cluster.md` relocates the module onto the crackerjack MCP wire; until those stubs are implemented, the tools will fail there as well. `mahavishnu_tools.py` was removed |
 | `create_workspace(...)` / `list_workspaces(...)` / `get_workspace_info(...)` / `remove_workspace(...)` | (removed 2026-09-09 — workspace concept obsolete in favor of native git worktrees) | None — `workspace_tools.py` was removed; see §9.1 removal log in `MCP_TOOLS_SPECIFICATION.md` |
 
 ### Phase-order / dependency map
@@ -1002,9 +1002,17 @@ the searcher immediately after the query).
 tool was removed with the orphan `mahavishnu_tools.py` module.
 Period-over-period velocity comparison for a single repo is not
 available on any current crackerjack MCP server. Multi-repo comparison
-in a single window is available via
-`mcp__crackerjack-mahavishnu-git-analytics__get_repository_comparison`
-(see `crackerjack/mahavishnu/mcp/tools/git_analytics.py:399`).
+in a single window is provided by
+`get_repository_comparison` in `crackerjack/mahavishnu/mcp/tools/git_analytics.py`
+(line 399). **It is not callable today** — that module's
+`FastMCP("crackerjack-mahavishnu-git-analytics")` object has no launcher, no
+console script, and no MCP registration, so no client can reach the tool; and
+the tool's analytics are unimplemented, routing through the
+`NotImplementedError` stubs in `crackerjack/integration/mahavishnu_integration.py`
+and `crackerjack/memory/git_metrics_collector.py`. Phase 6 of
+`docs/plans/2026-11-14-remove-dead-module-cluster.md` relocates the module onto
+the crackerjack MCP wire; the stubs have to be implemented for the tools to
+work there.
 
 ### Q10 — Publish a `test.failed` event to the Bodai EventBridge
 
@@ -1199,7 +1207,7 @@ ______________________________________________________________________
 | `crackerjack_search_semantic` | 5-50 ms (TF-IDF) or 50-200 ms (sentence-transformers) | No | |
 | `search_git_history` | 5-100 ms (post `index_git_history`) | No | `index_git_history(days_back=30)` is the precondition |
 | `collect_git_metrics` | 5-30 s for `days_back=30` (live `git log`) | No (operator-only) | |
-| `get_repository_health` (moved to `crackerjack-mahavishnu-git-analytics`) | n/a | n/a | Struck 2026-09-09; use `mcp__crackerjack-mahavishnu-git-analytics__get_repository_health_dashboard` |
+| `get_repository_health` (moved to the git-analytics module) | n/a | n/a | Struck 2026-09-09; the replacement is `get_repository_health_dashboard` in `crackerjack/mahavishnu/mcp/tools/git_analytics.py`, which is **not currently served** — no launcher, no console script, no MCP registration. Phase 6 of `docs/plans/2026-11-14-remove-dead-module-cluster.md` relocates it onto the crackerjack MCP wire. |
 | `get_velocity_comparison` (moved) | n/a | n/a | Struck 2026-09-09; period-over-period comparison removed with the orphan |
 | `agent_performance_analysis` | 50-500 ms | No | |
 | `find_best_skill` | 5-20 ms (in-memory `can_handle` eval) | Yes (when invoked) | |
@@ -1394,7 +1402,7 @@ ______________________________________________________________________
 - `crackerjack/mcp/tools/skill_tools.py` — `list_skills` + `get_skill_info` + `search_skills` + `get_skills_for_issue` + `get_skill_statistics` + `execute_skill` + `find_best_skill`.
 - `crackerjack/mcp/tools/monitoring_tools.py` — `crackerjack_get_stage_status` + `crackerjack_get_next_action` + `crackerjack_get_server_stats` + `crackerjack_get_comprehensive_status` + `crackerjack_list_slash_commands` + `crackerjack_get_filtered_status` (the secure-status path; backed by `StatusSecurityManager`).
 - `crackerjack/mcp/tools/git_metrics_tools.py` — `collect_git_metrics` + `get_repository_velocity` + `get_repository_health` + `get_conventional_compliance`.
-- `crackerjack/mcp/tools/mahavishnu_tools.py` — *removed 2026-09-09.* Superseded by `crackerjack/mahavishnu/mcp/tools/git_analytics.py` (the standalone `crackerjack-mahavishnu-git-analytics` MCP server), which exposes `get_portfolio_velocity_dashboard`, `get_repository_health_dashboard`, `get_repository_comparison`, `get_cross_project_conflicts`, `get_active_branches_analysis`, `get_workflow_recommendations`, and `get_best_practices_propagation` over the same shared `crackerjack.integration.mahavishnu_integration` aggregator.
+- `crackerjack/mcp/tools/mahavishnu_tools.py` — *removed 2026-09-09.* The equivalent surface is `crackerjack/mahavishnu/mcp/tools/git_analytics.py` — eight tool functions, but **not currently callable**. The module declares its own `FastMCP("crackerjack-mahavishnu-git-analytics")` object with no `mcp.run()`, no console script, and no MCP registration, so no client can reach it. Its analytics are unimplemented too: every one of the eight tools routes through `crackerjack/integration/mahavishnu_integration.py` and `crackerjack/memory/git_metrics_collector.py`, both of which are type-checker stubs whose runtime bodies raise `NotImplementedError`. Phase 6 of `docs/plans/2026-11-14-remove-dead-module-cluster.md` relocates the module onto the crackerjack MCP wire; until those stubs are implemented, the tools will fail there as well. The module exposes `get_portfolio_velocity_dashboard`, `get_repository_health_dashboard`, `get_repository_comparison`, `get_cross_project_conflicts`, `get_active_branches_analysis`, `get_workflow_recommendations`, and `get_best_practices_propagation` over the same shared `crackerjack.integration.mahavishnu_integration` aggregator.
 - `crackerjack/mcp/tools/otel_tools.py` — `query_local_traces` (HTTP proxy to Akosha).
 - `crackerjack/mcp/tools/eventbridge_tools.py` — `publish_to_eventbridge` (the only EventBridge-emit tool; gated by `enabled`).
 - `crackerjack/mcp/tools/workspace_tools.py` — *removed 2026-09-09.* Workspace concept obsolete in favor of native git worktrees. See [Contract 5.7](#contract-57--struck-2026-09-09) for the closure log.
