@@ -96,6 +96,30 @@ class DefaultAdapterFactory(AdapterFactoryProtocol):
     def get_adapter_name(self, tool_name: str) -> str | None:
         return self.TOOL_TO_ADAPTER_NAME.get(tool_name)
 
+    def create_settings(
+        self,
+        adapter_name: str,
+        timeout_seconds: int | None = None,
+    ) -> t.Any:
+        """Build the settings object ``adapter_name`` expects.
+
+        Each adapter declares its settings as a narrowed type (e.g.
+        ``RuffSettings``) and reads adapter-specific fields off it, so the
+        default must be that exact class -- handing back a plain
+        ``ToolAdapterSettings`` makes the adapter blow up on its first
+        adapter-specific field access. The timeout override is applied to
+        that object rather than replacing it.
+
+        ``timeout_seconds`` exists for callers that run an adapter as a
+        side-effect of something else and must not let it outlive that
+        budget: the adapter's own default is 300s, and its scan covers
+        the whole package.
+        """
+        settings = self._create_default_settings(adapter_name)
+        if settings is not None and timeout_seconds is not None:
+            settings.timeout_seconds = timeout_seconds
+        return settings
+
     def create_adapter(
         self,
         adapter_name: str,

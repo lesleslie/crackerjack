@@ -677,10 +677,20 @@ class HookExecutor:
 
         exit_code, error_message = self._determine_exit_code_and_error(status, result)
 
+        # The QA adapter re-runs the tool it reports on, so it is only
+        # worth running when the text parsers produced nothing. Otherwise
+        # it repeats work we already have, at the cost of a second run of
+        # the tool over the whole package -- and its result would only
+        # duplicate the issues already parsed.
+        qa_result = None
+        if status == "failed" and not issues_found:
+            qa_result = self._try_get_qa_result_for_hook(hook, result, duration)
+
         issues_found = self._handle_no_issues_for_failed_hook(
             status,
             issues_found,
             result,
+            qa_result,
         )
 
         issues_count = self._calculate_issues_count(status, issues_found)
@@ -695,8 +705,6 @@ class HookExecutor:
             tc_refs_actual = self._tc_refs_actual_count(issues_found[0])
             if tc_refs_actual > 0:
                 issues_count = tc_refs_actual
-
-        qa_result = self._try_get_qa_result_for_hook(hook, result, duration)
 
         return HookResult(
             id=hook.name,
@@ -837,13 +845,45 @@ class HookExecutor:
             error_message = result.stderr.strip()[:500]
         return exit_code, error_message
 
+    def _qa_result_issues(self, qa_result: t.Any | None) -> list[str]:
+        """Flatten a ``QAResult``'s structured issues into report strings.
+
+        The adapter reports each issue as a dict of ``file_path``,
+        ``line_number``, ``column_number``, ``message``, ``code``,
+        ``severity`` and ``suggestion``. The report format elsewhere is
+        ``<path>:<line> - <code>: <message>`` -- the same shape the
+        semgrep parser produces from the tool's own JSON.
+        """
+        if qa_result is None:
+            return []
+
+        issues: list[str] = []
+        for issue in getattr(qa_result, "parsed_issues", None) or []:
+            if not isinstance(issue, dict):
+                continue
+            path = issue.get("file_path") or "unknown"
+            line = issue.get("line_number")
+            code = issue.get("code")
+            message = issue.get("message") or ""
+            location = f"{path}:{line}" if line else path
+            if code:
+                issues.append(f"{location} - {code}: {message}")
+            else:
+                issues.append(f"{location}: {message}")
+        return issues
+
     def _handle_no_issues_for_failed_hook(
         self,
         status: str,
         issues_found: list[str],
         result: subprocess.CompletedProcess[str],
+        qa_result: t.Any | None = None,
     ) -> list[str]:
         if status == "failed" and not issues_found:
+            qa_issues = self._qa_result_issues(qa_result)
+            if qa_issues:
+                return qa_issues
+
             stderr = (result.stderr or "").strip()
             stdout = (result.stdout or "").strip()
 
@@ -2292,7 +2332,18 @@ class HookExecutor:
             if adapter_name is None:
                 return None
 
-            adapter = adapter_factory.create_adapter(adapter_name)
+            # The adapter re-runs the tool it is reporting on, over the
+            # whole package. Its own timeout defaults to 300s, which for
+            # a package-wide scan would outlive the hook that triggered
+            # it -- so the hook's budget is the adapter's budget.
+            adapter_settings = adapter_factory.create_settings(
+                adapter_name,
+                timeout_seconds=hook.timeout,
+            )
+            adapter = adapter_factory.create_adapter(
+                adapter_name,
+                adapter_settings,
+            )
 
             if adapter is None:
                 return None

@@ -1900,13 +1900,40 @@ class TestQaAdapterLookup:
         # the expectations below are ever reached.
         factory.return_value = factory
         factory.get_adapter_name = MagicMock(return_value="Ruff")
+        factory.create_settings = MagicMock(return_value=object())
         factory.create_adapter = MagicMock(return_value=MagicMock())
 
         with patch("crackerjack.adapters.factory.DefaultAdapterFactory", factory):
             executor._try_get_qa_result_for_hook(hook, result, 1.0)
 
         factory.get_adapter_name.assert_called_once_with("ruff-check")
-        factory.create_adapter.assert_called_once_with("Ruff")
+        assert factory.create_adapter.call_args[0][0] == "Ruff"
+
+    def test_adapter_is_bounded_by_the_hook_timeout(
+        self, executor: HookExecutor
+    ) -> None:
+        """The adapter's scan must not outlive the hook that triggered it.
+
+        The adapter re-runs the tool over the whole package and its own
+        default timeout is 300s, which for a package-wide scan would
+        outlive the hook.
+        """
+        hook = HookDefinition(name="ruff-check", command=[], timeout=7)
+        result = _completed(returncode=1)
+
+        factory = MagicMock()
+        factory.return_value = factory
+        factory.get_adapter_name = MagicMock(return_value="Ruff")
+        factory.create_settings = MagicMock(return_value=object())
+        factory.create_adapter = MagicMock(return_value=MagicMock())
+
+        with patch("crackerjack.adapters.factory.DefaultAdapterFactory", factory):
+            executor._try_get_qa_result_for_hook(hook, result, 1.0)
+
+        factory.create_settings.assert_called_once_with(
+            "Ruff",
+            timeout_seconds=7,
+        )
 
     def test_tool_without_an_adapter_is_skipped(
         self, executor: HookExecutor
@@ -1918,6 +1945,7 @@ class TestQaAdapterLookup:
         factory = MagicMock()
         factory.return_value = factory
         factory.get_adapter_name = MagicMock(return_value=None)
+        factory.create_settings = MagicMock(return_value=object())
         factory.create_adapter = MagicMock(return_value=MagicMock())
 
         with patch("crackerjack.adapters.factory.DefaultAdapterFactory", factory):
@@ -1925,6 +1953,52 @@ class TestQaAdapterLookup:
 
         assert out is None
         factory.create_adapter.assert_not_called()
+
+    def test_adapter_does_not_run_when_issues_were_parsed(
+        self, executor: HookExecutor
+    ) -> None:
+        """The adapter re-runs the tool, so it only runs when nothing parsed.
+
+        Otherwise it repeats work we already have -- and its result would
+        only duplicate the issues already parsed -- at the cost of a
+        second run of the tool over the whole package.
+        """
+        output = '{"results": [{"path": "test.py", "start": {"line": 1}}]}'
+
+        with patch.object(executor, "_run_hook_subprocess") as mock_run:
+            mock_run.return_value = _completed(returncode=1, stdout=output)
+
+            factory = MagicMock()
+            factory.return_value = factory
+            factory.get_adapter_name = MagicMock(return_value="Semgrep")
+            factory.create_settings = MagicMock(return_value=object())
+            factory.create_adapter = MagicMock(return_value=MagicMock())
+
+            with patch(
+                "crackerjack.adapters.factory.DefaultAdapterFactory", factory
+            ):
+                hook = HookDefinition(name="semgrep", command=[], timeout=5)
+                result = executor.execute_single_hook(hook)
+
+        assert result.status == "failed"
+        assert result.issues_found
+        factory.create_adapter.assert_not_called()
+
+    def test_qa_issues_replace_the_generic_fallback(
+        self, executor: HookExecutor
+    ) -> None:
+        """A structured QA result beats 'reported no parseable issues'."""
+        result = _completed(returncode=1, stdout="", stderr="")
+
+        qa = MagicMock()
+        qa.parsed_issues = [
+            {"file_path": "a.py", "line_number": 3, "message": "boom", "code": "E1"},
+            {"file_path": "b.py", "message": "no line"},
+        ]
+
+        out = executor._handle_no_issues_for_failed_hook("failed", [], result, qa)
+
+        assert out == ["a.py:3 - E1: boom", "b.py: no line"]
 
 
 # ---------------------------------------------------------------------------

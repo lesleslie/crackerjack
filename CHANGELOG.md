@@ -27,6 +27,17 @@ topic: changelog
   is why nothing resolved; both are now present, and the hook
   executor's own 26-name table — a stale duplicate that advertised
   adapters which do not exist — is gone.
+
+  Making the path live exposed what the bug had been hiding: the adapter
+  *re-runs* the tool it reports on, over the whole package, with its own
+  300-second default timeout — so a failing hook would have paid a
+  second full scan of the package, and a failing `semgrep` hook made the
+  test suite hang for minutes. The path now runs only when the hook
+  failed *and* the text parsers produced no issues (the one case where
+  a structured report beats "hook exited with code N but reported no
+  parseable issues"), and the adapter's budget is the hook's budget
+  rather than its own. The adapter's structured issues are now used as
+  that fallback instead of being discarded.
 - coverage: The release audit refused a present, readable coverage ratchet
   with "ratchet file could not be read". `update_coverage()` only wrote
   `.coverage-ratchet.json` on the *improved* path, so a repo whose
