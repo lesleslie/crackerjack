@@ -287,3 +287,26 @@ class TestProseMarkerFollowsTheDirective:
         assert stripped == (
             "value = cache  # ty: ignore[invalid-explicit-return]  # Cached stack\n"
         )
+
+
+class TestStripKinds:
+    """``strip_directives`` must be told which kind of directive to remove.
+
+    The default is ``bracketed`` because that is the safe direction: a bare
+    directive is live under ty. Asking for ``bare`` must remove the bare
+    directive and leave a bracketed one in the same comment alone.
+    """
+
+    def test_default_removes_bracketed_only(self) -> None:
+        text = "x = 1  # type: ignore\n"
+        comments = find_comments(text)
+        stripped = strip_directives(text, {(comments[0].line, comments[0].col)})
+        assert stripped == "x = 1  # type: ignore\n"
+
+    def test_kinds_bare_removes_the_bare_directive(self) -> None:
+        text = "x = 1  # type: ignore\n"
+        comments = find_comments(text)
+        stripped = strip_directives(
+            text, {(comments[0].line, comments[0].col)}, kinds=("bare",)
+        )
+        assert stripped == "x = 1\n"

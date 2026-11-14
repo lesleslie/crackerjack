@@ -472,7 +472,9 @@ def migrate(
         stripped_text: dict[Path, str] = {}
         for path, directives in bare_by_file.items():
             targets = {(d.line, d.col) for d in directives}
-            stripped_text[path] = strip_directives(originals[path], targets)
+            stripped_text[path] = strip_directives(
+                originals[path], targets, kinds=("bare",)
+            )
             path.write_text(stripped_text[path], encoding="utf-8")
 
         after: list[dict] = []
