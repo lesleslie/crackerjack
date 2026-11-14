@@ -29,9 +29,9 @@ RE_MYPY_IGNORE = re.compile(r"^type:\s*ignore\b")
 RE_TY_IGNORE = re.compile(r"^ty:\s*ignore\b")
 RE_BARE_TYPE_IGNORE = re.compile(r"^type:\s*ignore\s*$")
 
-# A backtick-quoted run. A comment that *documents* a directive writes it
-# this way -- ``# ``# type: ignore[import-not-found]`` directive covers
-# Mypy/Pyright`` -- and that is prose about a directive, not a directive.
+# A backtick-quoted run. A comment that *documents* a directive writes the
+# directive inside backticks, so it is prose about a directive rather than
+# a directive.
 RE_BACKTICK_RUN = re.compile(r"``[^`]*``|`[^`]*`")
 
 
