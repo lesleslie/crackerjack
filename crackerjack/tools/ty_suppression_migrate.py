@@ -35,8 +35,14 @@ from crackerjack.tools._ty_binary import resolve_ty_binary
 # A mypy-syntax directive: ``# type: ignore`` or ``# type: ignore[code, ...]``.
 RE_MYPY_DIRECTIVE = re.compile(r"#\s*type:\s*ignore(?:\[[^\]]*\])?")
 
+# The same, matched anywhere in a comment body so that trailing prose such as
+# ``# type: ignore[attr-defined] dynamically attached`` is recognised as a
+# directive plus prose rather than as one undifferentiated blob.
+RE_MYPY_LOOSE = re.compile(r"type:\s*ignore(?:\[[^\]]*\])?")
+
 # A ty-syntax directive, used to recognise a line that already carries one.
 RE_TY_DIRECTIVE = re.compile(r"#\s*ty:\s*ignore(?:\[[^\]]*\])?")
+RE_TY_LOOSE = re.compile(r"ty:\s*ignore(?:\[[^\]]*\])?")
 
 _CONCISE_DIAGNOSTIC = re.compile(
     r"^(?P<file>[^\s:][^:]*):(?P<line>\d+):(?P<col>\d+):\s+"
@@ -78,8 +84,69 @@ class Directive:
     text: str
 
 
-def find_directives(text: str) -> list[Directive]:
-    """Every mypy-syntax directive in ``text``, in comment tokens only.
+@dataclass(frozen=True)
+class Comment:
+    """One comment token, with its contents classified."""
+
+    line: int
+    col: int
+    end_col: int
+    text: str
+    mypy_bare: tuple[str, ...]
+    mypy_bracketed: tuple[str, ...]
+    ty: tuple[str, ...]
+    prose: str
+
+    @property
+    def mypy(self) -> tuple[str, ...]:
+        return self.mypy_bare + self.mypy_bracketed
+
+
+def _classify(body: str) -> tuple[list[str], list[str], list[str], str]:
+    """Split a comment body into mypy directives, ty directives and prose.
+
+    A comment can hold more than one directive, and a directive can be
+    followed by prose in the same segment — ``# type: ignore[attr-defined]
+    dynamically attached``. Removing only the directive text would leave the
+    prose behind as bare code, so a comment is rebuilt from its parts rather
+    than patched in place.
+    """
+    bare: list[str] = []
+    bracketed: list[str] = []
+    ty: list[str] = []
+    prose: list[str] = []
+    for segment in body.split("#"):
+        stripped = segment.strip()
+        if not stripped:
+            continue
+        match = RE_MYPY_LOOSE.search(stripped)
+        if match:
+            raw = match.group(0)
+            if "[" in raw:
+                bracketed.append(raw)
+            else:
+                bare.append(raw)
+            remainder = (
+                stripped[: match.start()] + " " + stripped[match.end() :]
+            ).strip()
+            if remainder:
+                prose.append(remainder)
+            continue
+        match = RE_TY_LOOSE.search(stripped)
+        if match:
+            ty.append(match.group(0))
+            remainder = (
+                stripped[: match.start()] + " " + stripped[match.end() :]
+            ).strip()
+            if remainder:
+                prose.append(remainder)
+            continue
+        prose.append(stripped)
+    return bare, bracketed, ty, " ".join(prose)
+
+
+def find_comments(text: str) -> list[Comment]:
+    """Every comment token in ``text``, classified.
 
     Token offsets are relative to the comment token's own string, so the
     column is the token's start column plus the match offset. Getting this
@@ -90,18 +157,37 @@ def find_directives(text: str) -> list[Directive]:
     except tokenize.TokenError, IndentationError, SyntaxError:
         return []
 
-    found: list[Directive] = []
+    comments: list[Comment] = []
     for token in tokens:
         if token.type != tokenize.COMMENT:
             continue
-        column = token.start[1]
-        for match in RE_MYPY_DIRECTIVE.finditer(token.string):
-            raw = match.group(0)
+        body = token.string.lstrip("#").strip()
+        bare, bracketed, ty, prose = _classify(body)
+        comments.append(
+            Comment(
+                line=token.start[0],
+                col=token.start[1],
+                end_col=token.end[1],
+                text=token.string,
+                mypy_bare=tuple(bare),
+                mypy_bracketed=tuple(bracketed),
+                ty=tuple(ty),
+                prose=prose,
+            )
+        )
+    return comments
+
+
+def find_directives(text: str) -> list[Directive]:
+    """Every mypy-syntax directive in ``text``, in comment tokens only."""
+    found: list[Directive] = []
+    for comment in find_comments(text):
+        for raw in comment.mypy:
             found.append(
                 Directive(
-                    line=token.start[0],
-                    col=column + match.start(),
-                    end_col=column + match.end(),
+                    line=comment.line,
+                    col=comment.col,
+                    end_col=comment.end_col,
                     kind="bracketed" if "[" in raw else "bare",
                     codes=raw[raw.index("[") + 1 : raw.rindex("]")]
                     if "[" in raw
@@ -110,6 +196,27 @@ def find_directives(text: str) -> list[Directive]:
                 )
             )
     return found
+
+
+def _rebuild(
+    comment: Comment,
+    keep_mypy: tuple[str, ...] = (),
+    extra: tuple[str, ...] = (),
+) -> str:
+    """Rebuild a comment from its surviving directives and prose."""
+    parts: list[str] = []
+    parts.extend(part.lstrip("# ").strip() for part in comment.ty)
+    parts.extend(part.lstrip("# ").strip() for part in extra)
+    for raw in comment.mypy:
+        kind = "bracketed" if "[" in raw else "bare"
+        if kind in keep_mypy:
+            parts.append(raw)
+    if comment.prose:
+        parts.append(comment.prose)
+    parts = [part for part in parts if part]
+    if not parts:
+        return ""
+    return "# " + "  ".join(parts)
 
 
 def _apply_edits(text: str, edits: list[tuple[int, int, int, str]]) -> str:
@@ -130,23 +237,60 @@ def _apply_edits(text: str, edits: list[tuple[int, int, int, str]]) -> str:
     return "".join(lines)
 
 
-def strip_directives(text: str, targets: set[tuple[int, int]]) -> str:
-    """Remove the directive text at each ``(line, col)`` in ``targets``."""
-    edits = [
-        (d.line, d.col, d.end_col, "")
-        for d in find_directives(text)
-        if (d.line, d.col) in targets
-    ]
+def strip_directives(
+    text: str,
+    targets: set[tuple[int, int]],
+    kinds: tuple[str, ...] = ("bracketed",),
+) -> str:
+    """Remove mypy directives of the given ``kinds`` from selected comments.
+
+    ``targets`` selects which comments to rewrite; a comment with no
+    directive of that kind is left untouched. Any ty directive already in
+    the comment is kept, and so is any prose — including prose that trailed
+    the mypy directive in the same segment.
+    """
+    edits: list[tuple[int, int, int, str]] = []
+    for comment in find_comments(text):
+        if (comment.line, comment.col) not in targets:
+            continue
+        if not any(
+            ("bracketed" if "[" in raw else "bare") in kinds for raw in comment.mypy
+        ):
+            continue
+        edits.append(
+            (
+                comment.line,
+                comment.col,
+                comment.end_col,
+                _rebuild(
+                    comment, keep_mypy=("bare",) if kinds == ("bracketed",) else ()
+                ),
+            )
+        )
     return _apply_edits(text, edits)
 
 
 def convert_blanket(text: str, replacements: dict[tuple[int, int], str]) -> str:
-    """Replace the directive at each ``(line, col)`` with ``replacement``."""
-    edits = [
-        (d.line, d.col, d.end_col, replacements[(d.line, d.col)])
-        for d in find_directives(text)
-        if (d.line, d.col) in replacements
-    ]
+    """Replace the mypy directive in each selected comment with ``replacement``.
+
+    ``replacements`` maps a comment's ``(line, col)`` to the directive that
+    should take the mypy directive's place. Any ty directive already in the
+    comment is kept, and so is any prose — including prose that trailed the
+    mypy directive in the same segment.
+    """
+    edits: list[tuple[int, int, int, str]] = []
+    for comment in find_comments(text):
+        key = (comment.line, comment.col)
+        if key not in replacements:
+            continue
+        edits.append(
+            (
+                comment.line,
+                comment.col,
+                comment.end_col,
+                _rebuild(comment, extra=(replacements[key],)),
+            )
+        )
     return _apply_edits(text, edits)
 
 
@@ -320,7 +464,7 @@ def migrate(
                 if rules:
                     body = ", ".join(rules)
                     replacements[(directive.line, directive.col)] = (
-                        f"# ty: ignore[{body}]"
+                        f"ty: ignore[{body}]"
                     )
                     report["converted"] += 1
                     report["sites"].append(
@@ -332,6 +476,9 @@ def migrate(
                         }
                     )
                 else:
+                    # Nothing appeared when the directive was removed, so it
+                    # was suppressing nothing. Drop it.
+                    replacements[(directive.line, directive.col)] = ""
                     report["deleted"] += 1
                     report["sites"].append(
                         {"file": relative, "line": directive.line, "action": "deleted"}

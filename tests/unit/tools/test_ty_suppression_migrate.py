@@ -17,6 +17,7 @@ from pathlib import Path
 
 from crackerjack.tools.ty_suppression_migrate import (
     convert_blanket,
+    find_comments,
     find_directives,
     migrate,
     strip_directives,
@@ -66,17 +67,19 @@ class TestStripDirectives:
         assert stripped == "value = compute()  \n"
 
     def test_preserves_the_line_count(self) -> None:
-        text = "a = 1  # type: ignore\nb = 2\nc = 3\n"
+        text = "a = 1  # type: ignore[assignment]\nb = 2\nc = 3\n"
         directives = find_directives(text)
         stripped = strip_directives(text, {(directives[0].line, directives[0].col)})
         assert len(stripped.splitlines()) == len(text.splitlines())
 
     def test_leaves_untargeted_directives_alone(self) -> None:
         text = "a = 1  # type: ignore\nb = 2  # type: ignore[assignment]\n"
-        directives = find_directives(text)
-        stripped = strip_directives(text, {(directives[0].line, directives[0].col)})
+        comments = find_comments(text)
+        stripped = strip_directives(
+            text, {(comments[0].line, comments[0].col)}, kinds=("bare",)
+        )
         assert "# type: ignore[assignment]" in stripped
-        assert "# type: ignore\n" not in stripped
+        assert stripped.splitlines()[0] == "a = 1  "
 
 
 class TestConvertBlanket:
@@ -169,3 +172,37 @@ class TestMigrateConvertBlanket:
         compile(
             (tmp_path / "pkg" / "mod.py").read_text(encoding="utf-8"), "mod.py", "exec"
         )
+
+
+class TestProseSurvivesDirectiveRemoval:
+    """A directive can be followed by prose in the same comment segment.
+
+    ``# type: ignore[attr-defined] dynamically attached`` is one comment
+    token. Removing only the directive text leaves ``dynamically attached``
+    as bare code, which is a syntax error. The comment must be rebuilt from
+    its parts so the prose stays a comment.
+    """
+
+    def test_trailing_prose_is_preserved_as_a_comment(self) -> None:
+        text = "adapter.client = client  # type: ignore[attr-defined] dynamically attached\n"
+        directives = find_directives(text)
+        stripped = strip_directives(text, {(directives[0].line, directives[0].col)})
+        assert stripped == "adapter.client = client  # dynamically attached\n"
+
+    def test_trailing_prose_still_parses(self) -> None:
+        text = "adapter.client = client  # type: ignore[attr-defined] dynamically attached\n"
+        directives = find_directives(text)
+        stripped = strip_directives(text, {(directives[0].line, directives[0].col)})
+        compile(stripped, "x.py", "exec")
+
+    def test_both_forms_keep_the_ty_directive(self) -> None:
+        text = "x = 1  # type: ignore[attr-defined]  # ty: ignore[missing-attribute]\n"
+        directives = find_directives(text)
+        stripped = strip_directives(text, {(directives[0].line, directives[0].col)})
+        assert stripped == "x = 1  # ty: ignore[missing-attribute]\n"
+
+    def test_stripping_bracketed_keeps_a_bare_directive(self) -> None:
+        text = "x = 1  # type: ignore\n"
+        comments = find_comments(text)
+        stripped = strip_directives(text, {(comments[0].line, comments[0].col)})
+        assert stripped == "x = 1  # type: ignore\n"
