@@ -154,7 +154,7 @@ def _classify(body: str) -> tuple[list[str], list[str], list[str], str]:
         if not stripped:
             continue
 
-        match = RE_MYPY_LOOSE.search(stripped)
+        match = RE_MYPY_LOOSE.match(stripped)
         if match and not in_backticks(base + match.start(), base + match.end()):
             raw = match.group(0)
             if "[" in raw:
@@ -167,7 +167,7 @@ def _classify(body: str) -> tuple[list[str], list[str], list[str], str]:
             if remainder:
                 prose.append(remainder)
             continue
-        match = RE_TY_LOOSE.search(stripped)
+        match = RE_TY_LOOSE.match(stripped)
         if match and not in_backticks(base + match.start(), base + match.end()):
             ty.append(match.group(0))
             surviving = True

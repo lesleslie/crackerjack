@@ -310,3 +310,28 @@ class TestStripKinds:
             text, {(comments[0].line, comments[0].col)}, kinds=("bare",)
         )
         assert stripped == "x = 1\n"
+
+
+class TestProseMentioningADirective:
+    """A directive must sit at the start of a comment to be a directive.
+
+    ``# These fields have None defaults with type: ignore`` is a comment
+    that happens to end with the words "type: ignore". It is prose, and
+    rewriting it would mangle the explanation.
+    """
+
+    def test_prose_ending_with_the_words_is_not_a_directive(self) -> None:
+        text = "# These fields have None defaults with type: ignore\n"
+        assert find_directives(text) == []
+
+    def test_prose_ending_with_the_words_is_not_rewritten(self) -> None:
+        text = "# These fields have None defaults with type: ignore\n"
+        comments = find_comments(text)
+        assert comments[0].mypy == ()
+        assert strip_directives(text, {(comments[0].line, comments[0].col)}) == text
+
+    def test_a_directive_at_the_start_is_still_one(self) -> None:
+        text = "# type: ignore[assignment] and then some prose\n"
+        directives = find_directives(text)
+        assert len(directives) == 1
+        assert directives[0].kind == "bracketed"
