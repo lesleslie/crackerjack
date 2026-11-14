@@ -906,34 +906,6 @@ exclude = [
     "CLAUDE*.md",
 ]
 
-[tool.mypy]
-python_version = "3.14"
-warn_unused_configs = false
-warn_redundant_casts = false
-warn_unused_ignores = false
-ignore_missing_imports = true
-show_error_codes = true
-check_untyped_defs = false
-disallow_untyped_defs = false
-disallow_incomplete_defs = false
-disallow_untyped_decorators = false
-warn_return_any = false
-warn_unreachable = false
-follow_imports = "skip"
-ignore_errors = false
-no_implicit_optional = true
-allow_redefinition = true
-strict_optional = false
-exclude = "^(\\.venv|venv|\\.tox|__pycache__)(/|$)"
-
-# Tolerate `ty: ignore` directives that don't match a current diagnostic.
-# ty's resolution is environment-sensitive: the same directive can report
-# UNUSED in an interactive shell (where a stub resolves the import) but
-# suppress a real error under crackerjack (where the project venv lacks
-# the package). The defense-in-depth: keep the directive, ignore the
-# unused warning. See `crackerjack/services/config_parsers.py` for the
-# canonical case (`import toml` is a defensive fallback never exercised
-# by this project, but still legitimate to keep).
 [tool.ty.rules]
 unused-ignore-comment = "ignore"
 
