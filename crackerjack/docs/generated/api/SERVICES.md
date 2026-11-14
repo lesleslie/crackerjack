@@ -2,92 +2,85 @@
 
 This document describes all service implementations in the codebase.
 
-## _auth
+## \_auth
 
 **Location:** `/Users/les/Projects/crackerjack/crackerjack/services/pypi_auth/_auth.py`
 
 **Implements:**
+
 - t.Protocol
 
 ### PyPIAuth
 
+**Public Methods:**
 
+- `as_uv_publish_token`:
+
+- `is_trusted_publishing`:
+
+- `source`:
+
+### \_TrustedPublishingSentinel
 
 **Public Methods:**
-- `as_uv_publish_token`: 
 
-- `is_trusted_publishing`: 
+- `as_uv_publish_token`:
 
-- `source`: 
+- `is_trusted_publishing`:
 
-### _TrustedPublishingSentinel
-
-
-
-**Public Methods:**
-- `as_uv_publish_token`: 
-
-- `is_trusted_publishing`: 
-
-- `source`: 
+- `source`:
 
 ### PyPIAuthProvider
 
-
-
 **Public Methods:**
-- `is_available`: 
 
-- `resolve`: 
+- `is_available`:
 
-## _providers
+- `resolve`:
+
+## \_providers
 
 **Location:** `/Users/les/Projects/crackerjack/crackerjack/services/pypi_auth/_providers.py`
 
-### _EnvVarPyPIAuth
-
-
+### \_EnvVarPyPIAuth
 
 **Public Methods:**
-- `source`: 
 
-### _KeyringPyPIAuth
+- `source`:
 
-
+### \_KeyringPyPIAuth
 
 **Public Methods:**
-- `source`: 
+
+- `source`:
 
 ### EnvVarAuthProvider
 
-
-
 **Public Methods:**
-- `is_available`: 
 
-- `resolve`: 
+- `is_available`:
+
+- `resolve`:
 
 ### KeyringAuthProvider
 
-
-
 **Public Methods:**
-- `is_available`: 
 
-- `resolve`: 
+- `is_available`:
 
-## _trusted_publishing
+- `resolve`:
+
+## \_trusted_publishing
 
 **Location:** `/Users/les/Projects/crackerjack/crackerjack/services/pypi_auth/_trusted_publishing.py`
 
 ### TrustedPublishingProvider
 
-
-
 **Public Methods:**
-- `is_available`: 
 
-- `resolve`: 
+- `is_available`:
+
+- `resolve`:
 
 ## advanced_optimizer
 
@@ -95,68 +88,61 @@ This document describes all service implementations in the codebase.
 
 ### ResourceMetrics
 
-
-
 **Public Methods:**
-- `to_dict`: 
+
+- `to_dict`:
 
 ### PerformanceProfile
 
-
-
 **Public Methods:**
-- `to_dict`: 
+
+- `to_dict`:
 
 ### OptimizationRecommendation
 
-
-
 **Public Methods:**
-- `to_dict`: 
+
+- `to_dict`:
 
 ### ScalingMetrics
 
-
-
 **Public Methods:**
-- `to_dict`: 
+
+- `to_dict`:
 
 ### ConnectionPool
 
-
-
 **Public Methods:**
-- `add_connection`: 
 
-- `remove_connection`: 
+- `add_connection`:
 
-- `update_activity`: 
+- `remove_connection`:
 
-- `get_stats`: 
+- `update_activity`:
+
+- `get_stats`:
 
 ### DataCompactionManager
 
-
-
 **Public Methods:**
-- `compact_data`: 
 
-- `get_storage_usage`: 
+- `compact_data`:
+
+- `get_storage_usage`:
 
 ### AdvancedOptimizer
 
-
-
 **Public Methods:**
-- `collect_resource_metrics`: 
 
-- `analyze_scaling_needs`: 
+- `collect_resource_metrics`:
 
-- `generate_optimization_recommendations`: 
+- `analyze_scaling_needs`:
 
-- `optimize_configuration`: 
+- `generate_optimization_recommendations`:
 
-- `get_advanced_status`: 
+- `optimize_configuration`:
+
+- `get_advanced_status`:
 
 ## anomaly_detector
 
@@ -164,28 +150,21 @@ This document describes all service implementations in the codebase.
 
 ### MetricPoint
 
-
-
 ### AnomalyDetection
-
-
 
 ### BaselineModel
 
-
-
 ### AnomalyDetector
 
-
-
 **Public Methods:**
-- `add_metric`: 
 
-- `get_anomalies`: 
+- `add_metric`:
 
-- `get_baseline_summary`: 
+- `get_anomalies`:
 
-- `export_model`: 
+- `get_baseline_summary`:
+
+- `export_model`:
 
 ## anti_ai_flavor
 
@@ -193,19 +172,17 @@ This document describes all service implementations in the codebase.
 
 ### AntiAIFlavorMatch
 
-
-
 **Public Methods:**
-- `to_dict`: 
+
+- `to_dict`:
 
 ### AntiAIFlavorDetector
 
-
-
 **Public Methods:**
-- `detect`: 
 
-- `load_phrases_from_yaml`: 
+- `detect`:
+
+- `load_phrases_from_yaml`:
 
 ## anti_ai_flavor_adapter
 
@@ -213,41 +190,39 @@ This document describes all service implementations in the codebase.
 
 ### AntiAIFlavorReport
 
-
-
 **Public Methods:**
-- `is_clean`: 
 
-- `to_dict`: 
+- `is_clean`:
+
+- `to_dict`:
 
 ## api_extractor
 
 **Location:** `/Users/les/Projects/crackerjack/crackerjack/services/api_extractor.py`
 
 **Implements:**
+
 - APIExtractorProtocol
 
 ### PythonDocstringParser
 
-
-
 **Public Methods:**
-- `parse_docstring`: 
+
+- `parse_docstring`:
 
 ### APIExtractorImpl
 
-
-
 **Public Methods:**
-- `extract_from_python_files`: 
 
-- `extract_protocol_definitions`: 
+- `extract_from_python_files`:
 
-- `extract_service_interfaces`: 
+- `extract_protocol_definitions`:
 
-- `extract_cli_commands`: 
+- `extract_service_interfaces`:
 
-- `extract_mcp_tools`: 
+- `extract_cli_commands`:
+
+- `extract_mcp_tools`:
 
 ## backup_service
 
@@ -255,91 +230,77 @@ This document describes all service implementations in the codebase.
 
 ### BackupMetadata
 
-
-
 ### BackupValidationResult
-
-
 
 ### PackageBackupService
 
-
-
 **Public Methods:**
-- `model_post_init`: 
 
-- `create_package_backup`: 
+- `model_post_init`:
 
-- `restore_from_backup`: 
+- `create_package_backup`:
 
-- `cleanup_backup`: 
+- `restore_from_backup`:
+
+- `cleanup_backup`:
 
 ## bounded_status_operations
 
 **Location:** `/Users/les/Projects/crackerjack/crackerjack/services/bounded_status_operations.py`
 
 **Implements:**
+
 - BoundedStatusOperationsProtocol
 
 - ServiceProtocol
 
 ### OperationState
 
-
-
 ### OperationLimits
-
-
 
 ### OperationMetrics
 
-
-
 **Public Methods:**
-- `duration`: 
 
-- `is_completed`: 
+- `duration`:
+
+- `is_completed`:
 
 ### OperationLimitExceededError
 
-
-
 ### CircuitBreakerOpenError
-
-
 
 ### BoundedStatusOperations
 
-
-
 **Public Methods:**
-- `initialize`: 
 
-- `cleanup`: 
+- `initialize`:
 
-- `health_check`: 
+- `cleanup`:
 
-- `shutdown`: 
+- `health_check`:
 
-- `metrics`: 
+- `shutdown`:
 
-- `is_healthy`: 
+- `metrics`:
 
-- `register_resource`: 
+- `is_healthy`:
 
-- `cleanup_resource`: 
+- `register_resource`:
 
-- `record_error`: 
+- `cleanup_resource`:
 
-- `increment_requests`: 
+- `record_error`:
 
-- `get_custom_metric`: 
+- `increment_requests`:
 
-- `set_custom_metric`: 
+- `get_custom_metric`:
 
-- `get_operation_status`: 
+- `set_custom_metric`:
 
-- `reset_circuit_breaker`: 
+- `get_operation_status`:
+
+- `reset_circuit_breaker`:
 
 ## cache
 
@@ -347,51 +308,49 @@ This document describes all service implementations in the codebase.
 
 ### CacheStats
 
-
-
 **Public Methods:**
-- `hit_rate`: 
 
-- `to_dict`: 
+- `hit_rate`:
+
+- `to_dict`:
 
 ### CrackerjackCache
 
-
-
 **Public Methods:**
-- `get_hook_result`: 
 
-- `set_hook_result`: 
+- `get_hook_result`:
 
-- `get_expensive_hook_result`: 
+- `set_hook_result`:
 
-- `set_expensive_hook_result`: 
+- `get_expensive_hook_result`:
 
-- `get_file_hash`: 
+- `set_expensive_hook_result`:
 
-- `set_file_hash`: 
+- `get_file_hash`:
 
-- `get_config_data`: 
+- `set_file_hash`:
 
-- `set_config_data`: 
+- `get_config_data`:
 
-- `get`: 
+- `set_config_data`:
 
-- `set`: 
+- `get`:
 
-- `get_agent_decision`: 
+- `set`:
 
-- `set_agent_decision`: 
+- `get_agent_decision`:
 
-- `get_quality_baseline`: 
+- `set_agent_decision`:
 
-- `set_quality_baseline`: 
+- `get_quality_baseline`:
 
-- `invalidate_hook_cache`: 
+- `set_quality_baseline`:
 
-- `cleanup_all`: 
+- `invalidate_hook_cache`:
 
-- `get_cache_stats`: 
+- `cleanup_all`:
+
+- `get_cache_stats`:
 
 ## changelog_automation
 
@@ -399,23 +358,21 @@ This document describes all service implementations in the codebase.
 
 ### ChangelogEntry
 
-
-
 **Public Methods:**
-- `to_markdown`: 
+
+- `to_markdown`:
 
 ### ChangelogGenerator
 
-
-
 **Public Methods:**
-- `parse_commit_message`: 
 
-- `generate_changelog_entries`: 
+- `parse_commit_message`:
 
-- `update_changelog`: 
+- `generate_changelog_entries`:
 
-- `generate_changelog_from_commits`: 
+- `update_changelog`:
+
+- `generate_changelog_from_commits`:
 
 ## command_execution_service
 
@@ -423,10 +380,9 @@ This document describes all service implementations in the codebase.
 
 ### CommandExecutionService
 
-
-
 **Public Methods:**
-- `run_command_sync`: 
+
+- `run_command_sync`:
 
 ## config_cleanup
 
@@ -434,178 +390,167 @@ This document describes all service implementations in the codebase.
 
 ### ConfigCleanupResult
 
-
-
 ### MergeStrategy
-
-
 
 ### ConfigCleanupService
 
-
-
 **Public Methods:**
-- `cleanup_configs`: 
 
-- `rollback_cleanup`: 
+- `cleanup_configs`:
+
+- `rollback_cleanup`:
 
 ## config_integrity
 
 **Location:** `/Users/les/Projects/crackerjack/crackerjack/services/config_integrity.py`
 
 **Implements:**
+
 - ConfigIntegrityServiceProtocol
 
 - ServiceProtocol
 
 ### ConfigIntegrityService
 
-
-
 **Public Methods:**
-- `initialize`: 
 
-- `cleanup`: 
+- `initialize`:
 
-- `health_check`: 
+- `cleanup`:
 
-- `shutdown`: 
+- `health_check`:
 
-- `metrics`: 
+- `shutdown`:
 
-- `is_healthy`: 
+- `metrics`:
 
-- `register_resource`: 
+- `is_healthy`:
 
-- `cleanup_resource`: 
+- `register_resource`:
 
-- `record_error`: 
+- `cleanup_resource`:
 
-- `increment_requests`: 
+- `record_error`:
 
-- `get_custom_metric`: 
+- `increment_requests`:
 
-- `set_custom_metric`: 
+- `get_custom_metric`:
 
-- `check_config_integrity`: 
+- `set_custom_metric`:
+
+- `check_config_integrity`:
 
 ## config_merge
 
 **Location:** `/Users/les/Projects/crackerjack/crackerjack/services/config_merge.py`
 
 **Implements:**
+
 - ConfigMergeServiceProtocol
 
 ### ConfigMergeService
 
-
-
 **Public Methods:**
-- `smart_merge_pyproject`: 
 
-- `smart_append_file`: 
+- `smart_merge_pyproject`:
 
-- `smart_merge_gitignore`: 
+- `smart_append_file`:
 
-- `smart_merge_pre_commit_config`: 
+- `smart_merge_gitignore`:
 
-- `write_pre_commit_config`: 
+- `smart_merge_pre_commit_config`:
 
-- `write_pyproject_config`: 
+- `write_pre_commit_config`:
 
-- `initialize`: 
+- `write_pyproject_config`:
 
-- `cleanup`: 
+- `initialize`:
 
-- `health_check`: 
+- `cleanup`:
 
-- `shutdown`: 
+- `health_check`:
 
-- `metrics`: 
+- `shutdown`:
 
-- `is_healthy`: 
+- `metrics`:
 
-- `register_resource`: 
+- `is_healthy`:
 
-- `cleanup_resource`: 
+- `register_resource`:
 
-- `get_custom_metric`: 
+- `cleanup_resource`:
 
-- `increment_requests`: 
+- `get_custom_metric`:
 
-- `record_error`: 
+- `increment_requests`:
 
-- `set_custom_metric`: 
+- `record_error`:
+
+- `set_custom_metric`:
 
 ### ParsedContent
-
-
 
 ## config_parsers
 
 **Location:** `/Users/les/Projects/crackerjack/crackerjack/services/config_parsers.py`
 
 **Implements:**
+
 - t.Protocol
 
 ### ConfigParser
 
-
-
 **Public Methods:**
-- `load`: 
 
-- `save`: 
+- `load`:
 
-- `extensions`: 
+- `save`:
+
+- `extensions`:
 
 ### JSONParser
 
-
-
 **Public Methods:**
-- `extensions`: 
 
-- `load`: 
+- `extensions`:
 
-- `save`: 
+- `load`:
+
+- `save`:
 
 ### YAMLParser
 
-
-
 **Public Methods:**
-- `extensions`: 
 
-- `load`: 
+- `extensions`:
 
-- `save`: 
+- `load`:
+
+- `save`:
 
 ### TOMLParser
 
-
-
 **Public Methods:**
-- `extensions`: 
 
-- `load`: 
+- `extensions`:
 
-- `save`: 
+- `load`:
+
+- `save`:
 
 ### ConfigParserRegistry
 
-
-
 **Public Methods:**
-- `register`: 
 
-- `get_parser`: 
+- `register`:
 
-- `get_parser_by_format`: 
+- `get_parser`:
 
-- `list_formats`: 
+- `get_parser_by_format`:
 
-- `is_supported`: 
+- `list_formats`:
+
+- `is_supported`:
 
 ## config_service
 
@@ -613,16 +558,15 @@ This document describes all service implementations in the codebase.
 
 ### ConfigService
 
-
-
 **Public Methods:**
-- `load_config`: 
 
-- `validate_config`: 
+- `load_config`:
 
-- `save_config`: 
+- `validate_config`:
 
-- `merge_configs`: 
+- `save_config`:
+
+- `merge_configs`:
 
 ## config_template
 
@@ -630,26 +574,21 @@ This document describes all service implementations in the codebase.
 
 ### ConfigUpdateInfo
 
-
-
 ### ConfigVersion
-
-
 
 ### ConfigTemplateService
 
-
-
 **Public Methods:**
-- `get_template`: 
 
-- `check_updates`: 
+- `get_template`:
 
-- `apply_update`: 
+- `check_updates`:
 
-- `get_config_hash`: 
+- `apply_update`:
 
-- `list_available_templates`: 
+- `get_config_hash`:
+
+- `list_available_templates`:
 
 ## connection_pool
 
@@ -657,10 +596,9 @@ This document describes all service implementations in the codebase.
 
 ### HTTPConnectionPool
 
-
-
 **Public Methods:**
-- `is_closed`: 
+
+- `is_closed`:
 
 ## contextual_ai_assistant
 
@@ -668,22 +606,17 @@ This document describes all service implementations in the codebase.
 
 ### AIRecommendation
 
-
-
 ### ProjectContext
-
-
 
 ### ContextualAIAssistant
 
-
-
 **Public Methods:**
-- `get_contextual_recommendations`: 
 
-- `display_recommendations`: 
+- `get_contextual_recommendations`:
 
-- `get_quick_help`: 
+- `display_recommendations`:
+
+- `get_quick_help`:
 
 ## core
 
@@ -691,35 +624,33 @@ This document describes all service implementations in the codebase.
 
 ### CompiledPatternCache
 
-
-
 **Public Methods:**
-- `get_compiled_pattern`: 
 
-- `get_compiled_pattern_with_flags`: 
+- `get_compiled_pattern`:
 
-- `clear_cache`: 
+- `get_compiled_pattern_with_flags`:
 
-- `get_cache_stats`: 
+- `clear_cache`:
+
+- `get_cache_stats`:
 
 ### ValidatedPattern
 
-
-
 **Public Methods:**
-- `apply`: 
 
-- `apply_iteratively`: 
+- `apply`:
 
-- `apply_with_timeout`: 
+- `apply_iteratively`:
 
-- `test`: 
+- `apply_with_timeout`:
 
-- `search`: 
+- `test`:
 
-- `findall`: 
+- `search`:
 
-- `get_performance_stats`: 
+- `findall`:
+
+- `get_performance_stats`:
 
 ## coverage_badge_service
 
@@ -727,12 +658,11 @@ This document describes all service implementations in the codebase.
 
 ### CoverageBadgeService
 
-
-
 **Public Methods:**
-- `update_readme_coverage_badge`: 
 
-- `should_update_badge`: 
+- `update_readme_coverage_badge`:
+
+- `should_update_badge`:
 
 ## coverage_manager
 
@@ -740,92 +670,91 @@ This document describes all service implementations in the codebase.
 
 ### CoverageManager
 
-
-
 **Public Methods:**
-- `process_coverage_ratchet`: 
 
-- `attempt_coverage_extraction`: 
+- `process_coverage_ratchet`:
 
-- `handle_coverage_extraction_result`: 
+- `attempt_coverage_extraction`:
 
-- `update_coverage_badge`: 
+- `handle_coverage_extraction_result`:
 
-- `handle_ratchet_result`: 
+- `update_coverage_badge`:
+
+- `handle_ratchet_result`:
 
 ## coverage_ratchet
 
 **Location:** `/Users/les/Projects/crackerjack/crackerjack/services/coverage_ratchet.py`
 
 **Implements:**
+
 - CoverageRatchetProtocol
 
 ### CoverageRatchetService
 
-
-
 **Public Methods:**
-- `initialize`: 
 
-- `cleanup`: 
+- `initialize`:
 
-- `health_check`: 
+- `cleanup`:
 
-- `shutdown`: 
+- `health_check`:
 
-- `metrics`: 
+- `shutdown`:
 
-- `is_healthy`: 
+- `metrics`:
 
-- `register_resource`: 
+- `is_healthy`:
 
-- `cleanup_resource`: 
+- `register_resource`:
 
-- `record_error`: 
+- `cleanup_resource`:
 
-- `increment_requests`: 
+- `record_error`:
 
-- `get_custom_metric`: 
+- `increment_requests`:
 
-- `set_custom_metric`: 
+- `get_custom_metric`:
 
-- `initialize_baseline`: 
+- `set_custom_metric`:
 
-- `get_ratchet_data`: 
+- `initialize_baseline`:
 
-- `get_status_report`: 
+- `get_ratchet_data`:
 
-- `get_baseline`: 
+- `get_status_report`:
 
-- `get_baseline_coverage`: 
+- `get_baseline`:
 
-- `update_baseline_coverage`: 
+- `get_baseline_coverage`:
 
-- `is_coverage_regression`: 
+- `update_baseline_coverage`:
 
-- `calculate_coverage_gap`: 
+- `is_coverage_regression`:
 
-- `update_coverage`: 
+- `calculate_coverage_gap`:
 
-- `raise_floor`: Raise the enforced floor to ``new_coverage`` and rewrite the ratchet.
+- `update_coverage`:
 
-- `get_progress_visualization`: 
+- `raise_floor`: Raise the enforced floor to `new_coverage` and rewrite the ratchet.
 
-- `get_coverage_improvement_needed`: 
+- `get_progress_visualization`:
 
-- `display_milestone_celebration`: 
+- `get_coverage_improvement_needed`:
 
-- `show_progress_with_spinner`: 
+- `display_milestone_celebration`:
 
-- `get_coverage_report`: 
+- `show_progress_with_spinner`:
 
-- `check_and_update_coverage`: 
+- `get_coverage_report`:
+
+- `check_and_update_coverage`:
 
 - `lower_baseline`: Lower the enforced coverage floor, with a recorded reason.
 
 - `mirror_to_pyproject`: Write --cov-fail-under=<coverage> to pyproject.toml.
 
-- `report_status`: 
+- `report_status`:
 
 ## debug
 
@@ -833,73 +762,71 @@ This document describes all service implementations in the codebase.
 
 ### AIAgentDebugger
 
-
-
 **Public Methods:**
-- `debug_operation`: 
 
-- `log_mcp_operation`: 
+- `debug_operation`:
 
-- `log_agent_activity`: 
+- `log_mcp_operation`:
 
-- `log_workflow_phase`: 
+- `log_agent_activity`:
 
-- `log_error_event`: 
+- `log_workflow_phase`:
 
-- `print_debug_summary`: 
+- `log_error_event`:
 
-- `log_iteration_start`: 
+- `print_debug_summary`:
 
-- `log_iteration_end`: 
+- `log_iteration_start`:
 
-- `log_test_failures`: 
+- `log_iteration_end`:
 
-- `log_test_fixes`: 
+- `log_test_failures`:
 
-- `log_hook_failures`: 
+- `log_test_fixes`:
 
-- `log_hook_fixes`: 
+- `log_hook_failures`:
 
-- `set_workflow_success`: 
+- `log_hook_fixes`:
 
-- `reset_deduplicator`: 
+- `set_workflow_success`:
 
-- `export_debug_data`: 
+- `reset_deduplicator`:
+
+- `export_debug_data`:
 
 ### NoOpDebugger
 
-
-
 **Public Methods:**
-- `reset_deduplicator`: 
 
-- `debug_operation`: 
+- `reset_deduplicator`:
 
-- `log_mcp_operation`: 
+- `debug_operation`:
 
-- `log_agent_activity`: 
+- `log_mcp_operation`:
 
-- `log_workflow_phase`: 
+- `log_agent_activity`:
 
-- `log_error_event`: 
+- `log_workflow_phase`:
 
-- `print_debug_summary`: 
+- `log_error_event`:
 
-- `export_debug_data`: 
+- `print_debug_summary`:
 
-- `log_iteration_start`: 
+- `export_debug_data`:
 
-- `log_iteration_end`: 
+- `log_iteration_start`:
 
-- `log_test_failures`: 
+- `log_iteration_end`:
 
-- `log_test_fixes`: 
+- `log_test_failures`:
 
-- `log_hook_failures`: 
+- `log_test_fixes`:
 
-- `log_hook_fixes`: 
+- `log_hook_failures`:
 
-- `set_workflow_success`: 
+- `log_hook_fixes`:
+
+- `set_workflow_success`:
 
 ## dependency_analyzer
 
@@ -907,48 +834,43 @@ This document describes all service implementations in the codebase.
 
 ### DependencyNode
 
-
-
 **Public Methods:**
-- `to_dict`: 
+
+- `to_dict`:
 
 ### DependencyEdge
 
-
-
 **Public Methods:**
-- `to_dict`: 
+
+- `to_dict`:
 
 ### DependencyGraph
 
-
-
 **Public Methods:**
-- `to_dict`: 
+
+- `to_dict`:
 
 ### DependencyAnalyzer
 
-
-
 **Public Methods:**
-- `analyze_project`: 
+
+- `analyze_project`:
 
 ### DependencyVisitor
 
-
-
 **Public Methods:**
-- `visit_Module`: 
 
-- `visit_Import`: 
+- `visit_Module`:
 
-- `visit_ImportFrom`: 
+- `visit_Import`:
 
-- `visit_ClassDef`: 
+- `visit_ImportFrom`:
 
-- `visit_FunctionDef`: 
+- `visit_ClassDef`:
 
-- `visit_Call`: 
+- `visit_FunctionDef`:
+
+- `visit_Call`:
 
 ## doc_categorizer
 
@@ -956,36 +878,31 @@ This document describes all service implementations in the codebase.
 
 ### CategoryConfig
 
-
-
 ### CategoryResult
-
-
 
 ### DocumentationCategorizer
 
-
-
 **Public Methods:**
-- `derive_archive_area`: Return the archive area (relative to ``self.docs_root``) that a
-file should be archived under, derived from its parent directory.
 
-- `archive_target_path`: Compose the full archive target path for ``filepath`` given its
-category subdir name. The result lives under
-``<archive_area>/.archive/<category_subdir>/`` relative to the
-docs_root.
+- `derive_archive_area`: Return the archive area (relative to `self.docs_root`) that a
+  file should be archived under, derived from its parent directory.
 
-- `categorize_file`: 
+- `archive_target_path`: Compose the full archive target path for `filepath` given its
+  category subdir name. The result lives under
+  `<archive_area>/.archive/<category_subdir>/` relative to the
+  docs_root.
 
-- `analyze_all`: 
+- `categorize_file`:
+
+- `analyze_all`:
 
 - `get_archivable_files`: Return the list of files that should be archived.
 
-- `get_archive_subdirectory`: Return the category sub-directory for ``filepath``.
+- `get_archive_subdirectory`: Return the category sub-directory for `filepath`.
 
-- `should_keep_in_root`: 
+- `should_keep_in_root`:
 
-- `should_keep_in_docs`: 
+- `should_keep_in_docs`:
 
 ## doc_update_service
 
@@ -993,24 +910,17 @@ docs_root.
 
 ### CodeChange
 
-
-
 ### DocUpdate
-
-
 
 ### DocUpdateResult
 
-
-
 ### DocUpdateService
 
-
-
 **Public Methods:**
-- `settings`: 
 
-- `update_documentation`: 
+- `settings`:
+
+- `update_documentation`:
 
 ## documentation_cleanup
 
@@ -1018,97 +928,91 @@ docs_root.
 
 ### DocumentationCleanupResult
 
-
-
 ### ArchiveMapping
-
-
 
 ### DocumentationCleanup
 
-
-
 **Public Methods:**
-- `cleanup_documentation`: 
 
-- `rollback_cleanup`: 
+- `cleanup_documentation`:
+
+- `rollback_cleanup`:
 
 ## documentation_generator
 
 **Location:** `/Users/les/Projects/crackerjack/crackerjack/services/documentation_generator.py`
 
 **Implements:**
+
 - DocumentationGeneratorProtocol
 
 ### MarkdownTemplateRenderer
 
-
-
 **Public Methods:**
-- `render_template`: 
+
+- `render_template`:
 
 ### DocumentationGeneratorImpl
 
-
-
 **Public Methods:**
-- `generate_api_reference`: 
 
-- `generate_user_guide`: 
+- `generate_api_reference`:
 
-- `generate_changelog_update`: 
+- `generate_user_guide`:
 
-- `render_template`: 
+- `generate_changelog_update`:
 
-- `generate_cross_references`: 
+- `render_template`:
+
+- `generate_cross_references`:
 
 ## documentation_service
 
 **Location:** `/Users/les/Projects/crackerjack/crackerjack/services/documentation_service.py`
 
 **Implements:**
+
 - DocumentationServiceProtocol
 
 ### DocumentationServiceImpl
 
-
-
 **Public Methods:**
-- `extract_api_documentation`: 
 
-- `generate_documentation`: 
+- `extract_api_documentation`:
 
-- `validate_documentation`: 
+- `generate_documentation`:
 
-- `update_documentation_index`: 
+- `validate_documentation`:
 
-- `get_documentation_coverage`: 
+- `update_documentation_index`:
 
-- `generate_full_api_documentation`: 
+- `get_documentation_coverage`:
 
-- `initialize`: 
+- `generate_full_api_documentation`:
 
-- `cleanup`: 
+- `initialize`:
 
-- `health_check`: 
+- `cleanup`:
 
-- `shutdown`: 
+- `health_check`:
 
-- `metrics`: 
+- `shutdown`:
 
-- `is_healthy`: 
+- `metrics`:
 
-- `register_resource`: 
+- `is_healthy`:
 
-- `cleanup_resource`: 
+- `register_resource`:
 
-- `get_custom_metric`: 
+- `cleanup_resource`:
 
-- `increment_requests`: 
+- `get_custom_metric`:
 
-- `record_error`: 
+- `increment_requests`:
 
-- `set_custom_metric`: 
+- `record_error`:
+
+- `set_custom_metric`:
 
 ## embeddings
 
@@ -1116,81 +1020,77 @@ docs_root.
 
 ### EmbeddingService
 
-
-
 **Public Methods:**
-- `session`: 
 
-- `tokenizer`: 
+- `session`:
 
-- `generate_embedding`: 
+- `tokenizer`:
 
-- `generate_embeddings_batch`: 
+- `generate_embedding`:
 
-- `calculate_similarity`: 
+- `generate_embeddings_batch`:
 
-- `calculate_similarities_batch`: 
+- `calculate_similarity`:
 
-- `get_text_hash`: 
+- `calculate_similarities_batch`:
 
-- `get_file_hash`: 
+- `get_text_hash`:
 
-- `chunk_text`: 
+- `get_file_hash`:
 
-- `is_model_available`: 
+- `chunk_text`:
 
-- `get_model_info`: 
+- `is_model_available`:
+
+- `get_model_info`:
 
 ## enhanced_filesystem
 
 **Location:** `/Users/les/Projects/crackerjack/crackerjack/services/enhanced_filesystem.py`
 
 **Implements:**
+
 - EnhancedFileSystemServiceProtocol
 
 - ServiceProtocol
 
 ### FileCache
 
-
-
 **Public Methods:**
-- `get`: 
 
-- `put`: 
+- `get`:
 
-- `clear`: 
+- `put`:
 
-- `get_stats`: 
+- `clear`:
+
+- `get_stats`:
 
 ### BatchFileOperations
 
-
-
 ### EnhancedFileSystemService
 
-
-
 **Public Methods:**
-- `read_file`: 
 
-- `write_file`: 
+- `read_file`:
 
-- `file_exists`: 
+- `write_file`:
 
-- `create_directory`: 
+- `file_exists`:
 
-- `delete_file`: 
+- `create_directory`:
 
-- `list_files`: 
+- `delete_file`:
 
-- `get_cache_stats`: 
+- `list_files`:
 
-- `clear_cache`: 
+- `get_cache_stats`:
 
-- `exists`: 
+- `clear_cache`:
 
-- `mkdir`: 
+- `exists`:
+
+- `mkdir`:
 
 ## failure_metrics_repository
 
@@ -1205,26 +1105,20 @@ Failure metrics store.
 **Location:** `/Users/les/Projects/crackerjack/crackerjack/services/failure_recorder.py`
 
 **Implements:**
+
 - Protocol
 
 ### FixAttemptRecord
 
-
-
 **Public Methods:**
-- `to_dict`: 
+
+- `to_dict`:
 
 ### TrendClassification
 
-
-
-### _SessionBuddyProtocol
-
-
+### \_SessionBuddyProtocol
 
 ### FailureRecorder
-
-
 
 ## file_chunker
 
@@ -1232,82 +1126,81 @@ Failure metrics store.
 
 ### FileChunker
 
-
-
 **Public Methods:**
-- `chunk_files`: 
 
-- `should_chunk_files`: 
+- `chunk_files`:
 
-- `estimate_parallel_benefit`: 
+- `should_chunk_files`:
+
+- `estimate_parallel_benefit`:
 
 ## file_filter
 
 **Location:** `/Users/les/Projects/crackerjack/crackerjack/services/file_filter.py`
 
 **Implements:**
+
 - SmartFileFilterProtocol
 
 - ServiceProtocol
 
 ### SmartFileFilter
 
-
-
 **Public Methods:**
-- `initialize`: 
 
-- `cleanup`: 
+- `initialize`:
 
-- `health_check`: 
+- `cleanup`:
 
-- `shutdown`: 
+- `health_check`:
 
-- `metrics`: 
+- `shutdown`:
 
-- `is_healthy`: 
+- `metrics`:
 
-- `register_resource`: 
+- `is_healthy`:
 
-- `cleanup_resource`: 
+- `register_resource`:
 
-- `record_error`: 
+- `cleanup_resource`:
 
-- `increment_requests`: 
+- `record_error`:
 
-- `get_custom_metric`: 
+- `increment_requests`:
 
-- `set_custom_metric`: 
+- `get_custom_metric`:
 
-- `get_changed_files`: 
+- `set_custom_metric`:
 
-- `get_staged_files`: 
+- `get_changed_files`:
 
-- `get_unstaged_files`: 
+- `get_staged_files`:
 
-- `filter_by_pattern`: 
+- `get_unstaged_files`:
 
-- `filter_by_tool`: 
+- `filter_by_pattern`:
 
-- `get_all_modified_files`: 
+- `filter_by_tool`:
 
-- `filter_by_extensions`: 
+- `get_all_modified_files`:
 
-- `get_python_files`: 
+- `filter_by_extensions`:
 
-- `get_markdown_files`: 
+- `get_python_files`:
 
-- `get_changed_python_files_incremental`: 
+- `get_markdown_files`:
 
-- `get_all_python_files_in_package`: 
+- `get_changed_python_files_incremental`:
 
-- `should_include`: 
+- `get_all_python_files_in_package`:
 
-- `filter_files`: 
+- `should_include`:
 
-- `should_use_incremental_scan`: 
+- `filter_files`:
 
-- `get_files_for_qa_scan`: 
+- `should_use_incremental_scan`:
+
+- `get_files_for_qa_scan`:
 
 ## file_hasher
 
@@ -1315,35 +1208,33 @@ Failure metrics store.
 
 ### FileHasher
 
-
-
 **Public Methods:**
-- `shutdown`: 
 
-- `shutdown_all_instances`: 
+- `shutdown`:
 
-- `get_file_hash`: 
+- `shutdown_all_instances`:
 
-- `get_directory_hash`: 
+- `get_file_hash`:
 
-- `get_files_hash_list`: 
+- `get_directory_hash`:
 
-- `has_files_changed`: 
+- `get_files_hash_list`:
 
-- `get_project_files_hash`: 
+- `has_files_changed`:
 
-- `invalidate_cache`: 
+- `get_project_files_hash`:
+
+- `invalidate_cache`:
 
 ### SmartFileWatcher
 
-
-
 **Public Methods:**
-- `register_files`: 
 
-- `check_changes`: 
+- `register_files`:
 
-- `invalidate_changed_files`: 
+- `check_changes`:
+
+- `invalidate_changed_files`:
 
 ## file_io_service
 
@@ -1351,64 +1242,63 @@ Failure metrics store.
 
 ### FileIOService
 
-
-
 **Public Methods:**
-- `read_text_file_sync`: 
 
-- `write_text_file_sync`: 
+- `read_text_file_sync`:
 
-- `read_json_file_sync`: 
+- `write_text_file_sync`:
 
-- `write_json_file_sync`: 
+- `read_json_file_sync`:
 
-- `read_binary_file_sync`: 
+- `write_json_file_sync`:
 
-- `write_binary_file_sync`: 
+- `read_binary_file_sync`:
 
-- `file_exists`: 
+- `write_binary_file_sync`:
 
-- `directory_exists`: 
+- `file_exists`:
+
+- `directory_exists`:
 
 ## file_modifier
 
 **Location:** `/Users/les/Projects/crackerjack/crackerjack/services/file_modifier.py`
 
 **Implements:**
+
 - SafeFileModifierProtocol
 
 - ServiceProtocol
 
 ### SafeFileModifier
 
-
-
 **Public Methods:**
-- `initialize`: 
 
-- `cleanup`: 
+- `initialize`:
 
-- `health_check`: 
+- `cleanup`:
 
-- `shutdown`: 
+- `health_check`:
 
-- `metrics`: 
+- `shutdown`:
 
-- `is_healthy`: 
+- `metrics`:
 
-- `register_resource`: 
+- `is_healthy`:
 
-- `cleanup_resource`: 
+- `register_resource`:
 
-- `record_error`: 
+- `cleanup_resource`:
 
-- `increment_requests`: 
+- `record_error`:
 
-- `get_custom_metric`: 
+- `increment_requests`:
 
-- `set_custom_metric`: 
+- `get_custom_metric`:
 
-- `modify_file`: 
+- `set_custom_metric`:
+
+- `modify_file`:
 
 ## filesystem
 
@@ -1416,34 +1306,33 @@ Failure metrics store.
 
 ### FileSystemService
 
-
-
 **Public Methods:**
-- `clean_trailing_whitespace_and_newlines`: 
 
-- `read_file`: 
+- `clean_trailing_whitespace_and_newlines`:
 
-- `write_file`: 
+- `read_file`:
 
-- `exists`: 
+- `write_file`:
 
-- `mkdir`: 
+- `exists`:
 
-- `glob`: 
+- `mkdir`:
 
-- `rglob`: 
+- `glob`:
 
-- `copy_file`: 
+- `rglob`:
 
-- `remove_file`: 
+- `copy_file`:
 
-- `get_file_size`: 
+- `remove_file`:
 
-- `get_file_mtime`: 
+- `get_file_size`:
 
-- `read_file_chunked`: 
+- `get_file_mtime`:
 
-- `read_lines_streaming`: 
+- `read_file_chunked`:
+
+- `read_lines_streaming`:
 
 ## frontmatter
 
@@ -1451,19 +1340,17 @@ Failure metrics store.
 
 ### Issue
 
-
-
 **Public Methods:**
-- `format`: 
+
+- `format`:
 
 ### FileResult
 
-
-
 **Public Methods:**
-- `issues`: 
 
-- `add`: 
+- `issues`:
+
+- `add`:
 
 ### VocabFileNotFoundError
 
@@ -1475,27 +1362,21 @@ The topic vocabulary file is missing from the configured location.
 
 ### FrontmatterValidationIssue
 
-
-
 ### FrontmatterValidationResult
 
-
-
 **Public Methods:**
-- `from_payload`: 
+
+- `from_payload`:
 
 ### FrontmatterValidationError
 
-
-
 ### FrontmatterValidator
 
-
-
 **Public Methods:**
-- `validate`: 
 
-- `validate_or_raise`: 
+- `validate`:
+
+- `validate_or_raise`:
 
 ## git
 
@@ -1503,48 +1384,45 @@ The topic vocabulary file is missing from the configured location.
 
 ### FailedGitResult
 
-
-
 ### GitService
 
-
-
 **Public Methods:**
-- `is_git_repo`: 
 
-- `get_changed_files`: 
+- `is_git_repo`:
 
-- `get_staged_files`: 
+- `get_changed_files`:
 
-- `add_files`: 
+- `get_staged_files`:
 
-- `add_all_files`: 
+- `add_files`:
 
-- `commit`: 
+- `add_all_files`:
 
-- `push`: 
+- `commit`:
 
-- `push_with_tags`: 
+- `push`:
 
-- `get_current_branch`: 
+- `push_with_tags`:
 
-- `get_commit_message_suggestions`: 
+- `get_current_branch`:
 
-- `get_unpushed_commit_count`: 
+- `get_commit_message_suggestions`:
 
-- `get_changed_files_by_extension`: 
+- `get_unpushed_commit_count`:
 
-- `get_current_commit_hash`: 
+- `get_changed_files_by_extension`:
 
-- `reset_hard`: 
+- `get_current_commit_hash`:
+
+- `reset_hard`:
 
 - `checkout_files`: Revert the given paths in BOTH the working tree AND index to HEAD.
 
-- `rm_files`: Stage removals for ``files`` (paths relative to ``self.pkg_path``).
+- `rm_files`: Stage removals for `files` (paths relative to `self.pkg_path`).
 
-- `get_changed_files_since`: 
+- `get_changed_files_since`:
 
-- `get_unstaged_files`: 
+- `get_unstaged_files`:
 
 ## git_cleanup_service
 
@@ -1556,20 +1434,15 @@ Raised when the working tree is dirty and unsafe rewrites are forbidden.
 
 ### GitCommandResult
 
-
-
 ### GitCleanupResult
-
-
 
 ### GitCleanupService
 
-
-
 **Public Methods:**
-- `settings`: 
 
-- `cleanup_git_deleted_files`: 
+- `settings`:
+
+- `cleanup_git_deleted_files`:
 
 ## heatmap_generator
 
@@ -1577,35 +1450,31 @@ Raised when the working tree is dirty and unsafe rewrites are forbidden.
 
 ### HeatMapCell
 
-
-
 ### HeatMapData
 
-
-
 **Public Methods:**
-- `to_dict`: 
+
+- `to_dict`:
 
 ### HeatMapGenerator
 
-
-
 **Public Methods:**
-- `add_error_data`: 
 
-- `add_metric_data`: 
+- `add_error_data`:
 
-- `generate_error_frequency_heatmap`: 
+- `add_metric_data`:
 
-- `generate_code_complexity_heatmap`: 
+- `generate_error_frequency_heatmap`:
 
-- `generate_quality_metrics_heatmap`: 
+- `generate_code_complexity_heatmap`:
 
-- `generate_test_failure_heatmap`: 
+- `generate_quality_metrics_heatmap`:
 
-- `export_heatmap_data`: 
+- `generate_test_failure_heatmap`:
 
-- `generate_html_visualization`: 
+- `export_heatmap_data`:
+
+- `generate_html_visualization`:
 
 ## import_resolution
 
@@ -1613,22 +1482,17 @@ Raised when the working tree is dirty and unsafe rewrites are forbidden.
 
 ### ImportSpec
 
-
-
 ## improvement_generator
 
 **Location:** `/Users/les/Projects/crackerjack/crackerjack/services/improvement_generator.py`
 
 ### ImprovementProposal
 
-
-
 **Public Methods:**
-- `is_auto_apply_candidate`: 
+
+- `is_auto_apply_candidate`:
 
 ### ImprovementGenerator
-
-
 
 ## improvement_overseer
 
@@ -1636,14 +1500,11 @@ Raised when the working tree is dirty and unsafe rewrites are forbidden.
 
 ### OverseerVerdict
 
-
-
 ### ImprovementOverseer
 
-
-
 **Public Methods:**
-- `build_review_context`: 
+
+- `build_review_context`:
 
 ## incremental_executor
 
@@ -1651,33 +1512,27 @@ Raised when the working tree is dirty and unsafe rewrites are forbidden.
 
 ### FileHash
 
-
-
 ### CacheEntry
-
-
 
 ### ExecutionResult
 
-
-
 **Public Methods:**
-- `cache_effective`: 
+
+- `cache_effective`:
 
 ### IncrementalExecutor
 
-
-
 **Public Methods:**
-- `execute_incremental`: 
 
-- `get_changed_files`: 
+- `execute_incremental`:
 
-- `invalidate_file`: 
+- `get_changed_files`:
 
-- `clear_cache`: 
+- `invalidate_file`:
 
-- `get_cache_stats`: 
+- `clear_cache`:
+
+- `get_cache_stats`:
 
 ## incremental_scanner
 
@@ -1685,10 +1540,9 @@ Raised when the working tree is dirty and unsafe rewrites are forbidden.
 
 ### IncrementalScanner
 
-
-
 **Public Methods:**
-- `get_scan_strategy`: 
+
+- `get_scan_strategy`:
 
 ## initialization
 
@@ -1696,18 +1550,17 @@ Raised when the working tree is dirty and unsafe rewrites are forbidden.
 
 ### InitializationService
 
-
-
 **Public Methods:**
-- `initialize_project`: 
 
-- `setup_git_hooks`: 
+- `initialize_project`:
 
-- `validate_project_structure`: 
+- `setup_git_hooks`:
 
-- `initialize_project_full`: 
+- `validate_project_structure`:
 
-- `check_uv_installed`: 
+- `initialize_project_full`:
+
+- `check_uv_installed`:
 
 ## input_validator
 
@@ -1715,39 +1568,33 @@ Raised when the working tree is dirty and unsafe rewrites are forbidden.
 
 ### ValidationConfig
 
-
-
 ### ValidationResult
-
-
 
 ### InputSanitizer
 
-
-
 **Public Methods:**
-- `sanitize_string`: 
 
-- `sanitize_json`: 
+- `sanitize_string`:
 
-- `sanitize_path`: 
+- `sanitize_json`:
+
+- `sanitize_path`:
 
 ### SecureInputValidator
 
-
-
 **Public Methods:**
-- `validate_project_name`: 
 
-- `validate_job_id`: 
+- `validate_project_name`:
 
-- `validate_command_args`: 
+- `validate_job_id`:
 
-- `validate_json_payload`: 
+- `validate_command_args`:
 
-- `validate_file_path`: 
+- `validate_json_payload`:
 
-- `validate_environment_var`: 
+- `validate_file_path`:
+
+- `validate_environment_var`:
 
 ## intelligent_commit
 
@@ -1755,12 +1602,11 @@ Raised when the working tree is dirty and unsafe rewrites are forbidden.
 
 ### CommitMessageGenerator
 
-
-
 **Public Methods:**
-- `generate_commit_message`: 
 
-- `commit_with_generated_message`: 
+- `generate_commit_message`:
+
+- `commit_with_generated_message`:
 
 ## log_manager
 
@@ -1768,40 +1614,37 @@ Raised when the working tree is dirty and unsafe rewrites are forbidden.
 
 ### LogManager
 
-
-
 **Public Methods:**
-- `log_dir`: 
 
-- `debug_dir`: 
+- `log_dir`:
 
-- `error_dir`: 
+- `debug_dir`:
 
-- `audit_dir`: 
+- `error_dir`:
 
-- `create_debug_log_file`: 
+- `audit_dir`:
 
-- `create_error_log_file`: 
+- `create_debug_log_file`:
 
-- `rotate_logs`: 
+- `create_error_log_file`:
 
-- `cleanup_all_logs`: 
+- `rotate_logs`:
 
-- `migrate_legacy_logs`: 
+- `cleanup_all_logs`:
 
-- `get_log_stats`: 
+- `migrate_legacy_logs`:
 
-- `setup_rotating_file_handler`: 
+- `get_log_stats`:
 
-- `print_log_summary`: 
+- `setup_rotating_file_handler`:
+
+- `print_log_summary`:
 
 ## logging
 
 **Location:** `/Users/les/Projects/crackerjack/crackerjack/services/logging.py`
 
 ### LoggingContext
-
-
 
 ## mahavishnu_discovery
 
@@ -1817,14 +1660,13 @@ Internal: probe failed. Callers should NOT raise this — soft fallback.
 
 ### MarkerTracker
 
-
-
 **Public Methods:**
-- `get_files_needing_scan`: 
 
-- `mark_scanned`: 
+- `get_files_needing_scan`:
 
-- `mark_full_scan_complete`: 
+- `mark_scanned`:
+
+- `mark_full_scan_complete`:
 
 ## memory_aware_scanner
 
@@ -1832,75 +1674,67 @@ Internal: probe failed. Callers should NOT raise this — soft fallback.
 
 ### MemoryAwareScanner
 
-
-
 ## memory_optimizer
 
 **Location:** `/Users/les/Projects/crackerjack/crackerjack/services/memory_optimizer.py`
 
 ### MemoryStats
 
-
-
 ### LazyLoader
 
-
-
 **Public Methods:**
-- `is_loaded`: 
 
-- `access_count`: 
+- `is_loaded`:
 
-- `get`: 
+- `access_count`:
 
-- `dispose`: 
+- `get`:
+
+- `dispose`:
 
 ### ResourcePool
 
-
-
 **Public Methods:**
-- `acquire`: 
 
-- `release`: 
+- `acquire`:
 
-- `clear`: 
+- `release`:
 
-- `get_stats`: 
+- `clear`:
+
+- `get_stats`:
 
 ### MemoryProfiler
 
-
-
 **Public Methods:**
-- `start_profiling`: 
 
-- `record_checkpoint`: 
+- `start_profiling`:
 
-- `get_summary`: 
+- `record_checkpoint`:
+
+- `get_summary`:
 
 ### MemoryOptimizer
 
-
-
 **Public Methods:**
-- `get_instance`: 
 
-- `register_lazy_object`: 
+- `get_instance`:
 
-- `notify_lazy_load`: 
+- `register_lazy_object`:
 
-- `register_resource_pool`: 
+- `notify_lazy_load`:
 
-- `get_resource_pool`: 
+- `register_resource_pool`:
 
-- `start_profiling`: 
+- `get_resource_pool`:
 
-- `record_checkpoint`: 
+- `start_profiling`:
 
-- `get_memory_stats`: 
+- `record_checkpoint`:
 
-- `optimize_memory`: 
+- `get_memory_stats`:
+
+- `optimize_memory`:
 
 ## mermaid_renderer
 
@@ -1915,7 +1749,8 @@ A fenced mermaid block found in a `.md` file.
 A mermaid block that failed to parse.
 
 **Public Methods:**
-- `relpath`: 
+
+- `relpath`:
 
 ## message_deduplicator
 
@@ -1923,26 +1758,25 @@ A mermaid block that failed to parse.
 
 ### MessageDeduplicator
 
-
-
 **Public Methods:**
-- `add_message`: 
 
-- `should_show`: 
+- `add_message`:
 
-- `get_duplicates`: 
+- `should_show`:
 
-- `get_summary`: 
+- `get_duplicates`:
 
-- `print_summary`: 
+- `get_summary`:
 
-- `reset`: 
+- `print_summary`:
 
-- `total_messages`: 
+- `reset`:
 
-- `unique_messages`: 
+- `total_messages`:
 
-- `duplicate_count`: 
+- `unique_messages`:
+
+- `duplicate_count`:
 
 ## metrics
 
@@ -1950,28 +1784,27 @@ A mermaid block that failed to parse.
 
 ### MetricsCollector
 
-
-
 **Public Methods:**
-- `execute`: 
 
-- `execute_query`: 
+- `execute`:
 
-- `track_provider_selection`: 
+- `execute_query`:
 
-- `track_agent_execution`: 
+- `track_provider_selection`:
 
-- `get_provider_stats`: 
+- `track_agent_execution`:
 
-- `get_agent_stats`: 
+- `get_provider_stats`:
 
-- `get_agent_success_rate`: 
+- `get_agent_stats`:
 
-- `get_provider_availability`: 
+- `get_agent_success_rate`:
 
-- `get_agent_confidence_distribution`: 
+- `get_provider_availability`:
 
-- `close`: 
+- `get_agent_confidence_distribution`:
+
+- `close`:
 
 ## operations
 
@@ -1979,22 +1812,22 @@ A mermaid block that failed to parse.
 
 ### RegexPatternsService
 
-
-
 **Public Methods:**
-- `update_pyproject_version`: 
 
-- `remove_coverage_fail_under`: 
+- `update_pyproject_version`:
 
-- `update_version_in_changelog`: 
+- `remove_coverage_fail_under`:
 
-- `mask_tokens_in_text`: 
+- `update_version_in_changelog`:
+
+- `mask_tokens_in_text`:
 
 ## parallel_executor
 
 **Location:** `/Users/les/Projects/crackerjack/crackerjack/services/parallel_executor.py`
 
 **Implements:**
+
 - ParallelHookExecutorProtocol
 
 - ServiceProtocol
@@ -2005,73 +1838,67 @@ A mermaid block that failed to parse.
 
 ### ExecutionStrategy
 
-
-
 ### ExecutionGroup
-
-
 
 ### ParallelHookExecutor
 
-
-
 **Public Methods:**
-- `initialize`: 
 
-- `cleanup`: 
+- `initialize`:
 
-- `health_check`: 
+- `cleanup`:
 
-- `shutdown`: 
+- `health_check`:
 
-- `metrics`: 
+- `shutdown`:
 
-- `is_healthy`: 
+- `metrics`:
 
-- `register_resource`: 
+- `is_healthy`:
 
-- `cleanup_resource`: 
+- `register_resource`:
 
-- `record_error`: 
+- `cleanup_resource`:
 
-- `increment_requests`: 
+- `record_error`:
 
-- `get_custom_metric`: 
+- `increment_requests`:
 
-- `set_custom_metric`: 
+- `get_custom_metric`:
 
-- `analyze_hook_dependencies`: 
+- `set_custom_metric`:
 
-- `can_execute_in_parallel`: 
+- `analyze_hook_dependencies`:
+
+- `can_execute_in_parallel`:
 
 ### AsyncCommandExecutor
 
-
-
 **Public Methods:**
-- `initialize`: 
 
-- `cleanup`: 
+- `initialize`:
 
-- `health_check`: 
+- `cleanup`:
 
-- `shutdown`: 
+- `health_check`:
 
-- `metrics`: 
+- `shutdown`:
 
-- `is_healthy`: 
+- `metrics`:
 
-- `register_resource`: 
+- `is_healthy`:
 
-- `cleanup_resource`: 
+- `register_resource`:
 
-- `record_error`: 
+- `cleanup_resource`:
 
-- `increment_requests`: 
+- `record_error`:
 
-- `get_custom_metric`: 
+- `increment_requests`:
 
-- `set_custom_metric`: 
+- `get_custom_metric`:
+
+- `set_custom_metric`:
 
 ## pattern_cache
 
@@ -2079,32 +1906,29 @@ A mermaid block that failed to parse.
 
 ### CachedPattern
 
-
-
 ### PatternCache
 
-
-
 **Public Methods:**
-- `cache_successful_pattern`: 
 
-- `get_patterns_for_issue`: 
+- `cache_successful_pattern`:
 
-- `get_best_pattern_for_issue`: 
+- `get_patterns_for_issue`:
 
-- `use_pattern`: 
+- `get_best_pattern_for_issue`:
 
-- `update_pattern_success_rate`: 
+- `use_pattern`:
 
-- `get_pattern_statistics`: 
+- `update_pattern_success_rate`:
 
-- `cleanup_old_patterns`: 
+- `get_pattern_statistics`:
 
-- `clear_cache`: 
+- `cleanup_old_patterns`:
 
-- `export_patterns`: 
+- `clear_cache`:
 
-- `import_patterns`: 
+- `export_patterns`:
+
+- `import_patterns`:
 
 ## pattern_detector
 
@@ -2112,45 +1936,35 @@ A mermaid block that failed to parse.
 
 ### AntiPatternConfig
 
-
-
 ### AntiPattern
-
-
 
 ### PatternDetector
 
-
-
 ### ComplexityVisitor
 
-
-
 **Public Methods:**
-- `visit_FunctionDef`: 
+
+- `visit_FunctionDef`:
 
 ### PerformanceVisitor
 
-
-
 **Public Methods:**
-- `visit_For`: 
+
+- `visit_For`:
 
 ### SecurityVisitor
 
-
-
 **Public Methods:**
-- `visit_Call`: 
+
+- `visit_Call`:
 
 ### ImportVisitor
 
-
-
 **Public Methods:**
-- `visit_Import`: 
 
-- `visit_ImportFrom`: 
+- `visit_Import`:
+
+- `visit_ImportFrom`:
 
 ## pool_client
 
@@ -2158,52 +1972,49 @@ A mermaid block that failed to parse.
 
 ### CrackerjackPoolClient
 
-
-
 ## pool_orchestrator
 
 **Location:** `/Users/les/Projects/crackerjack/crackerjack/services/pool_orchestrator.py`
 
 **Implements:**
+
 - ServiceProtocol
 
 ### PoolExecutionResult
 
-
-
 **Public Methods:**
-- `passed_count`: 
 
-- `failed_count`: 
+- `passed_count`:
+
+- `failed_count`:
 
 ### PoolOrchestrator
 
-
-
 **Public Methods:**
-- `initialize`: 
 
-- `cleanup`: 
+- `initialize`:
 
-- `health_check`: 
+- `cleanup`:
 
-- `shutdown`: 
+- `health_check`:
 
-- `metrics`: 
+- `shutdown`:
 
-- `is_healthy`: 
+- `metrics`:
 
-- `record_error`: 
+- `is_healthy`:
 
-- `increment_requests`: 
+- `record_error`:
 
-- `register_resource`: 
+- `increment_requests`:
 
-- `cleanup_resource`: 
+- `register_resource`:
 
-- `get_custom_metric`: 
+- `cleanup_resource`:
 
-- `set_custom_metric`: 
+- `get_custom_metric`:
+
+- `set_custom_metric`:
 
 ## pool_router
 
@@ -2211,10 +2022,9 @@ A mermaid block that failed to parse.
 
 ### PoolRouter
 
-
-
 **Public Methods:**
-- `get_routing_summary`: 
+
+- `get_routing_summary`:
 
 ## pool_scaler
 
@@ -2222,72 +2032,61 @@ A mermaid block that failed to parse.
 
 ### PoolScaler
 
-
-
 **Public Methods:**
-- `get_status`: 
+
+- `get_status`:
 
 ## predictive_analytics
 
 **Location:** `/Users/les/Projects/crackerjack/crackerjack/services/ai/predictive_analytics.py`
 
 **Implements:**
+
 - t.Protocol
 
 ### PredictorProtocol
 
-
-
 **Public Methods:**
-- `predict`: 
+
+- `predict`:
 
 ### TrendAnalysis
 
-
-
 ### Prediction
-
-
 
 ### CapacityForecast
 
-
-
 ### MovingAveragePredictor
 
-
-
 **Public Methods:**
-- `predict`: 
+
+- `predict`:
 
 ### LinearTrendPredictor
 
-
-
 **Public Methods:**
-- `predict`: 
+
+- `predict`:
 
 ### SeasonalPredictor
 
-
-
 **Public Methods:**
-- `predict`: 
+
+- `predict`:
 
 ### PredictiveAnalyticsEngine
 
-
-
 **Public Methods:**
-- `add_metric`: 
 
-- `predict_metric`: 
+- `add_metric`:
 
-- `analyze_capacity_requirements`: 
+- `predict_metric`:
 
-- `get_trend_summary`: 
+- `analyze_capacity_requirements`:
 
-- `export_analytics_data`: 
+- `get_trend_summary`:
+
+- `export_analytics_data`:
 
 ## profiler
 
@@ -2295,42 +2094,37 @@ A mermaid block that failed to parse.
 
 ### ProfileResult
 
-
-
 **Public Methods:**
-- `mean_time`: 
 
-- `median_time`: 
+- `mean_time`:
 
-- `std_dev_time`: 
+- `median_time`:
 
-- `mean_memory`: 
+- `std_dev_time`:
 
-- `cache_hit_rate`: 
+- `mean_memory`:
+
+- `cache_hit_rate`:
 
 ### Bottleneck
 
-
-
 ### ComparisonReport
 
-
-
 **Public Methods:**
-- `time_ratio`: 
+
+- `time_ratio`:
 
 ### ToolProfiler
 
-
-
 **Public Methods:**
-- `profile_tool`: 
 
-- `compare_phases`: 
+- `profile_tool`:
 
-- `identify_bottlenecks`: 
+- `compare_phases`:
 
-- `generate_report`: 
+- `identify_bottlenecks`:
+
+- `generate_report`:
 
 ## prompt_evolution
 
@@ -2338,26 +2132,21 @@ A mermaid block that failed to parse.
 
 ### FailedFixAttempt
 
-
-
 ### SuccessfulFixPattern
-
-
 
 ### PromptEvolution
 
-
-
 **Public Methods:**
-- `record_failed_fix`: 
 
-- `record_successful_fix`: 
+- `record_failed_fix`:
 
-- `get_evolved_prompt`: 
+- `record_successful_fix`:
 
-- `analyze_failure_patterns`: 
+- `get_evolved_prompt`:
 
-- `get_success_rate`: 
+- `analyze_failure_patterns`:
+
+- `get_success_rate`:
 
 ## pycharm_mcp_integration
 
@@ -2365,29 +2154,23 @@ A mermaid block that failed to parse.
 
 ### CircuitBreakerState
 
-
-
 **Public Methods:**
-- `record_failure`: 
 
-- `record_success`: 
+- `record_failure`:
 
-- `can_execute`: 
+- `record_success`:
+
+- `can_execute`:
 
 ### SearchResult
 
-
-
 ### PyCharmMCPAdapter
 
-
-
 **Public Methods:**
-- `clear_cache`: 
+
+- `clear_cache`:
 
 ### MahavishnuPycharmMCPClient
-
-
 
 ## pypistats_service
 
@@ -2395,20 +2178,15 @@ A mermaid block that failed to parse.
 
 ### DownloadTrendClass
 
-
-
 ### PackageStatsSnapshot
-
-
 
 ### PypiStatsService
 
-
-
 **Public Methods:**
-- `get_snapshot`: 
 
-- `classify_download_trend`: 
+- `get_snapshot`:
+
+- `classify_download_trend`:
 
 ## quality_baseline_enhanced
 
@@ -2416,18 +2194,13 @@ A mermaid block that failed to parse.
 
 ### TrendDirection
 
-
-
 ### AlertSeverity
-
-
 
 ### EnhancedQualityBaselineService
 
-
-
 **Public Methods:**
-- `get_recent_baselines`: 
+
+- `get_recent_baselines`:
 
 ## quality_intelligence
 
@@ -2435,52 +2208,43 @@ A mermaid block that failed to parse.
 
 ### AnomalyType
 
-
-
 ### PatternType
-
-
 
 ### QualityAnomaly
 
-
-
 **Public Methods:**
-- `to_dict`: 
+
+- `to_dict`:
 
 ### QualityPattern
 
-
-
 **Public Methods:**
-- `to_dict`: 
+
+- `to_dict`:
 
 ### QualityPrediction
 
-
-
 **Public Methods:**
-- `to_dict`: 
+
+- `to_dict`:
 
 ### QualityInsights
 
-
-
 **Public Methods:**
-- `to_dict`: 
+
+- `to_dict`:
 
 ### QualityIntelligenceService
 
-
-
 **Public Methods:**
-- `detect_anomalies`: 
 
-- `identify_patterns`: 
+- `detect_anomalies`:
 
-- `generate_advanced_predictions`: 
+- `identify_patterns`:
 
-- `generate_comprehensive_insights`: 
+- `generate_advanced_predictions`:
+
+- `generate_comprehensive_insights`:
 
 ## refurb_fixer
 
@@ -2488,33 +2252,29 @@ A mermaid block that failed to parse.
 
 ### SafeRefurbFixer
 
+**Public Methods:**
 
+- `fix_file`:
+
+- `fix_package`:
+
+### \_StartswithTupleTransformer
 
 **Public Methods:**
-- `fix_file`: 
 
-- `fix_package`: 
+- `visit_BoolOp`:
 
-### _StartswithTupleTransformer
-
-
+### \_MembershipTupleTransformer
 
 **Public Methods:**
-- `visit_BoolOp`: 
 
-### _MembershipTupleTransformer
+- `visit_Compare`:
 
-
-
-**Public Methods:**
-- `visit_Compare`: 
-
-### _ForLoopTupleTransformer
-
-
+### \_ForLoopTupleTransformer
 
 **Public Methods:**
-- `visit_For`: 
+
+- `visit_For`:
 
 ## run_state_store
 
@@ -2525,11 +2285,12 @@ A mermaid block that failed to parse.
 SQLite-backed store of per-test run results.
 
 **Public Methods:**
-- `db_path`: 
+
+- `db_path`:
 
 - `record_run`: Record one test run and its per-test results.
 
-- `get_run`: Return the most recent run for a commit, or ``None``.
+- `get_run`: Return the most recent run for a commit, or `None`.
 
 - `list_runs`: Return every recorded run for a commit, newest first.
 
@@ -2537,7 +2298,7 @@ SQLite-backed store of per-test run results.
 
 - `summarize`: Aggregate the recorded runs.
 
-- `get_status_map`: Return ``{node_id: status}`` for a run - the diffing primitive.
+- `get_status_map`: Return `{node_id: status}` for a run - the diffing primitive.
 
 ## safe_code_modifier
 
@@ -2545,31 +2306,23 @@ SQLite-backed store of per-test run results.
 
 ### ValidationSeverity
 
-
-
 ### ValidationIssue
-
-
 
 ### ValidationResult
 
-
-
 **Public Methods:**
-- `errors`: 
 
-- `warnings`: 
+- `errors`:
+
+- `warnings`:
 
 ### BackupMetadata
 
-
-
 ### SafeCodeModifier
 
-
-
 **Public Methods:**
-- `apply_with_backup`: Write ``new_content`` to ``path``, optionally leaving a ``.bak`` sibling.
+
+- `apply_with_backup`: Write `new_content` to `path`, optionally leaving a `.bak` sibling.
 
 ## secure_path_utils
 
@@ -2577,92 +2330,87 @@ SQLite-backed store of per-test run results.
 
 ### SecurePathValidator
 
-
-
 **Public Methods:**
-- `validate_safe_path`: 
 
-- `validate_file_path`: 
+- `validate_safe_path`:
 
-- `secure_path_join`: 
+- `validate_file_path`:
 
-- `normalize_path`: 
+- `secure_path_join`:
 
-- `is_within_directory`: 
+- `normalize_path`:
 
-- `safe_resolve`: 
+- `is_within_directory`:
 
-- `validate_file_size`: 
+- `safe_resolve`:
 
-- `create_secure_backup_path`: 
+- `validate_file_size`:
 
-- `create_secure_temp_file`: 
+- `create_secure_backup_path`:
+
+- `create_secure_temp_file`:
 
 ### AtomicFileOperations
 
-
-
 **Public Methods:**
-- `atomic_write`: 
 
-- `atomic_backup_and_write`: 
+- `atomic_write`:
+
+- `atomic_backup_and_write`:
 
 ### SubprocessPathValidator
 
-
-
 **Public Methods:**
-- `validate_subprocess_cwd`: 
 
-- `validate_executable_path`: 
+- `validate_subprocess_cwd`:
+
+- `validate_executable_path`:
 
 ## secure_status_formatter
 
 **Location:** `/Users/les/Projects/crackerjack/crackerjack/services/secure_status_formatter.py`
 
 **Implements:**
+
 - SecureStatusFormatterProtocol
 
 - ServiceProtocol
 
 ### StatusVerbosity
 
-
-
 ### SecureStatusFormatter
 
-
-
 **Public Methods:**
-- `initialize`: 
 
-- `cleanup`: 
+- `initialize`:
 
-- `health_check`: 
+- `cleanup`:
 
-- `shutdown`: 
+- `health_check`:
 
-- `metrics`: 
+- `shutdown`:
 
-- `is_healthy`: 
+- `metrics`:
 
-- `register_resource`: 
+- `is_healthy`:
 
-- `cleanup_resource`: 
+- `register_resource`:
 
-- `record_error`: 
+- `cleanup_resource`:
 
-- `increment_requests`: 
+- `record_error`:
 
-- `get_custom_metric`: 
+- `increment_requests`:
 
-- `set_custom_metric`: 
+- `get_custom_metric`:
 
-- `format_status`: 
+- `set_custom_metric`:
 
-- `format`: 
+- `format_status`:
 
-- `format_error_response`: 
+- `format`:
+
+- `format_error_response`:
 
 ## secure_subprocess
 
@@ -2670,82 +2418,73 @@ SQLite-backed store of per-test run results.
 
 ### SecurityError
 
-
-
 ### CommandValidationError
-
-
 
 ### EnvironmentValidationError
 
-
-
 ### SubprocessSecurityConfig
-
-
 
 ### SecureSubprocessExecutor
 
-
-
 **Public Methods:**
-- `execute_secure`: 
+
+- `execute_secure`:
 
 ## security
 
 **Location:** `/Users/les/Projects/crackerjack/crackerjack/services/security.py`
 
 **Implements:**
+
 - SecurityServiceProtocol
 
 ### SecurityService
 
-
-
 **Public Methods:**
-- `mask_tokens`: 
 
-- `mask_command_output`: 
+- `mask_tokens`:
 
-- `create_secure_token_file`: 
+- `mask_command_output`:
 
-- `cleanup_token_file`: 
+- `create_secure_token_file`:
 
-- `get_masked_env_summary`: 
+- `cleanup_token_file`:
 
-- `validate_token_format`: 
+- `get_masked_env_summary`:
 
-- `create_secure_command_env`: 
+- `validate_token_format`:
 
-- `validate_file_safety`: 
+- `create_secure_command_env`:
 
-- `check_hardcoded_secrets`: 
+- `validate_file_safety`:
 
-- `is_safe_subprocess_call`: 
+- `check_hardcoded_secrets`:
 
-- `initialize`: 
+- `is_safe_subprocess_call`:
 
-- `cleanup`: 
+- `initialize`:
 
-- `health_check`: 
+- `cleanup`:
 
-- `shutdown`: 
+- `health_check`:
 
-- `metrics`: 
+- `shutdown`:
 
-- `is_healthy`: 
+- `metrics`:
 
-- `register_resource`: 
+- `is_healthy`:
 
-- `cleanup_resource`: 
+- `register_resource`:
 
-- `get_custom_metric`: 
+- `cleanup_resource`:
 
-- `increment_requests`: 
+- `get_custom_metric`:
 
-- `record_error`: 
+- `increment_requests`:
 
-- `set_custom_metric`: 
+- `record_error`:
+
+- `set_custom_metric`:
 
 ## security_logger
 
@@ -2753,63 +2492,57 @@ SQLite-backed store of per-test run results.
 
 ### SecurityEventType
 
-
-
 ### SecurityEventLevel
-
-
 
 ### SecurityEvent
 
-
-
 **Public Methods:**
-- `to_dict`: 
+
+- `to_dict`:
 
 ### SecurityLogger
 
-
-
 **Public Methods:**
-- `log_security_event`: 
 
-- `log_path_traversal_attempt`: 
+- `log_security_event`:
 
-- `log_file_size_exceeded`: 
+- `log_path_traversal_attempt`:
 
-- `log_dangerous_path_detected`: 
+- `log_file_size_exceeded`:
 
-- `log_backup_created`: 
+- `log_dangerous_path_detected`:
 
-- `log_file_cleaned`: 
+- `log_backup_created`:
 
-- `log_atomic_operation`: 
+- `log_file_cleaned`:
 
-- `log_validation_failed`: 
+- `log_atomic_operation`:
 
-- `log_temp_file_created`: 
+- `log_validation_failed`:
 
-- `log_rate_limit_exceeded`: 
+- `log_temp_file_created`:
 
-- `log_subprocess_execution`: 
+- `log_rate_limit_exceeded`:
 
-- `log_subprocess_environment_sanitized`: 
+- `log_subprocess_execution`:
 
-- `log_subprocess_command_validation`: 
+- `log_subprocess_environment_sanitized`:
 
-- `log_subprocess_timeout`: 
+- `log_subprocess_command_validation`:
 
-- `log_subprocess_failure`: 
+- `log_subprocess_timeout`:
 
-- `log_dangerous_command_blocked`: 
+- `log_subprocess_failure`:
 
-- `log_environment_variable_filtered`: 
+- `log_dangerous_command_blocked`:
 
-- `log_status_access_attempt`: 
+- `log_environment_variable_filtered`:
 
-- `log_sensitive_data_sanitized`: 
+- `log_status_access_attempt`:
 
-- `log_status_information_disclosure`: 
+- `log_sensitive_data_sanitized`:
+
+- `log_status_information_disclosure`:
 
 ## self_patcher
 
@@ -2817,94 +2550,93 @@ SQLite-backed store of per-test run results.
 
 ### SelfPatcher
 
-
-
 **Public Methods:**
-- `sentinel_path`: 
 
-- `validate_diff`: 
+- `sentinel_path`:
+
+- `validate_diff`:
 
 ## smart_file_filter_v2
 
 **Location:** `/Users/les/Projects/crackerjack/crackerjack/services/smart_file_filter_v2.py`
 
 **Implements:**
+
 - ServiceProtocol
 
 ### SmartFileFilterV2
 
-
-
 **Public Methods:**
-- `initialize`: 
 
-- `cleanup`: 
+- `initialize`:
 
-- `health_check`: 
+- `cleanup`:
 
-- `shutdown`: 
+- `health_check`:
 
-- `metrics`: 
+- `shutdown`:
 
-- `is_healthy`: 
+- `metrics`:
 
-- `register_resource`: 
+- `is_healthy`:
 
-- `cleanup_resource`: 
+- `register_resource`:
 
-- `record_error`: 
+- `cleanup_resource`:
 
-- `increment_requests`: 
+- `record_error`:
 
-- `get_custom_metric`: 
+- `increment_requests`:
 
-- `set_custom_metric`: 
+- `get_custom_metric`:
 
-- `get_files_for_scan`: 
+- `set_custom_metric`:
 
-- `mark_scan_complete`: 
+- `get_files_for_scan`:
+
+- `mark_scan_complete`:
 
 ## smart_scheduling
 
 **Location:** `/Users/les/Projects/crackerjack/crackerjack/services/smart_scheduling.py`
 
 **Implements:**
+
 - SmartSchedulingServiceProtocol
 
 - ServiceProtocol
 
 ### SmartSchedulingService
 
-
-
 **Public Methods:**
-- `initialize`: 
 
-- `cleanup`: 
+- `initialize`:
 
-- `health_check`: 
+- `cleanup`:
 
-- `shutdown`: 
+- `health_check`:
 
-- `metrics`: 
+- `shutdown`:
 
-- `is_healthy`: 
+- `metrics`:
 
-- `register_resource`: 
+- `is_healthy`:
 
-- `cleanup_resource`: 
+- `register_resource`:
 
-- `record_error`: 
+- `cleanup_resource`:
 
-- `increment_requests`: 
+- `record_error`:
 
-- `get_custom_metric`: 
+- `increment_requests`:
 
-- `set_custom_metric`: 
+- `get_custom_metric`:
 
-- `should_scheduled_init`: 
+- `set_custom_metric`:
 
-- `record_init_timestamp`: 
+- `should_scheduled_init`:
+
+- `record_init_timestamp`:
 
 ## status_authentication
 
@@ -2912,47 +2644,35 @@ SQLite-backed store of per-test run results.
 
 ### AccessLevel
 
-
-
 ### AuthenticationMethod
-
-
 
 ### AuthCredentials
 
-
-
 **Public Methods:**
-- `is_expired`: 
 
-- `has_operation_access`: 
+- `is_expired`:
+
+- `has_operation_access`:
 
 ### AuthenticationError
 
-
-
 ### AccessDeniedError
-
-
 
 ### ExpiredCredentialsError
 
-
-
 ### StatusAuthenticator
 
-
-
 **Public Methods:**
-- `authenticate_request`: 
 
-- `is_operation_allowed`: 
+- `authenticate_request`:
 
-- `add_api_key`: 
+- `is_operation_allowed`:
 
-- `revoke_api_key`: 
+- `add_api_key`:
 
-- `get_auth_status`: 
+- `revoke_api_key`:
+
+- `get_auth_status`:
 
 ## status_security_manager
 
@@ -2960,85 +2680,65 @@ SQLite-backed store of per-test run results.
 
 ### StatusSecurityError
 
-
-
 ### AccessDeniedError
-
-
 
 ### ResourceLimitExceededError
 
-
-
 ### RateLimitExceededError
-
-
 
 ### StatusSecurityManager
 
-
-
 **Public Methods:**
-- `validate_request`: 
 
-- `get_security_status`: 
+- `validate_request`:
+
+- `get_security_status`:
 
 ### RequestLock
-
-
 
 ## swarm_client
 
 **Location:** `/Users/les/Projects/crackerjack/crackerjack/services/swarm_client.py`
 
 **Implements:**
+
 - Protocol
 
 ### SwarmMode
 
-
-
 ### SwarmTask
-
-
 
 ### SwarmResult
 
-
-
 ### SwarmClientProtocol
 
-
-
 **Public Methods:**
-- `mode`: 
+
+- `mode`:
 
 ### MahavishnuSwarmClient
 
-
-
 **Public Methods:**
-- `mode`: 
+
+- `mode`:
 
 ### LocalSequentialClient
 
-
-
 **Public Methods:**
-- `mode`: 
+
+- `mode`:
 
 ### SwarmManager
 
-
-
 **Public Methods:**
-- `mode`: 
 
-- `is_parallel`: 
+- `mode`:
 
-- `is_initialized`: 
+- `is_parallel`:
 
-- `get_status`: 
+- `is_initialized`:
+
+- `get_status`:
 
 ## template_applicator
 
@@ -3046,12 +2746,11 @@ SQLite-backed store of per-test run results.
 
 ### TemplateApplicator
 
-
-
 **Public Methods:**
-- `apply_template`: 
 
-- `get_available_templates`: 
+- `apply_template`:
+
+- `get_available_templates`:
 
 ## template_detector
 
@@ -3059,14 +2758,13 @@ SQLite-backed store of per-test run results.
 
 ### TemplateDetector
 
-
-
 **Public Methods:**
-- `detect_template`: 
 
-- `get_template_description`: 
+- `detect_template`:
 
-- `prompt_manual_selection`: 
+- `get_template_description`:
+
+- `prompt_manual_selection`:
 
 ## test_result_parser
 
@@ -3074,25 +2772,21 @@ SQLite-backed store of per-test run results.
 
 ### TestErrorType
 
-
-
 ### TestFailure
 
-
-
 **Public Methods:**
-- `to_issue`: 
+
+- `to_issue`:
 
 ### TestResultParser
 
-
-
 **Public Methods:**
-- `parse_text_output`: 
 
-- `parse_json_output`: 
+- `parse_text_output`:
 
-- `parse_statistics`: 
+- `parse_json_output`:
+
+- `parse_statistics`:
 
 ## test_result_renderer
 
@@ -3100,16 +2794,15 @@ SQLite-backed store of per-test run results.
 
 ### TestResultRenderer
 
-
-
 **Public Methods:**
-- `render_test_results_panel`: 
 
-- `render_banner`: 
+- `render_test_results_panel`:
 
-- `should_render_test_panel`: 
+- `render_banner`:
 
-- `render_parsing_error_message`: 
+- `should_render_test_panel`:
+
+- `render_parsing_error_message`:
 
 ## thread_safe_status_collector
 
@@ -3117,16 +2810,13 @@ SQLite-backed store of per-test run results.
 
 ### StatusSnapshot
 
-
-
 ### ThreadSafeStatusCollector
 
-
-
 **Public Methods:**
-- `clear_cache`: 
 
-- `get_collection_status`: 
+- `clear_cache`:
+
+- `get_collection_status`:
 
 ## tool_filter
 
@@ -3134,33 +2824,29 @@ SQLite-backed store of per-test run results.
 
 ### FilterConfig
 
-
-
 ### FilterResult
 
-
-
 **Public Methods:**
-- `tools_filtered_out`: 
 
-- `files_filtered_out`: 
+- `tools_filtered_out`:
+
+- `files_filtered_out`:
 
 ### ToolFilter
 
-
-
 **Public Methods:**
-- `filter_tools`: 
 
-- `filter_files`: 
+- `filter_tools`:
 
-- `should_run_tool`: 
+- `filter_files`:
 
-- `get_filtered_files`: 
+- `should_run_tool`:
 
-- `estimate_time_savings`: 
+- `get_filtered_files`:
 
-- `generate_filter_summary`: 
+- `estimate_time_savings`:
+
+- `generate_filter_summary`:
 
 ## tool_version_service
 
@@ -3168,14 +2854,13 @@ SQLite-backed store of per-test run results.
 
 ### ToolVersionService
 
-
-
 **Public Methods:**
-- `check_config_integrity`: 
 
-- `should_scheduled_init`: 
+- `check_config_integrity`:
 
-- `record_init_timestamp`: 
+- `should_scheduled_init`:
+
+- `record_init_timestamp`:
 
 ## unified_config
 
@@ -3183,20 +2868,19 @@ SQLite-backed store of per-test run results.
 
 ### UnifiedConfigurationService
 
-
-
 **Public Methods:**
-- `get_config`: 
 
-- `get_logging_config`: 
+- `get_config`:
 
-- `get_hook_execution_config`: 
+- `get_logging_config`:
 
-- `get_testing_config`: 
+- `get_hook_execution_config`:
 
-- `get_cache_config`: 
+- `get_testing_config`:
 
-- `validate_current_config`: 
+- `get_cache_config`:
+
+- `validate_current_config`:
 
 ## validation_rate_limiter
 
@@ -3204,28 +2888,25 @@ SQLite-backed store of per-test run results.
 
 ### ValidationRateLimit
 
-
-
 ### ValidationRateLimiter
 
-
-
 **Public Methods:**
-- `is_blocked`: 
 
-- `record_failure`: 
+- `is_blocked`:
 
-- `get_remaining_attempts`: 
+- `record_failure`:
 
-- `get_block_time_remaining`: 
+- `get_remaining_attempts`:
 
-- `get_client_stats`: 
+- `get_block_time_remaining`:
 
-- `cleanup_expired_data`: 
+- `get_client_stats`:
 
-- `update_rate_limits`: 
+- `cleanup_expired_data`:
 
-- `get_all_stats`: 
+- `update_rate_limits`:
+
+- `get_all_stats`:
 
 ## vector_store
 
@@ -3233,20 +2914,19 @@ SQLite-backed store of per-test run results.
 
 ### VectorStore
 
-
-
 **Public Methods:**
-- `index_file`: 
 
-- `search`: 
+- `index_file`:
 
-- `get_stats`: 
+- `search`:
 
-- `remove_file`: 
+- `get_stats`:
 
-- `clear_index`: 
+- `remove_file`:
 
-- `close`: 
+- `clear_index`:
+
+- `close`:
 
 ## version_analyzer
 
@@ -3254,39 +2934,31 @@ SQLite-backed store of per-test run results.
 
 ### VersionBumpType
 
-
-
 ### VersionBumpRecommendation
-
-
 
 ### BreakingChangeAnalyzer
 
-
-
 **Public Methods:**
-- `analyze`: 
+
+- `analyze`:
 
 ### FeatureAnalyzer
 
-
-
 **Public Methods:**
-- `analyze`: 
+
+- `analyze`:
 
 ### ConventionalCommitAnalyzer
 
-
-
 **Public Methods:**
-- `analyze`: 
+
+- `analyze`:
 
 ### VersionAnalyzer
 
-
-
 **Public Methods:**
-- `display_recommendation`: 
+
+- `display_recommendation`:
 
 ## version_checker
 
@@ -3294,11 +2966,7 @@ SQLite-backed store of per-test run results.
 
 ### VersionInfo
 
-
-
 ### VersionChecker
-
-
 
 ## workflow_optimization
 
@@ -3306,22 +2974,16 @@ SQLite-backed store of per-test run results.
 
 ### WorkflowRecommendation
 
-
-
 ### WorkflowInsights
-
-
 
 ### WorkflowOptimizationEngine
 
-
-
 **Public Methods:**
-- `analyze_velocity_patterns`: 
 
-- `identify_bottlenecks`: 
+- `analyze_velocity_patterns`:
 
-- `generate_recommendations`: 
+- `identify_bottlenecks`:
 
-- `generate_insights`: 
+- `generate_recommendations`:
 
+- `generate_insights`:

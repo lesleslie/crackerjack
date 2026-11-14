@@ -4,7 +4,7 @@ This document describes all command-line options and usage patterns.
 
 ## __init__
 
-## _rich_utils
+## \_rich_utils
 
 ## advanced
 
@@ -60,130 +60,130 @@ This document describes all command-line options and usage patterns.
 
 ### Available Options
 
-- `--commit` (bool): 
-- `--interactive` (bool): 
-- `--no_config_updates` (bool): 
-- `--publish` (BumpOption | None): 
-- `--publish_url` (str | None): 
-- `--publish_token_env` (str | None): 
-- `--all` (BumpOption | None): 
-- `--bump` (BumpOption | None): 
-- `--verbose` (bool): 
-- `--debug` (bool): 
-- `--ai_debug` (bool): 
-- `--benchmark` (bool): 
-- `--benchmark_regression` (bool): 
-- `--benchmark_regression_threshold` (float): 
-- `--test_workers` (int): 
-- `--test_timeout` (int): 
-- `--start_mcp_server` (bool): 
-- `--stop_mcp_server` (bool): 
-- `--restart_mcp_server` (bool): 
-- `--create_pr` (bool): 
-- `--skip_hooks` (bool): 
-- `--async_mode` (bool): 
-- `--fast` (bool): 
-- `--comp` (bool): 
-- `--fast_iteration` (bool): 
-- `--tool` (str | None): 
-- `--changed_only` (bool): 
-- `--all_files` (bool): 
-- `--experimental_hooks` (bool): 
-- `--fail_first` (bool): 
-- `--enable_pyrefly` (bool): 
-- `--enable_ty` (bool): 
-- `--cleanup` (t.Any | None): 
-- `--no_git_tags` (bool): 
-- `--skip_version_check` (bool): 
-- `--cleanup_pypi` (bool): 
-- `--keep_releases` (int): 
-- `--track_progress` (bool | None): 
-- `--boost_coverage` (bool): 
-- `--coverage` (bool): 
-- `--watchdog` (bool): 
-- `--enable_parallel_phases` (bool): 
-- `--dev` (bool): 
-- `--max_iterations` (int): 
-- `--advanced_batch` (str | None): 
-- `--monitor_dashboard` (str | None): 
-- `--coverage_status` (bool): 
-- `--coverage_goal` (float | None): 
-- `--coverage_ratchet` (bool): 
-- `--skip_config_merge` (bool): 
-- `--enable_hooks` (list[str] | None): 
-- `--disable_global_locks` (bool): 
-- `--global_lock_timeout` (int): 
-- `--global_lock_cleanup` (bool): 
-- `--global_lock_dir` (str | None): 
-- `--quick` (bool): 
-- `--thorough` (bool): 
-- `--clear_cache` (bool): 
-- `--cleanup_docs` (bool): 
-- `--docs_dry_run` (bool): 
-- `--plan_index_sync` (bool): 
-- `--cleanup_configs` (bool): 
-- `--configs_dry_run` (bool): 
-- `--cleanup_git` (bool): 
-- `--update_docs` (bool): 
-- `--index` (str | None): 
-- `--search` (str | None): 
-- `--semantic_stats` (bool): 
-- `--remove_from_index` (str | None): 
-- `--cache_stats` (bool): 
-- `--refresh_cache` (bool): 
-- `--strip_code` (bool | None): 
-- `--run_tests` (bool): 
-- `--incremental_tests` (bool): 
-- `--fast_hooks_incremental` (bool): 
-- `--xcode_tests` (bool): 
-- `--xcode_project` (str): 
-- `--xcode_scheme` (str): 
-- `--xcode_configuration` (str): 
-- `--xcode_destination` (str): 
-- `--select_provider` (bool): 
-- `--dry_run` (bool): 
-- `--full_release` (str | None): 
-- `--generate_docs` (bool): 
-- `--docs_format` (str): 
-- `--validate_docs` (bool): 
-- `--docs_check` (bool): 
-- `--docs_validate` (bool): 
-- `--update_docs_index` (bool): 
-- `--generate_changelog` (bool): 
-- `--changelog_version` (str | None): 
-- `--changelog_since` (str | None): 
-- `--changelog_dry_run` (bool): 
-- `--auto_version` (bool): 
-- `--version_since` (str | None): 
-- `--accept_version` (bool): 
-- `--smart_commit` (bool): 
-- `--heatmap` (bool): 
-- `--heatmap_type` (str): 
-- `--heatmap_output` (str | None): 
-- `--anomaly_detection` (bool): 
-- `--anomaly_sensitivity` (float): 
-- `--anomaly_report` (str | None): 
-- `--predictive_analytics` (bool): 
-- `--prediction_periods` (int): 
-- `--analytics_dashboard` (str | None): 
-- `--check_config_updates` (bool): 
-- `--apply_config_updates` (bool): 
-- `--diff_config` (str | None): 
-- `--config_interactive` (bool): 
-- `--advanced_optimizer` (bool): 
-- `--advanced_profile` (str | None): 
-- `--advanced_report` (str | None): 
-- `--mkdocs_integration` (bool): 
-- `--mkdocs_serve` (bool): 
-- `--mkdocs_theme` (str): 
-- `--mkdocs_output` (str | None): 
-- `--contextual_ai` (bool): 
-- `--ai_recommendations` (int): 
-- `--ai_help_query` (str | None): 
-- `--swarm` (bool): 
-- `--swarm_workers` (int): 
-- `--swarm_mcp_port` (int): 
-- `--no_swarm` (bool): 
+- `--commit` (bool):
+- `--interactive` (bool):
+- `--no_config_updates` (bool):
+- `--publish` (BumpOption | None):
+- `--publish_url` (str | None):
+- `--publish_token_env` (str | None):
+- `--all` (BumpOption | None):
+- `--bump` (BumpOption | None):
+- `--verbose` (bool):
+- `--debug` (bool):
+- `--ai_debug` (bool):
+- `--benchmark` (bool):
+- `--benchmark_regression` (bool):
+- `--benchmark_regression_threshold` (float):
+- `--test_workers` (int):
+- `--test_timeout` (int):
+- `--start_mcp_server` (bool):
+- `--stop_mcp_server` (bool):
+- `--restart_mcp_server` (bool):
+- `--create_pr` (bool):
+- `--skip_hooks` (bool):
+- `--async_mode` (bool):
+- `--fast` (bool):
+- `--comp` (bool):
+- `--fast_iteration` (bool):
+- `--tool` (str | None):
+- `--changed_only` (bool):
+- `--all_files` (bool):
+- `--experimental_hooks` (bool):
+- `--fail_first` (bool):
+- `--enable_pyrefly` (bool):
+- `--enable_ty` (bool):
+- `--cleanup` (t.Any | None):
+- `--no_git_tags` (bool):
+- `--skip_version_check` (bool):
+- `--cleanup_pypi` (bool):
+- `--keep_releases` (int):
+- `--track_progress` (bool | None):
+- `--boost_coverage` (bool):
+- `--coverage` (bool):
+- `--watchdog` (bool):
+- `--enable_parallel_phases` (bool):
+- `--dev` (bool):
+- `--max_iterations` (int):
+- `--advanced_batch` (str | None):
+- `--monitor_dashboard` (str | None):
+- `--coverage_status` (bool):
+- `--coverage_goal` (float | None):
+- `--coverage_ratchet` (bool):
+- `--skip_config_merge` (bool):
+- `--enable_hooks` (list[str] | None):
+- `--disable_global_locks` (bool):
+- `--global_lock_timeout` (int):
+- `--global_lock_cleanup` (bool):
+- `--global_lock_dir` (str | None):
+- `--quick` (bool):
+- `--thorough` (bool):
+- `--clear_cache` (bool):
+- `--cleanup_docs` (bool):
+- `--docs_dry_run` (bool):
+- `--plan_index_sync` (bool):
+- `--cleanup_configs` (bool):
+- `--configs_dry_run` (bool):
+- `--cleanup_git` (bool):
+- `--update_docs` (bool):
+- `--index` (str | None):
+- `--search` (str | None):
+- `--semantic_stats` (bool):
+- `--remove_from_index` (str | None):
+- `--cache_stats` (bool):
+- `--refresh_cache` (bool):
+- `--strip_code` (bool | None):
+- `--run_tests` (bool):
+- `--incremental_tests` (bool):
+- `--fast_hooks_incremental` (bool):
+- `--xcode_tests` (bool):
+- `--xcode_project` (str):
+- `--xcode_scheme` (str):
+- `--xcode_configuration` (str):
+- `--xcode_destination` (str):
+- `--select_provider` (bool):
+- `--dry_run` (bool):
+- `--full_release` (str | None):
+- `--generate_docs` (bool):
+- `--docs_format` (str):
+- `--validate_docs` (bool):
+- `--docs_check` (bool):
+- `--docs_validate` (bool):
+- `--update_docs_index` (bool):
+- `--generate_changelog` (bool):
+- `--changelog_version` (str | None):
+- `--changelog_since` (str | None):
+- `--changelog_dry_run` (bool):
+- `--auto_version` (bool):
+- `--version_since` (str | None):
+- `--accept_version` (bool):
+- `--smart_commit` (bool):
+- `--heatmap` (bool):
+- `--heatmap_type` (str):
+- `--heatmap_output` (str | None):
+- `--anomaly_detection` (bool):
+- `--anomaly_sensitivity` (float):
+- `--anomaly_report` (str | None):
+- `--predictive_analytics` (bool):
+- `--prediction_periods` (int):
+- `--analytics_dashboard` (str | None):
+- `--check_config_updates` (bool):
+- `--apply_config_updates` (bool):
+- `--diff_config` (str | None):
+- `--config_interactive` (bool):
+- `--advanced_optimizer` (bool):
+- `--advanced_profile` (str | None):
+- `--advanced_report` (str | None):
+- `--mkdocs_integration` (bool):
+- `--mkdocs_serve` (bool):
+- `--mkdocs_theme` (str):
+- `--mkdocs_output` (str | None):
+- `--contextual_ai` (bool):
+- `--ai_recommendations` (int):
+- `--ai_help_query` (str | None):
+- `--swarm` (bool):
+- `--swarm_workers` (int):
+- `--swarm_mcp_port` (int):
+- `--no_swarm` (bool):
 
 ## profile_handlers
 
@@ -198,4 +198,3 @@ This document describes all command-line options and usage patterns.
 ## skills_cli
 
 ## version
-

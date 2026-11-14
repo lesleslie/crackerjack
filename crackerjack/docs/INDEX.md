@@ -9,4 +9,3 @@ This is the complete documentation index for the project.
 - [CROSS_REFERENCES](generated/api/CROSS_REFERENCES.md)
 - [PROTOCOLS](generated/api/PROTOCOLS.md)
 - [SERVICES](generated/api/SERVICES.md)
-
