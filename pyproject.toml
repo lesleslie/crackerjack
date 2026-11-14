@@ -151,13 +151,18 @@ dependencies = [
     # Floor is 0.0.99, not 0.0.95: ty renamed the import diagnostic
     # ``unresolved-import`` -> ``import-not-found`` in 0.0.98/0.0.99. The
     # suppressions this repo writes (e.g. in ``crackerjack/managers/
-    # hook_manager.py`` and ``crackerjack/services/doc_update_service.py``;
-    # the known-code list lives in ``crackerjack/tools/ty_ignore_syntax.py``)
+    # hook_manager.py`` and ``crackerjack/services/doc_update_service.py``)
     # use the current name, and a stale name is not a no-op -- ty reports
     # ``warning[renamed-rule-in-ignore-comment]`` and stops applying the
     # suppression, so the gate fails and the fix it was meant to make
     # reappears. An older ty does not merely warn: it does not know
     # ``import-not-found`` at all, so the import error goes unsuppressed.
+    #
+    # There is no curated list of ty rule names anywhere in this repo.
+    # ``crackerjack/tools/ty_ignore_syntax.py`` used to carry one; it was
+    # deleted because ty itself is the authority -- it reports
+    # ``warning[ignore-comment-unknown-rule]`` for a rule name it does not
+    # know, so a list could only ever drift behind ty's own rename.
     "ty>=0.0.99",
     "typer>=0.27.2",
     "types-aiofiles>=25.1.0.20260518",

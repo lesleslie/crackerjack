@@ -474,6 +474,56 @@ class TestBuildOptInTypeHooks:
 
 
 # ---------------------------------------------------------------------------
+# ty-ignore-syntax is on by default
+# ---------------------------------------------------------------------------
+
+
+class TestTyIgnoreSyntaxIsDefaultOn:
+    """The mypy-syntax suppression gate is part of the default gate set.
+
+    ty is the fleet's only type checker. A ``# type: ignore`` directive
+    reads like a suppression but suppresses nothing in ty, so a repo that
+    writes one believes it has silenced a diagnostic it has not. Leaving
+    the check opt-in is what let the fleet accumulate 2,711 inert
+    bracketed directives.
+    """
+
+    def test_setting_defaults_to_true(self) -> None:
+        from crackerjack.config.settings import HookSettings
+
+        assert HookSettings().enable_ty_ignore_syntax is True
+
+    def test_hook_is_present_by_default(self, patched_load_settings) -> None:
+        from crackerjack.config.settings import HookSettings
+
+        patched_load_settings["settings"] = patched_load_settings["settings"].model_copy(
+            update={"hooks": HookSettings()}
+        )
+        names = {h.name for h in _build_opt_in_type_hooks()}
+        assert "ty-ignore-syntax" in names
+
+    def test_hook_runs_in_the_comprehensive_strategy(
+        self, patched_load_settings
+    ) -> None:
+        from crackerjack.config.settings import HookSettings
+
+        patched_load_settings["settings"] = patched_load_settings["settings"].model_copy(
+            update={"hooks": HookSettings()}
+        )
+        names = {h.name for h in _build_comprehensive_hooks()}
+        assert "ty-ignore-syntax" in names
+
+    def test_hook_can_still_be_switched_off(self, patched_load_settings) -> None:
+        from crackerjack.config.settings import HookSettings
+
+        patched_load_settings["settings"] = patched_load_settings["settings"].model_copy(
+            update={"hooks": HookSettings(enable_ty_ignore_syntax=False)}
+        )
+        names = {h.name for h in _build_opt_in_type_hooks()}
+        assert "ty-ignore-syntax" not in names
+
+
+# ---------------------------------------------------------------------------
 # _build_comprehensive_hooks
 # ---------------------------------------------------------------------------
 

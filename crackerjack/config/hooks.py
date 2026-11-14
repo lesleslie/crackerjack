@@ -310,7 +310,8 @@ COMPREHENSIVE_HOOKS = [
         description=(
             "Reject bare `# type: ignore` and mypy/ruff-syntax "
             "`# type: ignore[<code>]` directives (ty does not interpret them). "
-            "Opt-in via `hooks.enable_ty_ignore_syntax: true`."
+            "On by default; turn off with "
+            "`hooks.enable_ty_ignore_syntax: false`."
         ),
     ),
     HookDefinition(
@@ -491,7 +492,9 @@ def _build_opt_in_type_hooks() -> list[HookDefinition]:
                     accepts_file_paths=False,
                     description=(
                         "Reject bare `# type: ignore` and mypy/ruff-syntax "
-                        "directives (enforces the ty: ignore policy)."
+                        "directives (enforces the ty: ignore policy). "
+                        "On by default; turn off with "
+                        "`hooks.enable_ty_ignore_syntax: false`."
                     ),
                 )
             )

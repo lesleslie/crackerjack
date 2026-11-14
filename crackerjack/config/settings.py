@@ -27,7 +27,11 @@ class HookSettings(OneiricMCPConfig):
     experimental_hooks: bool = False
     enable_pyrefly: bool = False
     enable_ty: bool = True
-    enable_ty_ignore_syntax: bool = False
+    # On by default: ty is the fleet's only type checker, and a mypy-syntax
+    # suppression (``# type: ignore`` or ``# type: ignore[code]``) reads
+    # like a suppression but suppresses nothing in ty. Leaving the check
+    # opt-in meant the fleet kept writing directives that did nothing.
+    enable_ty_ignore_syntax: bool = True
     skip_offline_osv_scanner: bool = True
     ruff_unsafe_fixes: bool = True
 
