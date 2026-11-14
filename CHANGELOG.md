@@ -219,7 +219,7 @@ topic: changelog
   check the CLI had (its version ignored pyscn's exit status, so a
   failed run could silently report whichever stale report was left on
   disk from an earlier scan) along with the CLI's 300-second timeout
-  and its handling of a missing binary and unparseable JSON.
+  and its handling of a missing binary and unparsable JSON.
 
   The one distinction the CLI made is preserved deliberately, and is
   now the adapter's contract: a scan that *fails* raises
