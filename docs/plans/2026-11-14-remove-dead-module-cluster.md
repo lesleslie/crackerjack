@@ -351,9 +351,19 @@ so in a wheel install it silently skips.
    `Path(__file__).resolve().parents[1] / "core" / "runtime_facts.py"` — the
    depth changes when it moves), and add `crackerjack/tests/**` to the wheel's
    exclude list so a stale copy can never ship again.
-2. **Keep the `mcp-common` fixture skip.** `test_release_audit.py` skipping
+2. **`tests/checks/test_release_audit.py` already exists** (1,294 lines, 95
+   tests) and would collide with the relocated copy. The two are
+   complementary, not redundant: the repo-level file unit-tests the audit's
+   internals against synthetic `tmp_path` trees, while the in-package one
+   runs the audit end-to-end against **fixtures from the sibling `mcp-common`
+   checkout** and skips when that checkout is absent. The relocated file
+   needs a distinct name — `tests/checks/test_release_audit_e2e.py` — not a
+   merge, because the fixture-based coverage does not exist anywhere else.
+3. **Keep the `mcp-common` fixture skip.** `test_release_audit.py` skipping
    when the sibling checkout is absent is correct behaviour for a
    repo-local test.
+4. **`tests/checks/test_gitignore_conformance.py` and
+   `tests/unit/test_runtime_facts.py` are free** — no collision.
 
 ### Risks
 
