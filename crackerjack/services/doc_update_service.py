@@ -284,7 +284,7 @@ class DocUpdateService:
 
                     content_block = response.content[0]
                     if hasattr(content_block, "text"):
-                        updated_content = content_block.text
+                        updated_content = t.cast(str, content_block.text)
                     else:
                         logger.error(
                             f"Unexpected content block type: {type(content_block)}"

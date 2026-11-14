@@ -40,7 +40,7 @@ class VultureSettings(ToolAdapterSettings):
 
 
 class VultureAdapter(BaseToolAdapter):
-    settings: VultureSettings | None = None  # ty: ignore[invalid-mutable-override]
+    settings: VultureSettings | None = None  # ty: ignore[incompatible-mutable-override]
 
     def __init__(self, settings: VultureSettings | None = None) -> None:
         super().__init__(settings=settings)

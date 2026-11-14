@@ -35,7 +35,7 @@ class SemgrepSettings(ToolAdapterSettings):
 
 
 class SemgrepAdapter(BaseToolAdapter):
-    settings: SemgrepSettings | None = None  # ty: ignore[invalid-mutable-override]
+    settings: SemgrepSettings | None = None  # ty: ignore[incompatible-mutable-override]
 
     def __init__(self, settings: SemgrepSettings | None = None) -> None:
         super().__init__(settings=settings)

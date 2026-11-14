@@ -40,7 +40,7 @@ class PymetricaSettings(ToolAdapterSettings):
 
 
 class PymetricaAdapter(BaseToolAdapter):
-    settings: PymetricaSettings | None = None  # ty: ignore[invalid-mutable-override]
+    settings: PymetricaSettings | None = None  # ty: ignore[incompatible-mutable-override]
 
     def __init__(self, settings: PymetricaSettings | None = None) -> None:
         super().__init__(settings=settings)

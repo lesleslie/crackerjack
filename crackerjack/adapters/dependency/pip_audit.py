@@ -53,7 +53,7 @@ class OsvScannerSettings(ToolAdapterSettings):
 
 
 class OsvScannerAdapter(BaseToolAdapter):
-    settings: OsvScannerSettings | None = None  # ty: ignore[invalid-mutable-override]
+    settings: OsvScannerSettings | None = None  # ty: ignore[incompatible-mutable-override]
 
     def __init__(self, settings: OsvScannerSettings | None = None) -> None:
         super().__init__(settings=settings)

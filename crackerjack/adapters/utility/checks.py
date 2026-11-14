@@ -84,7 +84,7 @@ class UtilityCheckSettings(QABaseSettings):
 
 
 class UtilityCheckAdapter(QAAdapterBase):
-    settings: UtilityCheckSettings | None = None  # ty: ignore[invalid-mutable-override]
+    settings: UtilityCheckSettings | None = None  # ty: ignore[incompatible-mutable-override]
 
     def __init__(self, settings: UtilityCheckSettings | None = None) -> None:
         super().__init__()

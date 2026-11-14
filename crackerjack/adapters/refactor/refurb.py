@@ -41,7 +41,7 @@ class RefurbSettings(ToolAdapterSettings):
 
 
 class RefurbAdapter(BaseToolAdapter):
-    settings: RefurbSettings | None = None  # ty: ignore[invalid-mutable-override]
+    settings: RefurbSettings | None = None  # ty: ignore[incompatible-mutable-override]
 
     def __init__(
         self,

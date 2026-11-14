@@ -39,7 +39,7 @@ class SyrupySettings(ToolAdapterSettings):
 
 
 class SyrupyAdapter(BaseToolAdapter):
-    settings: SyrupySettings | None = None  # ty: ignore[invalid-mutable-override]
+    settings: SyrupySettings | None = None  # ty: ignore[incompatible-mutable-override]
 
     def __init__(self, settings: SyrupySettings | None = None) -> None:
         super().__init__(settings=settings)
@@ -138,7 +138,7 @@ class SyrupyAdapter(BaseToolAdapter):
         return issues
 
     def _get_check_type(self) -> QACheckType:
-        return QACheckType.TESTING  # ty: ignore[unresolved-attribute]
+        return QACheckType.TESTING  # ty: ignore[missing-attribute]
 
     def get_default_config(self) -> QACheckConfig:
         from crackerjack.models.qa_config import QACheckConfig
@@ -146,7 +146,7 @@ class SyrupyAdapter(BaseToolAdapter):
         return QACheckConfig(
             check_id=MODULE_ID,
             check_name=self.adapter_name,
-            check_type=QACheckType.TESTING,  # ty: ignore[unresolved-attribute]
+            check_type=QACheckType.TESTING,  # ty: ignore[missing-attribute]
             enabled=True,
             file_patterns=["tests/**/*.py"],
             exclude_patterns=[

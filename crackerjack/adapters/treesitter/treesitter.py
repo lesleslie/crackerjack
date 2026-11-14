@@ -55,7 +55,7 @@ class TreeSitterSettings(QABaseSettings):
 
 
 class TreeSitterAdapter(QAAdapterBase):
-    settings: TreeSitterSettings | None = None  # ty: ignore[invalid-mutable-override]
+    settings: TreeSitterSettings | None = None  # ty: ignore[incompatible-mutable-override]
 
     def __init__(self) -> None:
         super().__init__()
