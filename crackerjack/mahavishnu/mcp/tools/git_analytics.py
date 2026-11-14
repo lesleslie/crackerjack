@@ -19,6 +19,7 @@ from crackerjack.integration.mahavishnu_integration import (
     MahavishnuConfig,
     RepositoryVelocity,
 )
+from crackerjack.services.secure_subprocess import SecureSubprocessExecutor
 from crackerjack.utils.path_redaction import redact_path
 
 logger = logging.getLogger(__name__)
@@ -1877,7 +1878,6 @@ def get_repository_health_dashboard(
         )
 
         from crackerjack.memory.git_metrics_collector import GitMetricsCollector
-        from crackerjack.services.secure_subprocess import SecureSubprocessExecutor
 
         period_end = datetime.now(UTC)
         period_start = period_end - timedelta(days=days_back)
@@ -2403,7 +2403,7 @@ def _scan_large_files(repo_path: Path, size_threshold_mb: float = 1.0) -> list[d
     threshold_bytes = size_threshold_mb * 1024 * 1024
 
     try:
-        executor = SecureSubprocessExecutor()  # ty: ignore[unresolved-reference]
+        executor = SecureSubprocessExecutor()
         result = executor.execute_secure(
             command=["git", "ls-files"],
             cwd=repo_path,
@@ -2444,7 +2444,7 @@ def _scan_stale_branches(repo_path: Path) -> list[dict]:
     stale_branches = []
 
     try:
-        executor = SecureSubprocessExecutor()  # ty: ignore[unresolved-reference]
+        executor = SecureSubprocessExecutor()
         result = executor.execute_secure(
             command=[
                 "git",

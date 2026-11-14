@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import logging
+import random
 import time
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -134,10 +135,10 @@ class MemoryAwareScanner:
 
             file_result = {
                 "file_path": str(file),
-                "status": "passed" if random.random() > 0.2 else "failed",  # ty: ignore[unresolved-reference]
+                "status": "passed" if random.random() > 0.2 else "failed",
                 "timestamp": datetime.now().isoformat(),
                 "tool": tool_name,
-                "exit_code": 0 if random.random() > 0.7 else 1,  # ty: ignore[unresolved-reference]
+                "exit_code": 0 if random.random() > 0.7 else 1,
             }
             scan_results.append(file_result)
 
