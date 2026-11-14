@@ -211,6 +211,28 @@ grep -r "from crackerjack" crackerjack/ --include="*.py" | grep -v protocols | g
 **Testing**: pytest with asyncio, 300s timeout, auto-detected workers via pytest-xdist
 **Coverage**: Ratchet system targeting 100%, never decrease
 
+## Plan Authoring
+
+Plans live in `docs/plans/YYYY-MM-DD-<feature-name>.md` and follow
+[`docs/plans/TEMPLATE.md`](../plans/TEMPLATE.md).
+
+Every phase deliverable must include an **Integration Contract** block —
+*Triggered from*, *Returns to / updates*, *Demonstrable by*, *Rollback
+signal*, *Observability added* — even if it says "no wiring required
+(rationale: …)". A deliverable nobody can point a command at is a
+deliverable nobody will notice is missing.
+
+Regenerate the plan index after adding a plan:
+
+```bash
+python -m crackerjack.tools.plan_index_sync
+```
+
+**Do not follow the sibling repo's plan template.** `~/Projects/mahavishnu/docs/plans/TEMPLATE.md`
+carries requirements-traceability machinery (`scripts/audit_requirements.py`,
+`requirements:` frontmatter, `REQ-NNN` IDs) that crackerjack does not have.
+Crackerjack's own template is the one that applies.
+
 ## Test Parallelization
 
 Crackerjack uses **pytest-xdist** for intelligent parallel execution:

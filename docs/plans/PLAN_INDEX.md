@@ -43,6 +43,7 @@ _Regenerated 2026-11-14 by `crackerjack.tools.plan_index_sync` (phase)._
 | [`docs/plans/2026-11-13-remove-dead-ai-fix-module-cluster.md`](2026-11-13-remove-dead-ai-fix-module-cluster.md) | 2026-11-13 | `active` | `implementation` | `architecture` | Remove the Dead AI-Fix Module Cluster from Crackerjack |
 | [`docs/plans/2026-11-14-consolidate-tool-taxonomies.md`](2026-11-14-consolidate-tool-taxonomies.md) | 2026-11-14 | `draft` | `implementation` | `architecture` | Consolidate the Tool Taxonomies in Crackerjack |
 | [`docs/plans/2026-11-14-remove-dead-module-cluster.md`](2026-11-14-remove-dead-module-cluster.md) | 2026-11-14 | `active` | `implementation` | `architecture` | Remove the Dead Module Cluster from Crackerjack |
+| [`docs/plans/TEMPLATE.md`](TEMPLATE.md) | 2026-11-14 | `active` | `canonical` | `process-discipline` | Plan Template — Integration-Contract Required |
 
 ### Docs: specs
 
@@ -90,9 +91,9 @@ _Regenerated 2026-11-14 by `crackerjack.tools.plan_index_sync` (phase)._
 
 | Role \\ Lifecycle | draft | active | partial | shipped | complete | Total |
 |---|---|---|---|---|---|---|
-| `canonical` | · | 10 | · | · | 2 | **12** |
+| `canonical` | · | 11 | · | · | 2 | **13** |
 | `implementation` | 18 | 25 | · | · | 3 | **46** |
 | `umbrella` | · | · | · | · | · | **0** |
 | `historical` | · | · | · | · | 1 | **1** |
 | `superseded` | · | · | · | · | · | **0** |
-| **Total** | **18** | **35** | **·** | **·** | **6** | **59** |
+| **Total** | **18** | **36** | **·** | **·** | **6** | **60** |
