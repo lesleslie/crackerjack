@@ -7,6 +7,21 @@ from crackerjack.models.protocols import ConsoleInterface
 from crackerjack.utils.path_redaction import redact_path
 
 
+def _package_dir() -> Path:
+    """Return the installed ``crackerjack`` package directory.
+
+    The documentation service writes generated docs *inside* the package,
+    so it needs the package directory rather than the repository root.
+    In a source checkout this is ``<repo>/crackerjack``; in an installed
+    wheel it is the ``site-packages/crackerjack`` directory, where
+    writing generated documentation would be wrong -- so the caller is
+    expected to be running from a checkout.
+    """
+    import crackerjack
+
+    return Path(crackerjack.__file__).parent
+
+
 def generate_documentation(doc_service: t.Any, console: ConsoleInterface) -> bool:
     console.print("📖 [bold blue]Generating API documentation...[/bold blue]")
     success = doc_service.generate_full_api_documentation()
@@ -58,7 +73,18 @@ def handle_documentation_commands(
 
     from crackerjack.services.documentation_service import DocumentationServiceImpl
 
-    pkg_path = Path.cwd()
+    # ``DocumentationServiceImpl`` treats ``pkg_path`` as the *package*
+    # directory: it writes the API docs to ``<pkg>/docs/generated/api/``
+    # and scans ``<pkg>/**/*.py`` for the API surface.
+    #
+    # Passing the repository root instead made the service write to
+    # ``<repo>/docs/`` -- a tree that is not tracked and that nothing
+    # links to -- while the tracked, wheel-shipped copy at
+    # ``crackerjack/docs/generated/api/`` silently rotted (68 of its 172
+    # class references pointed at modules deleted months earlier), and the
+    # ``<repo>/**/*.py`` scan pulled the whole test suite into the API
+    # documentation.
+    pkg_path = _package_dir()
     doc_service = DocumentationServiceImpl(pkg_path=pkg_path)
 
     if generate_docs and not generate_documentation(doc_service, console):
