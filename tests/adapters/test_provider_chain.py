@@ -1,7 +1,7 @@
 """Tests for FallbackChainCodeFixer.
 
 Validates that the unified code fixer correctly delegates LLM calls
-to mcp_common FallbackChain with proper task_type routing.
+to the oneiric FallbackChain with proper task_type routing.
 """
 
 from __future__ import annotations
@@ -82,10 +82,21 @@ class TestFallbackChainCodeFixer:
     @pytest.mark.asyncio
     async def test_initialize_client_returns_fallback_chain(self):
         fixer = FallbackChainCodeFixer()
-        from mcp_common.llm import FallbackChain
+        from crackerjack.adapters.ai import unified as unified_module
 
-        with patch("mcp_common.llm.fallback.FallbackChain.from_settings") as mock_fs:
-            mock_chain = MagicMock(spec=FallbackChain)
+        # Patch the class the module under test *calls*, not the oneiric
+        # module path. The repo's autouse reset fixture
+        # (``tests/conftest.py`` -> ``tests/conftest_reset.py``)
+        # evicts every ``oneiric.*`` module from ``sys.modules``
+        # between tests, so ``oneiric.adapters.llm.fallback.FallbackChain``
+        # resolved at test time is a *different* class object from the one
+        # ``unified.py`` captured at import time. Patching through
+        # ``unified`` targets the object the production code actually
+        # holds, which is stable across the reset.
+        with patch(
+            "crackerjack.adapters.ai.unified.FallbackChain.from_settings"
+        ) as mock_fs:
+            mock_chain = MagicMock(spec=unified_module.FallbackChain)
             mock_fs.return_value = mock_chain
             client = await fixer._initialize_client()
             assert client is mock_chain

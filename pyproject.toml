@@ -69,7 +69,18 @@ dependencies = [
     # singleton (``oneiric.adapters.llm.bifrost.get_router()``) for
     # the OPENAI-compatible provider's ``base_url``. The 0.32+ floor
     # is the router module's home version.
-    "oneiric>=0.33",
+    #
+    # 0.36.0 is the floor that carries the LLM subsystem: the provider
+    # transport, the fallback chain, and their settings moved from
+    # ``mcp_common.llm`` to ``oneiric.adapters.llm`` in 0.36.0. Below
+    # that floor the import swap below fails at import time.
+    "oneiric>=0.36.0",
+    # The OpenAI SDK, for ``oneiric.adapters.llm.provider``.
+    # ``OpenAICompatibleProvider`` imports it lazily but raises at
+    # construction when it is absent, so the code-fixer path needs it
+    # installed. Crackerjack does not import it by name -- the provider
+    # does -- so creosote sees it as an indirect dependency.
+    "openai>=3.24.0",
     "pyleak>=0.2.0",
     # PyPI publishes NO macOS Intel (x86_64) wheel for pyscn past 1.5.0, and
     # no sdist either, so `pip install pyscn` cannot be satisfied on an
@@ -805,6 +816,16 @@ exclude-deps = [
     # ty is the gate's type checker: a Rust binary invoked as an external
     # CLI by crackerjack.tools._ty_binary, never imported by name.
     "ty",
+    # vulture is the gate's dead-code hook: a CLI binary invoked as an
+    # external tool by the individual hook executor, never imported by
+    # name.
+    "vulture",
+    # openai is the OpenAI SDK that oneiric's OpenAICompatibleProvider
+    # imports -- lazily, when it builds its client. Crackerjack declares
+    # it so that provider can be constructed at all (the code-fixer's
+    # FallbackChain builds one), but never imports it by name, so
+    # creosote (which scans `import` statements) cannot see it in use.
+    "openai",
     # unidiff is invoked via tool wrappers, never imported by name;
     # flake8-bugbear dep is consumed indirectly via ruff tooling, not
     # imported by name.

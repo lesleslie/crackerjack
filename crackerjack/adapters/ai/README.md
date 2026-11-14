@@ -2,7 +2,7 @@
 
 # AI Adapter
 
-AI-powered code fixing helpers following the crackerjack adapter pattern. The built-in adapter focuses on safe, validated code fixes using the `mcp_common.FallbackChain` LLM gateway (defaults to MiniMax → llama_server).
+AI-powered code fixing helpers following the crackerjack adapter pattern. The built-in adapter focuses on safe, validated code fixes using the `oneiric.adapters.llm.FallbackChain` LLM gateway (defaults to MiniMax → llama_server).
 
 > **Note**: This README was rewritten 2026-09-09 to drop the obsolete `ClaudeCodeFixer` / `ClaudeCodeFixerSettings` references — those classes lived in the deleted `crackerjack.adapters.ai.claude` module and the pre-2026-08-06 multi-provider AI-fix chain. The current public surface is `BaseCodeFixer`, `FallbackChainCodeFixer`, `BaseCodeFixerSettings`, and `FallbackChainSettings` exported from `crackerjack.adapters.ai`.
 
@@ -10,7 +10,7 @@ AI-powered code fixing helpers following the crackerjack adapter pattern. The bu
 
 - Async `init()` lifecycle (inherited from `BaseCodeFixer`)
 - Validates generated code (regex + AST), sanitizes errors, enforces file-size limits
-- Uses the `mcp_common.FallbackChain` provider gateway — provider settings are built inline by `crackerjack.adapters.ai.unified._build_llm_settings()`; no external config file
+- Uses the `oneiric.adapters.llm.FallbackChain` provider gateway — provider settings are built inline by `crackerjack.adapters.ai.unified._build_llm_settings()`; no external config file
 - Designed to fit end-to-end QA flows and orchestrations
 
 ## Built-in Implementation
@@ -30,7 +30,7 @@ Settings class: `FallbackChainSettings`
 - `llama_server_url` (str; default `http://localhost:8081`)
 - Inherited from `BaseCodeFixerSettings`: `max_tokens`, `temperature`, `confidence_threshold`, `max_retries`, `max_file_size_bytes`
 
-Provider routing (`minimax` → `llama_server`) is built inline by `crackerjack.adapters.ai.unified._build_llm_settings()` (no external `settings/llms.yaml`); the `FallbackChainCodeFixer` reads from `mcp_common.llm_settings` at `init()` time.
+Provider routing (`minimax` → `llama_server`) is built inline by `crackerjack.adapters.ai.unified._build_llm_settings()` (no external `settings/llms.yaml`); the `FallbackChainCodeFixer` reads from `oneiric.adapters.llm` at `init()` time.
 
 ## Basic Usage
 

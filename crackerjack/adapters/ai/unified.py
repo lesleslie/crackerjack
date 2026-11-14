@@ -5,9 +5,9 @@ import os
 import typing as t
 from uuid import UUID
 
-from mcp_common.llm import FallbackChain
-from mcp_common.llm.config import LLMSettings, ProviderConfig
+from oneiric.adapters.llm import FallbackChain
 from oneiric.adapters.llm.bifrost import get_router
+from oneiric.adapters.llm.config import LLMSettings, ProviderConfig
 from oneiric.adapters.llm.llm_interface import LLMProvider
 
 from crackerjack.adapters.ai.base import BaseCodeFixer, BaseCodeFixerSettings
@@ -94,7 +94,7 @@ class FallbackChainCodeFixer(BaseCodeFixer):
     async def _initialize_client(self) -> FallbackChain:
         llm_settings = _build_llm_settings()
         chain = FallbackChain.from_settings(llm_settings)
-        logger.info("FallbackChainCodeFixer initialized with mcp_common FallbackChain")
+        logger.info("FallbackChainCodeFixer initialized with oneiric FallbackChain")
         return chain
 
     async def _call_provider_api(
