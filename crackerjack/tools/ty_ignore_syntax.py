@@ -43,6 +43,11 @@ DEFAULT_EXCLUDES: tuple[str, ...] = (
     ".ruff_cache",
     ".pytest_cache",
     ".crackerjack_cache",
+    # The crackerjack tool cache holds a vendored copy of the source, so
+    # scanning it would report every finding twice.
+    ".crackerjack",
+    ".worktrees",
+    "htmlcov",
     "site-packages",
 )
 
@@ -190,8 +195,13 @@ def main(argv: list[str] | None = None) -> int:
         "paths",
         nargs="*",
         type=Path,
-        default=[Path("crackerjack")],
-        help="Files or directories to scan (default: ./crackerjack).",
+        default=[Path(".")],
+        help=(
+            "Files or directories to scan (default: the repository root). "
+            "The root is the default because this tool runs in every repo in "
+            "the fleet, and a fixed package name would scan nothing outside "
+            "crackerjack itself."
+        ),
     )
     parser.add_argument(
         "--exclude",

@@ -191,3 +191,66 @@ def test_main_dry_run_always_exits_zero(tmp_path: Path) -> None:
     target = tmp_path / "sample.py"
     target.write_text("x = 1  # type: ignore[assignment]\n", encoding="utf-8")
     assert main([str(target), "--dry-run"]) == 0
+
+
+class TestDefaultScanPath:
+    """The default must scan the repository root, not a fixed package name.
+
+    The hook registers this tool with no path argument, so it uses the
+    default. A default of ``crackerjack/`` — a directory that exists only in
+    crackerjack itself — meant every other repo scanned zero files and
+    passed. That is the same vacuous-gate shape already fixed in
+    ``ty_ratchet``.
+    """
+
+    def test_default_path_scans_the_repo_root(self, tmp_path: Path) -> None:
+        package = tmp_path / "pkg"
+        tests = tmp_path / "tests"
+        package.mkdir()
+        tests.mkdir()
+        (package / "mod.py").write_text("x = 1  # type: ignore[assignment]\n", encoding="utf-8")
+        (tests / "test_mod.py").write_text("y = 2  # type: ignore[assignment]\n", encoding="utf-8")
+
+        cwd = Path.cwd()
+        try:
+            import os
+
+            os.chdir(tmp_path)
+            assert main([]) == 1
+        finally:
+            import os
+
+            os.chdir(cwd)
+
+    def test_default_path_reports_the_files_it_scanned(self, tmp_path: Path) -> None:
+        package = tmp_path / "pkg"
+        package.mkdir()
+        (package / "mod.py").write_text("x = 1  # ty: ignore[missing-attribute]\n", encoding="utf-8")
+
+        cwd = Path.cwd()
+        try:
+            import os
+
+            os.chdir(tmp_path)
+            assert main(["--json"]) == 0
+        finally:
+            import os
+
+            os.chdir(cwd)
+
+    def test_excluded_cache_directory_is_not_scanned(self, tmp_path: Path) -> None:
+        """``.crackerjack/`` holds a vendored copy of the source."""
+        cache = tmp_path / ".crackerjack" / "uv" / "cache"
+        cache.mkdir(parents=True)
+        (cache / "mod.py").write_text("x = 1  # type: ignore[assignment]\n", encoding="utf-8")
+
+        cwd = Path.cwd()
+        try:
+            import os
+
+            os.chdir(tmp_path)
+            assert main([]) == 0
+        finally:
+            import os
+
+            os.chdir(cwd)
