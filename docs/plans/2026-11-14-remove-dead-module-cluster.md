@@ -326,36 +326,60 @@ operator's answers.
 
 ### What else the sweep turned up
 
-Three live-code defects surfaced during the verification. They are **not**
-part of this plan's deletions; they are recorded here so the work is not
-lost.
+Four live-code defects surfaced during the verification. They are **not**
+part of this plan's deletions; three of them were fixed on 2026-11-14 and
+the fourth is recorded here so the work is not lost.
 
-1. **`hook_executor.py:2283` passes a tool name to a factory that wants an
-   adapter name.** `adapter_factory.create_adapter(hook.name)` where
-   `hook.name` is `"ruff"`, `"complexipy"`, `"gitleaks"`… but
-   `adapters/factory.py:140-147` keys its table by `"Ruff"`, `"Bandit"`,
-   `"Semgrep"`, `"Refurb"`, `"Pyrefly"`, `"Ty"`. Verified at runtime:
-   `create_adapter('ruff')` → `ValueError: Unknown adapter: ruff`;
-   `create_adapter('Ruff')` → `RuffAdapter`. The `ValueError` is swallowed by
-   the `except Exception` at `hook_executor.py:2327-2332`, so
-   `_try_get_qa_result_for_hook` returns `None` for **every** tool, and the
-   QA-result integration in the hook executor never runs. The server side
-   (`crackerjack/server.py:61-95`) uses the correct names and does work.
-2. **A `MODULE_ID` UUID collision.** The dead
+1. **The QA-adapter lookup in the hook executor never matched — FIXED
+   2026-11-14 (`9e76f4de`).** `hook_executor.py:2283` called
+   `adapter_factory.create_adapter(hook.name)`, passing a *tool* name
+   (`"ruff-check"`) to a factory keyed by *adapter* name (`"Ruff"`). Every
+   call raised `ValueError: Unknown adapter: ruff-check`, and the
+   `except Exception` around it swallowed the error — so the QA-result path
+   returned `None` for **every** tool. The factory already carried the
+   mapping (`DefaultAdapterFactory.TOOL_TO_ADAPTER_NAME`), but nothing in
+   production read it, so it had drifted: it held `"ruff"` where the hook
+   chain uses `"ruff-check"` and `"ruff-format"`, and the hook executor
+   kept its own stale 26-name duplicate advertising adapters that do not
+   exist. The lookup now goes through `get_adapter_name()`, the table has
+   the hook names, and the duplicate is gone. A failing `ruff-check` hook
+   produces a real `QAResult` again.
+
+   **The remaining gap is a separate, larger one.** `HookResult.qa_result`
+   (`crackerjack/models/task.py:56`) is written by the executor and read by
+   **nothing** — `git log -S "result.qa_result" --all` returns no commit
+   that ever read it. The field has been write-only since it was added.
+   `issues_found` still comes from the per-hook regex text parsers
+   (`_parse_ruff_issues`, `_parse_semgrep_issues`, …), with
+   `_handle_no_issues_for_failed_hook` supplying a last-resort fallback
+   (`"Hook exited with code N but reported no parseable issues"`). So the
+   adapter's structured `parsed_issues` — dicts of `file_path`,
+   `line_number`, `column_number`, `message`, `code`, `severity`,
+   `suggestion` — are computed and then discarded. Merging them into
+   `issues_found` is **building a feature, not restoring a regression**, and
+   it changes user-visible report content, so it is left as a decision.
+
+2. **A `MODULE_ID` UUID collision — FIXED 2026-11-14 (`ab0b24dd`).** The dead
    `adapters/benchmark/adapter.py:31` and the **live**
-   `adapters/ai/unified.py:16` both declare
-   `UUID("a1b2c3d4-e5f6-7890-abcd-ef1234567890")`. Harmless today because
-   the benchmark adapter is dead; a landmine if it is ever wired, since the
-   two would emit identical `check_id` values into a `QAResult`.
-3. **Six live documents describe the git-analytics MCP server as running**
-   (`docs/MCP_TOOLS_SPECIFICATION.md:61-62,252,313`,
+   `adapters/ai/unified.py:16` both declared
+   `UUID("a1b2c3d4-e5f6-7890-abcd-ef1234567890")` — two adapter classes
+   claiming one identity, which would have emitted identical `check_id`
+   values into a `QAResult` had the benchmark adapter ever been wired. The
+   benchmark adapter had zero production importers, so it was deleted
+   along with its test file, and the collision went with it. The generated
+   API docs were regenerated rather than hand-edited.
+3. **Six live documents describe the git-analytics MCP server as running —
+   FIXED 2026-11-14 (`34f42fb0`).** The claims were in
+   `docs/MCP_TOOLS_SPECIFICATION.md:61-62,252,313`,
    `docs/architecture/MEMORY_ARCHITECTURE.md:222,1006-1007,1202,1397`,
    `docs/features/SYMBIOTIC_ECOSYSTEM_INTEGRATION.md:14-15`,
    `docs/task-breakdown.md:7`, and
-   `crackerjack/memory/git_metrics_collector.py:9-19`). It has no launcher.
-   `MEMORY_ARCHITECTURE.md:54` also documents
-   `crackerjack/memory/git_metrics_storage.py`, a module that no longer exists.
-
+   `crackerjack/memory/git_metrics_collector.py:9-19`. The server has no
+   launcher, and its analytics are unimplemented — both dependencies are
+   stubs whose runtime bodies raise `NotImplementedError`. The documents now
+   say so. `MEMORY_ARCHITECTURE.md:54` also documented
+   `crackerjack/memory/git_metrics_storage.py`, a module that no longer exists;
+   that is corrected too.
 ---
 
 ## Phase 1 — Stop shipping tests inside the package
