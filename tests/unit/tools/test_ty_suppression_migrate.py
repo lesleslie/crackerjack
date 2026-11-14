@@ -261,3 +261,29 @@ class TestNestedMarkersSurvive:
         assert stripped == (
             "value = cache  # ty: ignore[invalid-explicit-return]  # Cached stack\n"
         )
+
+
+class TestProseMarkerFollowsTheDirective:
+    """A nested ``#`` separates segments; which survive depends on the directive.
+
+    ``# type: ignore[x] # note`` loses the nested hash, because the directive
+    it introduced is gone. ``# type: ignore[x] # ty: ignore[y] # note`` keeps
+    it, because the ty directive it followed survives.
+    """
+
+    def test_marker_after_a_removed_directive_is_dropped(self) -> None:
+        text = '@env.global_("btn")  # type: ignore[untyped-decorator] # note\n'
+        comments = find_comments(text)
+        stripped = strip_directives(text, {(comments[0].line, comments[0].col)})
+        assert stripped == '@env.global_("btn")  # note\n'
+
+    def test_marker_after_a_surviving_directive_is_kept(self) -> None:
+        text = (
+            "value = cache  # type: ignore[return-value]  "
+            "# ty: ignore[invalid-explicit-return]  # Cached stack\n"
+        )
+        comments = find_comments(text)
+        stripped = strip_directives(text, {(comments[0].line, comments[0].col)})
+        assert stripped == (
+            "value = cache  # ty: ignore[invalid-explicit-return]  # Cached stack\n"
+        )

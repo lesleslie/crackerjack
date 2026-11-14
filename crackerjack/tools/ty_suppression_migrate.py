@@ -136,6 +136,11 @@ def _classify(body: str) -> tuple[list[str], list[str], list[str], str]:
     ty: list[str] = []
     prose: list[str] = []
     mask = _backtick_mask(body)
+    # Whether a directive survives in this comment. A prose segment that
+    # followed a *removed* directive loses the nested ``#`` that introduced
+    # it -- ``# type: ignore[x] # note`` becomes ``# note`` -- while prose
+    # that followed a *surviving* one keeps it.
+    surviving = False
 
     def in_backticks(start: int, end: int) -> bool:
         return any(mask[start:end])
@@ -148,9 +153,6 @@ def _classify(body: str) -> tuple[list[str], list[str], list[str], str]:
         offset += len(segment) + 1
         if not stripped:
             continue
-        # Prose that followed a nested ``#`` keeps its marker, so a comment
-        # like ``# type: ignore[x]  # note`` does not lose the note's hash.
-        marker = "# " if index > 0 else ""
 
         match = RE_MYPY_LOOSE.search(stripped)
         if match and not in_backticks(base + match.start(), base + match.end()):
@@ -163,18 +165,19 @@ def _classify(body: str) -> tuple[list[str], list[str], list[str], str]:
                 stripped[: match.start()] + " " + stripped[match.end() :]
             ).strip()
             if remainder:
-                prose.append(marker + remainder)
+                prose.append(remainder)
             continue
         match = RE_TY_LOOSE.search(stripped)
         if match and not in_backticks(base + match.start(), base + match.end()):
             ty.append(match.group(0))
+            surviving = True
             remainder = (
                 stripped[: match.start()] + " " + stripped[match.end() :]
             ).strip()
             if remainder:
-                prose.append(marker + remainder)
+                prose.append(remainder)
             continue
-        prose.append(marker + stripped)
+        prose.append(("# " if surviving and index > 0 else "") + stripped)
     return bare, bracketed, ty, " ".join(prose)
 
 
