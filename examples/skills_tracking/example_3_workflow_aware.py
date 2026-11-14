@@ -9,9 +9,6 @@ Demonstrates how to:
 Use case: Optimize agent selection by workflow phase
 """
 
-from pathlib import Path
-
-from crackerjack.agents.base import AgentContext
 from crackerjack.integration.skills_tracking import create_skills_tracker
 
 
@@ -28,14 +25,8 @@ def main() -> None:
     )
     print(f"✅ Tracker created: {tracker.get_backend()}\n")
 
-    # Step 2: Create context
-    context = AgentContext(
-        project_path=Path.cwd(),
-        skills_tracker=tracker,
-    )
-
-    # Step 3: Get recommendations for different workflow phases
-    print("Step 3: Comparing recommendations across workflow phases...")
+    # Step 2: Get recommendations for different workflow phases
+    print("Step 2: Comparing recommendations across workflow phases...")
     print("=" * 80)
 
     query = "Fix import errors and organize imports"
@@ -47,7 +38,7 @@ def main() -> None:
         print(f"\n📋 Phase: {phase}")
         print("-" * 80)
 
-        recommendations = context.get_skill_recommendations(
+        recommendations = tracker.get_recommendations(
             user_query=query,
             limit=3,
             workflow_phase=phase,
@@ -68,8 +59,8 @@ def main() -> None:
 
     print("\n" + "=" * 80 + "\n")
 
-    # Step 4: Analyze phase-specific recommendations
-    print("Step 4: Analyzing phase-specific recommendations...\n")
+    # Step 3: Analyze phase-specific recommendations
+    print("Step 3: Analyzing phase-specific recommendations...\n")
 
     for phase, recs in phase_recommendations.items():
         if not recs:
@@ -88,8 +79,8 @@ def main() -> None:
         )
         print()
 
-    # Step 5: Select optimal agent for each phase
-    print("Step 5: Optimal agent selection by phase...")
+    # Step 4: Select optimal agent for each phase
+    print("Step 4: Optimal agent selection by phase...")
     print("=" * 80)
 
     for phase in phases:
@@ -116,8 +107,8 @@ def main() -> None:
 
     print("\n" + "=" * 80 + "\n")
 
-    # Step 6: Practical example - agent routing
-    print("Step 6: Practical agent routing by phase...\n")
+    # Step 5: Practical example - agent routing
+    print("Step 5: Practical agent routing by phase...\n")
 
     current_phase = "fast_hooks"  # Simulating current workflow phase
     print(f"Current phase: {current_phase}")

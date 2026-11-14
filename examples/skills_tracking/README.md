@@ -32,7 +32,7 @@ python examples/skills_tracking/example_1_basic_tracking.py
 **What you'll learn**:
 
 - How to create a tracker with `create_skills_tracker()`
-- Using `AgentContext.track_skill_invocation()` to start tracking
+- Using `tracker.track_invocation()` to start tracking
 - Calling the completer function to record success/failure
 
 ______________________________________________________________________
@@ -55,7 +55,7 @@ python examples/skills_tracking/example_2_recommendations.py
 
 **What you'll learn**:
 
-- Using `AgentContext.get_skill_recommendations()` to find best agents
+- Using `tracker.get_recommendations()` to find best agents
 - Understanding recommendation scores and similarity metrics
 - Selecting agents based on weighted scoring
 

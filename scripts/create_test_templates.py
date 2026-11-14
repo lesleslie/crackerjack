@@ -113,7 +113,6 @@ def main():
         ("refactor", "creosote_adapter", "CreosoteAdapter"),
     ]
 
-
     commands = [
         "run",
         "start",
@@ -138,7 +137,6 @@ def main():
             print(f" ✓ Created: {output_file.relative_to(base_dir)}")
         else:
             print(f" ⊙ Skipped (exists): {output_file.relative_to(base_dir)}")
-
 
     print()
     print("💻 CLI tests:")

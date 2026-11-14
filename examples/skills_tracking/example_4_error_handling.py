@@ -10,9 +10,7 @@ Use case: Robust error handling in production
 """
 
 import logging
-from pathlib import Path
 
-from crackerjack.agents.base import AgentContext
 from crackerjack.integration.skills_tracking import (
     NoOpSkillsTracker,
     create_skills_tracker,
@@ -31,13 +29,9 @@ def main() -> None:
     print("Use case: Testing, development, or when tracking not needed\n")
 
     no_op_tracker = NoOpSkillsTracker()
-    context = AgentContext(
-        project_path=Path.cwd(),
-        skills_tracker=no_op_tracker,
-    )
 
     # Try to track - returns None immediately
-    completer = context.track_skill_invocation(
+    completer = no_op_tracker.track_invocation(
         skill_name="TestAgent", user_query="Test query"
     )
 
@@ -56,13 +50,8 @@ def main() -> None:
             backend="direct",
         )
 
-        context = AgentContext(
-            project_path=Path.cwd(),
-            skills_tracker=tracker,
-        )
-
         # Attempt tracking with error handling
-        completer = context.track_skill_invocation(
+        completer = tracker.track_invocation(
             skill_name="RefactoringAgent",
             user_query="Fix complexity",
         )
@@ -102,13 +91,8 @@ def main() -> None:
             enabled=True,
         )
 
-        context = AgentContext(
-            project_path=Path.cwd(),
-            skills_tracker=tracker,
-        )
-
         # Get recommendations with error handling
-        recommendations = context.get_skill_recommendations(
+        recommendations = tracker.get_recommendations(
             user_query="Fix type errors",
             limit=5,
         )
@@ -151,12 +135,7 @@ def main() -> None:
         return
 
     # Safe to proceed with tracking
-    context = AgentContext(
-        project_path=Path.cwd(),
-        skills_tracker=tracker,
-    )
-
-    completer = context.track_skill_invocation(
+    completer = tracker.track_invocation(
         skill_name="TestAgent",
         user_query="Test",
     )
@@ -188,12 +167,7 @@ def main() -> None:
         tracker = NoOpSkillsTracker()
 
     # Continue with fallback tracker
-    context = AgentContext(
-        project_path=Path.cwd(),
-        skills_tracker=tracker,
-    )
-
-    completer = context.track_skill_invocation(
+    completer = tracker.track_invocation(
         skill_name="FallbackAgent",
         user_query="Test with fallback",
     )

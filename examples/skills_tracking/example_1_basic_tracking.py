@@ -9,9 +9,6 @@ Demonstrates how to:
 Use case: Simple manual tracking outside AgentOrchestrator
 """
 
-from pathlib import Path
-
-from crackerjack.agents.base import AgentContext
 from crackerjack.integration.skills_tracking import create_skills_tracker
 
 
@@ -29,17 +26,9 @@ def main() -> None:
     print(f"✅ Tracker created: {tracker.get_backend()}")
     print(f"   Enabled: {tracker.is_enabled()}\n")
 
-    # Step 2: Create context with tracker
-    print("Step 2: Creating agent context with tracker...")
-    context = AgentContext(
-        project_path=Path.cwd(),
-        skills_tracker=tracker,
-    )
-    print("✅ Context created\n")
-
-    # Step 3: Track an agent invocation
-    print("Step 3: Tracking agent invocation...")
-    completer = context.track_skill_invocation(
+    # Step 2: Track an agent invocation
+    print("Step 2: Tracking agent invocation...")
+    completer = tracker.track_invocation(
         skill_name="RefactoringAgent",
         user_query="Fix complexity issues in module X",
         workflow_phase="comprehensive_hooks",
@@ -56,15 +45,15 @@ def main() -> None:
     print("   Query: Fix complexity issues in module X")
     print("   Phase: comprehensive_hooks\n")
 
-    # Step 4: Simulate work
-    print("Step 4: Simulating agent work...")
+    # Step 3: Simulate work
+    print("Step 3: Simulating agent work...")
     import time
 
     time.sleep(1)  # Simulate 1 second of work
     print("✅ Work completed\n")
 
-    # Step 5: Complete tracking
-    print("Step 5: Completing tracking...")
+    # Step 4: Complete tracking
+    print("Step 4: Completing tracking...")
     completer(
         completed=True,
         follow_up_actions=["Run pytest", "Check coverage"],

@@ -9,9 +9,6 @@ Demonstrates how to:
 Use case: Intelligent agent selection based on historical data
 """
 
-from pathlib import Path
-
-from crackerjack.agents.base import AgentContext
 from crackerjack.integration.skills_tracking import create_skills_tracker
 
 
@@ -28,19 +25,11 @@ def main() -> None:
     )
     print(f"✅ Tracker created: {tracker.get_backend()}\n")
 
-    # Step 2: Create context
-    print("Step 2: Creating agent context...")
-    context = AgentContext(
-        project_path=Path.cwd(),
-        skills_tracker=tracker,
-    )
-    print("✅ Context created\n")
-
-    # Step 3: Get recommendations for a problem
-    print("Step 3: Getting agent recommendations...")
+    # Step 2: Get recommendations for a problem
+    print("Step 2: Getting agent recommendations...")
     print("   Query: 'Fix type errors in async functions'\n")
 
-    recommendations = context.get_skill_recommendations(
+    recommendations = tracker.get_recommendations(
         user_query="Fix type errors in async functions",
         limit=5,
         workflow_phase="comprehensive_hooks",
@@ -56,8 +45,8 @@ def main() -> None:
 
     print(f"✅ Got {len(recommendations)} recommendations:\n")
 
-    # Step 4: Process recommendations
-    print("Step 4: Processing recommendations...")
+    # Step 3: Process recommendations
+    print("Step 3: Processing recommendations...")
     print("=" * 80)
 
     for i, rec in enumerate(recommendations, 1):
@@ -85,8 +74,8 @@ def main() -> None:
 
     print("\n" + "=" * 80 + "\n")
 
-    # Step 5: Select best agent
-    print("Step 5: Selecting best agent...")
+    # Step 4: Select best agent
+    print("Step 4: Selecting best agent...")
     best_recommendation = recommendations[0]  # Already sorted by relevance
     print(f"✅ Selected: {best_recommendation['skill_name']}")
     print(
@@ -95,7 +84,7 @@ def main() -> None:
     print(f"   Success Rate: {best_recommendation['completed']}\n")
 
     # Alternative: Weighted selection
-    print("Step 6: Alternative - Weighted selection...")
+    print("Step 5: Alternative - Weighted selection...")
     print("   Considering both similarity and completion rate:")
 
     def recommendation_score(rec: dict) -> float:
