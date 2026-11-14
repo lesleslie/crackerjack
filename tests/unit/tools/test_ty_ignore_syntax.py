@@ -208,8 +208,12 @@ class TestDefaultScanPath:
         tests = tmp_path / "tests"
         package.mkdir()
         tests.mkdir()
-        (package / "mod.py").write_text("x = 1  # type: ignore[assignment]\n", encoding="utf-8")
-        (tests / "test_mod.py").write_text("y = 2  # type: ignore[assignment]\n", encoding="utf-8")
+        (package / "mod.py").write_text(
+            "x = 1  # type: ignore[assignment]\n", encoding="utf-8"
+        )
+        (tests / "test_mod.py").write_text(
+            "y = 2  # type: ignore[assignment]\n", encoding="utf-8"
+        )
 
         cwd = Path.cwd()
         try:
@@ -225,7 +229,9 @@ class TestDefaultScanPath:
     def test_default_path_reports_the_files_it_scanned(self, tmp_path: Path) -> None:
         package = tmp_path / "pkg"
         package.mkdir()
-        (package / "mod.py").write_text("x = 1  # ty: ignore[missing-attribute]\n", encoding="utf-8")
+        (package / "mod.py").write_text(
+            "x = 1  # ty: ignore[missing-attribute]\n", encoding="utf-8"
+        )
 
         cwd = Path.cwd()
         try:
@@ -242,7 +248,9 @@ class TestDefaultScanPath:
         """``.crackerjack/`` holds a vendored copy of the source."""
         cache = tmp_path / ".crackerjack" / "uv" / "cache"
         cache.mkdir(parents=True)
-        (cache / "mod.py").write_text("x = 1  # type: ignore[assignment]\n", encoding="utf-8")
+        (cache / "mod.py").write_text(
+            "x = 1  # type: ignore[assignment]\n", encoding="utf-8"
+        )
 
         cwd = Path.cwd()
         try:
@@ -254,3 +262,33 @@ class TestDefaultScanPath:
             import os
 
             os.chdir(cwd)
+
+
+class TestDocumentedDirectivesAreNotFindings:
+    """A comment can write *about* a directive instead of using one.
+
+    ``# ``# type: ignore[import-not-found]`` directive covers Mypy/Pyright``
+    documents a directive. Reporting it would send a reader to fix a
+    comment that is not broken.
+    """
+
+    def test_a_documented_directive_is_not_a_finding(self, tmp_path: Path) -> None:
+        target = tmp_path / "sample.py"
+        target.write_text(
+            "# ``# type: ignore[import-not-found]`` directive covers Mypy/Pyright\n",
+            encoding="utf-8",
+        )
+        assert scan_file(target) == []
+
+    def test_a_documented_ty_directive_is_not_a_finding(self, tmp_path: Path) -> None:
+        target = tmp_path / "sample.py"
+        target.write_text(
+            "# use ``# ty: ignore[missing-attribute]`` for that\n",
+            encoding="utf-8",
+        )
+        assert scan_file(target) == []
+
+    def test_a_real_directive_is_still_a_finding(self, tmp_path: Path) -> None:
+        target = tmp_path / "sample.py"
+        target.write_text("x = 1  # type: ignore[import-not-found]\n", encoding="utf-8")
+        assert scan_file(target)

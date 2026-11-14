@@ -29,6 +29,20 @@ RE_MYPY_IGNORE = re.compile(r"^type:\s*ignore\b")
 RE_TY_IGNORE = re.compile(r"^ty:\s*ignore\b")
 RE_BARE_TYPE_IGNORE = re.compile(r"^type:\s*ignore\s*$")
 
+# A backtick-quoted run. A comment that *documents* a directive writes it
+# this way -- ``# ``# type: ignore[import-not-found]`` directive covers
+# Mypy/Pyright`` -- and that is prose about a directive, not a directive.
+RE_BACKTICK_RUN = re.compile(r"``[^`]*``|`[^`]*`")
+
+
+def _mask_backticks(body: str) -> str:
+    """Blank out backtick-quoted runs, keeping every offset stable.
+
+    The mask character is not whitespace, so a masked segment cannot be
+    mistaken for a directive that starts at its beginning.
+    """
+    return RE_BACKTICK_RUN.sub(lambda m: "x" * len(m.group(0)), body)
+
 
 DEFAULT_EXCLUDES: tuple[str, ...] = (
     ".venv",
@@ -84,7 +98,7 @@ def _split_directives(comment_body: str) -> tuple[list[str], list[str]]:
     """
     mypy_parts: list[str] = []
     ty_parts: list[str] = []
-    for segment in comment_body.split("#"):
+    for segment in _mask_backticks(comment_body).split("#"):
         stripped = segment.strip()
         if not stripped:
             continue
