@@ -549,16 +549,13 @@ async def _execute_crackerjack_agent(agent, request):
 #### 2. Manual Tracking in Custom Code
 
 ```python
-from crackerjack.agents.base import AgentContext
+from crackerjack.integration.skills_tracking import SessionBuddyDirectTracker
 
 # Track with manual control
-context = AgentContext(
-    project_path=Path("/my/project"),
-    skills_tracker=tracker,  # From dependency injection
-)
+tracker = SessionBuddyDirectTracker(session_id="my-session")
 
 # Track invocation
-completer = context.track_skill_invocation(
+completer = tracker.track_invocation(
     skill_name="MyCustomAgent",
     user_query="Fix complexity issues",
     workflow_phase="comprehensive_hooks",
@@ -567,14 +564,15 @@ completer = context.track_skill_invocation(
 # ... do work ...
 
 # Complete tracking
-completer(completed=True)
+if completer is not None:
+    completer(completed=True)
 ```
 
 #### 3. Get Recommendations
 
 ```python
 # Get agent recommendations for a problem
-recommendations = context.get_skill_recommendations(
+recommendations = tracker.get_recommendations(
     user_query="How do I fix type errors in async code?",
     limit=5,
     workflow_phase="comprehensive_hooks",

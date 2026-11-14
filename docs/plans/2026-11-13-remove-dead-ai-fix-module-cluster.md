@@ -1,6 +1,6 @@
 ---
 title: Remove the Dead AI-Fix Module Cluster from Crackerjack
-description: Delete `crackerjack/fixers/` (33 files, 26,665 lines), the five orphaned `crackerjack/tools/ty_*` modules, and 70 of the 72 unreachable methods in `crackerjack/core/autofix_coordinator.py` — the residue of the AI-fix stage that was deleted from production but left its skeleton behind. The one live remnant (JSONC comment stripping) is rehomed into a new `crackerjack/tools/jsonc.py`. Net: ~52,000 lines removed, no capability that currently runs is lost.
+description: "Delete `crackerjack/fixers/` (33 files, 26,665 lines), the five orphaned `crackerjack/tools/ty_*` modules, and 70 of the 72 unreachable methods in `crackerjack/core/autofix_coordinator.py` — the residue of the AI-fix stage that was deleted from production but left its skeleton behind. The one live remnant (JSONC comment stripping) is rehomed into a new `crackerjack/tools/jsonc.py`. Net: ~52,000 lines removed, no capability that currently runs is lost."
 audience: crackerjack maintainer
 created: 2026-11-13
 status: active

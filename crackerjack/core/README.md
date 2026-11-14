@@ -28,14 +28,6 @@ The core package provides the orchestration backbone for Crackerjack's workflow 
 - AI batch fixing phase: process all collected failures
 - Phase dependency management and ordering
 
-**autofix_coordinator.py** - AI agent autofix coordination:
-
-- Agent-based issue fixing orchestration
-- Batch processing of quality issues
-- Confidence-based agent selection
-- Fix validation and rollback support
-- Integration with 12 specialized AI agents
-
 **async_workflow_orchestrator.py** - Async workflow management:
 
 - Asynchronous workflow execution

@@ -69,6 +69,57 @@ topic: changelog
   import has a visible side effect (`antigravity`, `this`), which is the
   same set mypy skips as `ANNOYING_STDLIB_MODULES`.
 
+### Security
+
+- deps: The `osv-scanner` fast hook failed on `tornado==6.6` —
+  GHSA-5cjw-f85j-cv6r / CVE-2026-126347 (CWE-601, open redirect).
+  Tornado's 6.6.0 fix for the `RedirectHandler` open redirect
+  (CVE-2026-116578, commit cc75ab0e) was incomplete: browsers treat a
+  string of three or more leading slashes as a protocol-level redirect
+  while `urllib` does not, so a triple-slash path still escaped the
+  redirect check. 6.6.1 completes the detection and also fixes a
+  regression in the 6.6.0 implementation.
+  `tornado` is transitive here (`creosote -> nbconvert -> nbclient ->
+  jupyter-client`), and `jupyter-client` declares it with no version
+  specifier, so 6.6.1 is a drop-in bump with no resolver conflict. The
+  fix landed inside the repo's 7-day `exclude-newer` cooldown, which
+  would have kept the resolver on the vulnerable 6.6, so `tornado`
+  joins the `[tool.uv.exclude-newer-package]` CVE carve-outs.
+
+### Removed
+
+- core: The dead AI-fix module cluster. The AI-fix stage was removed
+  from production in the 2026-08-12 refactor (commit 907ab860), but its
+  skeleton stayed behind. Reachability was computed with an AST sweep
+  rather than grep — a module referenced only by other dead modules is
+  dead.
+  - Removed the whole `crackerjack/fixers/` package (33 files, 26,665
+    lines) and its 21 test files. It had zero production importers; it
+    was the extraction target for the deleted agent runtime and was
+    never adopted.
+  - Removed `crackerjack/core/autofix_coordinator.py` (1,803 lines). Of
+    its 72 methods, two were reachable: the JSONC stripper, which moves
+    to the new `crackerjack/tools/jsonc.py`, and the constructor the
+    phase coordinator used to build it. Its public API had zero callers.
+  - Removed the modules only that file imported:
+    `crackerjack/core/preflight.py`, `crackerjack/services/ai_fix_progress.py`,
+    and `crackerjack/core/ai_fix_event_bus.py`.
+  - Removed the `crackerjack/agents/` package, which held one file after
+    the agent runtime was removed. Its only live export, the
+    `AgentContext` dataclass, moves to
+    `crackerjack/models/agent_context.py` — the layer that already owns
+    `FixResult` and the protocol definitions.
+  - Removed five orphaned ty tools — `ty_audit.py`, `ty_classify.py`,
+    `ty_cleanup.py`, `ty_imports.py`, and `ty_narrow.py` — the "tier 1
+    mechanical" type-error auto-fix. They had no live entry point, so
+    this removes a capability that already did not run, not one that
+    worked. `ty_ignore_syntax` and `ty_ratchet` stay: both are live
+    hook commands.
+  - Dropped the `redbaron` dependency; its only importer was the
+    deleted AST-transform surgeon. `libcst` stays.
+  - Net: 73 files and 52,338 lines.
+  - Plan: `docs/plans/2026-11-13-remove-dead-ai-fix-module-cluster.md`.
+
 ## [0.93.0] - 2026-11-07
 
 ### Added

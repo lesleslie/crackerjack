@@ -2,8 +2,9 @@
 
 The full ``GitMetricsSessionCollector`` previously lived alongside other
 memory / AI-fix subsystems that were removed when the AI-fix stage was
-deleted (see ``crackerjack/core/autofix_coordinator.py`` for the
-dead-code note). This module exists so the type checker can resolve
+deleted (see
+``docs/plans/2026-11-13-remove-dead-ai-fix-module-cluster.md`` for the
+removal record). This module exists so the type checker can resolve
 ``crackerjack.integration.git_metrics_integration`` and so the call
 site at ``crackerjack/core/session_coordinator.py:21`` (TYPE_CHECKING)
 plus the runtime call at ``session_coordinator.py:316`` have the surface

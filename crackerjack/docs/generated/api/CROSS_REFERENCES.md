@@ -1733,7 +1733,6 @@ This document shows where API components are used throughout the codebase.
 - CrackerjackAPI.\_should_skip_file() parameter
 - Task.can_run() parameter
 - CodeCleaner.\_should_include_file_path() parameter
-- AutofixCoordinator.\_get_hook_specific_fixes() parameter
 - AgentSelector.\_generate_score_reasoning() parameter
 - AgentSelector.\_assess_complexity() parameter
 - AgentSelector.\_generate_recommendations() parameter

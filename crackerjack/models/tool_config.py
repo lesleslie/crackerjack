@@ -8,7 +8,8 @@ from enum import StrEnum
 #
 # pyscn >= 1.30 changed its complexity metric: the same function scores 13
 # under pyscn 1.5.0 and 23 under pyscn 1.33.0 (measured on
-# crackerjack/fixers/ast_transform/patterns/extract_method.py). The previous
+# crackerjack/fixers/ast_transform/patterns/extract_method.py, since deleted).
+# The previous
 # threshold of 15 was calibrated against the pre-1.30 metric and was never
 # actually enforced -- pyscn 1.5.0 could not parse the repo's PEP 758
 # `except A, B:` files, and reported no complexity violations at all.

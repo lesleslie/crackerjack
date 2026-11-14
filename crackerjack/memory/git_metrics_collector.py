@@ -2,8 +2,9 @@
 
 The full git-metrics collector previously lived in ``crackerjack.memory``
 alongside other AI-fix / memory subsystems that were removed when the
-AI-fix stage was deleted (see ``crackerjack/core/autofix_coordinator.py``
-for the dead-code note). This module exists so the type checker can
+AI-fix stage was deleted (see
+``docs/plans/2026-11-13-remove-dead-ai-fix-module-cluster.md`` for the
+removal record). This module exists so the type checker can
 resolve ``crackerjack.memory.git_metrics_collector`` and so the four
 call sites in ``crackerjack/mahavishnu/mcp/tools/git_analytics.py``
 (lines 180, 586, 1868, 2113) have the surface they need at

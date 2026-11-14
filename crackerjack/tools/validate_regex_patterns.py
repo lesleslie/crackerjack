@@ -36,11 +36,9 @@ ALLOWED_PATTERNS = {
     r"tests/test_.*\.py$",
     r"crackerjack/services/secure_subprocess\.py$",
     r"crackerjack/mcp/tools/core_tools\.py$",
-    r"crackerjack/intelligence/agent_selector\.py$",
     r"crackerjack/managers/test_.*\.py$",
     r"crackerjack/core/async_workflow_orchestrator\.py$",
     r"crackerjack/core/workflow_orchestrator\.py$",
-    r"crackerjack/agents/.*\.py$",
 }
 
 FORBIDDEN_REPLACEMENT_PATTERNS = [

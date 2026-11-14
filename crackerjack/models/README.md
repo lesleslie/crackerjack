@@ -53,8 +53,10 @@ The models package provides the foundational data structures and protocol-based 
 > **REMOVED 2026-08-06**: `AgentCoordinatorProtocol`, `AgentTrackerProtocol`,
 > and `AgentDebuggerProtocol` were removed when the `crackerjack.agents.*`
 > subsystem was reduced to a type-stub module. The bullets below describe
-> deleted protocols and no longer apply. See
-> `docs/archive/2026-08-06-ai-fix-removal-cleanup/`.
+> deleted protocols and no longer apply. The type-stub module itself was
+> removed on 2026-11-14; `AgentContext` now lives in
+> `crackerjack/models/agent_context.py`. See
+> `docs/plans/2026-11-13-remove-dead-ai-fix-module-cluster.md`.
 
 - ~~`AgentCoordinatorProtocol` - AI agent coordination and issue routing~~
 - ~~`AgentTrackerProtocol` - Agent execution metrics tracking~~

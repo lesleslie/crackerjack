@@ -79,7 +79,6 @@ class AIAgentDebugger:
             loggers = [
                 "crackerjack.ai_agent",
                 "crackerjack.mcp",
-                "crackerjack.agents",
                 "crackerjack.workflow",
             ]
 

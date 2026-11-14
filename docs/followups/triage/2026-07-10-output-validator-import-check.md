@@ -28,6 +28,13 @@ OutputValidator: import_check failed for crackerjack/tools/ty_imports.py:
 
 Same pattern repeats for `crackerjack/tools/ty_narrow.py`, `crackerjack/tools/ty_classify.py`, `crackerjack/core/autofix_coordinator.py` (multiple sites).
 
+> **Update 2026-11-14:** all three of those files were deleted with the dead
+> AI-fix module cluster — see
+> `docs/plans/2026-11-13-remove-dead-ai-fix-module-cluster.md`. The
+> `OutputValidator` they belonged to went with them, so the crash this note
+> describes no longer has a live code path. The note is kept as the
+> historical record of the diagnosis.
+
 ## Why this is Cluster 1 (not the other failure clusters)
 
 The user's earlier 4-cluster diagnosis of the broken AI-fix loop included 3 model-quality clusters (`from __future__` placement, invalid Python generation, type/lint drift). **Cluster 1 is the only one with a clear crackerjack-side bug** — the others might be AI quality or context-window issues, but Cluster 1 is `AttributeError: 'NoneType' object has no attribute '__dict__'` which is unambiguously a code path where something returned `None` and the caller tried to read its `.__dict__`.
