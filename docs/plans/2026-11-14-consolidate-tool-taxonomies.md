@@ -38,8 +38,8 @@ other.
    `crackerjack/config/hooks.py` (the `HookDefinition` lists),
    `crackerjack/config/tool_commands.py` (the argv), the top-level flags of
    `settings/crackerjack.yaml` (`enable_pyrefly`, `enable_ty`,
-   `enable_ty_ignore_syntax`, `experimental_hooks`, `skip_hooks` — there is
-   **no `hooks:` sub-table**), and `settings/profiles/*.yaml`
+   `experimental_hooks`, `skip_hooks` — there is **no `hooks:` sub-table**),
+   and `settings/profiles/*.yaml`
    `checks.enabled` (a parallel vocabulary of tool names that includes names
    no hook has). Adding a hook today means touching three to four files and
    hoping the names line up; nothing checks that they do.
@@ -102,7 +102,7 @@ other.
    `crackerjack/adapters/type/ty_adapter.py`.
    **`crackerjack/adapters/` itself survives.** It is the package for the
    live *language* adapter layer (`base.py`, `registry.py`, `swift/`,
-   `kotlin/`, `web/`, `python/`, `lsp/`, `_output_paths.py`), which backs four
+   `kotlin/`, `web/`, `python/`, `_output_paths.py`), which backs four
    registered MCP tools (`crackerjack_swift_list_hooks`,
    `crackerjack_swift_bump_version`, `crackerjack_kotlin_list_hooks`,
    `crackerjack_kotlin_bump_version`) and
@@ -143,7 +143,7 @@ everything below.
 |---|---|---|---|
 | **Parsers** | `crackerjack/parsers/` | 13 JSON + 27 regex parsers (40 parsers, 34 unique tool keys) | Yes — the live issue path |
 | **QA adapters** | `crackerjack/adapters/{_qa_adapter_base,_tool_adapter_base,factory,health_mixin}.py` + `format/`, `refactor/`, `sast/`, `type/`, `complexity/`, `dependency/`, `lint/`, `performance/`, `security/`, `test/`, `treesitter/`, `utility/`, `benchmark/` | 18 `BaseToolAdapter` subclasses | 6 buildable by the factory; only **5 reachable via a hook** (`bandit` has no `HookDefinition`) |
-| **Language adapters** | `crackerjack/adapters/{base,registry}.py` + `kotlin/`, `python/`, `swift/`, `web/`, `lsp/` | 4 PEP 621 entry points | **Yes — four registered MCP tools** |
+| **Language adapters** | `crackerjack/adapters/{base,registry}.py` + `kotlin/`, `python/`, `swift/`, `web/` | 4 PEP 621 entry points | **Yes — four registered MCP tools** |
 | **AI provider registry** | `crackerjack/adapters/ai/` | live via `cli/handlers/provider_selection.py:11` | Yes |
 | **Plugin hooks** | `crackerjack/plugins/` | `CustomHookDefinition` | No — being deleted by the concurrent plan |
 
@@ -228,7 +228,7 @@ default `True` applies to every adapter and the count always equals the total
 |---|---|---|---|
 | 1 | `crackerjack/config/hooks.py` | `FAST_HOOKS` (18) + `COMPREHENSIVE_HOOKS` (14) = **32** `HookDefinition` objects, plus 3 opt-in-generated | — |
 | 2 | `crackerjack/config/tool_commands.py` | the argv for each hook name | hook name string |
-| 3 | `settings/crackerjack.yaml` **top level** (there is no `hooks:` sub-table) | `enable_pyrefly: false`, `enable_ty: true`, `enable_ty_ignore_syntax`, `experimental_hooks: false`, `skip_hooks: false`; and `adapter_timeouts` (also top level) | hook name string |
+| 3 | `settings/crackerjack.yaml` **top level** (there is no `hooks:` sub-table) | `enable_pyrefly: false`, `enable_ty: true`, `experimental_hooks: false`, `skip_hooks: false`; and `adapter_timeouts` (also top level). `enable_ty_ignore_syntax` exists **only** as a schema default (`config/settings.py:30`) — it is not in the YAML | hook name string |
 | 4 | `settings/profiles/*.yaml` `checks.enabled` | `ruff`, `pytest`, `coverage`, `bandit`, `safety`, `mypy`, `complexipy` | tool name string — **a different vocabulary** |
 | 5 | `crackerjack/plugins/` | `CustomHookDefinition` | hook name string — **being deleted by the concurrent plan** |
 
@@ -269,9 +269,24 @@ already a third source of truth:
 - `TOOL_CONFIGS` has no entry for `pyrefly`, `ty`, `ty-ignore-syntax`,
   `cohesion`, `creosote`, or `pymetrica`.
 
-Phase 1 must fold `supports_json` / `json_flag` / `required_json_fields` into
-`HookSpec`, or explicitly declare `TOOL_CONFIGS` out of scope and record that
-a second per-tool registry remains.
+**Decision: `TOOL_CONFIGS` is out of scope for this plan.** Phase 1 does
+*not* fold `supports_json` / `json_flag` / `required_json_fields` into
+`HookSpec`; the catalog records the structured-output flag where it is
+actually used — in `StructuredRerun.argv_template` — and `TOOL_CONFIGS` stays
+as it is.
+
+**This plan therefore does not deliver "one source of truth" for
+structured-output flags — it delivers it for hooks.** `StructuredRerun`'s
+argv template, `tool_commands.py`'s argv, and `TOOL_CONFIGS`' `json_flag` are
+three places a flag is written down, and the third already disagrees with the
+second for `complexipy`. That triple-bookkeeping is a future-drift hazard and
+is recorded as a Phase 6 follow-up, not resolved here.
+
+**Why out of scope:** `TOOL_CONFIGS` is a *tool* registry (16 tools, some with
+no hook) and this phase's subject is a *hook* registry. Merging them would
+make the catalog carry entries for tools that are not hooks — the same
+category error the profile vocabulary already made. The follow-up is the right
+home for it.
 
 **The operator-facing hook flags in `settings/crackerjack.yaml` are inert.**
 The YAML puts `enable_pyrefly`, `enable_ty`, `skip_hooks` and
@@ -409,10 +424,12 @@ all.
   and are read by `individual_hook_executor.py`, which the concurrent plan
   deletes — that removes one reader of many, not the registry.
 - **`settings/profiles/*.yaml`** — see Phase 1's resolved decision.
-- **`crackerjack/adapters/ai/`** — not a QA adapter layer, but it loses its
-  only construction path when the factory goes. Phase 5 decides.
+- **`crackerjack/adapters/ai/`** — not a QA adapter layer, and it keeps its
+  construction path (`adapters/ai/registry.py:68-71` →
+  `cli/handlers/provider_selection.py:141`), independent of the factory.
+  Phase 5 deletes the factory's special case and nothing else.
 - The **language adapter layer** — `base.py`, `registry.py`'s
-  `discover_adapters()`, `kotlin/`, `python/`, `swift/`, `web/`, `lsp/`, and
+  `discover_adapters()`, `kotlin/`, `python/`, `swift/`, `web/`, and
   the `pyproject.toml` entry points that load them.
 
 ______________________________________________________________________
@@ -547,22 +564,19 @@ plus the settings overrides applied — so the executors do not change shape.
    parsing. Phase 2 makes the registry complete enough for the catalog to be
    honest.
 
-1. **`settings/profiles/` is out of scope for this plan.**
-   `ProfileLoader` has **no production importer**: `load_profile`,
-   `get_profile_loader` and `list_profiles` are referenced only from `tests/`,
-   and `ProfileConfig.checks` is an unvalidated `dict[str, Any]`. There is no
-   production "load time" at which a typo could be reported, so the claim
-   "a typo in a profile's `checks.enabled` is reported at load time" is not
-   demonstrable. Two of the entries are not hooks and have no hook
-   equivalent — `pytest` and `coverage` are quality-gate inputs — and the same
-   stale vocabulary appears in `checks.disabled`, which this plan does not
-   mention. Renaming `checks.enabled` to hook names without a second
-   vocabulary for non-hook checks either fabricates hooks or drops quality
-   gates. **Decision: delete `settings/profiles/` and
-   `crackerjack/config/profile_loader.py` as dead configuration in a separate
-   commit, or wire `ProfileLoader` into a live consumer first — the latter is
-   feature work and belongs in its own plan.** Until one is chosen, the
-   profile files are untouched by this plan.
+1. **`settings/profiles/` is out of scope, and its deletion is a separate
+   commit (Phase 6, item 1).** `ProfileLoader` has no production importer:
+   `load_profile`, `get_profile_loader` and `list_profiles` are reached only
+   from `crackerjack/cli/profile_handlers.py`, which reads
+   `ProfileConfig.checks` — an unvalidated `dict[str, Any]` — to *print* a
+   list. No runtime path consults `checks.enabled`, so the vocabulary is not a
+   gate and renaming it would change nothing observable. Two of the entries
+   are not hooks and have no hook equivalent (`pytest` and `coverage` are
+   quality-gate inputs), and the same stale vocabulary appears in
+   `checks.disabled` (quick.yaml:15-21, standard.yaml:17-21). Deleting dead
+   configuration is real work, but it is not this plan's work: it has its own
+   commit and its own risk surface. **This plan does not touch the profile
+   files, and does not claim the vocabulary is validated.**
 
 1. **The catalog is not the cost; the settings load is.** Measured on `main`
    at `22fb3e06`: `import crackerjack.config.hooks` takes **7.0 s** (the
@@ -590,7 +604,18 @@ plus the settings overrides applied — so the executors do not change shape.
    catalog builds fresh `HookDefinition`s per call from frozen specs, which
    fixes this for free.
 
-1. **`ty` and `ty-ignore-syntax` exist twice today and the catalog holds
+5. **This supersedes `.claude/decisions/2026-10-12-hook-stage-documentary-vs-enforced.md`.**
+   That record is `status: active`, `role: canonical`, and governs exactly this
+   change: *"HookDefinition.stage is documentary-only for built-in entries…
+   Every new hook added to FAST_HOOKS or COMPREHENSIVE_HOOKS requires the
+   contributor to manually set stage correctly; this is fragile."* Its two
+   acceptable fix shapes (a runtime `__post_init__` check with a `_builtin`
+   marker, or a test pin) both assume the two lists survive. The catalog
+   removes the lists, so `stage` becomes load-bearing by construction and
+   neither shape applies. **Phase 1 updates that record to `status:
+   superseded` in the same commit**, with `superseded_by` pointing at this
+   plan.
+6. **`ty` and `ty-ignore-syntax` exist twice today and the catalog holds
    them once.** `COMPREHENSIVE_HOOKS` contains static *placeholders* for both
    with `auto_run=False` (`hooks.py:288-315`), and `_build_opt_in_type_hooks()`
    appends *runnable* entries with the **same names** and `auto_run=True`
@@ -623,7 +648,7 @@ plus the settings overrides applied — so the executors do not change shape.
 ### Estimated scope
 
 1 new module, 2 rewritten modules, 1 settings file, 1 consistency test,
-~600 lines net.
+~600 lines net. (`TOOL_CONFIGS` is out of scope — see the Context section.)
 
 ______________________________________________________________________
 
@@ -652,7 +677,7 @@ and `HookSpec.parser` names the only parser for every hook.
 
 | executor-local parser | registry entry | work needed |
 |---|---|---|
-| `_parse_refurb_issues` | `RefurbRegexParser` | move; the `[FURB123]` code needs `Issue.code` (Phase 4) to survive |
+| `_parse_refurb_issues` | `RefurbRegexParser` | move; the `[FURB123]` code needs `Issue.code` — **added in this phase** (see below) |
 | `_parse_gitleaks_issues` | `GitleaksJSONParser` | move; the registry parser supersedes a keyword filter |
 | `_parse_lychee_issues` | `LycheeJSONParser` (+ regex) | move |
 | `_parse_osv_scanner_issues` | `OsvScannerJSONParser` | move; **must learn** `crackerjack/config/pip_audit_ignores.py:IGNORED_VULNERABILITY_IDS` |
@@ -669,6 +694,15 @@ and `HookSpec.parser` names the only parser for every hook.
 returns `[]` for a zero count *on purpose*, so a clean repo does not flip to
 failed — that semantics must move with it into a `TcRefsParser`.
 `no-conflict-markers` has nothing at all.
+
+**`Issue` gains `code: str | None = None` in this phase.** The codes the
+moved parsers carry (`[FURB123]`, ruff's `F401`, semgrep's rule ids) are
+information the Fast Hook Results table shows today. The field is optional
+with a `None` default, so no existing construction site or caller changes;
+the executor's formatter emits `<path>:<line> - <code>: <message>` when
+`code` is set and `<path>:<line>: <message>` when it is not. The field is
+added **without** touching `CrackerjackRunResult` and **without** bumping
+the `schema_version` an external ai-fix-loop driver depends on.
 
 **`pyrefly` is a prerequisite only for operators who enable it.** It is
 opt-in and off by default (`settings.hooks.enable_pyrefly == False`), so it
@@ -883,8 +917,20 @@ Fast Hook Results table and in `crackerjack run --json`.
    structured.** The re-run exists for the case where the hook's *text* output
    yielded nothing. The `StructuredRerun` record is only populated for tools
    whose hook command is not already structured.
-1. **The issue format is a decision, not an accident.** Recorded in the
-   execution record before the phase starts, because it is user-visible.
+1. **`Issue` gains `code: str | None = None`, and the executor's formatter
+   includes it when present.** The adapter path emitted
+   `<path>:<line> - <code>: <message>` and the parser path emits
+   `<path>:<line>: <message>`; dropping the code loses information the Fast
+   Hook Results table shows today. The field is optional with a `None`
+   default, so every existing construction site and every `Issue(...)` caller
+   is unaffected. The formatter emits `<path>:<line> - <code>: <message>` when
+   `code` is set and `<path>:<line>: <message>` when it is not. This is an
+   additive schema change to a model whose `schema_version` is pinned by an
+   external ai-fix-loop driver (`models/issues.py:76`), so the field is added
+   **without** touching `CrackerjackRunResult` and **without** bumping that
+   version. The field is added in **Phase 2**, not Phase 4, so the
+   `[FURB123]`-style codes that Phase 2 moves into the registry do not lose
+   information on the way.
 
 ### Risks
 
@@ -946,13 +992,18 @@ and `classifier.py`, which are the other clone-domain modules. Its
 | `crackerjack/cli/handlers/health.py:126` | `crackerjack.adapters._qa_adapter_base.QAAdapterBase` | deleted — the health check becomes a catalog-hook readiness check |
 | `crackerjack/cli/handlers/provider_selection.py:11` | `crackerjack.adapters.ai.registry` | `crackerjack/adapters/ai/` stays (it is not a QA adapter layer); its own fate needs a decision |
 
-**`crackerjack/adapters/ai/` is not a QA adapter layer, but it loses its only
-construction path.** `FallbackChainCodeFixer` is reached only through
-`DefaultAdapterFactory.create_adapter`'s special case at `factory.py:135-138`;
-deleting the factory removes that path. Either `crackerjack/adapters/ai/`
-gets its own entry point, or it is named in this plan's scope. **Decision
-required before Phase 5 starts.** This plan's first draft left the capability
-with no way to be built.
+**`crackerjack/adapters/ai/` survives untouched.** It is not a QA adapter
+layer. `FallbackChainCodeFixer` is constructed through
+`crackerjack/adapters/ai/registry.py:68-71` (`get_code_fixer()`), which
+`crackerjack/cli/handlers/provider_selection.py:141` calls — a path
+independent of the factory. Deleting the factory removes the *second*
+construction path (`factory.py:135-138`), not the capability. Nothing in
+`adapters/ai/` is deleted, moved, or modified by this phase.
+
+*(The first draft of this plan claimed the opposite — that `adapters/ai/`
+"loses its only construction path" — and left the decision open. The
+plan-conformance reviewer traced `get_code_fixer()` and found the independent
+path; the claim was wrong and the decision is now resolved.)*
 
 **`refactor/cohesion.py` and `refactor/creosote.py` are decided here, not in
 a follow-up.** Neither is in the concurrent plan's Phase 3 scope, neither is
@@ -1126,8 +1177,8 @@ swapped relative to the source.
 
 ### Estimated scope
 
-~15 modules, ~2,500 lines, 1 model file, 1 server file, 2 CLI handlers,
-1 parser module, ~24 test files, 2 scripts, 9 doc files.
+~14 modules, ~3,500 lines, 1 model file, 1 server file, 2 CLI handlers,
+1 parser module, ~48 test files, 2 scripts, 9 doc files.
 
 ______________________________________________________________________
 
@@ -1274,6 +1325,24 @@ ______________________________________________________________________
 
 ## Execution record
 
-_(To be filled in as the phases execute. Each phase records: the commit SHA,
-the baseline fixture captured before it, the issue-count deltas per hook, and
-any decision taken that the plan left open.)_
+_(Filled in as the phases execute, in the house style of the executed sibling
+`docs/plans/2026-11-13-remove-dead-ai-fix-module-cluster.md`. Each phase
+records the commit SHA, the baseline fixture captured before it, the
+issue-count deltas per hook, and any decision taken that the plan left open;
+the closing entry names the findings that turned up during execution that the
+plan did not anticipate.)_
+
+```
+## Execution record (YYYY-MM-DD/YYYY-MM-DD)
+
+Executed in N phases, one commit each. Findings that turned up during
+execution that the plan did not anticipate:
+
+1. **<finding>** — <what it changed>. Net result: **<+/- files, +/- lines>** …
+
+Per phase:
+
+| Phase | Commit | Baseline | Issue-count deltas | Decisions taken |
+|---|---|---|---|---|
+| 1 | <sha> | <fixture path> | <deltas> | <decisions> |
+```
