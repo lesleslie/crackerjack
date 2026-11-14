@@ -32,7 +32,10 @@ from pathlib import Path
 
 from crackerjack.tools._ty_binary import resolve_ty_binary
 
-# A mypy-syntax directive: ``# type: ignore`` or ``# type: ignore[code, ...]``.
+# A mypy-syntax directive: ``type: ignore`` or ``type: ignore[code, ...]``.
+# The leading ``#`` is omitted from the spellings on purpose -- ty parses the
+# *text* of a comment for directives, so a comment that shows the hash becomes
+# a malformed directive itself and draws an ``invalid-ignore-comment`` warning.
 RE_MYPY_DIRECTIVE = re.compile(r"#\s*type:\s*ignore(?:\[[^\]]*\])?")
 
 # The same, matched anywhere in a comment body so that trailing prose such as
