@@ -496,3 +496,30 @@ under `crackerjack/`. This plan covers the AI-fix cluster. The remainder
 the QA-adapter tier at 4,495 lines, and the `services.patterns.*` families)
 is a separate plan. The inventory scripts are re-runnable from
 `/tmp/cj_dead_inventory.py`.
+
+## Execution record (2026-11-13/14)
+
+Executed in five phases, one commit each. Two findings turned up during
+execution that the plan did not anticipate:
+
+1. **`crackerjack/intelligence/` was left behind by the August 2026
+   AI-fix removal.** `docs/plans/2026-08-11-darnlink-replaces-check-local-
+   links.md` records that the package "was deleted in commit 907ab860",
+   but its README survived. It described an intelligence layer whose code
+   was gone. Deleted.
+
+2. **The API documentation generator wrote to the wrong tree.**
+   `DocumentationServiceImpl` treats `pkg_path` as the *package*
+   directory; the CLI passed the *repository root*. Three symptoms
+   followed: the docs went to an untracked `<repo>/docs/generated/api/`
+   instead of the tracked, wheel-shipped
+   `crackerjack/docs/generated/api/`; the `<repo>/**/*.py` scan pulled
+   361 test classes into the API reference; and
+   `update_documentation_index()` overwrote the canonical
+   `docs/index.md` (on a case-insensitive filesystem `docs/INDEX.md` and
+   `docs/index.md` are the same file). The tracked cross-references had
+   **68 stale class references** as a result. Fixed at the call site and
+   regenerated — now 351 classes, zero stale.
+
+Net result: **−73 files, −52,338 lines** of production and test code, plus
+the two fixes above.
