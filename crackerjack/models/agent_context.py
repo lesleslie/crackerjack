@@ -1,9 +1,13 @@
-"""Lightweight type stubs for the agents package.
+"""Minimal context object for the agent delegator protocol.
 
-The agent runtime lives outside this checkout, but a handful of protocol
-signatures still reference ``AgentContext`` and ``FixResult``. This module
-provides just enough surface for type checkers to resolve those references
-without re-introducing the full agent system.
+The full agent runtime lives outside this checkout. What the type checker
+needs is a shape for the ``context`` argument that
+``AgentDelegatorProtocol`` passes to every delegator method.
+
+This dataclass was moved here from ``crackerjack/agents/base.py`` when the
+``crackerjack/agents`` package was deleted — that package held one file
+after the AI-fix runtime was removed in the 2026-08-12 refactor, and the
+model layer already owns the types the protocol refers to.
 """
 
 from __future__ import annotations
@@ -12,9 +16,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from crackerjack.models.issues import FixResult
-
-__all__ = ["AgentContext", "FixResult"]
+__all__ = ["AgentContext"]
 
 
 @dataclass

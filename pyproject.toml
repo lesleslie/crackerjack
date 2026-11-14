@@ -102,7 +102,6 @@ dependencies = [
     "pytest-testmon>=2.2.0",
     "pytest-timeout>=2.4.0",
     "pytest-xdist>=3.8.0",
-    "redbaron>=0.9.2",
     "pyyaml>=6.0.3",
     "refurb>=2.3.1",
     "rich>=15.0.0",
@@ -140,7 +139,9 @@ dependencies = [
     #
     # Floor is 0.0.99, not 0.0.95: ty renamed the import diagnostic
     # ``unresolved-import`` -> ``import-not-found`` in 0.0.98/0.0.99. The
-    # suppressions this repo writes (``crackerjack/fixers/type_errors.py``)
+    # suppressions this repo writes (e.g. in ``crackerjack/managers/
+    # hook_manager.py`` and ``crackerjack/services/doc_update_service.py``;
+    # the known-code list lives in ``crackerjack/tools/ty_ignore_syntax.py``)
     # use the current name, and a stale name is not a no-op -- ty reports
     # ``warning[renamed-rule-in-ignore-comment]`` and stops applying the
     # suppression, so the gate fails and the fix it was meant to make
@@ -442,11 +443,6 @@ fixable = [
     "ASYNC221",
     "RUF012",
 ]
-"crackerjack/fixers/**" = [
-    "BLE001",
-    "TRY401",
-    "PLW1510",
-]
 "crackerjack/parsers/**" = [
     "BLE001",
     "TRY401",
@@ -470,9 +466,6 @@ fixable = [
 ]
 "crackerjack/mcp/client_runner.py" = [
     "ASYNC220",
-]
-"crackerjack/fixers/planning.py" = [
-    "C901",  # _rewrite_percent_format is intentionally complex
 ]
 "crackerjack/documentation/mkdocs_integration.py" = [
     "ASYNC221",
@@ -746,6 +739,21 @@ ty = "2099-12-31T23:59:59Z"
 # floor (`pytest-testmon>=2.2.0`) already permits 2.3.0; this entry only
 # unblocks the resolution the constraint already asks for.
 pytest-testmon = "2099-12-31T23:59:59Z"
+# tornado 6.6.1 — GHSA-5cjw-f85j-cv6r / CVE-2026-126347 (LOW, CWE-601).
+# Tornado's 6.6.0 fix for the RedirectHandler open redirect
+# (CVE-2026-116578, commit cc75ab0e) was incomplete: browsers treat a
+# string of three or more leading slashes as a protocol-level redirect
+# while urllib does not, so a triple-slash path still escaped the
+# redirect check. 6.6.1 completes the detection and also fixes a
+# regression in the 6.6.0 implementation.
+#
+# Transitive only: crackerjack never imports tornado. It arrives via
+# creosote -> nbconvert -> nbclient -> jupyter-client, and
+# jupyter-client 8.10.0 declares tornado with no version specifier, so
+# 6.6.1 is a drop-in bump with no resolver conflict. The fix landed
+# 2026-11-13, inside the 7-day cooldown above, so without this entry
+# `uv lock --upgrade` keeps the vulnerable 6.6 rather than erroring.
+tornado = "2099-12-31T23:59:59Z"
 
 [tool.pip-audit]
 ignore-vuln = [
@@ -907,13 +915,9 @@ exclude = "^(\\.venv|venv|\\.tox|__pycache__)(/|$)"
 [tool.ty.rules]
 unused-ignore-comment = "ignore"
 
-# Pymetrica scope — exclude AST-transform helpers (high cyclomatic density,
-# intentionally complex) so the comprehensive metrics run stays within budget.
-# See crackerjack/config/settings.py:AdapterTimeouts.pymetrica_timeout.
-# Patterns are fnmatch against path.relative_to(base) where base is the
-# directory passed to `pymetrica run-all` (crackerjack/), so the relative
-# paths start at agents/... — not crackerjack/agents/....
+# Pymetrica scope — see crackerjack/config/settings.py:AdapterTimeouts.
+# pymetrica_timeout. The AST-transform helpers this used to exclude were
+# deleted with the dead `crackerjack/fixers/` package, so the scope is now
+# the whole `crackerjack/` tree with no exclusions.
 [tool.pymetrica]
-exclude = [
-    "agents/helpers/ast_transform/**",
-]
+exclude = []

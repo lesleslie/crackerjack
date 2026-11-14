@@ -70,88 +70,6 @@ class Test{adapter_class}:
 '''
 
 
-def generate_agent_test_template(agent_name: str, agent_class: str) -> str:
-    return f'''"""Test {agent_name} functionality."""
-
-import pytest
-from pathlib import Path
-from crackerjack.agents.{agent_name} import {agent_class}
-from crackerjack.models.agent_context import AgentContext
-from crackerjack.models.issue import Issue
-
-
-@pytest.mark.unit
-class Test{agent_class}:
-    """Test suite for {agent_class}."""
-
-    @pytest.fixture
-    def agent(self):
-        """Create {agent_class} instance."""
-        return {agent_class}()
-
-    @pytest.fixture
-    def agent_context(self, tmp_path):
-        """Create agent context."""
-        return AgentContext(
-            project_path=tmp_path,
-            files=[],
-            issues=[],
-            config={{}}
-        )
-
-    @pytest.mark.asyncio
-    async def test_fix_issue_basic(self, agent, agent_context, tmp_path):
-        """Test basic issue fixing."""
-
-        test_file = tmp_path / "test.py"
-        test_file.write_text("# sample code\\n")
-
-        issue = Issue(
-            type="test_type",
-            message="Test issue message",
-            file="test.py",
-            line=1
-        )
-
-        agent_context.files = [test_file]
-        agent_context.issues = [issue]
-
-
-        result = await agent.fix_issue(
-            context=agent_context,
-            issue_type=issue.type,
-            message=issue.message
-        )
-
-
-        assert result is not None
-        assert hasattr(result, "success")
-
-    @pytest.mark.asyncio
-    async def test_fix_issue_with_no_files(self, agent, agent_context):
-        """Test fixing issue with no files."""
-
-        issue = Issue(
-            type="test_type",
-            message="Test issue",
-            file="test.py",
-            line=1
-        )
-
-        agent_context.issues = [issue]
-
-
-        result = await agent.fix_issue(
-            context=agent_context,
-            issue_type=issue.type,
-            message=issue.message
-        )
-
-
-        assert result is not None
-'''
-
-
 def generate_cli_test_template(command: str) -> str:
     return f'''"""Test CLI command: {command}."""
 
@@ -195,13 +113,6 @@ def main():
         ("refactor", "creosote_adapter", "CreosoteAdapter"),
     ]
 
-    agents = [
-        ("refactoring_agent", "RefactoringAgent"),
-        ("security_agent", "SecurityAgent"),
-        ("performance_agent", "PerformanceAgent"),
-        ("test_creation_agent", "TestCreationAgent"),
-        ("documentation_agent", "DocumentationAgent"),
-    ]
 
     commands = [
         "run",
@@ -228,20 +139,6 @@ def main():
         else:
             print(f" ⊙ Skipped (exists): {output_file.relative_to(base_dir)}")
 
-    print()
-    print("🤖 Agent tests:")
-    for module_name, class_name in agents:
-        output_dir = tests_dir / "agents"
-        output_dir.mkdir(parents=True, exist_ok=True)
-
-        output_file = output_dir / f"test_{module_name}.py"
-        template = generate_agent_test_template(module_name, class_name)
-
-        if not output_file.exists():
-            output_file.write_text(template)
-            print(f" ✓ Created: {output_file.relative_to(base_dir)}")
-        else:
-            print(f" ⊙ Skipped (exists): {output_file.relative_to(base_dir)}")
 
     print()
     print("💻 CLI tests:")
