@@ -112,6 +112,22 @@ topic: changelog
 
 ### Removed
 
+- adapters: `crackerjack.adapters.type.pyright.py` and
+  `crackerjack.adapters.refactor.vulture.py` — the Pyright and Vulture
+  QA adapters, and their two test files. Neither tool has a
+  `HookDefinition` anywhere in `crackerjack/config/hooks.py`, so no hook
+  can ever produce the name the factory would need to look them up; the
+  factory's name table (`DefaultAdapterFactory.TOOL_TO_ADAPTER_NAME`)
+  and its instantiation table listed neither, and the plugin loader
+  never scans `crackerjack/adapters/**`. Their only remaining consumers
+  were their own test files and the `__init__.py` re-exports, so those
+  go too. The `pyright` tool itself is not a declared dependency — the
+  `pyrightconfig.json` entry in `settings/crackerjack.yaml` is a file
+  mapping, unrelated to the adapter. The `pyright` *output patterns* in
+  `crackerjack/services/patterns/tool_output/pyright.py` are a separate
+  registry and are deliberately left in place: the
+  `individual_hook_executor` still reads them, and that module is
+  scheduled for removal by a separate plan.
 - adapters: `crackerjack.adapters.benchmark.adapter.py` and the rest of the
   `crackerjack/adapters/benchmark/` package — the pytest benchmark adapter.
   It had zero production importers: the adapter factory is keyed by a fixed

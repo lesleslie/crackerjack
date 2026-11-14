@@ -254,8 +254,6 @@ This document shows where API components are used throughout the codebase.
 
 - OsvScannerAdapter base class
 
-- PyrightAdapter base class
-
 - PyreflyAdapter base class
 
 - TyAdapter base class
@@ -275,8 +273,6 @@ This document shows where API components are used throughout the codebase.
 - CohesionAdapter base class
 
 - CreosoteAdapter base class
-
-- VultureAdapter base class
 
 - RefurbAdapter base class
 
@@ -2806,12 +2802,6 @@ This document shows where API components are used throughout the codebase.
 
 - PyreflyAdapter.__init__() parameter
 
-## PyrightSettings
-
-**Referenced in:**
-
-- PyrightAdapter.__init__() parameter
-
 ## PyscnSettings
 
 **Referenced in:**
@@ -2868,8 +2858,6 @@ This document shows where API components are used throughout the codebase.
 
 - OsvScannerAdapter.build_command() parameter
 
-- PyrightAdapter.build_command() parameter
-
 - PyreflyAdapter.build_command() parameter
 
 - TyAdapter.build_command() parameter
@@ -2891,8 +2879,6 @@ This document shows where API components are used throughout the codebase.
 - CohesionAdapter.build_command() parameter
 
 - CreosoteAdapter.build_command() parameter
-
-- VultureAdapter.build_command() parameter
 
 - RefurbAdapter.build_command() parameter
 
@@ -3756,8 +3742,6 @@ This document shows where API components are used throughout the codebase.
 
 - OsvScannerSettings base class
 
-- PyrightSettings base class
-
 - PyreflySettings base class
 
 - TySettings base class
@@ -3777,8 +3761,6 @@ This document shows where API components are used throughout the codebase.
 - CohesionSettings base class
 
 - CreosoteSettings base class
-
-- VultureSettings base class
 
 - RefurbSettings base class
 
@@ -3899,12 +3881,6 @@ This document shows where API components are used throughout the codebase.
 - VersionNotFoundError base class
 
 - VersionWriteError base class
-
-## VultureSettings
-
-**Referenced in:**
-
-- VultureAdapter.__init__() parameter
 
 ## WorkflowBuilder
 
@@ -5027,8 +5003,6 @@ This document shows where API components are used throughout the codebase.
 - OsvScannerAdapter.\_create_issues_from_entry() parameter
 
 - OsvScannerAdapter.\_count_affected_packages() parameter
-
-- PyrightAdapter.\_parse_json_output() parameter
 
 - PyreflyAdapter.\_extract_message_from_item() parameter
 
@@ -6362,8 +6336,6 @@ This document shows where API components are used throughout the codebase.
 
 - OsvScannerAdapter.\_build_vulnerability_message() parameter
 
-- PyrightAdapter.build_command() parameter
-
 - PyreflyAdapter.build_command() parameter
 
 - PyreflyAdapter.\_parse_error_items() parameter
@@ -6403,8 +6375,6 @@ This document shows where API components are used throughout the codebase.
 - CohesionAdapter.build_command() parameter
 
 - CreosoteAdapter.build_command() parameter
-
-- VultureAdapter.build_command() parameter
 
 - RefurbAdapter.build_command() parameter
 
