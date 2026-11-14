@@ -331,8 +331,8 @@ part of this plan's deletions; three of them were fixed on 2026-11-14 and
 the fourth is recorded here so the work is not lost.
 
 1. **The QA-adapter lookup in the hook executor never matched — FIXED
-   2026-11-14 (`9e76f4de`).** `hook_executor.py:2283` called
-   `adapter_factory.create_adapter(hook.name)`, passing a *tool* name
+   2026-11-14 (`9e76f4de`, bounded in `d4c98598`).** `hook_executor.py:2283`
+   called `adapter_factory.create_adapter(hook.name)`, passing a *tool* name
    (`"ruff-check"`) to a factory keyed by *adapter* name (`"Ruff"`). Every
    call raised `ValueError: Unknown adapter: ruff-check`, and the
    `except Exception` around it swallowed the error — so the QA-result path
@@ -341,24 +341,29 @@ the fourth is recorded here so the work is not lost.
    production read it, so it had drifted: it held `"ruff"` where the hook
    chain uses `"ruff-check"` and `"ruff-format"`, and the hook executor
    kept its own stale 26-name duplicate advertising adapters that do not
-   exist. The lookup now goes through `get_adapter_name()`, the table has
-   the hook names, and the duplicate is gone. A failing `ruff-check` hook
-   produces a real `QAResult` again.
+   exist. The lookup now goes through `get_adapter_name()`, the table has the
+   hook names, and the duplicate is gone.
 
-   **The remaining gap is a separate, larger one.** `HookResult.qa_result`
-   (`crackerjack/models/task.py:56`) is written by the executor and read by
-   **nothing** — `git log -S "result.qa_result" --all` returns no commit
-   that ever read it. The field has been write-only since it was added.
-   `issues_found` still comes from the per-hook regex text parsers
-   (`_parse_ruff_issues`, `_parse_semgrep_issues`, …), with
-   `_handle_no_issues_for_failed_hook` supplying a last-resort fallback
-   (`"Hook exited with code N but reported no parseable issues"`). So the
-   adapter's structured `parsed_issues` — dicts of `file_path`,
-   `line_number`, `column_number`, `message`, `code`, `severity`,
-   `suggestion` — are computed and then discarded. Merging them into
-   `issues_found` is **building a feature, not restoring a regression**, and
-   it changes user-visible report content, so it is left as a decision.
+   **Making the path live exposed what the bug had been hiding.** The adapter
+   *re-runs* the tool it reports on, over the whole package, with its own
+   300-second default timeout — so a failing hook would have paid a second
+   full scan, and a failing `semgrep` hook made the test suite hang for
+   minutes. Three corrections: the adapter runs only when the hook failed
+   *and* the text parsers produced no issues (the one case where a structured
+   report is worth a second run); the adapter's budget is the hook's budget
+   (`DefaultAdapterFactory.create_settings()` builds the adapter-specific
+   settings class with the timeout override applied); and the adapter's
+   structured issues are now *used* — they become the fallback for a failed
+   hook that produced nothing parseable, in place of `"hook exited with code
+   N but reported no parseable issues"`, flattened to the same
+   `<path>:<line> - <code>: <message>` shape the per-hook parsers produce.
 
+   `HookResult.qa_result` (`crackerjack/models/task.py:56`) is still written
+   and read by nothing — `git log -S "result.qa_result" --all` returns no
+   commit that ever read it. The field has been write-only since it was
+   added. The path now uses the adapter's issues, but the field itself is
+   still unconsumed; whether it should exist is a design question, not a
+   defect.
 2. **A `MODULE_ID` UUID collision — FIXED 2026-11-14 (`ab0b24dd`).** The dead
    `adapters/benchmark/adapter.py:31` and the **live**
    `adapters/ai/unified.py:16` both declared
