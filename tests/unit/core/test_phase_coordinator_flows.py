@@ -1042,12 +1042,12 @@ class TestPrepareJsoncFilesBeforeRetry:
 
     def test_no_last_results_noop(self, coordinator: PhaseCoordinator) -> None:
         coordinator._last_hook_results = []
-        # Must not raise; should not call AutofixCoordinator
+        # Must not raise; should not call the stripper
         with patch(
-            "crackerjack.core.autofix_coordinator.AutofixCoordinator"
-        ) as mock_cls:
+            "crackerjack.tools.jsonc.strip_jsonc_comments_from_failed_json_files"
+        ) as mock_strip:
             coordinator._prepare_jsonc_files_before_retry()
-        mock_cls.assert_not_called()
+        mock_strip.assert_not_called()
 
     def test_no_json_failures_noop(self, coordinator: PhaseCoordinator) -> None:
         coordinator._last_hook_results = [
@@ -1060,10 +1060,10 @@ class TestPrepareJsoncFilesBeforeRetry:
             ),
         ]
         with patch(
-            "crackerjack.core.autofix_coordinator.AutofixCoordinator"
-        ) as mock_cls:
+            "crackerjack.tools.jsonc.strip_jsonc_comments_from_failed_json_files"
+        ) as mock_strip:
             coordinator._prepare_jsonc_files_before_retry()
-        mock_cls.assert_not_called()
+        mock_strip.assert_not_called()
 
     def test_json_failures_triggers_strip(
         self, coordinator: PhaseCoordinator
@@ -1084,14 +1084,12 @@ class TestPrepareJsoncFilesBeforeRetry:
                 issues_count=1,
             ),
         ]
-        mock_coordinator = MagicMock()
-        mock_coordinator._strip_jsonc_comments_from_failed_json_files.return_value = "ok"
         with patch(
-            "crackerjack.core.autofix_coordinator.AutofixCoordinator",
-            return_value=mock_coordinator,
-        ):
+            "crackerjack.tools.jsonc.strip_jsonc_comments_from_failed_json_files",
+            return_value=True,
+        ) as mock_strip:
             coordinator._prepare_jsonc_files_before_retry()
-        mock_coordinator._strip_jsonc_comments_from_failed_json_files.assert_called_once()
+        mock_strip.assert_called_once_with(coordinator.pkg_path)
 
     def test_json_failure_with_exception_logs(
         self, coordinator: PhaseCoordinator
@@ -1107,7 +1105,7 @@ class TestPrepareJsoncFilesBeforeRetry:
             ),
         ]
         with patch(
-            "crackerjack.core.autofix_coordinator.AutofixCoordinator",
+            "crackerjack.tools.jsonc.strip_jsonc_comments_from_failed_json_files",
             side_effect=RuntimeError("boom"),
         ):
             # Should not raise

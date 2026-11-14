@@ -20,7 +20,6 @@ CRITICAL_MODULES = [
     "crackerjack.services.memory_optimizer",
     "crackerjack.config",
     "crackerjack.managers.test_manager",
-    "crackerjack.core.autofix_coordinator",
 ]
 
 

@@ -21,7 +21,6 @@ from rich.table import Table
 from crackerjack.cli.formatting import separator as make_separator
 from crackerjack.code_cleaner import CodeCleaner
 from crackerjack.config import get_console_width
-from crackerjack.core.autofix_coordinator import AutofixCoordinator
 from crackerjack.core.console import CrackerjackConsole
 from crackerjack.core.eventbridge_publisher import (
     publish_test_completed,
@@ -36,7 +35,6 @@ from crackerjack.services.frontmatter_validator import (
     FrontmatterValidationResult,
     FrontmatterValidator,
 )
-from crackerjack.services.memory_optimizer import create_lazy_service
 
 FileSystemCache = t.Any
 GitOperationCache = t.Any
@@ -178,12 +176,6 @@ class PhaseCoordinator:
         self._last_hook_summary: dict[str, t.Any] | None = None
         self._last_hook_results: list[HookResult] = []
 
-        self._lazy_autofix = create_lazy_service(
-            lambda: AutofixCoordinator(
-                pkg_path=pkg_path,
-            ),
-            "autofix_coordinator",
-        )
         self.console.print()
 
         self._fast_hooks_started: bool = False

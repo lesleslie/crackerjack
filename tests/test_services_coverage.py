@@ -92,11 +92,6 @@ class TestCoreModulesZeroCoverage:
 
         assert async_workflow_module is not None
 
-    def test_autofix_coordinator_import(self) -> None:
-        import crackerjack.core.autofix_coordinator as autofix_module
-
-        assert autofix_module is not None
-
     def test_performance_import(self) -> None:
         import crackerjack.core.performance as performance_module
 
