@@ -454,7 +454,7 @@ class PhaseCoordinator:
         return success
 
     def _prepare_jsonc_files_before_retry(self) -> None:
-        from crackerjack.core.autofix_coordinator import AutofixCoordinator
+        from crackerjack.tools.jsonc import strip_jsonc_comments_from_failed_json_files
 
         if not self._last_hook_results:
             self.logger.debug("No last hook results, skipping JSONC prep")
@@ -475,11 +475,7 @@ class PhaseCoordinator:
         )
 
         try:
-            coordinator = AutofixCoordinator(
-                console=self.console,  # type: ignore
-                pkg_path=self.pkg_path,
-            )
-            result = coordinator._strip_jsonc_comments_from_failed_json_files()
+            result = strip_jsonc_comments_from_failed_json_files(self.pkg_path)
             self.logger.info(f"JSONC stripping completed with result: {result}")
         except Exception as e:
             self.logger.exception(f"JSONC pre-retry stripping failed: {e}")
