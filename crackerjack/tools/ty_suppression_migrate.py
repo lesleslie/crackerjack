@@ -67,6 +67,7 @@ SKIP_DIRS = frozenset(
         ".crackerjack_cache",
         ".tox",
         ".worktrees",
+        ".archive",
         "site-packages",
     }
 )
