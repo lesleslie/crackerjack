@@ -94,5 +94,3 @@ _Regenerated 2026-11-14 by `crackerjack.tools.plan_index_sync` (phase)._
 | `historical` | · | · | · | · | 1 | **1** |
 | `superseded` | · | · | · | · | · | **0** |
 | **Total** | **17** | **34** | **·** | **·** | **6** | **57** |
-
-<!-- tampered for test -->
