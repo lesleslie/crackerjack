@@ -11,6 +11,7 @@ from crackerjack.core.console import CrackerjackConsole
 from crackerjack.core.eventbridge_resolver import resolve_event_publisher
 from crackerjack.core.phase_coordinator import PhaseCoordinator
 from crackerjack.core.session_coordinator import SessionCoordinator
+from crackerjack.models.config import CleanupConfig
 from crackerjack.models.protocols import ConsoleInterface
 from crackerjack.runtime.oneiric_workflow import (
     build_oneiric_runtime,
@@ -58,6 +59,7 @@ class WorkflowPipeline:
 
     async def run_complete_workflow(self, options: t.Any) -> bool:
         self._initialize_workflow_session(options)
+        self._configure_session_cleanup(options)
         runtime = build_oneiric_runtime()
         # The orchestrator is built with enable_workflow_checkpoints=False
         # (see build_oneiric_runtime), so there is no persistent task
@@ -84,10 +86,12 @@ class WorkflowPipeline:
                 self.logger.error("Workflow failed: %s", str(exc))
             self.session.finalize_session(self.session.start_time, success=False)
             return False
-
-        success = _workflow_result_success(result)
-        self.session.finalize_session(self.session.start_time, success=success)
-        return success
+        else:
+            success = _workflow_result_success(result)
+            self.session.finalize_session(self.session.start_time, success=success)
+            return success
+        finally:
+            self._cleanup_session_artifacts()
 
     def _wire_event_publisher(self, runtime: t.Any) -> None:
         if self._bridge_resolver is None:
@@ -117,7 +121,37 @@ class WorkflowPipeline:
         return self.phases.run_fast_hooks_only(options)  # type: ignore
 
     def _configure_session_cleanup(self, options: t.Any) -> None:
-        pass
+        """Hand the session its artifact-cleanup policy.
+
+        ``CleanupSettings`` carries the policy — whether to clean at all,
+        and how many of the newest coverage shards and debug logs to keep.
+        The session needs it as a ``CleanupConfig`` before the workflow
+        runs, because the teardown in :meth:`run_complete_workflow` reads
+        it when it prunes.
+
+        This was a stub that nothing called, so the session never
+        received a cleanup policy at all. It is now called on every run
+        and takes the configured policy.
+        """
+        cleanup_settings = getattr(self.settings, "cleanup", None)
+        if cleanup_settings is None:
+            return
+        self.session.set_cleanup_config(CleanupConfig.from_settings(cleanup_settings))
+
+    def _cleanup_session_artifacts(self) -> None:
+        """Prune the session's stale artifacts once the workflow is done.
+
+        Runs on every exit path — success, failure, and cancellation — so
+        a crashed run does not leave the next one to clean up after it.
+
+        The workflow's verdict is already decided by the time this runs,
+        so a cleanup failure is logged and swallowed rather than allowed
+        to change the outcome.
+        """
+        try:
+            self.session.cleanup_resources()
+        except Exception as exc:
+            self.logger.debug("Session artifact cleanup failed: %s", exc)
 
     def _configure_hook_manager_lsp(self, options: t.Any) -> None:
         pass

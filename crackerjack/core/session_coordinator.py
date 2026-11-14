@@ -17,6 +17,24 @@ from crackerjack.utils.path_redaction import redact_path
 
 logger = logging.getLogger(__name__)
 
+# Coverage artifacts that look like coverage data but carry state other
+# parts of the toolchain depend on. They are never cleanup candidates:
+#
+# - ``.coverage-ratchet.json`` is the enforced coverage floor. Deleting it
+#   silently drops the floor, and the release audit then treats the repo
+#   as having no ratchet at all — it skips the coverage claim instead of
+#   certifying it.
+# - ``coverage.json`` is pytest-cov's JSON report. The ratchet records its
+#   mtime and the release audit reads it for the measured-coverage
+#   tolerance check, so removing it invalidates the ratchet that
+#   describes it.
+#
+# The exclusion is explicit rather than a side effect of the glob: the
+# candidate pattern is free to widen without these being caught.
+PROTECTED_COVERAGE_ARTIFACTS: frozenset[str] = frozenset(
+    {".coverage-ratchet.json", "coverage.json"}
+)
+
 if t.TYPE_CHECKING:
     from crackerjack.core.workflow_orchestrator import WorkflowPipeline
     from crackerjack.integration.git_metrics_integration import (
@@ -424,9 +442,26 @@ class SessionCoordinator:
                 logger.debug(f"File not found: {redact_path(file_path)}")
 
     def _cleanup_coverage_files(self, keep_recent: int | None = None) -> None:
-        pattern = ".coverage.*"
+        """Remove stale coverage.py data shards, keeping the newest ``keep_recent``.
+
+        The candidates are coverage.py's per-process data shards
+        (``.coverage.<host>.<pid>.<random>``), which accumulate one per
+        parallel pytest worker and are never read once the run ends.
+
+        Two nearby files are deliberately left alone. ``.coverage`` is the
+        SQLite database that ``coverage report`` consumes, and
+        ``coverage.json`` is pytest-cov's JSON report — the ratchet records
+        its mtime and the release audit reads it for the measured-coverage
+        tolerance check. Both are named in
+        :data:`PROTECTED_COVERAGE_ARTIFACTS` so that widening the
+        candidate pattern cannot start deleting the ratchet.
+        """
         coverage_files = sorted(
-            self.pkg_path.glob(pattern),
+            (
+                path
+                for path in self.pkg_path.glob(".coverage.*")
+                if path.name not in PROTECTED_COVERAGE_ARTIFACTS
+            ),
             key=lambda p: p.stat().st_mtime,
             reverse=True,
         )
