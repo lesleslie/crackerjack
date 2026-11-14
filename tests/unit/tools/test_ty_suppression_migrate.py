@@ -220,3 +220,29 @@ class TestNoTrailingWhitespace:
     def test_kept_comment_keeps_its_leading_whitespace(self) -> None:
         text = "value = compute()  # ty: ignore[missing-attribute]\n"
         assert strip_directives(text, set()) == text
+
+
+class TestDocumentedDirectivesAreNotDirectives:
+    """A comment can write about a directive instead of using one.
+
+    ``# ``# type: ignore[import-not-found]`` directive covers Mypy/Pyright``
+    is prose about a directive. Rewriting it would mangle the documentation,
+    so a directive inside a backtick-quoted run is not a directive.
+    """
+
+    def test_a_directive_in_backticks_is_not_found(self) -> None:
+        text = "# ``# type: ignore[import-not-found]`` directive covers Mypy/Pyright\n"
+        assert find_directives(text) == []
+
+    def test_a_directive_in_backticks_is_not_rewritten(self) -> None:
+        text = "# ``# type: ignore[import-not-found]`` directive covers Mypy/Pyright\n"
+        comments = find_comments(text)
+        assert comments[0].mypy == ()
+        stripped = strip_directives(text, {(comments[0].line, comments[0].col)})
+        assert stripped == text
+
+    def test_a_real_directive_next_to_backticked_text_is_still_found(self) -> None:
+        text = "x = 1  # type: ignore[assignment]  # see ``# type: ignore`` docs\n"
+        directives = find_directives(text)
+        assert len(directives) == 1
+        assert directives[0].kind == "bracketed"

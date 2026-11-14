@@ -103,6 +103,25 @@ class Comment:
         return self.mypy_bare + self.mypy_bracketed
 
 
+RE_BACKTICK_RUN = re.compile(r"``[^`]*``|`[^`]*`")
+
+
+def _backtick_mask(body: str) -> list[bool]:
+    """Mark every character of ``body`` that sits inside a backtick run.
+
+    A comment that *documents* a directive writes it in backticks — ``# type:
+    ignore[import-not-found]`` directive covers Mypy/Pyright``. That is prose
+    about a directive, not a directive, and rewriting it would mangle the
+    documentation. The run is computed over the whole body because it
+    straddles the ``#`` that separates the comment's segments.
+    """
+    mask = [False] * len(body)
+    for match in RE_BACKTICK_RUN.finditer(body):
+        for index in range(match.start(), match.end()):
+            mask[index] = True
+    return mask
+
+
 def _classify(body: str) -> tuple[list[str], list[str], list[str], str]:
     """Split a comment body into mypy directives, ty directives and prose.
 
@@ -116,12 +135,21 @@ def _classify(body: str) -> tuple[list[str], list[str], list[str], str]:
     bracketed: list[str] = []
     ty: list[str] = []
     prose: list[str] = []
+    mask = _backtick_mask(body)
+
+    def in_backticks(start: int, end: int) -> bool:
+        return any(mask[start:end])
+
+    offset = 0
     for segment in body.split("#"):
         stripped = segment.strip()
+        lead = len(segment) - len(segment.lstrip())
+        base = offset + lead
+        offset += len(segment) + 1
         if not stripped:
             continue
         match = RE_MYPY_LOOSE.search(stripped)
-        if match:
+        if match and not in_backticks(base + match.start(), base + match.end()):
             raw = match.group(0)
             if "[" in raw:
                 bracketed.append(raw)
@@ -134,7 +162,7 @@ def _classify(body: str) -> tuple[list[str], list[str], list[str], str]:
                 prose.append(remainder)
             continue
         match = RE_TY_LOOSE.search(stripped)
-        if match:
+        if match and not in_backticks(base + match.start(), base + match.end()):
             ty.append(match.group(0))
             remainder = (
                 stripped[: match.start()] + " " + stripped[match.end() :]
