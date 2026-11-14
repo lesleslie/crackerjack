@@ -8,4 +8,3 @@ Documentation helpers and build-time utilities used by the package.
 
 - [Crackerjack Package](../README.md) - Parent package
 - [Docs](../docs/README.md) - Generated documentation assets
-- [Agents](../agents/README.md) - AI agents including DocumentationAgent

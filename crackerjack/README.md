@@ -14,6 +14,5 @@ See project root `README.md` and `docs/` for details.
 
 - [Main Documentation](../README.md) - Project overview and getting started
 - [CLAUDE.md](../CLAUDE.md) - Architecture and development guidelines
-- [Agents](./agents/README.md) - AI agent system
 - [CLI](./cli/README.md) - Command-line interface
 - [MCP](./mcp/README.md) - Model Context Protocol server

@@ -215,16 +215,12 @@ embedding_model: "text-embedding-3-small"
 embedding_dimension: 1536
 ```
 
-## Integration with Agent System
+## Integration with the AI Provider
 
-AI services integrate with crackerjack's 12 specialized agents:
-
-- **RefactoringAgent** - Uses AI for intelligent refactoring suggestions
-- **SemanticAgent** - Leverages embeddings for semantic analysis
-- **EnhancedProactiveAgent** - Uses predictive analytics for prevention
-- **ArchitectAgent** - Uses AI for architectural recommendations
-
-See [Intelligence](../../intelligence/README.md) for agent system details.
+These services call the configured provider (`ai_provider` / `ai_model`)
+directly. The in-package agent runtime that used to sit between them was
+removed in the 2026-08-12 refactor (commit 907ab860); the agent loop now runs
+outside the package, in `.claude/workflows/ai-fix-loop.js`.
 
 ## Security & Privacy
 
@@ -279,8 +275,6 @@ await limiter.acquire()
 1. **Handle Failures Gracefully** - Implement fallbacks when AI unavailable
 
 ## Related
-
-- [Intelligence](../../intelligence/README.md) - Agent orchestration and selection
 
 - [Services](../README.md) - Parent services documentation
 

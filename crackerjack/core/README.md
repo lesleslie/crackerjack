@@ -376,8 +376,6 @@ Based on Phase 2-4 refactoring audit:
 
 - [Managers](../managers/README.md) - Service implementations
 
-- [Agents](../agents/README.md) - AI agent system
-
 ## Future Enhancements
 
 - Complete DI migration for `ServiceWatchdog`

@@ -310,8 +310,6 @@ python -m crackerjack restart
 
 ## Related
 
-- [Agents](../agents/README.md) — AI agents that MCP coordinates
-
 - [Main README](../../README.md) — MCP integration overview
 
 ## Future Enhancements
