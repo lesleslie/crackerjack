@@ -88,6 +88,18 @@ topic: changelog
 
 ### Removed
 
+- adapters: `crackerjack.adapters.type.ty.py` — the stale first copy of the
+  `ty` adapter. `crackerjack/adapters/type/ty_adapter.py` has carried the
+  same `TySettings`/`TyAdapter` classes and the same `MODULE_ID` UUID
+  (25e1e5cf-d1f8-485e-85ab-01c8b540734a) since the module was renamed.
+  The rename was deliberate: a module at
+  `crackerjack/adapters/type/ty.py` puts `ty` in the import path of every
+  `from crackerjack.adapters.type.ty import ...` statement, which
+  satisfies the third-party `ty` distribution and makes creosote report
+  its `exclude-deps` entry as redundant. The old copy was left behind;
+  importing it would have registered a second adapter class claiming an
+  identity the factory already knows. See
+  `docs/decisions/2026-11-01-ty-adapter-module-name-shadows-ty-distribution.md`.
 - core: The dead AI-fix module cluster. The AI-fix stage was removed
   from production in the 2026-08-12 refactor (commit 907ab860), but its
   skeleton stayed behind. Reachability was computed with an AST sweep
