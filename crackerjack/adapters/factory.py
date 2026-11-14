@@ -11,8 +11,17 @@ logger = logging.getLogger(__name__)
 
 
 class DefaultAdapterFactory(AdapterFactoryProtocol):
+    #: Every name a tool may be referred to by, mapped to the adapter that
+    #: serves it. Two naming systems meet here: the *tool* names
+    #: ("ruff", "bandit") that the MCP server and the adapter classes use,
+    #: and the *hook* names ("ruff-check", "ruff-format") that the hook
+    #: chain is configured with. The hook executor looks an adapter up by
+    #: hook name, so both have to be present -- the hook chain splits
+    #: ruff into a linter and a formatter, while the adapter is one class.
     TOOL_TO_ADAPTER_NAME: t.ClassVar[dict[str, str]] = {
         "ruff": "Ruff",
+        "ruff-check": "Ruff",
+        "ruff-format": "Ruff",
         "bandit": "Bandit",
         "semgrep": "Semgrep",
         "refurb": "Refurb",

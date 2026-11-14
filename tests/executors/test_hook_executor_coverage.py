@@ -1874,17 +1874,57 @@ class TestTryGetQaResultForHook:
 
 
 # ---------------------------------------------------------------------------
-# _tool_has_qa_adapter
+# QA-adapter lookup
 # ---------------------------------------------------------------------------
 
 
-class TestToolHasQaAdapter:
-    def test_known_tool(self, executor: HookExecutor) -> None:
-        assert executor._tool_has_qa_adapter("complexipy") is True
-        assert executor._tool_has_qa_adapter("ruff-format") is True
+class TestQaAdapterLookup:
+    """The factory is keyed by adapter name; the hook chain names tools.
 
-    def test_unknown_tool(self, executor: HookExecutor) -> None:
-        assert executor._tool_has_qa_adapter("nope") is False
+    Passing the hook name straight to ``create_adapter`` raised
+    ``ValueError: Unknown adapter: ruff-check``, and the ``except
+    Exception`` around it swallowed that -- so the QA-result path
+    produced nothing for every tool.
+    """
+
+    def test_hook_name_resolves_to_adapter_name(
+        self, executor: HookExecutor
+    ) -> None:
+        """A failing ``ruff-check`` hook must reach the factory as "Ruff"."""
+        hook = HookDefinition(name="ruff-check", command=[], timeout=5)
+        result = _completed(returncode=1)
+
+        factory = MagicMock()
+        # ``DefaultAdapterFactory()`` must return this same mock, otherwise
+        # the code under test talks to ``factory.return_value`` and none of
+        # the expectations below are ever reached.
+        factory.return_value = factory
+        factory.get_adapter_name = MagicMock(return_value="Ruff")
+        factory.create_adapter = MagicMock(return_value=MagicMock())
+
+        with patch("crackerjack.adapters.factory.DefaultAdapterFactory", factory):
+            executor._try_get_qa_result_for_hook(hook, result, 1.0)
+
+        factory.get_adapter_name.assert_called_once_with("ruff-check")
+        factory.create_adapter.assert_called_once_with("Ruff")
+
+    def test_tool_without_an_adapter_is_skipped(
+        self, executor: HookExecutor
+    ) -> None:
+        """A hook with no adapter in the factory's map returns None."""
+        hook = HookDefinition(name="check-yaml", command=[], timeout=5)
+        result = _completed(returncode=1)
+
+        factory = MagicMock()
+        factory.return_value = factory
+        factory.get_adapter_name = MagicMock(return_value=None)
+        factory.create_adapter = MagicMock(return_value=MagicMock())
+
+        with patch("crackerjack.adapters.factory.DefaultAdapterFactory", factory):
+            out = executor._try_get_qa_result_for_hook(hook, result, 1.0)
+
+        assert out is None
+        factory.create_adapter.assert_not_called()
 
 
 # ---------------------------------------------------------------------------

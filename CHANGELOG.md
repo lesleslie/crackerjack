@@ -14,6 +14,19 @@ topic: changelog
 
 ### Fixed
 
+- executors: The QA-result path in the hook executor never ran. It called
+  `create_adapter(hook.name)`, passing a *tool* name ("ruff-check") to a
+  factory keyed by *adapter* name ("Ruff"). Every call raised
+  `ValueError: Unknown adapter: ruff-check`, and the `except Exception`
+  around it swallowed the error — so when a hook failed, the structured
+  QA failure report that was supposed to replace the raw subprocess dump
+  never appeared, for any tool. The lookup now goes through
+  `DefaultAdapterFactory.get_adapter_name()`, the table that already
+  carried the mapping. That table was missing the hook names the chain
+  actually uses ("ruff-check" and "ruff-format", not "ruff"), which
+  is why nothing resolved; both are now present, and the hook
+  executor's own 26-name table — a stale duplicate that advertised
+  adapters which do not exist — is gone.
 - coverage: The release audit refused a present, readable coverage ratchet
   with "ratchet file could not be read". `update_coverage()` only wrote
   `.coverage-ratchet.json` on the *improved* path, so a repo whose

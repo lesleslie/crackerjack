@@ -2261,9 +2261,6 @@ class HookExecutor:
         duration: float,
     ) -> t.Any | None:
 
-        if not self._tool_has_qa_adapter(hook.name):
-            return None
-
         if result.returncode == 0 and hook.name not in {
             "complexipy",
             "refurb",
@@ -2280,7 +2277,22 @@ class HookExecutor:
             from crackerjack.models.qa_results import QACheckType
 
             adapter_factory = DefaultAdapterFactory()
-            adapter = adapter_factory.create_adapter(hook.name)
+
+            # The hook names a *tool*; the factory is keyed by *adapter*
+            # name. ``DefaultAdapterFactory.TOOL_TO_ADAPTER_NAME`` is the
+            # translation, and it is the only place that knows it.
+            #
+            # Passing the hook name straight through raised
+            # ``ValueError: Unknown adapter: ruff-check``, which the
+            # ``except Exception`` below swallowed -- so the QA-result path
+            # silently produced nothing for every tool, and the structured
+            # failure report that was supposed to replace a raw subprocess
+            # dump never appeared.
+            adapter_name = adapter_factory.get_adapter_name(hook.name)
+            if adapter_name is None:
+                return None
+
+            adapter = adapter_factory.create_adapter(adapter_name)
 
             if adapter is None:
                 return None
@@ -2330,39 +2342,6 @@ class HookExecutor:
                     f"[yellow]QA adapter failed for '{hook.name}': {e}[/yellow]"
                 )
             return None
-
-    def _tool_has_qa_adapter(self, tool_name: str) -> bool:
-
-        tools_with_adapters = {
-            "complexipy",
-            "ruff",
-            "ruff-format",
-            "mypy",
-            "pyright",
-            "pylint",
-            "bandit",
-            "semgrep",
-            "codespell",
-            "refurb",
-            "creosote",
-            "pyscn",
-            "pytest",
-            "mdformat",
-            "check-yaml",
-            "check-toml",
-            "check-json",
-            "check-jsonschema",
-            "check-ast",
-            "trailing-whitespace",
-            "end-of-file-fixer",
-            "format-json",
-            "linkcheckmd",
-            "local-link-checker",
-            "validate-regex-patterns",
-            "gitleaks",
-        }
-
-        return tool_name in tools_with_adapters
 
     def _print_summary(
         self,

@@ -27,6 +27,33 @@ class TestDefaultAdapterFactory:
         assert factory.TOOL_TO_ADAPTER_NAME["pyrefly"] == "Pyrefly"
         assert factory.TOOL_TO_ADAPTER_NAME["ty"] == "Ty"
 
+    def test_hook_names_resolve_to_adapters(self):
+        """The hook chain names ruff-check/ruff-format; the adapter is one class.
+
+        The hook executor looks an adapter up by hook name, so a hook name
+        that is missing from the map means no QA result -- which is what
+        made the QA-result path produce nothing for every tool.
+        """
+        factory = DefaultAdapterFactory()
+        assert factory.get_adapter_name("ruff-check") == "Ruff"
+        assert factory.get_adapter_name("ruff-format") == "Ruff"
+        assert factory.get_adapter_name("semgrep") == "Semgrep"
+        assert factory.get_adapter_name("refurb") == "Refurb"
+        assert factory.get_adapter_name("ty") == "Ty"
+        assert factory.get_adapter_name("pyrefly") == "Pyrefly"
+
+    def test_hook_without_an_adapter_maps_to_none(self):
+        """Tools whose adapter is not in the factory must map to None.
+
+        Not to an adapter name: ``create_adapter`` raises
+        ``ValueError`` for names it cannot build, and the hook executor
+        relies on ``None`` to skip the tool cleanly.
+        """
+        factory = DefaultAdapterFactory()
+        for tool_name in ("complexipy", "gitleaks", "codespell", "mdformat"):
+            assert factory.get_adapter_name(tool_name) is None
+            assert factory.tool_has_adapter(tool_name) is False
+
     def test_init_with_defaults(self):
         factory = DefaultAdapterFactory()
         assert factory.settings is None
