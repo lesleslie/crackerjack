@@ -64,7 +64,7 @@ class TestStripDirectives:
         text = "value = compute()  # type: ignore[assignment]\n"
         directives = find_directives(text)
         stripped = strip_directives(text, {(directives[0].line, directives[0].col)})
-        assert stripped == "value = compute()  \n"
+        assert stripped == "value = compute()\n"
 
     def test_preserves_the_line_count(self) -> None:
         text = "a = 1  # type: ignore[assignment]\nb = 2\nc = 3\n"
@@ -79,7 +79,7 @@ class TestStripDirectives:
             text, {(comments[0].line, comments[0].col)}, kinds=("bare",)
         )
         assert "# type: ignore[assignment]" in stripped
-        assert stripped.splitlines()[0] == "a = 1  "
+        assert stripped.splitlines()[0] == "a = 1"
 
 
 class TestConvertBlanket:
@@ -206,3 +206,17 @@ class TestProseSurvivesDirectiveRemoval:
         comments = find_comments(text)
         stripped = strip_directives(text, {(comments[0].line, comments[0].col)})
         assert stripped == "x = 1  # type: ignore\n"
+
+
+class TestNoTrailingWhitespace:
+    """Removing a comment must not leave the line padded with spaces."""
+
+    def test_trailing_comment_removal_strips_the_whitespace_before_it(self) -> None:
+        text = "value = compute()  # type: ignore[assignment]\n"
+        directives = find_directives(text)
+        stripped = strip_directives(text, {(directives[0].line, directives[0].col)})
+        assert stripped == "value = compute()\n"
+
+    def test_kept_comment_keeps_its_leading_whitespace(self) -> None:
+        text = "value = compute()  # ty: ignore[missing-attribute]\n"
+        assert strip_directives(text, set()) == text

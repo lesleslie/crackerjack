@@ -223,7 +223,8 @@ def _apply_edits(text: str, edits: list[tuple[int, int, int, str]]) -> str:
     """Replace spans ``(line, col, end_col, replacement)`` in ``text``.
 
     Line count is preserved so that diagnostics ty reports afterwards map
-    back onto the original lines.
+    back onto the original lines. Removing a comment entirely also takes the
+    whitespace that preceded it, so the line does not end in trailing spaces.
     """
     lines = text.splitlines(keepends=True)
     by_line: dict[int, list[tuple[int, int, str]]] = {}
@@ -232,7 +233,10 @@ def _apply_edits(text: str, edits: list[tuple[int, int, int, str]]) -> str:
     for line_number, spans in by_line.items():
         original = lines[line_number - 1]
         for col, end_col, replacement in sorted(spans, reverse=True):
-            original = original[:col] + replacement + original[end_col:]
+            head = original[:col]
+            if not replacement:
+                head = head.rstrip()
+            original = head + replacement + original[end_col:]
         lines[line_number - 1] = original
     return "".join(lines)
 
