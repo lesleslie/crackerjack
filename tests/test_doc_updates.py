@@ -11,7 +11,9 @@ This test suite verifies the AI-powered documentation update feature:
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
+from types import ModuleType
 from unittest.mock import Mock
 
 import pytest
@@ -210,7 +212,16 @@ class TestGenerateDocUpdates:
             mock_response.content = [mock_message]
             return mock_response
 
-        import anthropic  # noqa: F401 - used in monkeypatch.setattr
+        # ``doc_update_service`` imports ``anthropic`` lazily and treats
+        # it as optional -- it catches ImportError and reports "not
+        # installed". This test replaces ``anthropic.Anthropic`` so no
+        # request leaves the process, so it never needed the real
+        # package: only a module object carrying that attribute.
+        # Installing a stub keeps the test runnable where the optional
+        # dependency is absent.
+        anthropic_stub = ModuleType("anthropic")
+        anthropic_stub.Anthropic = Mock()
+        monkeypatch.setitem(sys.modules, "anthropic", anthropic_stub)
 
         # Mock at client level
         def mock_client_init(*args, **kwargs):
@@ -412,7 +423,16 @@ class TestUpdateDocumentation:
             mock_response.content = [mock_message]
             return mock_response
 
-        import anthropic  # noqa: F401 - used in monkeypatch.setattr
+        # ``doc_update_service`` imports ``anthropic`` lazily and treats
+        # it as optional -- it catches ImportError and reports "not
+        # installed". This test replaces ``anthropic.Anthropic`` so no
+        # request leaves the process, so it never needed the real
+        # package: only a module object carrying that attribute.
+        # Installing a stub keeps the test runnable where the optional
+        # dependency is absent.
+        anthropic_stub = ModuleType("anthropic")
+        anthropic_stub.Anthropic = Mock()
+        monkeypatch.setitem(sys.modules, "anthropic", anthropic_stub)
 
         # Mock at client level
         def mock_client_init(*args, **kwargs):

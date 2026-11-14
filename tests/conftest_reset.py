@@ -15,7 +15,7 @@ Usage:
 from __future__ import annotations
 
 import asyncio
-import sys
+import importlib
 from contextlib import contextmanager
 from typing import TYPE_CHECKING
 
@@ -170,11 +170,60 @@ def clear_lru_caches() -> None:
         pass
 
 
-def clear_oneiric_modules() -> None:
-    """Clear oneiric modules from sys.modules."""
-    modules_to_clear = [k for k in list(sys.modules.keys()) if k.startswith("oneiric")]
-    for mod in modules_to_clear:
-        del sys.modules[mod]
+def reset_oneiric_state() -> None:
+    """Reset oneiric's cross-test state without breaking class identity.
+
+    This used to evict every ``oneiric.*`` entry from ``sys.modules``.
+    That was the blunt way to reset oneiric's state, and it breaks
+    ``isinstance`` checks: a module that was already imported keeps the
+    OLD class object, while a fresh import produces a NEW one with the
+    same name. Pydantic validates by identity, so a ``OneiricSettings``
+    built before the eviction rejects an ``OTelStorageSettings``
+    instance built after it -- and ``OneiricSettings`` has exactly two
+    such fields, ``observability`` and ``auth``.
+
+    The mechanism: ``oneiric.core.config`` was imported at collection
+    time, so its ``observability`` annotation resolved to the
+    ``OTelStorageSettings`` class of that generation. The eviction
+    removed the module, but the already-imported
+    ``crackerjack.runtime.oneiric_workflow`` still held the old
+    ``OneiricSettings``, whose default factory performs a *fresh*
+    ``from oneiric.adapters.observability.settings import
+    OTelStorageSettings`` at call time -- and got the new generation.
+    Same name, different class, validation error.
+
+    oneiric ships a targeted escape hatch for precisely this
+    (``clear_project_settings_cache`` -- "Test-only escape hatch"), so
+    reset the state instead of the modules.
+    """
+    # Public escape hatch: the memoized per-project settings models.
+    try:
+        from oneiric.core.build_settings import clear_project_settings_cache
+
+        clear_project_settings_cache()
+    except Exception:
+        pass
+
+    # Two more module-level caches in oneiric carry genuine per-test
+    # runtime state. They are private to oneiric, but the eviction this
+    # replaces used to reset them too, so resetting them keeps the
+    # isolation guarantee the autouse fixture promises.
+    #
+    # ``oneiric.modes.base._MODE_REGISTRY`` is deliberately NOT reset:
+    # it is a permanent registry filled by ``@register_mode`` decorators
+    # at import time, so clearing it would leave mode resolution empty
+    # until the module happened to be re-imported.
+    for module_name, attr in (
+        ("oneiric.core.resiliency", "_ADAPTIVE_RETRY_STATE"),
+        ("oneiric.adapters.observability.embeddings", "_EMBED_CACHE"),
+    ):
+        try:
+            module = importlib.import_module(module_name)
+            cache = getattr(module, attr, None)
+            if isinstance(cache, dict):
+                cache.clear()
+        except Exception:
+            pass
 
 
 def reset_all_singletons() -> None:
@@ -190,4 +239,4 @@ def reset_all_singletons() -> None:
     reset_connection_pool()
     reset_structlog()
     clear_lru_caches()
-    clear_oneiric_modules()
+    reset_oneiric_state()

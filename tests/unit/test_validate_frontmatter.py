@@ -357,42 +357,67 @@ def test_default_stores_have_no_duplicates_and_include_initiatives() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_vocab_file_not_found_error_when_default_missing(tmp_path: Path) -> None:
-    """load_seed_topics raises VocabFileNotFoundError when the default
-    docs/schemas/topic-vocabulary-v1.md is missing under repo_root.
+def test_vocab_file_not_found_error_when_explicit_path_missing(
+    tmp_path: Path,
+) -> None:
+    """load_seed_topics raises VocabFileNotFoundError for a missing explicit path.
 
-    Replaces the prior silent-degrade-to-set() behavior so the operator
-    sees a clear, named error with the path the validator tried to read
-    and the two documented fixes.
+    The *default* path can no longer be missing: oneiric ships the
+    vocabulary as a packaged resource, and the resolver prefers it over
+    the repo-local copy. So the reachable failure is an explicit
+    ``--vocab-path`` that points at nothing -- which is the case an
+    operator actually hits when they mistype the flag.
     """
     from crackerjack.services.frontmatter import (
         VocabFileNotFoundError,
         load_seed_topics,
     )
 
-    # tmp_path has no docs/schemas/ subdir, so the default path is missing
+    missing = tmp_path / "nope" / "topic-vocabulary-v1.md"
     with pytest.raises(VocabFileNotFoundError) as exc_info:
-        load_seed_topics(tmp_path)
-    # Error names the default path so the operator can see where the
-    # validator tried to look.
-    assert "docs/schemas/topic-vocabulary-v1.md" in str(exc_info.value)
+        load_seed_topics(tmp_path, vocab_path=missing)
+    # Error names the path so the operator can see where the validator
+    # tried to look.
+    assert str(missing) in str(exc_info.value)
     # And documents the two ways out: --vocab-path or --allow-nonstandard.
     assert "--vocab-path" in str(exc_info.value)
     assert "--allow-nonstandard" in str(exc_info.value)
 
 
-def test_load_seed_topics_allow_degrade_returns_empty_set(tmp_path: Path) -> None:
-    """load_seed_topics with allow_degrade=True returns empty set
-    instead of raising on missing vocab file.
+def test_load_seed_topics_falls_back_to_the_packaged_vocabulary(
+    tmp_path: Path,
+) -> None:
+    """A repo with no vocabulary file of its own still gets the controlled set.
 
-    This is the documented escape hatch for repos that don't carry
-    a topic vocabulary file: pass allow_degrade=True and the loader
-    yields an empty seed set so the rest of the validator sees
-    "every topic is unknown" warnings rather than a hard crash.
+    The resolver prefers the packaged ``oneiric.schemas`` resource over
+    the repo-local copy, so a repo that never carried a topic
+    vocabulary gets the canonical one instead of a hard failure. This
+    is what replaced the "default path is missing" case.
     """
     from crackerjack.services.frontmatter import load_seed_topics
 
-    seeds = load_seed_topics(tmp_path, allow_degrade=True)
+    seeds = load_seed_topics(tmp_path)
+    assert seeds, (
+        "the packaged vocabulary should yield a non-empty seed set, "
+        f"got {seeds!r}"
+    )
+
+
+def test_load_seed_topics_allow_degrade_returns_empty_set(tmp_path: Path) -> None:
+    """load_seed_topics with allow_degrade=True returns empty set
+    instead of raising on a missing vocab file.
+
+    This is the documented escape hatch: pass allow_degrade=True and the
+    loader yields an empty seed set so the rest of the validator sees
+    "every topic is unknown" warnings rather than a hard crash.
+
+    It needs an explicit path to reach, for the same reason the error
+    case does -- the packaged vocabulary satisfies the default.
+    """
+    from crackerjack.services.frontmatter import load_seed_topics
+
+    missing = tmp_path / "nope" / "topic-vocabulary-v1.md"
+    seeds = load_seed_topics(tmp_path, vocab_path=missing, allow_degrade=True)
     assert seeds == set()
 
 

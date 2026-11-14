@@ -882,9 +882,6 @@ export UV_PUBLISH_TOKEN=pypi-your-token-here
 # AI Integration (consumed by AI SDK clients, not crackerjack)
 export ANTHROPIC_API_KEY=sk-ant-...
 
-# Tool-native auto-fix (consumed by crackerjack/adapters/factory.py)
-export AI_AGENT=1
-
 # MCP server host/port — configured via pyproject.toml [tool.crackerjack]
 # mcp_http_host (default 127.0.0.1) and mcp_http_port (default 8676).
 # Crackerjack does NOT read CRACKERJACK_MCP_HOST / CRACKERJACK_MCP_PORT env vars;

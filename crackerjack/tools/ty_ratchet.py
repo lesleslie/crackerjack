@@ -112,7 +112,7 @@ def _include_glob(directory: str) -> str:
     normalised = directory.strip().rstrip("/")
     if normalised in {"", "."}:
         return "**/*.py"
-    if os.path.isabs(normalised):
+    if Path(normalised).is_absolute():
         normalised = os.path.relpath(normalised, Path.cwd())
     normalised = normalised.removeprefix("./")
     return f"{normalised}/**/*.py"

@@ -25,6 +25,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 from crackerjack.tools.ty_ratchet import (
     _count_diagnostics,
     _has_python_files,
@@ -644,6 +646,19 @@ class TestIncludeGlob:
 
     def test_empty_string_covers_everything(self) -> None:
         assert _include_glob("") == "**/*.py"
+
+    def test_absolute_dir_is_rebased_onto_the_cwd(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """An absolute directory comes back relative to the working directory.
+
+        The ratchet is invoked with ``--prod-dir``/``--test-dir`` that may
+        be absolute, but ty's ``src.include`` is a repo-relative glob, so
+        the path has to be rebased onto the cwd.
+        """
+        base = Path(tmp_path).resolve()
+        monkeypatch.chdir(base)
+        assert _include_glob(str(base / "pkg")) == "pkg/**/*.py"
 
 
 class TestHasPythonFiles:

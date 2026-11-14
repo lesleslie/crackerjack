@@ -65,14 +65,20 @@ async def test_mcp_tool_count_matches_documented() -> None:
 # Settings or string-literal forwarding to ``mcp-common``. It is not pinned
 # here because the wiring is dispatched through a helper. Add new entries
 # below whenever a new ``os.getenv``-backed env var is documented.
+#
+# Removed 2026-11-14: ``CRACKERJACK_ENABLE_PYCHARM_MCP`` (deleted with
+# ``autofix_coordinator``, 31bac0f7), ``PRE_COMMIT_FROM_REF`` (dropped
+# with the zuban/skylos hook entries, ca89d462), and ``AI_AGENT`` (the
+# 12-agent subsystem went in 2026-08-06 and the Ruff adapter that read
+# it went with the QA adapter layer, 49c103ce). None of the three was
+# read by package code any more; ``AI_AGENT`` was still documented in
+# README.md and docs/CLI_REFERENCE.md, and those mentions are now gone
+# too.
 DOCUMENTED_ENV_VARS: tuple[str, ...] = (
     "CRACKERJACK_AUTH_ENABLED",
     "CRACKERJACK_JWT_SECRET",
-    "CRACKERJACK_ENABLE_PYCHARM_MCP",
     "CRACKERJACK_DEBUG",
-    "PRE_COMMIT_FROM_REF",
     "AKOSHA_MCP_ENDPOINT",
-    "AI_AGENT",
     "LLAMA_SERVER_URL",
 )
 

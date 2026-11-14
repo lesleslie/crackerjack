@@ -149,12 +149,14 @@ def load_seed_topics(
     """Parse topic-vocabulary-v1.md and return the seed slug set.
 
     Args:
-        repo_root: Repository root, used to resolve the default vocab path
-            when vocab_path is None.
-        vocab_path: Explicit vocabulary file path. When None, falls back to
-            the canonical ``docs/schemas/topic-vocabulary-v1.md`` under
-            ``repo_root``. Pass an explicit path to point at any other
-            location without renaming files in the repo.
+        repo_root: Repository root. The last-resort location for the
+            vocabulary file -- see ``_resolve_vocab_path`` for the full
+            resolution order.
+        vocab_path: Explicit vocabulary file path. When None, the packaged
+            ``oneiric.schemas/topic-vocabulary-v1.md`` is preferred and the
+            repo-local ``docs/schemas/topic-vocabulary-v1.md`` is the
+            fallback. Pass an explicit path to point at any other location
+            without renaming files in the repo.
         allow_degrade: When True, return an empty set instead of raising
             VocabFileNotFoundError. Caller is responsible for emitting the
             visible warning. Defaults to False so silent failures are
