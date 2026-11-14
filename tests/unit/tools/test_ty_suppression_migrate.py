@@ -246,3 +246,18 @@ class TestDocumentedDirectivesAreNotDirectives:
         directives = find_directives(text)
         assert len(directives) == 1
         assert directives[0].kind == "bracketed"
+
+
+class TestNestedMarkersSurvive:
+    """A comment can carry a nested ``#`` marker before its prose."""
+
+    def test_a_nested_hash_before_prose_is_kept(self) -> None:
+        text = (
+            "value = cache  # type: ignore[return-value]  "
+            "# ty: ignore[invalid-explicit-return]  # Cached stack\n"
+        )
+        comments = find_comments(text)
+        stripped = strip_directives(text, {(comments[0].line, comments[0].col)})
+        assert stripped == (
+            "value = cache  # ty: ignore[invalid-explicit-return]  # Cached stack\n"
+        )

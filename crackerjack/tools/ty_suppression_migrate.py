@@ -141,13 +141,17 @@ def _classify(body: str) -> tuple[list[str], list[str], list[str], str]:
         return any(mask[start:end])
 
     offset = 0
-    for segment in body.split("#"):
+    for index, segment in enumerate(body.split("#")):
         stripped = segment.strip()
         lead = len(segment) - len(segment.lstrip())
         base = offset + lead
         offset += len(segment) + 1
         if not stripped:
             continue
+        # Prose that followed a nested ``#`` keeps its marker, so a comment
+        # like ``# type: ignore[x]  # note`` does not lose the note's hash.
+        marker = "# " if index > 0 else ""
+
         match = RE_MYPY_LOOSE.search(stripped)
         if match and not in_backticks(base + match.start(), base + match.end()):
             raw = match.group(0)
@@ -159,7 +163,7 @@ def _classify(body: str) -> tuple[list[str], list[str], list[str], str]:
                 stripped[: match.start()] + " " + stripped[match.end() :]
             ).strip()
             if remainder:
-                prose.append(remainder)
+                prose.append(marker + remainder)
             continue
         match = RE_TY_LOOSE.search(stripped)
         if match and not in_backticks(base + match.start(), base + match.end()):
@@ -168,9 +172,9 @@ def _classify(body: str) -> tuple[list[str], list[str], list[str], str]:
                 stripped[: match.start()] + " " + stripped[match.end() :]
             ).strip()
             if remainder:
-                prose.append(remainder)
+                prose.append(marker + remainder)
             continue
-        prose.append(stripped)
+        prose.append(marker + stripped)
     return bare, bracketed, ty, " ".join(prose)
 
 
