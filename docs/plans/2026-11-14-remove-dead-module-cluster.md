@@ -628,12 +628,14 @@ with no importer:
 closed islands, and one of them — `services/patterns/` — is **live** and
 stays.
 
-**Do not delete:** `crackerjack/services/patterns/` (33 modules, 2,787 lines)
-and its two siblings `patterns/core.py` and `patterns/operations.py`. The
-package's `__init__.py:1-15` eagerly imports every submodule and `:22-33`
-unions their `PATTERNS` dicts into `SAFE_PATTERNS` — 180 validated patterns
-that back input validation, path security, the coverage ratchet, publish
-version bumping, the MCP job-id validator, and the AI templates.
+**Do not delete:** the whole `crackerjack/services/patterns/` tree — 33
+modules, 3,465 lines. Thirty of them (2,787 lines) were the ones the
+inventory misclassified; the other three (`__init__.py` 114 lines,
+`patterns/core.py` 241, `patterns/operations.py` 323) were already live.
+The package's `__init__.py:1-15` eagerly imports every submodule and
+`:22-33` unions their `PATTERNS` dicts into `SAFE_PATTERNS` — 180 validated
+patterns that back input validation, path security, the coverage ratchet,
+publish version bumping, the MCP job-id validator, and the AI templates.
 `crackerjack/services/regex_patterns.py:1` is the bridge, and it has sixteen
 live production importers.
 
