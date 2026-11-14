@@ -128,6 +128,22 @@ topic: changelog
   registry and are deliberately left in place: the
   `individual_hook_executor` still reads them, and that module is
   scheduled for removal by a separate plan.
+- adapters: `crackerjack.adapters.type.pyright.py` and
+  `crackerjack.adapters.refactor.vulture.py` — the Pyright and Vulture
+  QA adapters, and their two test files. Neither tool has a
+  `HookDefinition` anywhere in `crackerjack/config/hooks.py`, so no hook
+  can ever produce the name the factory would need to look them up; the
+  factory's name table (`DefaultAdapterFactory.TOOL_TO_ADAPTER_NAME`)
+  and its instantiation table listed neither, and the plugin loader
+  never scans `crackerjack/adapters/**`. Their only remaining consumers
+  were their own test files and the `__init__.py` re-exports, so those
+  go too. The `pyright` tool itself is not a declared dependency — the
+  `pyrightconfig.json` entry in `settings/crackerjack.yaml` is a file
+  mapping, unrelated to the adapter. The `pyright` *output patterns* in
+  `crackerjack/services/patterns/tool_output/pyright.py` are a separate
+  registry and are deliberately left in place: the
+  `individual_hook_executor` still reads them, and that module is
+  scheduled for removal by a separate plan.
 - adapters: `crackerjack.adapters.benchmark.adapter.py` and the rest of the
   `crackerjack/adapters/benchmark/` package — the pytest benchmark adapter.
   It had zero production importers: the adapter factory is keyed by a fixed
@@ -192,6 +208,25 @@ topic: changelog
 
 ### Changed
 
+- clone: The pyscn clone scan now has one implementation. The
+  `crackerjack clone` CLI ran pyscn itself in `_run_pyscn_json`, while
+  `PyscnAdapter.parse_clone_groups` ran the same subprocess and read
+  the same report directory — two copies of one sequence, with the
+  adapter's copy unreachable and the CLI's copy the weaker one: it had
+  no timeout, so a hung pyscn hung the CLI indefinitely, and it let a
+  missing binary or malformed JSON propagate as a traceback. The CLI
+  now calls the adapter, and the adapter's copy gained the exit-code
+  check the CLI had (its version ignored pyscn's exit status, so a
+  failed run could silently report whichever stale report was left on
+  disk from an earlier scan) along with the CLI's 300-second timeout
+  and its handling of a missing binary and unparseable JSON.
+
+  The one distinction the CLI made is preserved deliberately, and is
+  now the adapter's contract: a scan that *fails* raises
+  `PyscnCloneScanError`, while a scan that finds nothing returns an
+  empty list. Collapsing those two would turn a broken toolchain into
+  a silent clean bill of health — "the outcome is unknown" and "the
+  repo is clean" have to read differently.
 - Chore/gitignore-session-buddy -> main
 - Feat/pyscn-ruff-integration -> main
 - Feat/test-selection-run-state -> main

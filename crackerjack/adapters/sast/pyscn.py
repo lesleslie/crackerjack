@@ -33,6 +33,16 @@ MODULE_STATUS = AdapterStatus.STABLE
 logger = logging.getLogger(__name__)
 
 
+class PyscnCloneScanError(RuntimeError):
+    """pyscn's clone scan could not be run, or its report could not be read.
+
+    Deliberately distinct from "no clones found": an empty result means
+    the scan ran cleanly and found nothing, while this exception means
+    the scan's outcome is unknown. Callers must not report the latter
+    as a clean repo -- that turns a broken toolchain into a silent pass.
+    """
+
+
 class PyscnSettings(ToolAdapterSettings):
     tool_name: str = "pyscn"
     use_json_output: bool = False
@@ -206,6 +216,29 @@ class PyscnAdapter(BaseToolAdapter):
         return severity_and_message
 
     def parse_clone_groups(self, repo_root: Path) -> list[CloneGroup]:
+        """Run pyscn's clone scan over ``repo_root`` and group the pairs.
+
+        This is the single implementation of the clone scan: the
+        ``crackerjack clone`` CLI calls it rather than running pyscn
+        itself. The two used to be separate copies of the same
+        subprocess-and-read-report sequence, and they disagreed on
+        failure handling -- the CLI had no timeout and let a missing
+        binary or malformed JSON raise, while this one had a timeout but
+        ignored the exit code, so a failed run could silently report
+        whichever stale report was left on disk.
+
+        Returns:
+            The clone groups found. An empty list means the scan ran
+            cleanly and found nothing.
+
+        Raises:
+            PyscnCloneScanError: the scan could not be run, or its
+                report could not be read. This is deliberately distinct
+                from an empty result -- "the toolchain is broken" and
+                "the repo has no clones" must not read the same, or a
+                missing pyscn install turns into a silent clean bill of
+                health.
+        """
         if not (self.settings and self.settings.emit_clone_groups):
             return []
 
@@ -213,7 +246,7 @@ class PyscnAdapter(BaseToolAdapter):
         report_dir = repo_root / ".pyscn" / "reports"
 
         try:
-            subprocess.run(
+            result = subprocess.run(
                 preferred_binary_command_with_min_version(
                     "pyscn",
                     "1.30",
@@ -231,21 +264,28 @@ class PyscnAdapter(BaseToolAdapter):
                 timeout=300,
             )
         except (FileNotFoundError, RuntimeError, subprocess.TimeoutExpired) as exc:
-            logger.warning("pyscn clone scan failed: %s", exc)
-            return []
+            raise PyscnCloneScanError(f"pyscn clone scan failed: {exc}") from exc
+
+        if result.returncode not in (0, 1):
+            raise PyscnCloneScanError(
+                f"pyscn exited with code {result.returncode}: {result.stderr.strip()}"
+            )
 
         pattern = str(report_dir / "analyze_*.json")
         files = sorted(glob.glob(pattern))
         if not files:
-            logger.warning("pyscn: no JSON report found in %s", report_dir)
+            # pyscn only writes a report when it finds clones, so a
+            # missing report means "nothing found", not a failure.
+            logger.info("pyscn: no clone report in %s", report_dir)
             return []
 
         try:
             with open(files[-1], encoding="utf-8") as fh:
                 data = json.load(fh)
         except (OSError, json.JSONDecodeError) as exc:
-            logger.warning("pyscn: failed to parse JSON report: %s", exc)
-            return []
+            raise PyscnCloneScanError(
+                f"could not parse pyscn JSON report: {exc}"
+            ) from exc
 
         raw_pairs: list[dict] = (data.get("clone") or {}).get("clone_pairs") or []
         grouper = CloneGrouper()

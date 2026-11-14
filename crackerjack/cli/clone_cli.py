@@ -1,18 +1,19 @@
 from __future__ import annotations
 
-import json
-import subprocess
 from pathlib import Path
-from typing import Any
 
 import typer
 from rich.console import Console
 from rich.table import Table
 
+from crackerjack.adapters.sast.pyscn import (
+    PyscnAdapter,
+    PyscnCloneScanError,
+    PyscnSettings,
+)
 from crackerjack.clone.classifier import ExtractionTargetClassifier
-from crackerjack.clone.grouper import CloneGrouper
+from crackerjack.clone.grouper import CloneGroup
 from crackerjack.clone.refactor_engine import CloneDecision, CloneRefactorEngine
-from crackerjack.config.tool_commands import preferred_binary_command_with_min_version
 from crackerjack.utils.path_redaction import redact_path
 
 app = typer.Typer(
@@ -21,38 +22,21 @@ app = typer.Typer(
 console = Console()
 
 
-def _run_pyscn_json(path: Path, threshold: float = 0.9) -> dict[str, Any]:
-    report_dir = path / ".pyscn" / "reports"
-    result = subprocess.run(
-        preferred_binary_command_with_min_version(
-            "pyscn",
-            "1.30",
-            "analyze",
-            "--json",
-            "--select",
-            "clones",
-            "--clone-threshold",
-            str(threshold),
-            str(path),
-        ),
-        capture_output=True,
-        text=True,
-        cwd=str(path),
-        check=False,
-    )
-    if result.returncode not in (0, 1):
-        console.print(f"[red]pyscn failed: {result.stderr}[/red]")
-        return {}
+def _clone_groups(path: Path, threshold: float = 0.9) -> list[CloneGroup] | None:
+    """Scan ``path`` for clone groups.
 
-    import glob
-
-    files = sorted(glob.glob(str(report_dir / "analyze_*.json")))
-    if not files:
-        console.print("[yellow]No pyscn report found.[/yellow]")
-        return {}
-
-    with open(files[-1], encoding="utf-8") as f:
-        return json.load(f)
+    Returns:
+        The groups found, an empty list when the scan ran cleanly and
+        found nothing, or ``None`` when the scan itself failed. The
+        caller must not read ``None`` as "no clones" -- a broken pyscn
+        install has to say so, not report a clean repo.
+    """
+    adapter = PyscnAdapter(settings=PyscnSettings(clone_threshold=threshold))
+    try:
+        return adapter.parse_clone_groups(path)
+    except PyscnCloneScanError as exc:
+        console.print(f"[red]pyscn failed: {exc}[/red]")
+        return None
 
 
 @app.command()
@@ -66,16 +50,14 @@ def detect(
         f"[bold]Scanning {redact_path(path)} for "
         f"clones (threshold={threshold})...[/bold]"
     )
-    data = _run_pyscn_json(path, threshold=threshold)
-    clone_data = data.get("clone", {})
-    raw_pairs = clone_data.get("clone_pairs") or []
+    groups = _clone_groups(path, threshold=threshold)
 
-    if not raw_pairs:
-        console.print("[green]No clones detected.[/green]")
+    if groups is None:
         return
 
-    grouper = CloneGrouper()
-    groups = grouper.group_pairs(raw_pairs)
+    if not groups:
+        console.print("[green]No clones detected.[/green]")
+        return
 
     table = Table(title=f"Clone Groups ({len(groups)} found)")
     table.add_column("ID", style="dim", width=10)
@@ -122,15 +104,15 @@ def refactor(
         f"[bold]Clone refactor for {redact_path(path)}[/bold]"
         + (" (dry-run)" if dry_run else "")
     )
-    data = _run_pyscn_json(path, threshold=threshold)
-    raw_pairs = (data.get("clone") or {}).get("clone_pairs") or []
+    groups = _clone_groups(path, threshold=threshold)
 
-    if not raw_pairs:
+    if groups is None:
+        return
+
+    if not groups:
         console.print("[green]No clones detected — nothing to refactor.[/green]")
         return
 
-    grouper = CloneGrouper()
-    groups = grouper.group_pairs(raw_pairs)
     engine = CloneRefactorEngine()
     ExtractionTargetClassifier()
 

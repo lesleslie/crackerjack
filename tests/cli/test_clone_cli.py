@@ -1,23 +1,23 @@
 """Tests for ``crackerjack.cli.clone_cli``.
 
 Covers the Typer ``clone`` sub-app with five commands: ``detect``,
-``refactor``, ``status``, ``approve``, ``skip``. The ``_run_pyscn_json``
-helper shells out to ``pyscn``; tests patch ``subprocess.run`` and seed a
-fake report file under ``.pyscn/reports/``.
+``refactor``, ``status``, ``approve``, ``skip``. The ``_clone_groups``
+helper delegates to ``PyscnAdapter.parse_clone_groups``, which is the
+single implementation of the clone scan; tests patch ``subprocess.run``
+and seed a fake report file under ``.pyscn/reports/``.
 """
 
 from __future__ import annotations
 
 import json
 import subprocess
-import sys
 from pathlib import Path
 from typing import Any
 
 import pytest
 from typer.testing import CliRunner
 
-from crackerjack.cli.clone_cli import _run_pyscn_json, app
+from crackerjack.cli.clone_cli import _clone_groups, app
 
 
 @pytest.fixture
@@ -62,39 +62,67 @@ def test_app_help_text_non_empty() -> None:
     assert "Clone" in app.info.help
 
 
-def test_run_pyscn_json_returns_empty_when_no_report(
+def test_clone_groups_empty_when_no_report(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """No ``.pyscn/reports/`` file → empty dict."""
+    """No ``.pyscn/reports/`` file → no groups, and *not* an error.
+
+    pyscn only writes a report when it finds clones, so a missing
+    report means "nothing found".
+    """
     fake = subprocess.CompletedProcess(
         args=[], returncode=0, stdout="", stderr=""
     )
     monkeypatch.setattr(subprocess, "run", lambda *a, **kw: fake)
-    assert _run_pyscn_json(tmp_path) == {}
+    assert _clone_groups(tmp_path) == []
 
 
-def test_run_pyscn_json_returns_empty_on_pyscn_failure(
+def test_clone_groups_returns_none_on_pyscn_failure(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """A non-zero exit code (other than 1) → empty dict."""
+    """A failing pyscn is an *error*, not "no clones".
+
+    ``None`` marks the scan as failed so the caller can say so. An
+    empty list would read as a clean repo, which turns a broken
+    toolchain into a silent pass.
+    """
     fake = subprocess.CompletedProcess(
         args=[], returncode=99, stdout="", stderr="boom"
     )
     monkeypatch.setattr(subprocess, "run", lambda *a, **kw: fake)
-    assert _run_pyscn_json(tmp_path) == {}
+    assert _clone_groups(tmp_path) is None
 
 
-def test_run_pyscn_json_reads_report(
+def test_clone_groups_reads_report(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Exit 0/1 + a present report file → the report contents."""
-    _make_pyscn_report(tmp_path, groups=[{"id": "abc", "similarity": 0.95}])
+    """Exit 0/1 + a present report file → the clone groups it contains."""
+    _make_pyscn_report(
+        tmp_path,
+        groups=[
+            {
+                "type": 1,
+                "similarity": 0.95,
+                "clone1": {
+                    "file_path": str(tmp_path / "a.py"),
+                    "start_line": 1,
+                    "end_line": 5,
+                },
+                "clone2": {
+                    "file_path": str(tmp_path / "b.py"),
+                    "start_line": 1,
+                    "end_line": 5,
+                },
+            }
+        ],
+    )
     fake = subprocess.CompletedProcess(
         args=[], returncode=0, stdout="", stderr=""
     )
     monkeypatch.setattr(subprocess, "run", lambda *a, **kw: fake)
-    data = _run_pyscn_json(tmp_path)
-    assert data["clone"]["clone_pairs"][0]["id"] == "abc"
+    groups = _clone_groups(tmp_path)
+    assert groups is not None
+    assert len(groups) == 1
 
 
 def test_detect_no_clones_prints_green_message(
@@ -324,17 +352,38 @@ def test_app_registers_all_five_commands() -> None:
     assert {"detect", "refactor", "status", "approve", "skip"} <= command_names
 
 
-def test_run_pyscn_json_handles_thresholds(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_clone_groups_forwards_threshold(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """The ``threshold`` parameter is forwarded to the pyscn CLI."""
     captured: dict[str, Any] = {}
 
     def fake_run(cmd, **kwargs):
         captured["cmd"] = cmd
         return subprocess.CompletedProcess(
-            args=cmd, returncode=99, stdout="", stderr="boom"
+            args=cmd, returncode=0, stdout="", stderr=""
         )
 
     monkeypatch.setattr(subprocess, "run", fake_run)
-    _run_pyscn_json(tmp_path, threshold=0.75)
+    _clone_groups(tmp_path, threshold=0.75)
     assert "--clone-threshold" in captured["cmd"]
     assert "0.75" in captured["cmd"]
+
+
+def test_detect_reports_a_failed_scan_instead_of_a_clean_repo(
+    runner: CliRunner, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A broken pyscn must not read as "no clones detected".
+
+    This is the distinction the consolidation exists to preserve: the
+    scan's outcome being unknown is not the same as the repo being
+    clean.
+    """
+    fake = subprocess.CompletedProcess(
+        args=[], returncode=99, stdout="", stderr="boom"
+    )
+    monkeypatch.setattr(subprocess, "run", lambda *a, **kw: fake)
+    result = runner.invoke(app, ["detect", "--path", str(tmp_path)])
+    assert result.exit_code == 0
+    assert "pyscn failed" in result.stdout
+    assert "No clones detected" not in result.stdout
