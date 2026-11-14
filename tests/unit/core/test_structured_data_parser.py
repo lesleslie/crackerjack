@@ -268,5 +268,5 @@ class TestStructuredDataParserIntegration:
 
         issues = parser.parse_text(output)
 
-        # Parser returns all issues, deduplication happens in AutofixCoordinator
+        # Parser returns all issues, deduplication happens at a higher level
         assert len(issues) == 2

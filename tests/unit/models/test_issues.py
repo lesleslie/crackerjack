@@ -1,10 +1,11 @@
 """Tests for the dependency-free issue vocabulary module.
 
-`crackerjack.models.issues` extracts `Issue`, `IssueType`, `Priority`, and
-`FixResult` out of `crackerjack.agents.base` so the ~30 files that depend on
-these types as shared vocabulary don't need to import the (unstable)
-orchestration machinery in `agents/`, `ai_fix/`, `intelligence/`, or
-`memory/`.
+`crackerjack.models.issues` is the canonical home for `Issue`, `IssueType`,
+`Priority`, and `FixResult`, so the files that depend on these types as
+shared vocabulary don't need to import any orchestration machinery. The
+module was originally carved out of `crackerjack.agents.base`; the
+`crackerjack.agents` package was removed in the 2026-08-12 AI-fix
+refactor.
 """
 
 from __future__ import annotations

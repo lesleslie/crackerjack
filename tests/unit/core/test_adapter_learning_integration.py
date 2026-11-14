@@ -94,11 +94,11 @@ class TestHookExecutorTracking:
         # prevents any tracking call when integration is None
 
 
-class TestAutofixCoordinatorTracking:
-    """Test AutofixCoordinator tracks adapter execution."""
+class TestAdapterExecutionTracking:
+    """Test that adapter execution is tracked."""
 
     def test_tracks_adapter_with_timing(self) -> None:
-        """Verify tracking is called in AutofixCoordinator path."""
+        """Verify tracking is called for an adapter execution."""
         mock_integration = MagicMock(spec=AdapterLearningIntegration)
 
         check_start = time.monotonic()
