@@ -98,7 +98,7 @@ class TestManager:
         except Exception:
             self.pkg_path = Path(resolved_path)
 
-        self.executor = TestExecutor(console, self.pkg_path)  # type: ignore
+        self.executor = TestExecutor(console, self.pkg_path)  # ty: ignore[invalid-argument-type]
         self.command_builder = command_builder
         self.result_parser = result_parser
         self.renderer = result_renderer
@@ -472,7 +472,7 @@ class TestManager:
 
         spinner = Spinner("dots", text="[cyan]Validating test environment...[/cyan]")
         try:
-            with Live(spinner, console=self.console, transient=True):  # type: ignore
+            with Live(spinner, console=self.console, transient=True):  # ty: ignore[invalid-argument-type]
                 result = subprocess.run(
                     cmd,
                     check=False,
@@ -1757,7 +1757,7 @@ class TestManager:
             logger.exception(
                 "LSP diagnostics failed",
                 extra={
-                    "lsp_client": str(self.lsp_client) if self.lsp_client else None,  # type: ignore
+                    "lsp_client": str(self.lsp_client) if self.lsp_client else None,  # ty: ignore[missing-attribute]
                 },
             )
             self.console.print(f"[dim]LSP diagnostics failed: {e}[/dim]")

@@ -30,7 +30,7 @@ class CachedHookExecutor:
         self.cache_ttl_seconds = cache_ttl_seconds
         self.file_hasher = FileHasher(self.cache)
         self.base_executor = HookExecutor(
-            console,  # type: ignore
+            console,  # ty: ignore[invalid-argument-type]
             pkg_path,
             quiet=True,
             skip_offline_osv_scanner=skip_offline_osv_scanner,

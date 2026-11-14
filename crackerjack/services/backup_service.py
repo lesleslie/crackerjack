@@ -321,7 +321,7 @@ class PackageBackupService(BaseModel):
                 total_size += len(content)
 
                 checksum = hashlib.sha256(content, usedforsecurity=False).hexdigest()
-                file_checksums[relative_path] = checksum  # type: ignore
+                file_checksums[relative_path] = checksum  # ty: ignore[invalid-assignment]
 
                 AtomicFileOperations.atomic_write(backup_file_path, content)
 

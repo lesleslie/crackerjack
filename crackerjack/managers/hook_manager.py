@@ -16,7 +16,7 @@ from crackerjack.models.protocols import (
 from crackerjack.models.task import HookResult
 
 try:
-    from crackerjack.orchestration.config import OrchestrationConfig  # type: ignore
+    from crackerjack.orchestration.config import OrchestrationConfig  # ty: ignore[import-not-found]
 except ModuleNotFoundError:  # pragma: no cover - optional dependency
     OrchestrationConfig = None
     orchestration_available = False
@@ -24,7 +24,7 @@ else:
     orchestration_available = OrchestrationConfig is not None
 
 if TYPE_CHECKING:
-    from crackerjack.orchestration.hook_orchestrator import (  # type: ignore
+    from crackerjack.orchestration.hook_orchestrator import (  # ty: ignore[import-not-found]
         HookOrchestratorAdapter,
         HookOrchestratorSettings,
     )
@@ -124,7 +124,7 @@ class HookManagerImpl:
         cache_backend: str,
     ) -> None:
         try:
-            from crackerjack.orchestration.hook_orchestrator import (  # type: ignore
+            from crackerjack.orchestration.hook_orchestrator import (  # ty: ignore[import-not-found]
                 HookOrchestratorSettings,
             )
 

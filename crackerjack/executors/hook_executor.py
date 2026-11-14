@@ -1417,7 +1417,7 @@ class HookExecutor:
                 except ValueError:
                     return file_path.name
 
-            clean_path = file_path.lstrip("./")  # type: ignore
+            clean_path = file_path.lstrip("./")  # ty: ignore[missing-attribute]
             return clean_path.replace("\\", "/")
 
         except Exception:

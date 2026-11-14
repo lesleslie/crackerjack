@@ -2403,7 +2403,7 @@ def _scan_large_files(repo_path: Path, size_threshold_mb: float = 1.0) -> list[d
     threshold_bytes = size_threshold_mb * 1024 * 1024
 
     try:
-        executor = SecureSubprocessExecutor()  # type: ignore
+        executor = SecureSubprocessExecutor()  # ty: ignore[unresolved-reference]
         result = executor.execute_secure(
             command=["git", "ls-files"],
             cwd=repo_path,
@@ -2444,7 +2444,7 @@ def _scan_stale_branches(repo_path: Path) -> list[dict]:
     stale_branches = []
 
     try:
-        executor = SecureSubprocessExecutor()  # type: ignore
+        executor = SecureSubprocessExecutor()  # ty: ignore[unresolved-reference]
         result = executor.execute_secure(
             command=[
                 "git",

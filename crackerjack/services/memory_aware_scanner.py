@@ -134,10 +134,10 @@ class MemoryAwareScanner:
 
             file_result = {
                 "file_path": str(file),
-                "status": "passed" if random.random() > 0.2 else "failed",  # type: ignore
+                "status": "passed" if random.random() > 0.2 else "failed",  # ty: ignore[unresolved-reference]
                 "timestamp": datetime.now().isoformat(),
                 "tool": tool_name,
-                "exit_code": 0 if random.random() > 0.7 else 1,  # type: ignore
+                "exit_code": 0 if random.random() > 0.7 else 1,  # ty: ignore[unresolved-reference]
             }
             scan_results.append(file_result)
 

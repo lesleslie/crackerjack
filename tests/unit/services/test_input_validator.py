@@ -73,7 +73,7 @@ class TestValidationResult:
         result = ValidationResult(
             valid=False,
             error_message="Invalid input",
-            security_level="high",  # type: ignore
+            security_level="high",
             validation_type="test_validation",
         )
 
@@ -169,7 +169,7 @@ class TestInputSanitizer:
 
     def test_sanitize_string_non_string_type(self) -> None:
         """Test sanitizing non-string type."""
-        result = InputSanitizer.sanitize_string(12345)  # type: ignore
+        result = InputSanitizer.sanitize_string(12345)
 
         assert result.valid is False
         assert "expected string" in result.error_message.lower()
@@ -290,7 +290,7 @@ class TestSecureInputValidator:
         """Test validating command args with invalid type."""
         validator = SecureInputValidator()
 
-        result = validator.validate_command_args(12345)  # type: ignore
+        result = validator.validate_command_args(12345)
 
         assert result.valid is False
 

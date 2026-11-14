@@ -329,7 +329,7 @@ class TestSessionMetricsCalculateDuration:
             project_path=Path("/test"),
             start_time=datetime(2026, 5, 16, 10, 0, 0),
         )
-        metrics.start_time = None  # type: ignore
+        metrics.start_time = None  # ty: ignore[invalid-assignment]
         metrics.end_time = end
         result = metrics.calculate_duration()
         assert result is None

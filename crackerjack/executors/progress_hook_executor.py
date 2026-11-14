@@ -33,7 +33,7 @@ class ProgressHookExecutor(HookExecutor):
         git_service: t.Any | None = None,
     ) -> None:
         super().__init__(
-            console,  # type: ignore
+            console,  # ty: ignore[invalid-argument-type]
             pkg_path,
             verbose,
             quiet,
@@ -98,7 +98,7 @@ class ProgressHookExecutor(HookExecutor):
             BarColumn(bar_width=20),
             TaskProgressColumn(),
             MofNCompleteColumn(),
-            console=self.console,  # type: ignore
+            console=self.console,  # ty: ignore[invalid-argument-type]
             transient=True,
             refresh_per_second=4,
         )

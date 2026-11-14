@@ -112,7 +112,7 @@ class CommitMessageGenerator:
             if path.parent != Path():
                 analysis["directories"].add(str(path.parent))
 
-            file_str = path.lower()  # type: ignore
+            file_str = path.lower()  # ty: ignore[missing-attribute]
             for commit_type, patterns in self.patterns.items():
                 for pattern in patterns:
                     compiled_pattern = (

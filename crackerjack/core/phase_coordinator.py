@@ -603,7 +603,7 @@ class PhaseCoordinator:
                 "and cannot be compared to the full-suite baseline.[/dim]",
             )
             return True
-        return self.test_manager.coverage_manager.process_coverage_ratchet()  # type: ignore
+        return self.test_manager.coverage_manager.process_coverage_ratchet()  # ty: ignore[missing-attribute]
 
     @handle_errors
     def run_testing_phase(self, options: OptionsProtocol) -> bool:

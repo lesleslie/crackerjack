@@ -244,7 +244,7 @@ class WorkflowOptimizationEngine:
             "quality_correlations": quality_correlations,
         }
 
-        recommendations = self.generate_recommendations(insights_data)  # type: ignore
+        recommendations = self.generate_recommendations(insights_data)  # ty: ignore[invalid-argument-type]
 
         return WorkflowInsights(
             velocity_analysis=velocity_analysis,

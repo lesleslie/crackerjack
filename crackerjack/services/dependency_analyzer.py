@@ -393,7 +393,7 @@ class DependencyVisitor(ast.NodeVisitor):
         if isinstance(decorator, ast.Name):
             return decorator.id
         if isinstance(decorator, ast.Attribute):
-            return f"{decorator.value.id}.{decorator.attr}"  # type: ignore
+            return f"{decorator.value.id}.{decorator.attr}"  # ty: ignore[missing-attribute]
         return "unknown"
 
     def _resolve_name(self, name: str) -> str:

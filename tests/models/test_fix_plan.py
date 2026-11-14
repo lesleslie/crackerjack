@@ -107,7 +107,7 @@ class TestChangeSpec:
         # For now, we skip validation testing since the model is a plain dataclass.
         # If validation is needed, the model should be converted to Pydantic.
         change = ChangeSpec(
-            line_range=[1, 5],  # type: ignore
+            line_range=[1, 5],  # ty: ignore[invalid-argument-type]
             old_code="old",
             new_code="new",
             reason="test"
@@ -276,7 +276,7 @@ class TestFixPlan:
             issue_type="COMPLEXITY",
             changes=[change],
             rationale="test",
-            risk_level="critical",  # type: ignore  # Invalid but not enforced at runtime
+            risk_level="critical",  # ty: ignore[invalid-argument-type]  Invalid but not enforced at runtime
             validated_by="test"
         )
         # Accept that the dataclass doesn't enforce Literal types at runtime

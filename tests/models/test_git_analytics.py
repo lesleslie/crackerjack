@@ -88,7 +88,7 @@ class TestGitCommitData:
             repository="test-repo",
         )
         with pytest.raises(AttributeError):
-            commit.author_name = "Modified"  # type: ignore
+            commit.author_name = "Modified"  # ty: ignore[invalid-assignment]
 
     def test_git_commit_data_to_searchable_text_basic(self) -> None:
         """Verify to_searchable_text() with basic commit."""
@@ -338,7 +338,7 @@ class TestGitBranchEvent:
             repository="test-repo",
         )
         with pytest.raises(AttributeError):
-            event.branch_name = "modified"  # type: ignore
+            event.branch_name = "modified"  # ty: ignore[invalid-assignment]
 
     def test_git_branch_event_all_event_types(self) -> None:
         """Verify GitBranchEvent with all event_type values."""
@@ -346,7 +346,7 @@ class TestGitBranchEvent:
         event_types = ["created", "deleted", "merged", "rebased"]
         for event_type in event_types:
             event = GitBranchEvent(
-                event_type=event_type,  # type: ignore
+                event_type=event_type,  # ty: ignore[invalid-argument-type]
                 branch_name="test",
                 timestamp=timestamp,
                 author_name="John",
@@ -498,7 +498,7 @@ class TestWorkflowEvent:
             duration_seconds=None,
         )
         with pytest.raises(AttributeError):
-            event.workflow_name = "modified"  # type: ignore
+            event.workflow_name = "modified"  # ty: ignore[invalid-assignment]
 
     def test_workflow_event_all_event_types(self) -> None:
         """Verify WorkflowEvent with all event_type values."""
@@ -513,7 +513,7 @@ class TestWorkflowEvent:
         ]
         for event_type in event_types:
             event = WorkflowEvent(
-                event_type=event_type,  # type: ignore
+                event_type=event_type,  # ty: ignore[invalid-argument-type]
                 workflow_name="test",
                 timestamp=timestamp,
                 status="success",
@@ -533,7 +533,7 @@ class TestWorkflowEvent:
                 event_type="ci_started",
                 workflow_name="test",
                 timestamp=timestamp,
-                status=status,  # type: ignore
+                status=status,  # ty: ignore[invalid-argument-type]
                 commit_hash="abc123",
                 branch="main",
                 repository="test-repo",

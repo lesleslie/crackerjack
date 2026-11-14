@@ -103,7 +103,7 @@ class TestToolConfig:
             supports_json=True,
         )
         with pytest.raises(AttributeError):
-            config.name = "modified"  # type: ignore
+            config.name = "modified"  # ty: ignore[invalid-assignment]
 
     def test_tool_config_required_json_fields_frozenset(self) -> None:
         """Verify required_json_fields is a frozenset."""
@@ -125,7 +125,7 @@ class TestToolConfig:
             required_json_fields=frozenset({"field1", "field2"}),
         )
         with pytest.raises(AttributeError):
-            config.required_json_fields.add("field3")  # type: ignore
+            config.required_json_fields.add("field3")  # ty: ignore[missing-attribute]
 
     def test_tool_config_all_output_formats(self) -> None:
         """Verify ToolConfig works with all OutputFormat values."""

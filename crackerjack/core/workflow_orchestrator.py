@@ -118,7 +118,7 @@ class WorkflowPipeline:
         self.session.initialize_session_tracking(options)
 
     def _run_fast_hooks_phase(self, options: t.Any) -> bool:
-        return self.phases.run_fast_hooks_only(options)  # type: ignore
+        return self.phases.run_fast_hooks_only(options)  # ty: ignore[invalid-explicit-return]
 
     def _configure_session_cleanup(self, options: t.Any) -> None:
         """Hand the session its artifact-cleanup policy.
