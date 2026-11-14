@@ -526,11 +526,11 @@ max_workers = 8
 memory_per_worker_gb = 2.0
 
 # ty type-check ratchet enforced by ``crackerjack.tools.ty_ratchet``.
-# Phase L production baseline: 143 diagnostics. Set 50 above baseline
-# for headroom. Production code is now clean of invalid-argument-type
-# (was 19, fixed by L.C). Test files have ~194 remaining out of scope.
-# Next push: tighten by 20-30 when the test-file mass-suppressions are
-# audited (Phase M candidate).
+# Production code is clean (0 diagnostics) as of 2026-11-14, so the prod
+# budget is pinned at 0: the next prod diagnostic fails the gate. The test
+# budget is the measured count, not a placeholder, so the ratchet has a real
+# baseline to tighten from. See the "ratchet budget" note in the repo's
+# ``docs/decisions/`` for how these numbers move.
 
 # Legacy single-target budget. Used when invoking:
 #   python -m crackerjack.tools.ty_ratchet <path>
@@ -540,11 +540,12 @@ ty_max_errors = 200
 # Split budgets (Phase Q). Used when invoking:
 #   python -m crackerjack.tools.ty_ratchet --split
 # Both fields are read independently; neither consults `ty_max_errors`.
-# Phased ramp per plan §Q.1: start at the legacy level (200/800) and tighten
-# over weeks. Current prod count is 56 (post-Phase R.F — Q.2 ramp); current
-# test count is 755 (mostly mass-Mock fixtures awaiting audit).
-ty_max_errors_prod = 150
-ty_max_errors_test = 1000
+# Measured 2026-11-14 with ty 0.0.104: prod 0, test 2676 (mostly mass-Mock
+# fixtures awaiting audit). The test gate is advisory — it never controls the
+# exit code — so this number is a ratchet baseline, not a pass/fail target.
+# Re-measure after a tree-wide refactor; the count moves.
+ty_max_errors_prod = 0
+ty_max_errors_test = 2676
 
 [tool.codespell]
 quiet-level = 3

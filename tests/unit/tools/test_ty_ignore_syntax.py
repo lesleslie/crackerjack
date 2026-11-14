@@ -1,116 +1,193 @@
+"""Unit tests for ``crackerjack.tools.ty_ignore_syntax``.
+
+The tool rejects mypy/ruff ignore syntax. In a ty repo, ``# type: ignore``
+suppresses nothing — ty does not interpret it — so a comment written that way
+looks like a suppression to a reader while the diagnostic stays live.
+
+Rule-name validity for ``# ty: ignore[<code>]`` is *not* checked here. ty
+reports ``ignore-comment-unknown-rule`` and exits non-zero for a code it does
+not know, which keeps this tool free of a rule registry that would need
+updating on every ty rename.
+
+These tests are deliberately self-contained: they read and write temporary
+files and never reach into another repository.
+"""
+
 from __future__ import annotations
 
-import os
-import re
 from pathlib import Path
 
 import pytest
 
-import crackerjack.tools.ty_ignore_syntax as _ty_ignore
+from crackerjack.tools.ty_ignore_syntax import main, scan_file
 
 
-def _resolve_decision_file() -> Path:
-    """Locate the canonical ty ignore-code decision file.
+def _scan(tmp_path: Path, body: str) -> list[tuple[int, str]]:
+    target = tmp_path / "sample.py"
+    target.write_text(body, encoding="utf-8")
+    return scan_file(target)
 
-    The file lives in the sibling ``mahavishnu`` checkout, under
-    ``docs/decisions/``. Resolve it relative to this repo rather than
-    hardcoding one machine's home directory, so the lookup survives a
-    layout change in the other repo. ``CRACKERJACK_TY_IGNORE_DECISION_FILE``
-    overrides everything.
+
+def _messages(tmp_path: Path, body: str) -> list[str]:
+    return [message for _, message in _scan(tmp_path, body)]
+
+
+# ---------------------------------------------------------------------------
+# Rejected: mypy/ruff ignore syntax
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        pytest.param("x = 1  # type: ignore\n", id="bare"),
+        pytest.param("x = 1  # type: ignore[assignment]\n", id="mypy-code"),
+        pytest.param(
+            "x = 1  # type: ignore[attr-defined]\n",
+            id="mypy-code-attr-defined",
+        ),
+        pytest.param(
+            "x = 1  # type: ignore[misc, assignment, no-redef]\n",
+            id="mypy-code-list",
+        ),
+        pytest.param("x = 1  # type: ignore[]\n", id="empty-code-list"),
+    ],
+)
+def test_rejects_mypy_ignore_syntax(tmp_path: Path, body: str) -> None:
+    """Every mypy-syntax directive is rejected, whatever code it names."""
+    assert _messages(tmp_path, body), f"expected a finding for {body!r}"
+
+
+def test_rejects_mypy_syntax_even_when_the_code_is_a_real_ty_rule(
+    tmp_path: Path,
+) -> None:
+    """A ty code written in mypy syntax is still rejected.
+
+    ``# type: ignore[missing-attribute]`` names a valid ty rule but uses the
+    spelling ty does not read, so it suppresses nothing. It must be reported
+    rather than waved through because the code happens to look familiar.
     """
-    override = os.environ.get("CRACKERJACK_TY_IGNORE_DECISION_FILE")
-    if override:
-        return Path(override)
-
-    repo_root = Path(__file__).resolve().parents[3]
-    candidates = [
-        repo_root.parent / "mahavishnu" / "docs" / "decisions" / "ty-ignore-codes.md",
-        Path.home() / "Projects" / "mahavishnu" / "docs" / "decisions" / "ty-ignore-codes.md",
-    ]
-    for candidate in candidates:
-        if candidate.is_file():
-            return candidate
-    return candidates[0]
-
-
-DECISION_FILE = _resolve_decision_file()
-DECISION_RULE_PATTERN = re.compile(
-    r"^## Decision rule\s*\n(?P<body>.*?)(?=^## |\Z)",
-    re.MULTILINE | re.DOTALL,
-)
-TY_IGNORE_CODE_PATTERN = re.compile(
-    r"#\s*ty:\s*ignore\[([a-zA-Z0-9_,\- ]+)\]",
-)
-
-
-def _decision_rule_codes() -> set[str]:
-    """Extract ty diagnostic codes from the canonical decision rule."""
-    if not DECISION_FILE.is_file():
-        pytest.fail(f"Canonical ty ignore-code decision file is missing: {DECISION_FILE}")
-
-    decision_text = DECISION_FILE.read_text(encoding="utf-8")
-    decision_rule = DECISION_RULE_PATTERN.search(decision_text)
-    if decision_rule is None:
-        pytest.fail(f"Canonical decision file has no Decision rule section: {DECISION_FILE}")
-
-    return {
-        code.strip()
-        for raw_codes in TY_IGNORE_CODE_PATTERN.findall(decision_rule.group("body"))
-        for code in raw_codes.split(",")
-        if code.strip()
-    }
-
-
-def _diff_sets(left: set[str], right: set[str]) -> tuple[list[str], list[str]]:
-    return sorted(left - right), sorted(right - left)
-
-
-def test_known_ty_codes_match_decision_file() -> None:
-    """Keep the hook's accepted ty codes synchronized with the policy."""
-    decision_codes = _decision_rule_codes()
-    known_codes = set(_ty_ignore.KNOWN_TY_CODES)
-    only_in_decision, only_in_known = _diff_sets(decision_codes, known_codes)
-
-    assert decision_codes == known_codes, (
-        "KNOWN_TY_CODES drifted from the canonical ty-ignore decision file.\n"
-        f"Decision file: {DECISION_FILE}\n"
-        f"Only in decision file: {only_in_decision}\n"
-        f"Only in KNOWN_TY_CODES: {only_in_known}"
+    findings = _messages(
+        tmp_path,
+        "x = 1  # type: ignore[missing-attribute]\n",
     )
+    assert findings
+    assert "does not interpret it" in findings[0]
 
 
-def test_sync_check_detects_extra_code_in_hook(monkeypatch) -> None:
-    """Regression: prove the sync check fails when the hook accepts extra codes."""
-    baseline = set(_ty_ignore.KNOWN_TY_CODES)
-    fake_hook_codes = baseline | {"foo-suppression"}
-    monkeypatch.setattr(_ty_ignore, "KNOWN_TY_CODES", frozenset(fake_hook_codes))
-
-    decision_codes = _decision_rule_codes()
-    known_codes = set(_ty_ignore.KNOWN_TY_CODES)
-    only_in_decision, only_in_known = _diff_sets(decision_codes, known_codes)
-
-    # Drift must be reported (whatever the baseline state is) and the injected
-    # code must show up on the "only in KNOWN_TY_CODES" side.
-    assert decision_codes != known_codes
-    assert "foo-suppression" in only_in_known
-    assert "foo-suppression" not in only_in_decision
+def test_bare_mypy_ignore_names_the_bare_form(tmp_path: Path) -> None:
+    """The bare form gets its own message, not the generic one."""
+    findings = _messages(tmp_path, "x = 1  # type: ignore\n")
+    assert findings
+    assert "bare" in findings[0]
 
 
-def test_sync_check_detects_missing_code_in_hook(monkeypatch) -> None:
-    """Regression: prove the sync check fails when the hook drops a sanctioned code."""
-    baseline = set(_ty_ignore.KNOWN_TY_CODES)
-    decision_codes = _decision_rule_codes()
-    # Pick a code present in both baseline and decision file so the regression
-    # assertion stays valid even if the baseline has other drift.
-    target_drop = next(iter(baseline & decision_codes))
-    fake_hook_codes = baseline - {target_drop}
-    monkeypatch.setattr(_ty_ignore, "KNOWN_TY_CODES", frozenset(fake_hook_codes))
+# ---------------------------------------------------------------------------
+# Rejected: both forms on one line
+# ---------------------------------------------------------------------------
 
-    known_codes = set(_ty_ignore.KNOWN_TY_CODES)
-    only_in_decision, only_in_known = _diff_sets(decision_codes, known_codes)
 
-    # Drift must be reported and the dropped code must show up on the
-    # "only in decision file" side.
-    assert decision_codes != known_codes
-    assert target_drop in only_in_decision
-    assert target_drop not in only_in_known
+@pytest.mark.parametrize(
+    "body",
+    [
+        pytest.param(
+            "x = 1  # type: ignore[attr-defined]  # ty: ignore[missing-attribute]\n",
+            id="mypy-then-ty",
+        ),
+        pytest.param(
+            "x = 1  # ty: ignore[missing-attribute]  # type: ignore[attr-defined]\n",
+            id="ty-then-mypy",
+        ),
+        pytest.param(
+            "x = 1  # type: ignore[assignment] # ty: ignore[invalid-assignment]\n",
+            id="single-space",
+        ),
+    ],
+)
+def test_rejects_both_forms_on_one_line(tmp_path: Path, body: str) -> None:
+    """A line carrying both spellings is reported once."""
+    findings = _messages(tmp_path, body)
+    assert len(findings) == 1
+    assert "combines" in findings[0]
+
+
+# ---------------------------------------------------------------------------
+# Accepted
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        pytest.param("x = 1  # ty: ignore[missing-attribute]\n", id="ty-with-code"),
+        pytest.param("x = 1  # ty: ignore\n", id="ty-bare"),
+        pytest.param(
+            "x = 1  # ty: ignore[missing-attribute, invalid-argument-type]\n",
+            id="ty-code-list",
+        ),
+        pytest.param("x = 1  # noqa: E501\n", id="ruff-noqa"),
+        pytest.param("x = 1  # a comment mentioning ty: ignore in prose\n", id="prose"),
+        pytest.param("x = 1\n", id="no-comment"),
+    ],
+)
+def test_accepts_ty_syntax_and_unrelated_comments(
+    tmp_path: Path,
+    body: str,
+) -> None:
+    """``# ty: ignore[...]`` and unrelated comments produce no findings."""
+    assert _messages(tmp_path, body) == []
+
+
+def test_ignores_unknown_ty_rule_names(tmp_path: Path) -> None:
+    """Rule-name validity belongs to ty, not to this tool.
+
+    ty reports ``ignore-comment-unknown-rule`` for a code it does not know.
+    This tool stays silent so the two never disagree about the same line.
+    """
+    assert _messages(tmp_path, "x = 1  # ty: ignore[not-a-real-rule]\n") == []
+
+
+# ---------------------------------------------------------------------------
+# Behaviour beyond a single line
+# ---------------------------------------------------------------------------
+
+
+def test_reports_the_line_number_of_each_finding(tmp_path: Path) -> None:
+    body = "x = 1\ny = 2  # type: ignore[assignment]\nz = 3\n"
+    findings = _scan(tmp_path, body)
+    assert [line for line, _ in findings] == [2]
+
+
+def test_reads_a_real_file(tmp_path: Path) -> None:
+    target = tmp_path / "sample.py"
+    target.write_text("x = 1  # type: ignore[assignment]\n", encoding="utf-8")
+    assert scan_file(target)
+
+
+def test_missing_file_is_reported_not_raised(tmp_path: Path) -> None:
+    findings = scan_file(tmp_path / "does-not-exist.py")
+    assert findings
+    assert "Could not read" in findings[0][1]
+
+
+# ---------------------------------------------------------------------------
+# CLI
+# ---------------------------------------------------------------------------
+
+
+def test_main_exits_zero_when_clean(tmp_path: Path) -> None:
+    target = tmp_path / "sample.py"
+    target.write_text("x = 1  # ty: ignore[missing-attribute]\n", encoding="utf-8")
+    assert main([str(target)]) == 0
+
+
+def test_main_exits_nonzero_when_dirty(tmp_path: Path) -> None:
+    target = tmp_path / "sample.py"
+    target.write_text("x = 1  # type: ignore[assignment]\n", encoding="utf-8")
+    assert main([str(target)]) == 1
+
+
+def test_main_dry_run_always_exits_zero(tmp_path: Path) -> None:
+    target = tmp_path / "sample.py"
+    target.write_text("x = 1  # type: ignore[assignment]\n", encoding="utf-8")
+    assert main([str(target), "--dry-run"]) == 0

@@ -9,26 +9,25 @@ from pathlib import Path
 
 from ._git_utils import get_files_by_extension
 
-# Kebab-case ty diagnostic codes. A `# type: ignore[code-name]` comment only
+# A ty suppression is spelled ``ty: ignore[<code>]``. The mypy spelling
+# (``type: ignore``) reads like a suppression but suppresses nothing in ty —
+# ty does not interpret it — so it is rejected whatever code it names.
+#
+# Rule-name validity for ``ty: ignore[...]`` is enforced by ty itself: it
+# reports ``ignore-comment-unknown-rule`` and exits non-zero for a code it
+# does not know. That is why this tool carries no registry of ty rule names.
+# A curated list would need updating on every ty rename, and would drift:
+# ty 0.0.104 renamed three rules and split a fourth into two.
+#
+# The leading ``#`` is omitted from the examples above on purpose. ty parses
+# the *text* of a comment looking for directives, so a comment that shows the
+# hash becomes a malformed directive itself and draws an
+# ``invalid-ignore-comment`` warning against this file. Docstrings and string
+# literals are not scanned, so the same text is safe there.
 
-
-KNOWN_TY_CODES: frozenset[str] = frozenset(
-    {
-        "invalid-argument-type",
-        "missing-attribute",
-        "invalid-assignment",
-        "import-not-found",
-        "call-arg",
-        "invalid-await",
-        "invalid-explicit-return",
-        "unused-type-ignore-comment",
-    }
-)
-
-# Match a bare type: ignore directive at the END of a real `# ...` comment.
-
+RE_MYPY_IGNORE = re.compile(r"^type:\s*ignore\b")
+RE_TY_IGNORE = re.compile(r"^ty:\s*ignore\b")
 RE_BARE_TYPE_IGNORE = re.compile(r"^type:\s*ignore\s*$")
-RE_BRACKETED_TYPE_IGNORE = re.compile(r"^type:\s*ignore\[([a-zA-Z0-9_,\- ]+)\]\s*$")
 
 
 DEFAULT_EXCLUDES: tuple[str, ...] = (
@@ -53,10 +52,6 @@ def _is_excluded(path: Path, exclude_dirs: tuple[str, ...]) -> bool:
     return any(excluded in parts for excluded in exclude_dirs)
 
 
-def _normalise_codes(raw_codes: str) -> list[str]:
-    return [code.strip() for code in raw_codes.split(",") if code.strip()]
-
-
 def _iter_real_comments(text: str) -> list[tuple[int, str]]:
     comments: list[tuple[int, str]] = []
     try:
@@ -74,6 +69,27 @@ def _iter_real_comments(text: str) -> list[tuple[int, str]]:
     return comments
 
 
+def _split_directives(comment_body: str) -> tuple[list[str], list[str]]:
+    """Split a comment body into the mypy and ty ignore directives it carries.
+
+    One line can hold more than one directive, for example
+    ``# type: ignore[attr-defined]  # ty: ignore[missing-attribute]``.
+    ``tokenize`` yields that whole line as a single comment token, so the
+    individual directives are separated on the inner ``#`` markers.
+    """
+    mypy_parts: list[str] = []
+    ty_parts: list[str] = []
+    for segment in comment_body.split("#"):
+        stripped = segment.strip()
+        if not stripped:
+            continue
+        if RE_MYPY_IGNORE.match(stripped):
+            mypy_parts.append(stripped)
+        elif RE_TY_IGNORE.match(stripped):
+            ty_parts.append(stripped)
+    return mypy_parts, ty_parts
+
+
 def scan_file(file_path: Path) -> list[tuple[int, str]]:
     try:
         text = file_path.read_text(encoding="utf-8")
@@ -81,42 +97,30 @@ def scan_file(file_path: Path) -> list[tuple[int, str]]:
         return [(0, f"Could not read {file_path}: {exc}")]
 
     findings: list[tuple[int, str]] = []
-    seen_lines: set[int] = set()
 
     for line_number, comment_body in _iter_real_comments(text):
-        bracketed = RE_BRACKETED_TYPE_IGNORE.match(comment_body)
-        if bracketed is not None:
-            codes = _normalise_codes(bracketed.group(1))
-            if not codes:
-                findings.append(
-                    (
-                        line_number,
-                        (
-                            "`# type: ignore[]` with empty code list; "
-                            "use `# ty: ignore[<code>]` with a real ty code"
-                        ),
-                    ),
-                )
-                seen_lines.add(line_number)
-                continue
-            unknown = [c for c in codes if c not in KNOWN_TY_CODES]
-            if unknown:
-                formatted = ", ".join(repr(c) for c in unknown)
-                findings.append(
-                    (
-                        line_number,
-                        (
-                            f"`# type: ignore[{','.join(codes)}]` uses mypy/ruff code(s) "
-                            f"{formatted}; ty only recognises the kebab-case codes in "
-                            f"`crackerjack.tools.ty_ignore_syntax.KNOWN_TY_CODES`. "
-                            f"Use `# ty: ignore[<code>]` with a ty code or fix the code."
-                        ),
-                    ),
-                )
-                seen_lines.add(line_number)
+        mypy_parts, ty_parts = _split_directives(comment_body)
+        if not mypy_parts:
+            # No mypy-syntax directive on this line. A `ty: ignore[...]`
+            # directive is left to ty, which reports unknown rule names
+            # itself.
             continue
 
-        if RE_BARE_TYPE_IGNORE.match(comment_body):
+        if ty_parts:
+            findings.append(
+                (
+                    line_number,
+                    (
+                        "combines a `# type: ignore[...]` and a "
+                        "`# ty: ignore[...]` directive on one line; keep only "
+                        "the `# ty: ignore[...]` form. ty does not interpret "
+                        "the mypy spelling, so it suppresses nothing."
+                    ),
+                ),
+            )
+            continue
+
+        if RE_BARE_TYPE_IGNORE.match(mypy_parts[0]):
             findings.append(
                 (
                     line_number,
@@ -126,7 +130,19 @@ def scan_file(file_path: Path) -> list[tuple[int, str]]:
                     ),
                 ),
             )
-            seen_lines.add(line_number)
+            continue
+
+        findings.append(
+            (
+                line_number,
+                (
+                    "`# type: ignore[...]` uses mypy/ruff ignore syntax; ty "
+                    "does not interpret it, so it suppresses nothing. Use "
+                    "`# ty: ignore[<code>]` with the ty diagnostic code, or "
+                    "fix the code."
+                ),
+            ),
+        )
 
     return findings
 
@@ -237,7 +253,6 @@ def main(argv: list[str] | None = None) -> int:
                     "total_findings": total_findings,
                     "files": file_results,
                     "gate_passes": total_findings == 0,
-                    "known_ty_codes": sorted(KNOWN_TY_CODES),
                 },
                 indent=2,
             )
@@ -246,14 +261,14 @@ def main(argv: list[str] | None = None) -> int:
         if total_findings == 0:
             print(
                 f"✓ ty-ignore-syntax: 0 findings across {len(files)} file(s); "
-                f"all suppressions use the kebab-case `# ty: ignore[<code>]` form."
+                f"all suppressions use the `# ty: ignore[<code>]` form."
             )
         else:
             print(
                 f"\n✗ ty-ignore-syntax: {total_findings} finding(s) across "
                 f"{len(file_results)} file(s). "
-                f"Replace bare `# type: ignore` and mypy/ruff codes with "
-                f"`# ty: ignore[<known-code>]`."
+                f"Replace mypy/ruff `# type: ignore[...]` directives with "
+                f"`# ty: ignore[<code>]`."
             )
 
     if args.dry_run:

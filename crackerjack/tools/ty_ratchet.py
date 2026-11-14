@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import subprocess
 import sys
@@ -11,6 +12,9 @@ from crackerjack.tools._ty_binary import resolve_ty_binary
 
 _CONCISE_DIAGNOSTIC_PREFIX = re.compile(r"^[\w./-]+:\d+:\d+:\s+(?:error|warning)\[")
 _FOUND_DIAGNOSTICS_RE = re.compile(r"Found\s+(\d+)\s+diagnostics?")
+# ty prints this on stderr and exits 0 when file discovery matched nothing.
+# A gate that measured zero files is a tooling error, not a clean run.
+_NO_FILES_FOUND_RE = re.compile(r"No python files found")
 
 
 def _read_max_errors(pyproject: Path) -> int:
@@ -28,6 +32,10 @@ def _read_max_errors(pyproject: Path) -> int:
         if in_section and stripped.startswith("[") and stripped.endswith("]"):
             break
         if in_section and stripped.startswith("ty_max_errors"):
+            # Skip the split-mode keys (``ty_max_errors_prod`` /
+            # ``ty_max_errors_test``); they describe a different budget.
+            if stripped.startswith("ty_max_errors_"):
+                continue
             _, _, value = stripped.partition("=")
             try:
                 return int(value.strip())
@@ -78,16 +86,54 @@ def _count_diagnostics(output: str) -> int:
     )
 
 
-def run_ty(target: str) -> subprocess.CompletedProcess[str]:
+def _has_python_files(directory: str) -> bool:
+    """Whether ``directory`` holds any Python file at all.
+
+    Used to tell an empty directory apart from one ty was filtered out of.
+    A directory with no ``.py`` files is legitimately empty; a directory full
+    of them that ty reports as containing nothing is a broken measurement.
+    """
+    root = Path(directory)
+    if not root.is_dir():
+        return False
+    return next(root.rglob("*.py"), None) is not None
+
+
+def _include_glob(directory: str) -> str:
+    """Glob selecting every Python file under ``directory``.
+
+    Repos commonly set ``[tool.ty] src = { include = ["<pkg>/**/*.py"] }``
+    to scope ty to their package. That filter applies to ty's whole file
+    discovery, not just its default target: ``ty check tests`` then finds
+    nothing, prints "No python files found", and exits 0 — a gate that
+    measures zero files. Passing this glob as an explicit ``src.include``
+    override makes each gate measure the directory it claims to measure.
+    """
+    normalised = directory.strip().rstrip("/")
+    if normalised in {"", "."}:
+        return "**/*.py"
+    if os.path.isabs(normalised):
+        normalised = os.path.relpath(normalised, Path.cwd())
+    normalised = normalised.removeprefix("./")
+    return f"{normalised}/**/*.py"
+
+
+def run_ty(
+    target: str,
+    include_glob: str | None = None,
+) -> subprocess.CompletedProcess[str]:
+    command = [
+        resolve_ty_binary(),
+        "check",
+        "--output-format",
+        "concise",
+        "--no-progress",
+    ]
+    if include_glob is not None:
+        command += ["-c", f'src.include=["{include_glob}"]']
+    command.append(target)
     return subprocess.run(
-        [
-            resolve_ty_binary(),
-            "check",
-            "--output-format",
-            "concise",
-            "--no-progress",
-            target,
-        ],
+        command,
         capture_output=True,
         text=True,
         check=False,
@@ -131,13 +177,45 @@ def _run_split(args: argparse.Namespace) -> int:
             file=sys.stderr,
         )
 
-    prod_result = run_ty(args.prod_dir) if prod_exists else _zero_result()
-    test_result = run_ty(args.test_dir) if test_exists else _zero_result()
+    prod_result = (
+        run_ty(args.prod_dir, _include_glob(args.prod_dir))
+        if prod_exists
+        else _zero_result()
+    )
+    test_result = (
+        run_ty(args.test_dir, _include_glob(args.test_dir))
+        if test_exists
+        else _zero_result()
+    )
     prod_count = _count_diagnostics(prod_result.stdout + prod_result.stderr)
     test_count = _count_diagnostics(test_result.stdout + test_result.stderr)
 
-    prod_gate = 0 <= prod_count <= prod_max and prod_result.returncode == 0
-    test_gate = 0 <= test_count <= test_max and test_result.returncode == 0
+    # A gate that found no files in a directory that holds Python files
+    # measured nothing. That is a tooling error, not a clean run, and must
+    # never be reported as a pass. An empty directory is a different case:
+    # there was nothing to check, so zero diagnostics is the honest answer.
+    prod_no_files = bool(
+        _NO_FILES_FOUND_RE.search(prod_result.stderr)
+        and _has_python_files(args.prod_dir)
+    )
+    test_no_files = bool(
+        _NO_FILES_FOUND_RE.search(test_result.stderr)
+        and _has_python_files(args.test_dir)
+    )
+
+    # ty exits non-zero when it reports error-level diagnostics. For a
+    # ratchet that is expected: the budget is what decides, and "count <=
+    # max" means the known diagnostics are still within the allowance. A
+    # non-zero exit with *zero* diagnostics means ty could not run, which is
+    # a tooling error rather than a measurement.
+    prod_ty_failed = prod_result.returncode != 0 and prod_count == 0
+    test_ty_failed = test_result.returncode != 0 and test_count == 0
+
+    prod_gate_error = prod_no_files or prod_ty_failed
+    test_gate_error = test_no_files or test_ty_failed
+
+    prod_gate = not prod_gate_error and 0 <= prod_count <= prod_max
+    test_gate = not test_gate_error and 0 <= test_count <= test_max
 
     overall_exit = prod_gate
 
@@ -155,22 +233,48 @@ def _run_split(args: argparse.Namespace) -> int:
             "diagnostic_count": prod_count,
             "max_errors": prod_max,
             "gate_passes": prod_gate,
+            "gate_error": prod_gate_error,
         },
         "test": {
             "diagnostic_count": test_count,
             "max_errors": test_max,
             "gate_passes": test_gate,
+            "gate_error": test_gate_error,
         },
     }
 
     if args.as_json:
         print(json.dumps(summary, indent=2))
     else:
-        prod_status = "PASS" if prod_gate else "FAIL"
-        test_status = "PASS" if test_gate else "FAIL"
+        if prod_gate_error:
+            prod_status = "GATE ERROR"
+        else:
+            prod_status = "PASS" if prod_gate else "FAIL"
+        if test_gate_error:
+            test_status = "GATE ERROR"
+        else:
+            test_status = "PASS" if test_gate else "FAIL"
         print(f"ty ratchet [split] prod: {prod_status} ({prod_count}/{prod_max})")
         print(f"ty ratchet [split] test: {test_status} ({test_count}/{test_max})")
-        if not test_gate:
+        if prod_gate_error:
+            print(
+                f"⚠️ ty_ratchet: GATE ERROR — ty could not measure "
+                f"{args.prod_dir!r} (found no files, or exited "
+                f"{prod_result.returncode} without reporting any). The prod "
+                f"gate is not evidence of a clean run. Check the repo's "
+                f"[tool.ty] src.include setting.",
+                file=sys.stderr,
+            )
+        if test_gate_error:
+            print(
+                f"⚠️ ty_ratchet: GATE ERROR — ty could not measure "
+                f"{args.test_dir!r} (found no files, or exited "
+                f"{test_result.returncode} without reporting any). The test "
+                f"gate is not evidence of a clean run. Check the repo's "
+                f"[tool.ty] src.include setting.",
+                file=sys.stderr,
+            )
+        if not test_gate and not test_gate_error:
             test_combined = (test_result.stdout + test_result.stderr).splitlines()
             if not args.verbose:
                 test_combined = test_combined[-20:]
@@ -181,7 +285,7 @@ def _run_split(args: argparse.Namespace) -> int:
                 file=sys.stderr,
             )
             print("\n".join(test_combined), file=sys.stderr)
-        if not prod_gate:
+        if not prod_gate and not prod_gate_error:
             prod_combined = (prod_result.stdout + prod_result.stderr).splitlines()
             if not args.verbose:
                 prod_combined = prod_combined[-20:]
