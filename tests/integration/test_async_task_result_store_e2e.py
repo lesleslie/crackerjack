@@ -82,7 +82,7 @@ async def test_crackerjack_result_store_is_registered_and_live(
     set_task_manager(manager)
     try:
         app = _StubApp()
-        register_async_task_tools(app)  # type: ignore[arg-type]
+        register_async_task_tools(app)
 
         assert "crackerjack_result_store" in app.tools, (
             "mcp-backend-wiring-discipline: result_store must be registered"

@@ -108,7 +108,7 @@ async def test_list_agents_returns_three_entries(
     from crackerjack.mcp.tools.agent_registry import register_agent_registry
 
     app = _StubApp()
-    register_agent_registry(app)  # type: ignore[arg-type]
+    register_agent_registry(app)
 
     assert "crackerjack_list_agents" in app.tools, (
         "register_agent_registry must register 'crackerjack_list_agents'"
@@ -154,7 +154,7 @@ async def test_list_agents_bumps_feed_cycles(
     from crackerjack.mcp.tools.agent_registry import register_agent_registry
 
     app = _StubApp()
-    register_agent_registry(app)  # type: ignore[arg-type]
+    register_agent_registry(app)
 
     crackerjack_list_agents = app.tools["crackerjack_list_agents"]
 
@@ -181,7 +181,7 @@ async def test_list_agents_returns_expected_agent_names(
     from crackerjack.mcp.tools.agent_registry import register_agent_registry
 
     app = _StubApp()
-    register_agent_registry(app)  # type: ignore[arg-type]
+    register_agent_registry(app)
 
     entries = await app.tools["crackerjack_list_agents"]()
     names = {entry["name"] for entry in entries}
@@ -204,7 +204,7 @@ async def test_list_agents_each_entry_has_valid_id_shape(
     from crackerjack.mcp.tools.agent_registry import register_agent_registry
 
     app = _StubApp()
-    register_agent_registry(app)  # type: ignore[arg-type]
+    register_agent_registry(app)
 
     entries = await app.tools["crackerjack_list_agents"]()
     for entry in entries:

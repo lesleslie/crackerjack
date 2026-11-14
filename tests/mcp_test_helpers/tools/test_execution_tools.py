@@ -45,7 +45,7 @@ class TestRegisterExecutionTools:
 
             return wrap
 
-        mock_app.tool = decorator  # type: ignore[method-assign]
+        mock_app.tool = decorator
         register_execution_tools(mock_app)
 
         for name in (
@@ -400,7 +400,7 @@ def _captured_tool(name: str) -> t.Any:
 
         return wrap
 
-    mock_app.tool = decorator  # type: ignore[method-assign]
+    mock_app.tool = decorator
     register_execution_tools(mock_app)
     for fn in captured:
         if fn.__name__ == name:

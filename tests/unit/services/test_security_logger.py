@@ -392,7 +392,7 @@ def test_log_security_event_with_path_object(
 
     record = caplog.records[-1]
     assert record.levelno == logging.INFO
-    assert record.security_event is True  # type: ignore[attr-defined]
+    assert record.security_event is True
     assert record.getMessage().startswith("{")
     payload = _last_event(caplog)
     assert payload["timestamp"] == 10.0

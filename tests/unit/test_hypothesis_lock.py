@@ -53,7 +53,7 @@ class TestHypothesisDataclass:
             locked_at="2026-06-22T00:00:00Z",
         )
         with pytest.raises((AttributeError, Exception)):
-            h.claim = "Y"  # type: ignore[misc]
+            h.claim = "Y"
 
     def test_hypothesis_confidence_bounded(self) -> None:
         with pytest.raises(ValueError):
@@ -173,7 +173,7 @@ class TestHypothesisLock:
         assert isinstance(lock, LockResult)
         # Locked copy is frozen
         with pytest.raises((AttributeError, Exception)):
-            lock.hypothesis.claim = "Y"  # type: ignore[misc]
+            lock.hypothesis.claim = "Y"
 
     def test_lock_has_signature(self) -> None:
         h = Hypothesis(

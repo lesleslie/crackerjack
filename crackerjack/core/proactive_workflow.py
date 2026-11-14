@@ -21,7 +21,7 @@ class ProactiveWorkflowPipeline:
         # its deterministic/basic planning strategy.
         self._architect_agent_coordinator: None = None
 
-        self._phase_handlers: dict[  # type: ignore[dict-item]
+        self._phase_handlers: dict[
             str, t.Callable[[OptionsProtocol, dict[str, t.Any]], t.Awaitable[bool]]
         ] = {
             WorkflowPhase.CONFIGURATION_SETUP: self._setup_with_architecture,

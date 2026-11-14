@@ -92,13 +92,13 @@ class TestRegisterSemanticTools:
         mock_app = MagicMock()
         registered: list[str] = []
 
-        def tool_decorator() -> t.Any:  # type: ignore[name-defined]
-            def decorator(func: t.Any) -> t.Any:  # type: ignore[name-defined]
+        def tool_decorator() -> t.Any:
+            def decorator(func: t.Any) -> t.Any:
                 registered.append(func.__name__)
                 return func
             return decorator
 
-        mock_app.tool = tool_decorator  # type: ignore[method-assign]
+        mock_app.tool = tool_decorator
         register_semantic_tools(mock_app)
 
         for name in (
@@ -386,17 +386,17 @@ class TestGenerateEmbeddingsForTexts:
 
 @pytest.mark.unit
 class TestIndexFileSemantic:
-    def _tool(self) -> t.Any:  # type: ignore[name-defined]
+    def _tool(self) -> t.Any:
         mock_app = MagicMock()
         captured: list[t.Any] = []
 
-        def decorator() -> t.Any:  # type: ignore[name-defined]
-            def wrap(func: t.Any) -> t.Any:  # type: ignore[name-defined]
+        def decorator() -> t.Any:
+            def wrap(func: t.Any) -> t.Any:
                 captured.append(func)
                 return func
             return wrap
 
-        mock_app.tool = decorator  # type: ignore[method-assign]
+        mock_app.tool = decorator
         register_semantic_tools(mock_app)
         for fn in captured:
             if fn.__name__ == "crackerjack_index_file_semantic":
@@ -469,17 +469,17 @@ class TestIndexFileSemantic:
 
 @pytest.mark.unit
 class TestSearchSemantic:
-    def _tool(self) -> t.Any:  # type: ignore[name-defined]
+    def _tool(self) -> t.Any:
         mock_app = MagicMock()
         captured: list[t.Any] = []
 
-        def decorator() -> t.Any:  # type: ignore[name-defined]
-            def wrap(func: t.Any) -> t.Any:  # type: ignore[name-defined]
+        def decorator() -> t.Any:
+            def wrap(func: t.Any) -> t.Any:
                 captured.append(func)
                 return func
             return wrap
 
-        mock_app.tool = decorator  # type: ignore[method-assign]
+        mock_app.tool = decorator
         register_semantic_tools(mock_app)
         for fn in captured:
             if fn.__name__ == "crackerjack_search_semantic":
@@ -564,17 +564,17 @@ class TestSearchSemantic:
 
 @pytest.mark.unit
 class TestGetSemanticStats:
-    def _tool(self) -> t.Any:  # type: ignore[name-defined]
+    def _tool(self) -> t.Any:
         mock_app = MagicMock()
         captured: list[t.Any] = []
 
-        def decorator() -> t.Any:  # type: ignore[name-defined]
-            def wrap(func: t.Any) -> t.Any:  # type: ignore[name-defined]
+        def decorator() -> t.Any:
+            def wrap(func: t.Any) -> t.Any:
                 captured.append(func)
                 return func
             return wrap
 
-        mock_app.tool = decorator  # type: ignore[method-assign]
+        mock_app.tool = decorator
         register_semantic_tools(mock_app)
         for fn in captured:
             if fn.__name__ == "crackerjack_get_semantic_stats":
@@ -641,17 +641,17 @@ class TestGetSemanticStats:
 
 @pytest.mark.unit
 class TestRemoveFileFromIndex:
-    def _tool(self) -> t.Any:  # type: ignore[name-defined]
+    def _tool(self) -> t.Any:
         mock_app = MagicMock()
         captured: list[t.Any] = []
 
-        def decorator() -> t.Any:  # type: ignore[name-defined]
-            def wrap(func: t.Any) -> t.Any:  # type: ignore[name-defined]
+        def decorator() -> t.Any:
+            def wrap(func: t.Any) -> t.Any:
                 captured.append(func)
                 return func
             return wrap
 
-        mock_app.tool = decorator  # type: ignore[method-assign]
+        mock_app.tool = decorator
         register_semantic_tools(mock_app)
         for fn in captured:
             if fn.__name__ == "crackerjack_remove_file_from_semantic_index":
@@ -734,17 +734,17 @@ class TestRemoveFileFromIndex:
 
 @pytest.mark.unit
 class TestGetEmbeddings:
-    def _tool(self) -> t.Any:  # type: ignore[name-defined]
+    def _tool(self) -> t.Any:
         mock_app = MagicMock()
         captured: list[t.Any] = []
 
-        def decorator() -> t.Any:  # type: ignore[name-defined]
-            def wrap(func: t.Any) -> t.Any:  # type: ignore[name-defined]
+        def decorator() -> t.Any:
+            def wrap(func: t.Any) -> t.Any:
                 captured.append(func)
                 return func
             return wrap
 
-        mock_app.tool = decorator  # type: ignore[method-assign]
+        mock_app.tool = decorator
         register_semantic_tools(mock_app)
         for fn in captured:
             if fn.__name__ == "crackerjack_get_embeddings":
@@ -808,17 +808,17 @@ class TestGetEmbeddings:
 
 @pytest.mark.unit
 class TestCalculateSimilarity:
-    def _tool(self) -> t.Any:  # type: ignore[name-defined]
+    def _tool(self) -> t.Any:
         mock_app = MagicMock()
         captured: list[t.Any] = []
 
-        def decorator() -> t.Any:  # type: ignore[name-defined]
-            def wrap(func: t.Any) -> t.Any:  # type: ignore[name-defined]
+        def decorator() -> t.Any:
+            def wrap(func: t.Any) -> t.Any:
                 captured.append(func)
                 return func
             return wrap
 
-        mock_app.tool = decorator  # type: ignore[method-assign]
+        mock_app.tool = decorator
         register_semantic_tools(mock_app)
         for fn in captured:
             if fn.__name__ == "crackerjack_calculate_similarity_semantic":

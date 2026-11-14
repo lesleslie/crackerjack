@@ -43,7 +43,7 @@ def test_match_to_dict() -> None:
 def test_match_is_frozen() -> None:
     match = AntiAIFlavorMatch(phrase="x", line=1, column=1)
     with pytest.raises((AttributeError, Exception)):
-        match.phrase = "y"  # type: ignore[misc]
+        match.phrase = "y"
 
 
 # ---------------------------------------------------------------------------

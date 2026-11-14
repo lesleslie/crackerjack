@@ -1100,7 +1100,7 @@ class TestHandleProcessTimeout:
         assert result.exit_code == 124
         assert result.issues_found is not None
         assert "timed out" in result.issues_found[0].lower()
-        assert "exceeded timeout" in (result.error_message or "").lower()  # type: ignore[operator]
+        assert "exceeded timeout" in (result.error_message or "").lower()
 
 
 # ---------------------------------------------------------------------------

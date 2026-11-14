@@ -812,7 +812,7 @@ class TestSessionMetricsComputePaths:
             start_time=start,
         )
         # Mutate after construction to simulate missing start_time.
-        metrics.start_time = None  # type: ignore[assignment]
+        metrics.start_time = None
         # Calling helper directly should leave duration_seconds unchanged.
         metrics._compute_duration_if_needed()
         assert metrics.duration_seconds is None
@@ -825,7 +825,7 @@ class TestSessionMetricsComputePaths:
             project_path=Path("/test"),
             start_time=start,
         )
-        metrics.start_time = None  # type: ignore[assignment]
+        metrics.start_time = None
         metrics.end_time = None
         metrics._compute_duration_if_needed()
         assert metrics.duration_seconds is None
@@ -957,7 +957,7 @@ class TestSessionMetricsCalculateDurationLogging:
             project_path=Path("/test"),
             start_time=start,
         )
-        metrics.start_time = None  # type: ignore[assignment]
+        metrics.start_time = None
         metrics.end_time = end
         with caplog.at_level(logging.DEBUG, logger="crackerjack.models.session_metrics"):
             assert metrics.calculate_duration() is None
@@ -992,7 +992,7 @@ class TestSessionMetricsToDictExtra:
             start_time=start,
         )
         # Mutate to simulate a non-Path project_path stored in the dict.
-        metrics.project_path = "/already/string"  # type: ignore[assignment]
+        metrics.project_path = "/already/string"
         data = metrics.to_dict()
         assert data["project_path"] == "/already/string"
 
@@ -1005,7 +1005,7 @@ class TestSessionMetricsToDictExtra:
             start_time=start,
         )
         # Mutate to simulate an already-serialized start_time.
-        metrics.start_time = "2026-05-16T10:00:00"  # type: ignore[assignment]
+        metrics.start_time = "2026-05-16T10:00:00"
         data = metrics.to_dict()
         assert data["start_time"] == "2026-05-16T10:00:00"
 
@@ -1017,7 +1017,7 @@ class TestSessionMetricsToDictExtra:
             project_path=Path("/test/path"),
             start_time=start,
         )
-        metrics.start_time = None  # type: ignore[assignment]
+        metrics.start_time = None
         data = metrics.to_dict()
         assert data["start_time"] is None
 

@@ -33,7 +33,7 @@ def test_language_adapter_is_runtime_checkable() -> None:
 def test_capabilities_is_frozen() -> None:
     caps = Capabilities()
     with pytest.raises((AttributeError, Exception)):  # FrozenInstanceError is subclass of AttributeError
-        caps.has_lifecycle = True  # type: ignore[misc]
+        caps.has_lifecycle = True
 
 
 def test_capabilities_defaults() -> None:
@@ -60,13 +60,13 @@ def test_version_source_error_hierarchy() -> None:
 
 def test_lifecycle_options_accepts_known_levels() -> None:
     for level in ("major", "minor", "patch"):
-        opts = LifecycleOptions(level=level)  # type: ignore[arg-type]
+        opts = LifecycleOptions(level=level)
         assert opts.level == level
 
 
 def test_lifecycle_options_rejects_unknown_level() -> None:
     with pytest.raises(ValueError):
-        LifecycleOptions(level="epic")  # type: ignore[arg-type]
+        LifecycleOptions(level="epic")
 
 
 def test_lifecycle_result_defaults() -> None:

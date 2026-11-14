@@ -354,4 +354,4 @@ def test_marker_hit_is_frozen() -> None:
     """MarkerHit is a frozen dataclass (hashable, immutable)."""
     hit = MarkerHit(path=Path("a.md"), line=1, snippet="<<<<<<<")
     with pytest.raises((AttributeError, Exception)):
-        hit.line = 99  # type: ignore[misc]
+        hit.line = 99

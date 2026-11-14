@@ -331,7 +331,7 @@ class TestFixPlan:
         path_obj = Path("/path/to/file.py")
 
         plan = FixPlan(
-            file_path=path_obj,  # type: ignore[arg-type]
+            file_path=path_obj,
             issue_type="COMPLEXITY",
             changes=[],
             rationale="test",

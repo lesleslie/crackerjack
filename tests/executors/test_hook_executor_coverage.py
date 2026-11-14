@@ -2062,7 +2062,7 @@ class TestGetChangedFilesSmartFilter:
         # Construct a real SmartFileFilter, then swap in a stub for the
         # ``get_files_for_qa_scan`` method
         real_filter = SmartFileFilter.__new__(SmartFileFilter)
-        real_filter.get_files_for_qa_scan = MagicMock(  # type: ignore[method-assign]
+        real_filter.get_files_for_qa_scan = MagicMock(
             return_value=[tmp_path / "a.py", tmp_path / "b.md"]
         )
 

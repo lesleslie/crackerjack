@@ -26,12 +26,12 @@ def test_default_overseer_model_is_set() -> None:
 
 def test_overseer_initializes_with_default_model() -> None:
     overseer = ImprovementOverseer()
-    assert overseer._model == "MiniMax-M3-highspeed"  # type: ignore[attr-defined]
+    assert overseer._model == "MiniMax-M3-highspeed"
 
 
 def test_overseer_accepts_custom_model() -> None:
     overseer = ImprovementOverseer(model="MiniMax-M3")
-    assert overseer._model == "MiniMax-M3"  # type: ignore[attr-defined]
+    assert overseer._model == "MiniMax-M3"
 
 
 @pytest.mark.asyncio

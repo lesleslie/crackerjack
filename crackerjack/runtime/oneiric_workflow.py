@@ -254,7 +254,7 @@ def _register_tasks(
         ),
         "fast_hooks": lambda: _PhaseTask(
             "fast_hooks",
-            lambda: phases.run_fast_hooks_only(options),  # type: ignore[unused-coroutine]
+            lambda: phases.run_fast_hooks_only(options),
             verbose=verbose,
             error_provider=_make_error_provider("fast_hooks"),
         ),

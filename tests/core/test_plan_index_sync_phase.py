@@ -232,10 +232,10 @@ def test_run_plan_index_sync_phase_skips_when_flag_off(
             tracked.append((key, label))
 
     coordinator = PhaseCoordinator.__new__(PhaseCoordinator)
-    coordinator.session = _FakeSession()  # type: ignore[attr-defined]
+    coordinator.session = _FakeSession()
 
     assert (
-        coordinator.run_plan_index_sync_phase(  # type: ignore[arg-type]
+        coordinator.run_plan_index_sync_phase(
             SimpleNamespace(plan_index_sync=False),
         )
         is True
@@ -263,9 +263,9 @@ def test_run_plan_index_sync_phase_calls_tool_success(
             completed.append((key, details))
 
     coordinator = pc.PhaseCoordinator.__new__(pc.PhaseCoordinator)
-    coordinator.session = _FakeSession()  # type: ignore[attr-defined]
-    coordinator.pkg_path = Path("/tmp/repo")  # type: ignore[attr-defined]
-    coordinator.console = MagicMock()  # type: ignore[attr-defined]
+    coordinator.session = _FakeSession()
+    coordinator.pkg_path = Path("/tmp/repo")
+    coordinator.console = MagicMock()
 
     fake_main = MagicMock(return_value=0)
     fake_module = MagicMock()
@@ -280,7 +280,7 @@ def test_run_plan_index_sync_phase_calls_tool_success(
     )
 
     assert (
-        coordinator.run_plan_index_sync_phase(  # type: ignore[arg-type]
+        coordinator.run_plan_index_sync_phase(
             SimpleNamespace(plan_index_sync=True, docs_dry_run=False),
         )
         is True
@@ -309,9 +309,9 @@ def test_run_plan_index_sync_phase_dry_run_message(
             completed.append((key, details))
 
     coordinator = pc.PhaseCoordinator.__new__(pc.PhaseCoordinator)
-    coordinator.session = _FakeSession()  # type: ignore[attr-defined]
-    coordinator.pkg_path = Path("/tmp/repo")  # type: ignore[attr-defined]
-    coordinator.console = MagicMock()  # type: ignore[attr-defined]
+    coordinator.session = _FakeSession()
+    coordinator.pkg_path = Path("/tmp/repo")
+    coordinator.console = MagicMock()
 
     fake_main = MagicMock(return_value=0)
     fake_module = MagicMock()
@@ -322,7 +322,7 @@ def test_run_plan_index_sync_phase_dry_run_message(
     )
 
     assert (
-        coordinator.run_plan_index_sync_phase(  # type: ignore[arg-type]
+        coordinator.run_plan_index_sync_phase(
             SimpleNamespace(plan_index_sync=True, docs_dry_run=True),
         )
         is True
@@ -352,9 +352,9 @@ def test_run_plan_index_sync_phase_handles_systemexit(
             failed.append((key, details))
 
     coordinator = pc.PhaseCoordinator.__new__(pc.PhaseCoordinator)
-    coordinator.session = _FakeSession()  # type: ignore[attr-defined]
-    coordinator.pkg_path = Path("/tmp/repo")  # type: ignore[attr-defined]
-    coordinator.console = MagicMock()  # type: ignore[attr-defined]
+    coordinator.session = _FakeSession()
+    coordinator.pkg_path = Path("/tmp/repo")
+    coordinator.console = MagicMock()
 
     def raise_system_exit(_argv: list[str]) -> None:
         raise SystemExit(2)
@@ -367,7 +367,7 @@ def test_run_plan_index_sync_phase_handles_systemexit(
     )
 
     assert (
-        coordinator.run_plan_index_sync_phase(  # type: ignore[arg-type]
+        coordinator.run_plan_index_sync_phase(
             SimpleNamespace(plan_index_sync=True, docs_dry_run=False),
         )
         is False
@@ -394,9 +394,9 @@ def test_run_plan_index_sync_phase_handles_systemexit_nonint_code(
             failed.append((key, details))
 
     coordinator = pc.PhaseCoordinator.__new__(pc.PhaseCoordinator)
-    coordinator.session = _FakeSession()  # type: ignore[attr-defined]
-    coordinator.pkg_path = Path("/tmp/repo")  # type: ignore[attr-defined]
-    coordinator.console = MagicMock()  # type: ignore[attr-defined]
+    coordinator.session = _FakeSession()
+    coordinator.pkg_path = Path("/tmp/repo")
+    coordinator.console = MagicMock()
 
     def raise_system_exit(_argv: list[str]) -> None:
         raise SystemExit(None)  # argparse with error: SystemExit(2), but cover None.
@@ -409,7 +409,7 @@ def test_run_plan_index_sync_phase_handles_systemexit_nonint_code(
     )
 
     assert (
-        coordinator.run_plan_index_sync_phase(  # type: ignore[arg-type]
+        coordinator.run_plan_index_sync_phase(
             SimpleNamespace(plan_index_sync=True, docs_dry_run=False),
         )
         is False

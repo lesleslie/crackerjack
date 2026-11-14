@@ -121,7 +121,7 @@ def test_track_search_interaction_when_not_initialized(
 ) -> None:
     """When ``_initialized`` is False, ``track_search_interaction`` is a no-op."""
     opt = SQLiteQueryOptimizer(db_path=tmp_path / "opt.db")
-    opt._initialized = False  # type: ignore[attr-defined]
+    opt._initialized = False
     opt.track_search_interaction(
         query="q",
         results_clicked=[],
@@ -246,7 +246,7 @@ def test_get_query_suggestions_empty_when_not_initialized(
     tmp_path: Path,
 ) -> None:
     opt = SQLiteQueryOptimizer(db_path=tmp_path / "opt.db")
-    opt._initialized = False  # type: ignore[attr-defined]
+    opt._initialized = False
     assert opt.get_query_suggestions("partial", ["similar"]) == []
 
 
@@ -347,7 +347,7 @@ def test_adapt_ranking_boosts_clicked_results(
 
 def test_adapt_ranking_when_not_initialized(tmp_path: Path) -> None:
     opt = SQLiteQueryOptimizer(db_path=tmp_path / "opt.db")
-    opt._initialized = False  # type: ignore[attr-defined]
+    opt._initialized = False
     candidates = [{"id": "x", "score": 0.5}]
     assert opt.adapt_ranking("q", candidates) == candidates
 
@@ -417,7 +417,7 @@ def test_get_click_through_rate_zero_shown(
         return _FakeConn()
 
     monkeypatch.setattr(sqlite3, "connect", _fake_connect)
-    optimizer._initialized = True  # type: ignore[attr-defined]
+    optimizer._initialized = True
     assert optimizer.get_click_through_rate("q") == 0.0
 
 
@@ -435,7 +435,7 @@ def test_get_click_through_rate_handles_exception(
 
 def test_get_click_through_rate_not_initialized(tmp_path: Path) -> None:
     opt = SQLiteQueryOptimizer(db_path=tmp_path / "opt.db")
-    opt._initialized = False  # type: ignore[attr-defined]
+    opt._initialized = False
     assert opt.get_click_through_rate("q") == 0.0
 
 

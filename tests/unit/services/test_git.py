@@ -814,15 +814,15 @@ class TestRunSubprocessWithKillOnTimeout:
             def __init__(self) -> None:
                 self.pid = 99999  # arbitrary fake pid
 
-            def communicate(self, *, timeout: float | None = None):  # type: ignore[no-untyped-def]
+            def communicate(self, *, timeout: float | None = None):
                 # Always time out so we exercise the kill path.
                 raise subprocess.TimeoutExpired(["sleep"], timeout or 0.0)
 
-        def fake_popen(cmd, **kwargs):  # type: ignore[no-untyped-def]
+        def fake_popen(cmd, **kwargs):
             popen_calls.append({"cmd": cmd, "kwargs": kwargs})
             return _FakeProc()
 
-        def fake_killpg(pid, sig):  # type: ignore[no-untyped-def]
+        def fake_killpg(pid, sig):
             killpg_calls.append((pid, sig))
 
         monkeypatch.setattr(
@@ -852,15 +852,15 @@ class TestRunSubprocessWithKillOnTimeout:
                 self.pid = 12345
                 self.returncode = 0
 
-            def communicate(self, *, timeout: float | None = None):  # type: ignore[no-untyped-def]
+            def communicate(self, *, timeout: float | None = None):
                 return ("ok stdout", "ok stderr")
 
         killpg_calls: list = []
 
-        def fake_popen(cmd, **kwargs):  # type: ignore[no-untyped-def]
+        def fake_popen(cmd, **kwargs):
             return _FakeProc()
 
-        def fake_killpg(pid, sig):  # type: ignore[no-untyped-def]
+        def fake_killpg(pid, sig):
             killpg_calls.append((pid, sig))
 
         monkeypatch.setattr(
@@ -888,7 +888,7 @@ class TestRunSubprocessWithKillOnTimeout:
                 self.pid = 7777
                 self.returncode = 0
 
-            def communicate(self, *, timeout: float | None = None):  # type: ignore[no-untyped-def]
+            def communicate(self, *, timeout: float | None = None):
                 communicate_calls.append({"timeout": timeout})
                 return ("", "")
 

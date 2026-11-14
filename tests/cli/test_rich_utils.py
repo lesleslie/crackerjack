@@ -56,7 +56,7 @@ def test_print_panel_with_style_passes_style_to_print() -> None:
     fake_console = Console(file=StringIO(), force_terminal=False)
     with patch.object(_rich_utils, "console", fake_console):
         _rich_utils.print_panel("x", style="bold red")
-    out = fake_console.file.getvalue()  # type: ignore[attr-defined]
+    out = fake_console.file.getvalue()
     # Style may not appear in plain output, but no exception is what matters.
     assert "x" in out or out == ""
 
@@ -67,7 +67,7 @@ def test_print_panel_without_style_uses_plain_print() -> None:
     with patch.object(_rich_utils, "console", fake_console):
         _rich_utils.print_panel("payload")
     # No exception, and the panel content reached the console
-    out = fake_console.file.getvalue()  # type: ignore[attr-defined]
+    out = fake_console.file.getvalue()
     assert "payload" in out or "panel" in out.lower() or out != ""
 
 

@@ -758,7 +758,7 @@ class TestValidateArgs:
             return x
 
         with pytest.raises(ValidationError):
-            f("not an int")  # type: ignore[arg-type]
+            f("not an int")
 
     def test_multiple_validators_for_same_param(self) -> None:
         @validate_args(
@@ -783,7 +783,7 @@ class TestValidateArgs:
             return f"{a}-{b}"
 
         with pytest.raises(ValidationError):
-            f(1, 2)  # type: ignore[arg-type]
+            f(1, 2)
 
     def test_type_check_against_signature(self) -> None:
         @validate_args(type_check=True)
@@ -791,7 +791,7 @@ class TestValidateArgs:
             return x
 
         with pytest.raises(ValidationError, match="x"):
-            f("nope")  # type: ignore[arg-type]
+            f("nope")
 
     def test_type_check_off_skips_signature_check(self) -> None:
         @validate_args(type_check=False)
@@ -800,7 +800,7 @@ class TestValidateArgs:
             return 1
 
         # Should not raise when type_check=False
-        assert f("nope") == 1  # type: ignore[arg-type]
+        assert f("nope") == 1
 
     def test_type_check_skips_unannotated_params(self) -> None:
         # Exercises the type_check=True branch without triggering the
@@ -808,7 +808,7 @@ class TestValidateArgs:
         # when no annotation is present, _check_type_annotation_against_signature
         # returns early.
         @validate_args(type_check=True)
-        def f(x) -> int:  # type: ignore[no-untyped-def]
+        def f(x) -> int:
             return 1
 
         assert f(5) == 1
@@ -820,7 +820,7 @@ class TestValidateArgs:
 
         assert await f(3) == 3
         with pytest.raises(ValidationError):
-            await f("nope")  # type: ignore[arg-type]
+            await f("nope")
 
     def test_validator_map_with_no_keys_is_noop(self) -> None:
         @validate_args()

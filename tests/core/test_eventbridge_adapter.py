@@ -83,4 +83,4 @@ def test_publisher_accepts_any_bridge_object() -> None:
             self.calls.append((topic, payload, headers))
 
     publisher = EventBridgePublisher(_FakeBridge())
-    assert publisher._bridge is not None  # type: ignore[attr-defined]
+    assert publisher._bridge is not None

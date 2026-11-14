@@ -518,10 +518,10 @@ class ConfigCleanupService:
 
         try:
             from crackerjack.services.config_service import (
-                _dump_toml,  # ty: ignore[import-not-found] # type: ignore[attr-defined]
+                _dump_toml,  # ty: ignore[import-not-found]
             )
 
-            toml_content = _dump_toml(pyproject_config)  # type: ignore[attr-defined]
+            toml_content = _dump_toml(pyproject_config)
             pyproject_path.write_text(toml_content)
 
             self.console.print("[green]✅[/green] pyproject.toml updated")

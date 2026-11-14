@@ -10,9 +10,9 @@ from unittest.mock import AsyncMock, MagicMock
 
 def _load_tool_version_module() -> types.ModuleType:
     fake_package = types.ModuleType("fakepkg")
-    fake_package.__path__ = []  # type: ignore[attr-defined]
+    fake_package.__path__ = []
     fake_services = types.ModuleType("fakepkg.services")
-    fake_services.__path__ = []  # type: ignore[attr-defined]
+    fake_services.__path__ = []
 
     fake_config_integrity = types.ModuleType("fakepkg.services.config_integrity")
     fake_smart_scheduling = types.ModuleType("fakepkg.services.smart_scheduling")

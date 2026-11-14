@@ -18,7 +18,7 @@ class _FakeAdapter:
 
 def test_discover_adapters_returns_dict_with_python_key(monkeypatch: object) -> None:
     """The Python adapter must always be discoverable."""
-    monkeypatch_ = monkeypatch  # type: ignore[assignment]
+    monkeypatch_ = monkeypatch
     adapters = discover_adapters()
     # Built-in Python adapter is registered via entry-point in pyproject.toml.
     assert "python" in adapters

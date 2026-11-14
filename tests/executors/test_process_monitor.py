@@ -387,7 +387,7 @@ def test_monitor_process_starts_thread(monkeypatch: pytest.MonkeyPatch) -> None:
     thread_started: list[threading.Thread] = []
     real_thread_cls = threading.Thread
 
-    class _SpyThread(real_thread_cls):  # type: ignore[misc]
+    class _SpyThread(real_thread_cls):
         def start(self) -> None:
             thread_started.append(self)
             # Don't actually run the target — the test only verifies wiring.

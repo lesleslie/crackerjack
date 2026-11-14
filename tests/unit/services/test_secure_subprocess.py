@@ -98,7 +98,7 @@ class TestSecureSubprocessExecutorValidation:
             executor._validate_command(("echo", "test"))
 
         with pytest.raises(CommandValidationError, match="Command arguments must be strings"):
-            executor._validate_command(["echo", 123])  # type: ignore[list-item]
+            executor._validate_command(["echo", 123])
 
     def test_validate_command_too_long_raises_error(self, executor) -> None:
         """Test validation fails for excessively long command."""

@@ -84,7 +84,7 @@ async def test_start_sets_running_and_spawns_cleanup_task() -> None:
     try:
         await mgr.start()
         assert mgr.get_stats()["running"] is True
-        assert mgr._cleanup_task is not None  # type: ignore[attr-defined]
+        assert mgr._cleanup_task is not None
     finally:
         await mgr.stop()
 
@@ -236,7 +236,7 @@ async def test_cancel_existing_task_returns_true() -> None:
     cancelled = await mgr.cancel_task("t")
     assert cancelled is True
     with pytest.raises(asyncio.CancelledError):
-        await mgr._tasks["t"].task  # type: ignore[attr-defined]
+        await mgr._tasks["t"].task
     await mgr.stop()
 
 
@@ -389,7 +389,7 @@ async def test_managed_task_exception_in_task_does_not_break_context() -> None:
 @pytest.mark.unit
 async def test_cancel_all_tasks_with_no_tasks_is_noop() -> None:
     mgr = _new_manager()
-    await mgr._cancel_all_tasks()  # type: ignore[attr-defined]
+    await mgr._cancel_all_tasks()
     assert mgr.get_stats()["active_tasks"] == 0
 
 
@@ -401,7 +401,7 @@ async def test_cleanup_completed_tasks_removes_done_tasks() -> None:
     await asyncio.sleep(0)
     # task already removed by _wrap_task finally; listing should be empty
     assert mgr.get_stats()["active_tasks"] == 0
-    await mgr._cleanup_completed_tasks()  # type: ignore[attr-defined]
+    await mgr._cleanup_completed_tasks()
     assert mgr.get_stats()["active_tasks"] == 0
 
 

@@ -581,7 +581,7 @@ class TestRetryOnError:
 
         def odd_error() -> None:
             attempts.append(1)
-            raise KeyError("not configured")  # type: ignore[misc]
+            raise KeyError("not configured")
 
         decorator = ehd.retry_on_error(
             max_attempts=3,

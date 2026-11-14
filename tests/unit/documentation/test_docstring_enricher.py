@@ -182,7 +182,7 @@ class TestEnricherBatchCallsReduceLLMRoundTrips:
 
         call_count = 0
 
-        async def mock_llm(candidates):  # type: ignore[no-untyped-def]
+        async def mock_llm(candidates):
             nonlocal call_count
             call_count += 1
             return [

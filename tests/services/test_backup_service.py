@@ -269,7 +269,7 @@ def test_create_package_backup_validation_failure_cleans_up(tmp_path: Path) -> N
     svc = PackageBackupService(backup_root=bk_root)
 
     # Patch _validate_backup to return invalid (won't be reached).
-    svc._validate_backup = MagicMock(  # type: ignore[assignment]
+    svc._validate_backup = MagicMock(
         return_value=BackupValidationResult(
             is_valid=False,
             missing_files=[],
@@ -289,7 +289,7 @@ def test_create_package_backup_generic_exception_wrapped(tmp_path: Path) -> None
     (pkg / "a.py").write_text("a = 1\n")
     svc = PackageBackupService(backup_root=tmp_path / "bk")
     # Force _perform_backup to raise a non-ExecutionError.
-    svc._perform_backup = MagicMock(  # type: ignore[assignment]
+    svc._perform_backup = MagicMock(
         side_effect=RuntimeError("disk crash"),
     )
     with pytest.raises(ExecutionError, match="Failed to create package backup"):
@@ -584,7 +584,7 @@ def test_restore_from_backup_success(tmp_path: Path) -> None:
     md = _make_metadata(pkg, bk, files, "")
 
     svc = PackageBackupService(backup_root=tmp_path)
-    svc._calculate_backup_checksum = lambda x: ""  # type: ignore[assignment]
+    svc._calculate_backup_checksum = lambda x: ""
     svc.restore_from_backup(md, base_directory=tmp_path)
     # Restore writes the staged file content back to package_directory.
     assert (pkg / "a.py").read_bytes() == content
@@ -614,7 +614,7 @@ def test_restore_from_backup_validation_failure(tmp_path: Path) -> None:
     md = _make_metadata(pkg, bk, {}, "")
     svc = PackageBackupService(backup_root=tmp_path)
     # Force validation to fail.
-    svc._validate_backup = MagicMock(  # type: ignore[assignment]
+    svc._validate_backup = MagicMock(
         return_value=BackupValidationResult(
             is_valid=False,
             missing_files=[],
@@ -635,14 +635,14 @@ def test_restore_from_backup_generic_exception_wrapped(tmp_path: Path) -> None:
     md = _make_metadata(pkg, bk, {}, "")
     # Patch _validate_backup so it passes (otherwise we hit validation error first).
     svc = PackageBackupService(backup_root=tmp_path)
-    svc._validate_backup = MagicMock(  # type: ignore[assignment]
+    svc._validate_backup = MagicMock(
         return_value=BackupValidationResult(
             is_valid=True, missing_files=[], corrupted_files=[],
             total_validated=0, validation_errors=[],
         ),
     )
     # Force staging to fail.
-    svc._stage_backup_files = MagicMock(side_effect=RuntimeError("stage fail"))  # type: ignore[assignment]
+    svc._stage_backup_files = MagicMock(side_effect=RuntimeError("stage fail"))
     with pytest.raises(ExecutionError, match="Failed to restore"):
         svc.restore_from_backup(md)
 
@@ -655,7 +655,7 @@ def test_restore_from_backup_temp_dir_cleaned_on_failure(tmp_path: Path) -> None
     bk.mkdir()
     md = _make_metadata(pkg, bk, {}, "")
     svc = PackageBackupService(backup_root=tmp_path)
-    svc._stage_backup_files = MagicMock(side_effect=RuntimeError("boom"))  # type: ignore[assignment]
+    svc._stage_backup_files = MagicMock(side_effect=RuntimeError("boom"))
     with pytest.raises(ExecutionError):
         svc.restore_from_backup(md)
     # Sanity check — the test does not crash; temp dir cleanup is best-effort.

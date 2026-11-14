@@ -8,7 +8,7 @@ import yaml
 
 
 class _UniqueKeyLoader(yaml.SafeLoader):
-    def construct_mapping(self, node, deep=False):  # type: ignore[override]
+    def construct_mapping(self, node, deep=False):
         mapping = {}
         for key_node, value_node in node.value:
             key = self.construct_object(key_node, deep=deep)

@@ -15,7 +15,7 @@ def register_execution_tools(mcp_app: t.Any) -> None:
 
 
 def _register_execute_crackerjack_tool(mcp_app: t.Any) -> None:
-    @mcp_app.tool(name="crackerjack_execute")  # type: ignore[misc]
+    @mcp_app.tool(name="crackerjack_execute")
     async def execute_crackerjack(args: str, kwargs: str) -> str:
         """Start a Crackerjack quality workflow and return its job id.
 
@@ -123,7 +123,7 @@ def _handle_general_error(error: Exception) -> str:
 
 
 def _register_smart_error_analysis_tool(mcp_app: t.Any) -> None:
-    @mcp_app.tool(name="crackerjack_analyze_errors")  # type: ignore[misc]
+    @mcp_app.tool(name="crackerjack_analyze_errors")
     async def smart_error_analysis(use_cache: bool = True) -> str:
         """Analyse cached error patterns and suggest fixes.
 
@@ -161,7 +161,7 @@ def _register_smart_error_analysis_tool(mcp_app: t.Any) -> None:
 
 
 def _register_init_crackerjack_tool(mcp_app: t.Any) -> None:
-    @mcp_app.tool(name="crackerjack_init")  # type: ignore[misc]
+    @mcp_app.tool(name="crackerjack_init")
     def init_crackerjack(args: str = "", kwargs: str = "{}") -> str:
         """Initialise or update the Crackerjack configuration for a project.
 
@@ -201,7 +201,7 @@ def _register_init_crackerjack_tool(mcp_app: t.Any) -> None:
 
 
 def _register_agent_suggestions_tool(mcp_app: t.Any) -> None:
-    @mcp_app.tool()  # type: ignore[misc]
+    @mcp_app.tool()
     def crackerjack_suggest_agents(
         task_description: str = "",
         project_type: str = "python",

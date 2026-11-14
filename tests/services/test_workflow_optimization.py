@@ -53,7 +53,7 @@ def test_workflow_recreation_frozen() -> None:
         effort="low",
     )
     with pytest.raises(Exception):  # FrozenInstanceError or AttributeError
-        rec.priority = "low"  # type: ignore[misc]
+        rec.priority = "low"
 
 
 def test_workflow_recreation_fields() -> None:

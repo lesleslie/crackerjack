@@ -42,7 +42,7 @@ def test_detect_returns_empty_for_empty_adapter_list(tmp_path: Path) -> None:
 def test_detect_preserves_order(tmp_path: Path) -> None:
     adapters = [_AlwaysAdapter(), _NeverAdapter(), _AlwaysAdapter()]
     # Two `_AlwaysAdapter` instances — collision. Patch name to differentiate.
-    adapters[2].name = "also"  # type: ignore[misc]
+    adapters[2].name = "also"
     result = detect(adapters, tmp_path)
     names = [a.name for a in result]
     assert names == ["always", "also"]

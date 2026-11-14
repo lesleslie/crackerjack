@@ -157,7 +157,7 @@ class TestL2Noop:
         outcome = await l2_noop(
             operation="git_push",
             l1_context={},
-            claude_turn=fake_claude,  # type: ignore[arg-type]
+            claude_turn=fake_claude,
         )
         assert outcome == "noop_recovery"
         assert call_count == 0  # stub must NOT call into the optional claude_turn

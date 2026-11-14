@@ -19,8 +19,8 @@ def _restore_marker() -> None:
     Tests must not permanently mutate the constant even if they probe mutability.
     """
     saved = L2Noop.MARKER
-    yield  # type: ignore[misc]
-    L2Noop.MARKER = saved  # type: ignore[misc]
+    yield
+    L2Noop.MARKER = saved
 
 
 def test_l2_noop_marker_is_constant_string() -> None:
@@ -54,7 +54,7 @@ async def test_l2_noop_returns_marker_for_arbitrary_inputs() -> None:
         {"operation": "x" * 1000, "l1_context": {"deep": {"nested": [1, 2, 3]}}},
     ]
     for kwargs in cases:
-        result = await l2_noop(**kwargs)  # type: ignore[arg-type]
+        result = await l2_noop(**kwargs)
         assert result == "noop_recovery"
 
 

@@ -148,7 +148,7 @@ def main() -> int:
         pass
 
     agent = mod.RefurbCodeTransformerAgent.__new__(mod.RefurbCodeTransformerAgent)
-    mod.SubAgent.__init__(agent, DummyCtx())  # type: ignore[arg-type]
+    mod.SubAgent.__init__(agent, DummyCtx())
 
     print(f"AUDIT RESULTS - {len(mapping)} FURB transformations", flush=True)
     print("=" * 100, flush=True)

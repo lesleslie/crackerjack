@@ -101,10 +101,10 @@ class TestExceptionFallback:
 
         gen.generate_commit_message()
 
-        console.file.write.assert_called()  # type: ignore[attr-defined]
+        console.file.write.assert_called()
         rendered = "".join(
             str(call.args[0])
-            for call in console.file.write.call_args_list  # type: ignore[attr-defined]
+            for call in console.file.write.call_args_list
         )
         assert "Error generating commit message" in rendered
         assert "boom" in rendered
@@ -187,7 +187,7 @@ class TestCommitTypeDetection:
         gen.generate_commit_message(include_body=False)
         rendered = "".join(
             str(call.args[0])
-            for call in console.file.write.call_args_list  # type: ignore[attr-defined]
+            for call in console.file.write.call_args_list
         )
         assert "Error generating commit message" in rendered
         assert "lower" in rendered  # AttributeError message
@@ -454,7 +454,7 @@ class TestCommitWithGeneratedMessage:
         gen.commit_with_generated_message(dry_run=True)
         rendered = "".join(
             str(call.args[0])
-            for call in console.file.write.call_args_list  # type: ignore[attr-defined]
+            for call in console.file.write.call_args_list
         )
         assert "Generated commit message" in rendered
 

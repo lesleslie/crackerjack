@@ -333,7 +333,7 @@ def _execute_init_stage(orchestrator: WorkflowPipeline) -> bool:
 
 
 def register_core_tools(mcp_app: t.Any) -> None:
-    @mcp_app.tool(name="crackerjack_run_stage")  # type: ignore[misc]
+    @mcp_app.tool(name="crackerjack_run_stage")
     async def run_crackerjack_stage(args: str, kwargs: str) -> str:
         """Run a named Crackerjack quality stage through the MCP server.
 

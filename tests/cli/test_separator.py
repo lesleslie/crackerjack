@@ -38,8 +38,8 @@ def test_separator_ignores_non_positive_width(monkeypatch: pytest.MonkeyPatch) -
 def test_separator_ignores_non_int_width(monkeypatch: pytest.MonkeyPatch) -> None:
     """String / float widths are not honored — fall back to console width."""
     monkeypatch.setattr(formatting, "get_console_width", lambda: 12)
-    assert separator(width="10") == "-" * 12  # type: ignore[arg-type]
-    assert separator(width=2.5) == "-" * 12  # type: ignore[arg-type]
+    assert separator(width="10") == "-" * 12
+    assert separator(width=2.5) == "-" * 12
 
 
 def test_separator_with_empty_char_returns_empty_string() -> None:

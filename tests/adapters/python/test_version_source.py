@@ -51,7 +51,7 @@ class _BrokenReadPyprojectVersionSource(PyprojectVersionSource):
     value regardless of what ``write()`` persisted.
     """
 
-    def read(self) -> str:  # type: ignore[override]
+    def read(self) -> str:
         return "9.9.9"
 
 

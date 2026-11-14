@@ -723,7 +723,7 @@ class AsyncMockReturning:
     def __call__(self, *args: Any, **kwargs: Any) -> "AsyncMockReturning":
         return self
 
-    def __await__(self):  # type: ignore[no-untyped-def]
+    def __await__(self):
         async def _coro() -> Any:
             return self._value
 

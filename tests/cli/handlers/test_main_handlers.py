@@ -90,7 +90,7 @@ def test_handle_interactive_mode_launches_cli(monkeypatch: pytest.MonkeyPatch) -
     monkeypatch.setattr(
         "crackerjack.cli.version.get_package_version", fake_get_version
     )
-    handle_interactive_mode(options)  # type: ignore[arg-type]
+    handle_interactive_mode(options)
     assert captured["version"] == "1.2.3"
     assert captured["opts"] is options
 
@@ -111,7 +111,7 @@ def test_handle_standard_mode_no_publish_no_cleanup(
     fake_runner = MagicMock()
     fake_facade = MagicMock(return_value=fake_runner)
     monkeypatch.setattr("crackerjack.cli.facade.CrackerjackCLIFacade", fake_facade)
-    handle_standard_mode(options)  # type: ignore[arg-type]
+    handle_standard_mode(options)
     assert options.cleanup_docs is False
     fake_runner.process.assert_called_once()
 
@@ -136,7 +136,7 @@ def test_handle_standard_mode_publish_sets_cleanup_docs(
 
     monkeypatch.setattr("crackerjack.config.load_settings", fake_loader)
     monkeypatch.setattr("crackerjack.cli.facade.CrackerjackCLIFacade", fake_facade)
-    handle_standard_mode(options)  # type: ignore[arg-type]
+    handle_standard_mode(options)
     assert options.cleanup_docs is True
     fake_runner.process.assert_called_once()
 
@@ -154,7 +154,7 @@ def test_handle_standard_mode_publish_existing_cleanup_unchanged(
     fake_runner = MagicMock()
     fake_facade = MagicMock(return_value=fake_runner)
     monkeypatch.setattr("crackerjack.cli.facade.CrackerjackCLIFacade", fake_facade)
-    handle_standard_mode(options)  # type: ignore[arg-type]
+    handle_standard_mode(options)
     assert options.cleanup_docs is True
 
 
@@ -174,7 +174,7 @@ def test_handle_standard_mode_publish_no_auto_cleanup(
         "crackerjack.config.load_settings", lambda _cls: fake_settings
     )
     monkeypatch.setattr("crackerjack.cli.facade.CrackerjackCLIFacade", fake_facade)
-    handle_standard_mode(options)  # type: ignore[arg-type]
+    handle_standard_mode(options)
     assert options.cleanup_docs is False
 
 
@@ -199,7 +199,7 @@ def test_handle_standard_mode_publish_sets_plan_index_sync(
         "crackerjack.config.load_settings", lambda _cls: fake_settings
     )
     monkeypatch.setattr("crackerjack.cli.facade.CrackerjackCLIFacade", fake_facade)
-    handle_standard_mode(options)  # type: ignore[arg-type]
+    handle_standard_mode(options)
     assert options.plan_index_sync is True
     fake_runner.process.assert_called_once()
 
@@ -218,7 +218,7 @@ def test_handle_standard_mode_publish_existing_plan_index_unchanged(
     fake_runner = MagicMock()
     fake_facade = MagicMock(return_value=fake_runner)
     monkeypatch.setattr("crackerjack.cli.facade.CrackerjackCLIFacade", fake_facade)
-    handle_standard_mode(options)  # type: ignore[arg-type]
+    handle_standard_mode(options)
     assert options.plan_index_sync is True
 
 
@@ -246,7 +246,7 @@ def test_handle_standard_mode_publish_no_auto_plan_index_sync(
         "crackerjack.config.load_settings", lambda _cls: fake_settings
     )
     monkeypatch.setattr("crackerjack.cli.facade.CrackerjackCLIFacade", fake_facade)
-    handle_standard_mode(options)  # type: ignore[arg-type]
+    handle_standard_mode(options)
     assert options.cleanup_docs is True
     assert options.plan_index_sync is False
 
@@ -271,7 +271,7 @@ def test_handle_standard_mode_publish_dual_auto_enable(
         "crackerjack.config.load_settings", lambda _cls: fake_settings
     )
     monkeypatch.setattr("crackerjack.cli.facade.CrackerjackCLIFacade", fake_facade)
-    handle_standard_mode(options)  # type: ignore[arg-type]
+    handle_standard_mode(options)
     assert options.cleanup_docs is True
     assert options.plan_index_sync is True
 
@@ -292,12 +292,12 @@ def test_handle_standard_mode_simple_namespace_missing_attrs() -> None:
     # No load_settings patch needed — the publish branch is skipped entirely.
     import pytest as _pytest
 
-    monkeypatch_obj = _pytest.MonkeyPatch()  # type: ignore[func-returns-value]
+    monkeypatch_obj = _pytest.MonkeyPatch()
     try:
         monkeypatch_obj.setattr(
             "crackerjack.cli.facade.CrackerjackCLIFacade", fake_facade
         )
-        handle_standard_mode(options)  # type: ignore[arg-type]
+        handle_standard_mode(options)
     finally:
         monkeypatch_obj.undo()
     fake_runner.process.assert_called_once()
@@ -334,7 +334,7 @@ def test_handle_config_updates_check(
         called["check"] = (service, path, console)
 
     monkeypatch.setattr(main_handlers, "_handle_check_updates", fake_check)
-    handle_config_updates(_options(check=True))  # type: ignore[arg-type]
+    handle_config_updates(_options(check=True))
     assert "check" in called
 
 
@@ -349,7 +349,7 @@ def test_handle_config_updates_apply(
         called["apply"] = interactive
 
     monkeypatch.setattr(main_handlers, "_handle_apply_updates", fake_apply)
-    handle_config_updates(_options(apply=True, interactive=True))  # type: ignore[arg-type]
+    handle_config_updates(_options(apply=True, interactive=True))
     assert called["apply"] is True
 
 
@@ -362,7 +362,7 @@ def test_handle_config_updates_diff(monkeypatch: pytest.MonkeyPatch) -> None:
         called["diff"] = config_type
 
     monkeypatch.setattr(main_handlers, "_handle_diff_config", fake_diff)
-    handle_config_updates(_options(diff="test-config"))  # type: ignore[arg-type]
+    handle_config_updates(_options(diff="test-config"))
     assert called["diff"] == "test-config"
 
 
@@ -373,13 +373,13 @@ def test_handle_config_updates_refresh(monkeypatch: pytest.MonkeyPatch) -> None:
         called["refresh"] = True
 
     monkeypatch.setattr(main_handlers, "_handle_refresh_cache", fake_refresh)
-    handle_config_updates(_options(refresh=True))  # type: ignore[arg-type]
+    handle_config_updates(_options(refresh=True))
     assert called.get("refresh") is True
 
 
 def test_handle_config_updates_no_flags_does_nothing() -> None:
     # No dispatch branch matches → silent no-op.
-    handle_config_updates(_options())  # type: ignore[arg-type]
+    handle_config_updates(_options())
 
 
 # ---------------------------------------------------------------------------
@@ -390,7 +390,7 @@ def test_handle_config_updates_no_flags_does_nothing() -> None:
 def test_handle_check_updates_no_updates(console: MagicMock) -> None:
     service = MagicMock()
     service.check_updates.return_value = {}
-    _handle_check_updates(service, Path("/tmp/pkg"), console)  # type: ignore[arg-type]
+    _handle_check_updates(service, Path("/tmp/pkg"), console)
     console.print.assert_called()
 
 
@@ -398,7 +398,7 @@ def test_handle_check_updates_all_up_to_date(console: MagicMock) -> None:
     update = SimpleNamespace(needs_update=False, current_version="1", latest_version="1")
     service = MagicMock()
     service.check_updates.return_value = {"test": update}
-    _handle_check_updates(service, Path("/tmp/pkg"), console)  # type: ignore[arg-type]
+    _handle_check_updates(service, Path("/tmp/pkg"), console)
     console.print.assert_called()
 
 
@@ -406,7 +406,7 @@ def test_handle_check_updates_has_updates(console: MagicMock) -> None:
     update = SimpleNamespace(needs_update=True, current_version="1", latest_version="2")
     service = MagicMock()
     service.check_updates.return_value = {"test": update}
-    _handle_check_updates(service, Path("/tmp/pkg"), console)  # type: ignore[arg-type]
+    _handle_check_updates(service, Path("/tmp/pkg"), console)
     printed = " ".join(str(c) for c in console.print.call_args_list)
     assert "test" in printed or "1" in printed
 
@@ -419,7 +419,7 @@ def test_handle_check_updates_has_updates(console: MagicMock) -> None:
 def test_handle_apply_updates_no_templates(console: MagicMock) -> None:
     service = MagicMock()
     service.check_updates.return_value = {}
-    _handle_apply_updates(service, Path("/tmp/pkg"), False, console)  # type: ignore[arg-type]
+    _handle_apply_updates(service, Path("/tmp/pkg"), False, console)
     console.print.assert_called()
 
 
@@ -427,7 +427,7 @@ def test_handle_apply_updates_all_up_to_date(console: MagicMock) -> None:
     update = SimpleNamespace(needs_update=False, current_version="1", latest_version="1")
     service = MagicMock()
     service.check_updates.return_value = {"test": update}
-    _handle_apply_updates(service, Path("/tmp/pkg"), False, console)  # type: ignore[arg-type]
+    _handle_apply_updates(service, Path("/tmp/pkg"), False, console)
     console.print.assert_called()
 
 
@@ -438,7 +438,7 @@ def test_handle_apply_updates_runs_batch(console: MagicMock) -> None:
     service = MagicMock()
     service.check_updates.return_value = {"a": update_a, "b": update_b, "c": update_c}
     service.apply_update.side_effect = [True, False]  # a succeeds, b fails
-    _handle_apply_updates(service, Path("/tmp/pkg"), True, console)  # type: ignore[arg-type]
+    _handle_apply_updates(service, Path("/tmp/pkg"), True, console)
     assert service.apply_update.call_count == 2
     printed = " ".join(str(c) for c in console.print.call_args_list)
     assert "1/2" in printed
@@ -452,7 +452,7 @@ def test_handle_apply_updates_runs_batch(console: MagicMock) -> None:
 def test_handle_diff_config(console: MagicMock) -> None:
     service = MagicMock()
     service._generate_diff_preview.return_value = "diff content"
-    _handle_diff_config(service, Path("/tmp/pkg"), "test-config", console)  # type: ignore[arg-type]
+    _handle_diff_config(service, Path("/tmp/pkg"), "test-config", console)
     service._generate_diff_preview.assert_called_once_with(
         "test-config", Path("/tmp/pkg")
     )
@@ -466,7 +466,7 @@ def test_handle_diff_config(console: MagicMock) -> None:
 
 def test_handle_refresh_cache(console: MagicMock) -> None:
     service = MagicMock()
-    _handle_refresh_cache(service, Path("/tmp/pkg"), console)  # type: ignore[arg-type]
+    _handle_refresh_cache(service, Path("/tmp/pkg"), console)
     service._invalidate_cache.assert_called_once_with(Path("/tmp/pkg"))
 
 
@@ -480,7 +480,7 @@ def test_display_available_updates_skips_non_needing(console: MagicMock) -> None
         "a": SimpleNamespace(needs_update=True, current_version="1", latest_version="2"),
         "b": SimpleNamespace(needs_update=False, current_version="2", latest_version="2"),
     }
-    _display_available_updates(updates, console)  # type: ignore[arg-type]
+    _display_available_updates(updates, console)
     printed = " ".join(str(c) for c in console.print.call_args_list)
     assert "a" in printed
     # The non-needing entry should not be rendered.
@@ -515,7 +515,7 @@ def test_apply_config_updates_batch_counts_successes() -> None:
     service.apply_update.side_effect = [True, False, True]
     count = _apply_config_updates_batch(
         service, ["a", "b", "c"], Path("/tmp/pkg"), interactive=True,
-        console=MagicMock(),  # type: ignore[arg-type]
+        console=MagicMock(),
     )
     assert count == 2
     assert service.apply_update.call_count == 3
@@ -527,12 +527,12 @@ def test_apply_config_updates_batch_counts_successes() -> None:
 
 
 def test_report_update_results_all_success(console: MagicMock) -> None:
-    _report_update_results(3, 3, console)  # type: ignore[arg-type]
+    _report_update_results(3, 3, console)
     printed = " ".join(str(c) for c in console.print.call_args_list)
     assert "3" in printed
 
 
 def test_report_update_results_partial(console: MagicMock) -> None:
-    _report_update_results(2, 5, console)  # type: ignore[arg-type]
+    _report_update_results(2, 5, console)
     printed = " ".join(str(c) for c in console.print.call_args_list)
     assert "2/5" in printed

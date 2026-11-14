@@ -279,7 +279,7 @@ def register_monitoring_tools(mcp_app: t.Any) -> None:
 
 
 def _register_stage_status_tool(mcp_app: t.Any) -> None:
-    @mcp_app.tool()  # type: ignore[misc] # type: ignore[misc]
+    @mcp_app.tool()
     async def crackerjack_get_stage_status() -> str:
         """Report the completion status of each Crackerjack workflow stage.
 
@@ -329,7 +329,7 @@ async def _build_stage_status(state_manager: t.Any) -> dict[str, t.Any]:
 
 
 def _register_next_action_tool(mcp_app: t.Any) -> None:
-    @mcp_app.tool()  # type: ignore[misc] # type: ignore[misc]
+    @mcp_app.tool()
     async def crackerjack_get_next_action() -> str:
         """Recommend the next Crackerjack stage to run.
 
@@ -371,7 +371,7 @@ def _register_next_action_tool(mcp_app: t.Any) -> None:
 
 
 def _register_server_stats_tool(mcp_app: t.Any) -> None:
-    @mcp_app.tool()  # type: ignore[misc] # type: ignore[misc]
+    @mcp_app.tool()
     async def crackerjack_get_server_stats() -> str:
         """Report server-level statistics for the running MCP server.
 
@@ -440,7 +440,7 @@ async def _build_server_stats_secure(context: t.Any) -> dict[str, t.Any]:
 
 
 def _register_comprehensive_status_tool(mcp_app: t.Any) -> None:
-    @mcp_app.tool()  # type: ignore[misc]
+    @mcp_app.tool()
     async def crackerjack_get_comprehensive_status() -> str:
         """Report the server's comprehensive status in one call.
 
@@ -488,7 +488,7 @@ def _register_comprehensive_status_tool(mcp_app: t.Any) -> None:
 
 
 def _register_command_help_tool(mcp_app: t.Any) -> None:
-    @mcp_app.tool()  # type: ignore[misc]
+    @mcp_app.tool()
     async def crackerjack_list_slash_commands() -> str:
         """List the available Crackerjack slash commands and their usage.
 
@@ -618,7 +618,7 @@ async def _build_filtered_status(
 
 
 def _register_filtered_status_tool(mcp_app: t.Any) -> None:
-    @mcp_app.tool()  # type: ignore[misc]
+    @mcp_app.tool()
     async def crackerjack_get_filtered_status(components: str = "all") -> str:
         """Report only the status components that were asked for.
 

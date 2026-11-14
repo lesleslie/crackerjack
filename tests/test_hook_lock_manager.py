@@ -1104,7 +1104,7 @@ class TestGenericExceptionPaths:
             def release(self) -> None:
                 pass
 
-        manager._hook_locks[hook] = _BrokenLock()  # type: ignore[assignment]
+        manager._hook_locks[hook] = _BrokenLock()
 
         with pytest.raises(RuntimeError, match="boom"):
             async with manager.acquire_hook_lock(hook):
@@ -1138,7 +1138,7 @@ class TestGenericExceptionPaths:
                 self._real.release()
                 released.append(True)
 
-        manager._hook_locks[hook] = _TrackedLock()  # type: ignore[assignment]
+        manager._hook_locks[hook] = _TrackedLock()
 
         with pytest.raises(ValueError):
             async with manager.acquire_hook_lock(hook):

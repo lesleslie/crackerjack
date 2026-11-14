@@ -59,7 +59,7 @@ class TestTenantContextPackModel:
             published_by="alice",
         )
         with pytest.raises((AttributeError, TypeError, ValueError)):
-            pack.version = 2  # type: ignore[misc]
+            pack.version = 2
 
     def test_body_must_contain_only_known_context_files(self) -> None:
         """Body keys restricted to CONTEXT_FILES."""

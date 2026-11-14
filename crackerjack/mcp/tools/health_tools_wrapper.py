@@ -69,7 +69,7 @@ def register_crackerjack_health(mcp_app: FastMCP) -> None:
         dependencies=_HEALTH_DEPENDENCIES,
     )
 
-    @mcp_app.tool()  # type: ignore[untyped-decorator]
+    @mcp_app.tool()
     async def get_health() -> dict[str, Any]:
         """Return the canonical HealthSnapshot envelope for Crackerjack.
 

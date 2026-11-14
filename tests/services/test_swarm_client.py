@@ -114,7 +114,7 @@ class TestDataClasses:
             task_id="t", issue_type="x", file_paths=[], prompt="p"
         )
         with pytest.raises(Exception):
-            task.task_id = "changed"  # type: ignore[misc]
+            task.task_id = "changed"
 
     def test_swarm_result_is_mutable(self) -> None:
         """SwarmResult is a regular dataclass — fields can be reassigned."""
@@ -776,7 +776,7 @@ class TestSwarmManagerExecuteFixes:
                 success=True,
             )}
 
-        manager._active_client.execute_batch = _fake_execute  # type: ignore[method-assign]
+        manager._active_client.execute_batch = _fake_execute
         issues = [
             {"type": "a", "file": "f1.py"},
             {"type": "b", "file": "f2.py"},
@@ -820,7 +820,7 @@ class TestSwarmManagerLifecycle:
         )
         await manager.initialize()
         # Force the active client to blow up on close
-        manager._active_client.close_workers = AsyncMock(  # type: ignore[method-assign]
+        manager._active_client.close_workers = AsyncMock(
             side_effect=RuntimeError("close failed")
         )
         await manager.shutdown()  # must not raise

@@ -41,7 +41,7 @@ def _captured_tool(name: str) -> t.Any:
 
         return wrap
 
-    mock_app.tool = decorator  # type: ignore[method-assign]
+    mock_app.tool = decorator
     register_monitoring_tools(mock_app)
     for fn in captured:
         if fn.__name__ == name:
@@ -945,7 +945,7 @@ class TestRegisterMonitoringTools:
 
             return wrap
 
-        mock_app.tool = decorator  # type: ignore[method-assign]
+        mock_app.tool = decorator
         register_monitoring_tools(mock_app)
         for name in (
             "crackerjack_get_stage_status",

@@ -45,7 +45,7 @@ def register_async_task_tools(mcp_app: t.Any) -> None:
     Currently exposes one tool: ``crackerjack_result_store``.
     """
 
-    @mcp_app.tool(name="crackerjack_result_store")  # type: ignore[misc]
+    @mcp_app.tool(name="crackerjack_result_store")
     async def result_store(task_id: str) -> str:
         """Look up a persisted async task record by id.
 

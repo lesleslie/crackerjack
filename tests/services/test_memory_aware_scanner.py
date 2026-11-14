@@ -20,7 +20,7 @@ def _install_random() -> None:
     """The source module references ``random.random()`` without importing the
     module (a known source bug). Inject a real ``random`` module attribute and
     seed it so the test order does not flake."""
-    scanner_module.random = random  # type: ignore[attr-defined]
+    scanner_module.random = random
     random.seed(0xC0FFEE)
 
 
@@ -513,4 +513,4 @@ class TestCleanup:
 
     async def test_cleanup_runs(self, scanner: MemoryAwareScanner) -> None:
         await scanner.cleanup()  # should not raise
-        scanner.console.print.assert_called()  # type: ignore[attr-defined]
+        scanner.console.print.assert_called()

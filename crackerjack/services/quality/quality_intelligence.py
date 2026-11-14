@@ -60,7 +60,7 @@ class QualityAnomaly:
     def to_dict(self) -> dict[str, Any]:
         return {
             field: _serialize(getattr(self, field))
-            for field in self.__dataclass_fields__  # type: ignore[attr-defined]
+            for field in self.__dataclass_fields__
         }
 
 
@@ -79,7 +79,7 @@ class QualityPattern:
     def to_dict(self) -> dict[str, Any]:
         return {
             field: _serialize(getattr(self, field))
-            for field in self.__dataclass_fields__  # type: ignore[attr-defined]
+            for field in self.__dataclass_fields__
         }
 
 
@@ -99,7 +99,7 @@ class QualityPrediction:
     def to_dict(self) -> dict[str, Any]:
         return {
             field: _serialize(getattr(self, field))
-            for field in self.__dataclass_fields__  # type: ignore[attr-defined]
+            for field in self.__dataclass_fields__
         }
 
 

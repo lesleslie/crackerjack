@@ -106,7 +106,7 @@ class TestAdapterSettingsVersion:
     def test_settings_hash_is_required(self) -> None:
         """settings_hash is the join key for forensic queries — must be present."""
         with pytest.raises(Exception):
-            AdapterSettingsVersion(  # type: ignore[call-arg]
+            AdapterSettingsVersion(
                 adapter_id="prefect",
                 version=1,
                 activated_at=datetime(2026, 6, 26, 12, 0, 0, tzinfo=UTC),

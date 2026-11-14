@@ -300,7 +300,7 @@ class TestUpdateReadmeCoverageBadge:
 
         original_read_text = Path.read_text
         with pytest.MonkeyPatch.context() as mp:
-            def _raise(self, *args, **kwargs):  # type: ignore[no-untyped-def]
+            def _raise(self, *args, **kwargs):
                 if self == readme:
                     raise OSError("disk error")
                 return original_read_text(self, *args, **kwargs)
@@ -376,7 +376,7 @@ class TestShouldUpdateBadge:
         original_read_text = Path.read_text
 
         with pytest.MonkeyPatch.context() as mp:
-            def _raise(self, *args, **kwargs):  # type: ignore[no-untyped-def]
+            def _raise(self, *args, **kwargs):
                 if self == readme:
                     raise OSError("boom")
                 return original_read_text(self, *args, **kwargs)

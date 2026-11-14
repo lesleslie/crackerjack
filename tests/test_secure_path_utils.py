@@ -475,7 +475,7 @@ class TestAtomicFileOperations:
                     return None
                 raise RuntimeError("write failed")
 
-            fake_atomic_write.calls = 0  # type: ignore[attr-defined]
+            fake_atomic_write.calls = 0
 
             monkeypatch.setattr(
                 AtomicFileOperations,

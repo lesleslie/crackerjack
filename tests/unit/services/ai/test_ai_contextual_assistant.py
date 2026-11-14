@@ -51,7 +51,7 @@ class _FSStub:
 
 @pytest.fixture
 def fs() -> FileSystemInterface:
-    return _FSStub()  # type: ignore[return-value]
+    return _FSStub()
 
 
 @pytest.fixture
@@ -679,7 +679,7 @@ class TestDisplayRecommendations:
         assistant.display_recommendations([])
         rendered = "".join(
             str(call.args[0])
-            for call in console.file.write.call_args_list  # type: ignore[attr-defined]
+            for call in console.file.write.call_args_list
         )
         assert "No immediate recommendations" in rendered
 
@@ -700,7 +700,7 @@ class TestDisplayRecommendations:
         assistant.display_recommendations(recs)
         rendered = "".join(
             str(call.args[0])
-            for call in console.file.write.call_args_list  # type: ignore[attr-defined]
+            for call in console.file.write.call_args_list
         )
         assert "AI Assistant Recommendations" in rendered
         assert "Test title" in rendered
@@ -720,7 +720,7 @@ class TestDisplayRecommendations:
         assistant.display_recommendations(recs)
         rendered = "".join(
             str(call.args[0])
-            for call in console.file.write.call_args_list  # type: ignore[attr-defined]
+            for call in console.file.write.call_args_list
         )
         # No action_command or reasoning -> the Run/Reasoning lines are
         # absent, but the title is still rendered.

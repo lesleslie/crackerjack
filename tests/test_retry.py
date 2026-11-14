@@ -56,8 +56,8 @@ class TestRetryDecorator:
 
         @retry(max_attempts=3, delay=0.01, jitter=False)
         def failing_func() -> str:
-            failing_func.call_count += 1  # type: ignore[attr-defined]
-            if failing_func.call_count < 3:  # type: ignore[attr-defined]
+            failing_func.call_count += 1
+            if failing_func.call_count < 3:
                 msg = "Not yet"
                 raise ValueError(msg)
             return "success"
@@ -72,8 +72,8 @@ class TestRetryDecorator:
 
         @retry(max_attempts=3, delay=0.01, jitter=False)
         async def failing_async_func() -> str:
-            failing_async_func.call_count += 1  # type: ignore[attr-defined]
-            if failing_async_func.call_count < 2:  # type: ignore[attr-defined]
+            failing_async_func.call_count += 1
+            if failing_async_func.call_count < 2:
                 msg = "Not yet"
                 raise ValueError(msg)
             return "async success"

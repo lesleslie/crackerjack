@@ -81,7 +81,7 @@ class TestProjectSOP:
 
     def test_project_id_and_name_required(self):
         with pytest.raises(TypeError):
-            ProjectSOP()  # type: ignore[call-arg]
+            ProjectSOP()
 
     def test_equality_by_identity_fields(self):
         a = ProjectSOP(

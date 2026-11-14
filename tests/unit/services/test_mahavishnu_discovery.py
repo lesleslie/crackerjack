@@ -191,8 +191,8 @@ class TestParseMcpResponse:
 
     def test_non_dict_payload(self) -> None:
         """Robustness: garbage input must not raise."""
-        assert _parse_mcp_response("not a dict") is None  # type: ignore[arg-type]
-        assert _parse_mcp_response(None) is None  # type: ignore[arg-type]
+        assert _parse_mcp_response("not a dict") is None
+        assert _parse_mcp_response(None) is None
 
     def test_empty_content_returns_none(self) -> None:
         payload = {"result": {"content": [], "isError": False}}

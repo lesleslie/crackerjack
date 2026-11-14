@@ -31,7 +31,7 @@ def test_bump_patch() -> None:
 
 def test_bump_rejects_invalid_level() -> None:
     with pytest.raises(ValueError):
-        _bump("1.0.0", "epic")  # type: ignore[arg-type]
+        _bump("1.0.0", "epic")
 
 
 # --- Lifecycle tests with constructor-injected fakes ---
@@ -113,7 +113,7 @@ def test_lifecycle_options_rejects_invalid_level() -> None:
     not in SwiftLifecycle.run.
     """
     with pytest.raises(ValueError, match="level must be"):
-        LifecycleOptions(level="epic")  # type: ignore[arg-type]
+        LifecycleOptions(level="epic")
 
 
 def test_swift_lifecycle_does_not_mutate_package_swift(tmp_path: Path) -> None:

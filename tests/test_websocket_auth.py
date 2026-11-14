@@ -369,6 +369,6 @@ class TestChannelAuthorization:
             f"got messages: {[r.message for r in caplog.records]}"
         )
         denial = denial_records[0]
-        assert denial.channel == "quality:myproject"  # type: ignore[attr-defined]
-        assert denial.user_id == "user2"  # type: ignore[attr-defined]
-        assert denial.reason == "insufficient_permissions"  # type: ignore[attr-defined]
+        assert denial.channel == "quality:myproject"
+        assert denial.user_id == "user2"
+        assert denial.reason == "insufficient_permissions"

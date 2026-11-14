@@ -24,7 +24,7 @@ def register_semantic_tools(mcp_app: t.Any) -> None:
 
 
 def _register_index_file_tool(mcp_app: t.Any) -> None:
-    @mcp_app.tool()  # type: ignore[misc]
+    @mcp_app.tool()
     async def crackerjack_index_file_semantic(
         file_path: str,
         config_json: str = "",
@@ -95,7 +95,7 @@ def _register_index_file_tool(mcp_app: t.Any) -> None:
 
 
 def _register_search_semantic_tool(mcp_app: t.Any) -> None:
-    @mcp_app.tool()  # type: ignore[misc]
+    @mcp_app.tool()
     async def crackerjack_search_semantic(
         query: str,
         max_results: int = 10,
@@ -199,7 +199,7 @@ def _register_search_semantic_tool(mcp_app: t.Any) -> None:
 
 
 def _register_get_semantic_stats_tool(mcp_app: t.Any) -> None:
-    @mcp_app.tool()  # type: ignore[misc]
+    @mcp_app.tool()
     async def crackerjack_get_semantic_stats(config_json: str = "") -> str:
         """Report statistics about the semantic index.
 
@@ -259,7 +259,7 @@ def _register_get_semantic_stats_tool(mcp_app: t.Any) -> None:
 
 
 def _register_remove_file_from_index_tool(mcp_app: t.Any) -> None:
-    @mcp_app.tool()  # type: ignore[misc]
+    @mcp_app.tool()
     async def crackerjack_remove_file_from_semantic_index(
         file_path: str,
         config_json: str = "",
@@ -325,7 +325,7 @@ def _register_remove_file_from_index_tool(mcp_app: t.Any) -> None:
 
 
 def _register_get_embeddings_tool(mcp_app: t.Any) -> None:
-    @mcp_app.tool()  # type: ignore[misc]
+    @mcp_app.tool()
     async def crackerjack_get_embeddings(
         texts: str,
         config_json: str = "",
@@ -373,7 +373,7 @@ def _register_get_embeddings_tool(mcp_app: t.Any) -> None:
 
 
 def _register_calculate_similarity_tool(mcp_app: t.Any) -> None:
-    @mcp_app.tool()  # type: ignore[misc]
+    @mcp_app.tool()
     async def crackerjack_calculate_similarity_semantic(
         embedding1: str,
         embedding2: str,

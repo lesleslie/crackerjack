@@ -94,7 +94,7 @@ def registered_app(initialized_signer: Any) -> _StubApp:
     from crackerjack.mcp.tools.agent_registry import register_agent_registry
 
     app = _StubApp()
-    register_agent_registry(app)  # type: ignore[arg-type]
+    register_agent_registry(app)
     return app
 
 

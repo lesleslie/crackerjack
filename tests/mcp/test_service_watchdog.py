@@ -1219,7 +1219,7 @@ async def test_emit_event_swallows_queue_put_exception() -> None:
         async def put(_event: dict[str, Any]) -> None:
             raise RuntimeError("queue down")
 
-    s = ServiceWatchdog(services=[], event_queue=_QueueProxy())  # type: ignore[arg-type]
+    s = ServiceWatchdog(services=[], event_queue=_QueueProxy())
     await s._emit_event("started", "x", "msg")  # no raise
 
 

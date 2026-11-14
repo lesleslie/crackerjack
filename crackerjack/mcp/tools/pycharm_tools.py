@@ -26,7 +26,7 @@ def _resolve_local_search_root() -> Path:
     """
     try:
         ctx = get_context()
-        project_path = getattr(ctx.config, "project_path", None)  # type: ignore[attr-defined]
+        project_path = getattr(ctx.config, "project_path", None)
         if project_path is not None:
             return Path(project_path).resolve()
     except RuntimeError:
@@ -51,13 +51,13 @@ def _get_adapter() -> PyCharmMCPAdapter | None:
         logger.debug("MCP context not initialized")
         return None
     if not hasattr(context, "_pycharm_adapter"):
-        context._pycharm_adapter = PyCharmMCPAdapter(  # type: ignore[attr-defined] # ty: ignore[invalid-assignment]
+        context._pycharm_adapter = PyCharmMCPAdapter(  # ty: ignore[invalid-assignment]
             mcp_client=None,
             timeout=30.0,
             max_results=100,
         )
         logger.debug("Created PyCharm MCP adapter singleton")
-    return context._pycharm_adapter  # type: ignore[attr-defined] # ty: ignore[missing-attribute]
+    return context._pycharm_adapter  # ty: ignore[missing-attribute]
 
 
 def _create_success_response(data: dict[str, t.Any]) -> str:

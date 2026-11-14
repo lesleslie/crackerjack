@@ -41,9 +41,9 @@ class _FakeFastMCP:
 @pytest.fixture(autouse=True)
 def _reset_publisher() -> None:
     """Reset module-level _publisher between tests."""
-    eventbridge_tools._publisher = None  # type: ignore[attr-defined]
+    eventbridge_tools._publisher = None
     yield
-    eventbridge_tools._publisher = None  # type: ignore[attr-defined]
+    eventbridge_tools._publisher = None
 
 
 # ---------------------------------------------------------------------------
@@ -54,13 +54,13 @@ def _reset_publisher() -> None:
 def test_set_eventbridge_publisher_stores_global() -> None:
     sentinel = object()
     set_eventbridge_publisher(sentinel)
-    assert eventbridge_tools._publisher is sentinel  # type: ignore[attr-defined]
+    assert eventbridge_tools._publisher is sentinel
 
 
 def test_set_eventbridge_publisher_to_none() -> None:
     set_eventbridge_publisher("something")
     set_eventbridge_publisher(None)
-    assert eventbridge_tools._publisher is None  # type: ignore[attr-defined]
+    assert eventbridge_tools._publisher is None
 
 
 # ---------------------------------------------------------------------------
@@ -89,7 +89,7 @@ def test_register_enabled_with_publisher_sets_global() -> None:
     mcp = _FakeFastMCP()
     sentinel = object()
     register_eventbridge_tools(mcp, publisher=sentinel, enabled=True)
-    assert eventbridge_tools._publisher is sentinel  # type: ignore[attr-defined]
+    assert eventbridge_tools._publisher is sentinel
 
 
 def test_register_enabled_publisher_already_set() -> None:
@@ -98,7 +98,7 @@ def test_register_enabled_publisher_already_set() -> None:
     sentinel = object()
     set_eventbridge_publisher(sentinel)
     register_eventbridge_tools(mcp, publisher=None, enabled=True)
-    assert eventbridge_tools._publisher is sentinel  # type: ignore[attr-defined]
+    assert eventbridge_tools._publisher is sentinel
 
 
 # ---------------------------------------------------------------------------
