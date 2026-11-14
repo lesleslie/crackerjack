@@ -15,12 +15,12 @@ from ._git_utils import get_files_by_extension
 KNOWN_TY_CODES: frozenset[str] = frozenset(
     {
         "invalid-argument-type",
-        "unresolved-attribute",
+        "missing-attribute",
         "invalid-assignment",
         "import-not-found",
         "call-arg",
         "invalid-await",
-        "invalid-return-type",
+        "invalid-explicit-return",
         "unused-type-ignore-comment",
     }
 )
