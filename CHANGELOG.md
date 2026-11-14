@@ -60,6 +60,14 @@ topic: changelog
   fields, so a ratchet written that way was data-stale the moment it
   was written. The write now goes through `CoverageRatchetService.
   raise_floor()`, so there is a single writer for the ratchet file.
+- tools: `ty_imports.resolve_symbol()` resolves an unknown symbol by
+  importing every stdlib module in turn and looking for one that owns
+  it. That sweep imported `antigravity`, whose import-time side effect
+  is `webbrowser.open("https://xkcd.com/353/")` — so resolving any
+  symbol that was not itself a module name launched a browser window on
+  the developer's desktop. The sweep now skips the stdlib modules whose
+  import has a visible side effect (`antigravity`, `this`), which is the
+  same set mypy skips as `ANNOYING_STDLIB_MODULES`.
 
 ## [0.93.0] - 2026-11-07
 

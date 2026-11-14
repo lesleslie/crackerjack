@@ -19,8 +19,10 @@ The design mirrors ``ty_cleanup``:
 
 from __future__ import annotations
 
+import importlib
 from pathlib import Path
 
+from crackerjack.tools import ty_imports
 from crackerjack.tools.ty_imports import (
     AUTO_FIX_CODES,
     ImportFix,
@@ -140,6 +142,39 @@ class TestResolveSymbolUnresolvable:
         # We won't reach into private modules to grab names. If ty flagged
         # it, the LLM tier should handle it.
         assert resolve_symbol("_abc_init_unlikely_to_exist") is None
+
+
+class TestResolveSymbolSkipsSideEffectModules:
+    """The stdlib sweep must not import modules with import-time side effects."""
+
+    def test_sweep_does_not_import_antigravity_or_this(self, monkeypatch) -> None:
+        """``antigravity`` opens https://xkcd.com/353/ in a web browser on
+        import, which put a browser window on the developer's desktop
+        during every test run that reached the sweep. ``this`` prints the
+        Zen of Python to stdout.
+
+        The symbol below resolves to nothing, so the sweep runs over the
+        whole stdlib list — the worst case, and the only way to be sure
+        neither module is reached.
+        """
+        requested: list[str] = []
+        real_import_module = importlib.import_module
+
+        def spy(name: str, *args: object, **kwargs: object):
+            requested.append(name)
+            return real_import_module(name, *args, **kwargs)
+
+        # Clear the memo caches so the sweep actually runs.
+        monkeypatch.setattr(ty_imports, "_SUBNAME_TO_MODULE", {})
+        monkeypatch.setattr(ty_imports, "_BAD_MODULES", set())
+        monkeypatch.setattr(ty_imports.importlib, "import_module", spy)
+
+        assert resolve_symbol("DefinitelyNotARealSymbol12345") is None
+
+        assert "antigravity" not in requested
+        assert "this" not in requested
+        # Sanity check: the sweep really did run over the stdlib.
+        assert len(requested) > 50
 
 
 # ---------------------------------------------------------------------------

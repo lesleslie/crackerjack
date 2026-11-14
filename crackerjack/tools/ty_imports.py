@@ -140,6 +140,19 @@ def _stdlib_names() -> frozenset[str]:
 _SUBNAME_TO_MODULE: dict[str, str] = {}
 _BAD_MODULES: set[str] = set()
 
+# Stdlib modules that must never be imported by the sweep below, because
+# importing them has a visible side effect:
+#
+# - ``antigravity`` calls ``webbrowser.open("https://xkcd.com/353/")`` at
+#   import time, which launches a browser window on the developer's
+#   desktop — including during a test run.
+# - ``this`` prints the Zen of Python to stdout at import time.
+#
+# Neither can own a symbol that anyone would ever import, so skipping
+# them costs nothing. mypy skips the same set for the same reason
+# (``mypy/stubtest.py``: ``ANNOYING_STDLIB_MODULES``).
+_SKIP_MODULES: frozenset[str] = frozenset({"builtins", "antigravity", "this"})
+
 
 def _resolve_subname(symbol: str) -> str | None:
     if symbol in _SUBNAME_TO_MODULE:
@@ -148,7 +161,7 @@ def _resolve_subname(symbol: str) -> str | None:
     for module_name in sorted(_stdlib_names()):
         if module_name.startswith("_") or module_name in _BAD_MODULES:
             continue
-        if module_name == "builtins":
+        if module_name in _SKIP_MODULES:
             continue
         try:
             module = importlib.import_module(module_name)
