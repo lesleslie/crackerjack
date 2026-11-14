@@ -101,6 +101,18 @@ topic: changelog
 
 ### Removed
 
+- adapters: `crackerjack.adapters.benchmark.adapter.py` and the rest of the
+  `crackerjack/adapters/benchmark/` package — the pytest benchmark adapter.
+  It had zero production importers: the adapter factory is keyed by a fixed
+  six-entry table that never included it, and the plugin loader never scans
+  `crackerjack/adapters/**`. Its `MODULE_ID` UUID
+  (a1b2c3d4-e5f6-7890-abcd-ef1234567890) was also declared by the live
+  `crackerjack/adapters/ai/unified.py`, so two adapter classes claimed one
+  identity — harmless while the benchmark adapter stayed dead, and a landmine
+  if it were ever wired, since the two would emit identical `check_id`
+  values into a `QAResult`. Removing it removes the collision. The
+  package's only consumer was `tests/adapters/test_benchmark_adapter.py`,
+  which goes with it.
 - adapters: `crackerjack.adapters.type.ty.py` — the stale first copy of the
   `ty` adapter. `crackerjack/adapters/type/ty_adapter.py` has carried the
   same `TySettings`/`TyAdapter` classes and the same `MODULE_ID` UUID

@@ -240,8 +240,6 @@ This document shows where API components are used throughout the codebase.
 
 **Referenced in:**
 
-- PytestBenchmarkAdapter base class
-
 - CodespellAdapter base class
 
 - SyrupyAdapter base class
@@ -295,20 +293,6 @@ This document shows where API components are used throughout the codebase.
 - AnomalyDetector.\_calculate_confidence() parameter
 
 - AnomalyDetector.\_generate_anomaly_description() parameter
-
-## BenchmarkResult
-
-**Referenced in:**
-
-- BaselineManager.compare() parameter
-
-- BaselineManager.update() parameter
-
-## BenchmarkSettings
-
-**Referenced in:**
-
-- PytestBenchmarkAdapter.__init__() parameter
 
 ## BetterleaksSettings
 
@@ -2868,8 +2852,6 @@ This document shows where API components are used throughout the codebase.
 
 - QAAdapterBase.\_should_check_file() parameter
 
-- PytestBenchmarkAdapter.build_command() parameter
-
 - CodespellAdapter.build_command() parameter
 
 - TreeSitterAdapter.\_prepare_files_to_check() parameter
@@ -3759,8 +3741,6 @@ This document shows where API components are used throughout the codebase.
 **Referenced in:**
 
 - BaseToolAdapter.__init__() parameter
-
-- BenchmarkSettings base class
 
 - CodespellSettings base class
 
@@ -5021,10 +5001,6 @@ This document shows where API components are used throughout the codebase.
 - AdvancedOptimizer.\_generate_storage_recommendations() parameter
 
 - TenantContextPack.\_body_keys_must_be_known_files() parameter
-
-- BenchmarkResult.from_pytest_benchmark() parameter
-
-- PytestBenchmarkAdapter.\_process_benchmark() parameter
 
 - TreeSitterAdapter.\_update_metrics() parameter
 
@@ -6341,8 +6317,6 @@ This document shows where API components are used throughout the codebase.
 - PredictiveAnalyticsEngine.\_calculate_confidence_intervals() parameter
 
 - AdvancedOptimizer.\_build_optimization_result() parameter
-
-- PytestBenchmarkAdapter.build_command() parameter
 
 - CodespellAdapter.build_command() parameter
 

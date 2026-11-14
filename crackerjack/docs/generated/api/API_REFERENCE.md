@@ -2,9 +2,9 @@
 
 This document provides comprehensive API reference for all protocols, services, and managers in the codebase.
 **Total Protocols:** 0
-**Total Classes:** 998
-**Total Functions:** 5959
-**Total Modules:** 519
+**Total Classes:** 992
+**Total Functions:** 5935
+**Total Modules:** 516
 
 No protocols found.
 
