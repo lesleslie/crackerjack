@@ -41,6 +41,7 @@ _Regenerated 2026-11-14 by `crackerjack.tools.plan_index_sync` (phase)._
 | [`docs/plans/2026-11-07-ruff-pin-range.md`](2026-11-07-ruff-pin-range.md) | 2026-11-07 | `draft` | `implementation` | `dependency-management` | Replace the Exact `ruff==0.16.0` Pin with a Bounded Version Range |
 | [`docs/plans/2026-11-07-xdg-runtime-paths-and-observability.md`](2026-11-07-xdg-runtime-paths-and-observability.md) | 2026-11-07 | `complete` | `implementation` | `testing-infrastructure` | XDG Runtime Paths and Run-State Observability |
 | [`docs/plans/2026-11-13-remove-dead-ai-fix-module-cluster.md`](2026-11-13-remove-dead-ai-fix-module-cluster.md) | 2026-11-13 | `active` | `implementation` | `architecture` | Remove the Dead AI-Fix Module Cluster from Crackerjack |
+| [`docs/plans/2026-11-14-remove-dead-module-cluster.md`](2026-11-14-remove-dead-module-cluster.md) | 2026-11-14 | `active` | `implementation` | `architecture` | Remove the Dead Module Cluster from Crackerjack |
 
 ### Docs: specs
 
@@ -89,8 +90,8 @@ _Regenerated 2026-11-14 by `crackerjack.tools.plan_index_sync` (phase)._
 | Role \\ Lifecycle | draft | active | partial | shipped | complete | Total |
 |---|---|---|---|---|---|---|
 | `canonical` | · | 10 | · | · | 2 | **12** |
-| `implementation` | 17 | 24 | · | · | 3 | **44** |
+| `implementation` | 17 | 25 | · | · | 3 | **45** |
 | `umbrella` | · | · | · | · | · | **0** |
 | `historical` | · | · | · | · | 1 | **1** |
 | `superseded` | · | · | · | · | · | **0** |
-| **Total** | **17** | **34** | **·** | **·** | **6** | **57** |
+| **Total** | **17** | **35** | **·** | **·** | **6** | **58** |
