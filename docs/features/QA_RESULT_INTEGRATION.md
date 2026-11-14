@@ -1,14 +1,23 @@
 ---
-status: active
-role: canonical
+status: complete
+role: historical
 date: 2026-07-17
-last_reviewed: 2026-07-17
-superseded_by: null
+last_reviewed: 2026-11-14
+superseded_by: docs/plans/2026-11-14-consolidate-tool-taxonomies.md
 blocks_on: []
 topic: lifecycle
 ---
 
 # QAResult Integration Architecture
+
+> **Historical.** The `QAResult` architecture described below was removed on
+> 2026-11-14 along with the QA adapter layer. Tool output now flows through a
+> single taxonomy — the parser registry in `crackerjack/parsers/`, which emits
+> `crackerjack.models.issues.Issue`. There is no `QAResult`, no `QACheckType`,
+> and no per-tool adapter wrapper. See
+> `docs/plans/2026-11-14-consolidate-tool-taxonomies.md`.
+>
+> This document is kept as the record of the design that was replaced.
 
 ## Overview
 

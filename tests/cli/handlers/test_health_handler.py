@@ -367,15 +367,15 @@ class TestCheckAdapters:
         assert result.category == "adapters"
         assert isinstance(result, ComponentHealth)
 
-    def test_includes_adapter_base_when_protocol_present(self) -> None:
-        # The crackerjack runtime guarantees QAAdapterBase is importable,
-        # so adapter_base ends up healthy in the result.
+    def test_includes_language_adapters_component(self) -> None:
+        # The language-adapter entry points are discoverable in the test
+        # environment, so the component ends up healthy in the result.
         result = _check_adapters(Path("/tmp"))
-        assert "adapter_base" in result.components
+        assert "language_adapters" in result.components
 
     def test_handles_missing_module_gracefully(self) -> None:
-        # Simulate a failure loading the adapter base module.
-        with patch.dict("sys.modules", {"crackerjack.adapters._qa_adapter_base": None}):
+        # Simulate a failure loading the adapter registry module.
+        with patch.dict("sys.modules", {"crackerjack.adapters.registry": None}):
             result = _check_adapters(Path("/tmp"))
 
         # The function should not raise; some component will be marked unhealthy.

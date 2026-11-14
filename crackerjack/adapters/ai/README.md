@@ -63,5 +63,6 @@ async def fix_with_ai() -> None:
 
 ## Related
 
-- [Type](../type/README.md) — Type checking that often informs fix prompts
-- [Refactor](../refactor/README.md) — Refactoring tools that pair well with AI fixes
+- [Adapters](../README.md) — The surviving adapter surfaces and the
+  historical note for the removed QA adapter layer
+- [Consolidation plan](../../../docs/plans/2026-11-14-consolidate-tool-taxonomies.md) — The QA layer removal record

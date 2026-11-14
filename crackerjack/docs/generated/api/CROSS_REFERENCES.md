@@ -106,14 +106,6 @@ This document shows where API components are used throughout the codebase.
 
 - SQLiteAdapterLearner.\_update_effectiveness_metrics() parameter
 
-## AdapterFactoryProtocol
-
-**Referenced in:**
-
-- CrackerjackServer.__init__() parameter
-
-- DefaultAdapterFactory base class
-
 ## AdvancedConfig
 
 **Referenced in:**
@@ -214,12 +206,6 @@ This document shows where API components are used throughout the codebase.
 
 - ConfigCleanupService.rollback_cleanup() parameter
 
-## BanditSettings
-
-**Referenced in:**
-
-- BanditAdapter.__init__() parameter
-
 ## BaseCodeFixer
 
 **Referenced in:**
@@ -236,46 +222,6 @@ This document shows where API components are used throughout the codebase.
 
 - BaseCodeFixer.__init__() parameter
 
-## BaseToolAdapter
-
-**Referenced in:**
-
-- CodespellAdapter base class
-
-- SyrupyAdapter base class
-
-- GitleaksAdapter base class
-
-- BetterleaksAdapter base class
-
-- ComplexipyAdapter base class
-
-- PymetricaAdapter base class
-
-- OsvScannerAdapter base class
-
-- PyreflyAdapter base class
-
-- TyAdapter base class
-
-- MdformatAdapter base class
-
-- RuffAdapter base class
-
-- ScaleneAdapter base class
-
-- SemgrepAdapter base class
-
-- BanditAdapter base class
-
-- PyscnAdapter base class
-
-- CohesionAdapter base class
-
-- CreosoteAdapter base class
-
-- RefurbAdapter base class
-
 ## BaselineModel
 
 **Referenced in:**
@@ -289,12 +235,6 @@ This document shows where API components are used throughout the codebase.
 - AnomalyDetector.\_calculate_confidence() parameter
 
 - AnomalyDetector.\_generate_anomaly_description() parameter
-
-## BetterleaksSettings
-
-**Referenced in:**
-
-- BetterleaksAdapter.__init__() parameter
 
 ## BoundedStatusOperationsProtocol
 
@@ -416,18 +356,6 @@ This document shows where API components are used throughout the codebase.
 
 - DocUpdateService.\_is_change_relevant() parameter
 
-## CodespellSettings
-
-**Referenced in:**
-
-- CodespellAdapter.__init__() parameter
-
-## CohesionSettings
-
-**Referenced in:**
-
-- CohesionAdapter.__init__() parameter
-
 ## CommandInfo
 
 **Referenced in:**
@@ -495,12 +423,6 @@ This document shows where API components are used throughout the codebase.
 **Referenced in:**
 
 - EnhancedCommandRunner.handle_result() parameter
-
-## ComplexipySettings
-
-**Referenced in:**
-
-- ComplexipyAdapter.__init__() parameter
 
 ## ComponentHealth
 
@@ -702,8 +624,6 @@ This document shows where API components are used throughout the codebase.
 
 **Referenced in:**
 
-- CrackerjackServer.__init__() parameter
-
 - CrackerjackMCPSettings.from_crackerjack_settings() parameter
 
 - TestCommandBuilder.__init__() parameter
@@ -721,12 +641,6 @@ This document shows where API components are used throughout the codebase.
 - ConfigCleanupService.__init__() parameter
 
 - \_AdaptedOptions.__init__() parameter
-
-## CreosoteSettings
-
-**Referenced in:**
-
-- CreosoteAdapter.__init__() parameter
 
 ## CustomHookDefinition
 
@@ -889,14 +803,6 @@ This document shows where API components are used throughout the codebase.
 **Referenced in:**
 
 - WorkflowOptions.\_initialize_config_attributes() parameter
-
-## ExecutionResult
-
-**Referenced in:**
-
-- BaseToolAdapter.\_determine_qa_status_and_message() parameter
-
-- BaseToolAdapter.\_convert_to_qa_result() parameter
 
 ## ExecutionSettings
 
@@ -1123,12 +1029,6 @@ This document shows where API components are used throughout the codebase.
 **Referenced in:**
 
 - BetterleaksJSONParser base class
-
-## GitleaksSettings
-
-**Referenced in:**
-
-- GitleaksAdapter.__init__() parameter
 
 ## GlobalLockSettings
 
@@ -1468,8 +1368,6 @@ This document shows where API components are used throughout the codebase.
 
 - HookExecutor.\_retry_single_hook() parameter
 
-- HookExecutor.\_try_get_qa_result_for_hook() parameter
-
 - HookExecutor.\_print_summary() parameter
 
 - HookExecutor.\_print_summary() parameter
@@ -1597,8 +1495,6 @@ This document shows where API components are used throughout the codebase.
 - HookExecutor.\_create_timeout_result() parameter
 
 - HookExecutor.\_create_error_result() parameter
-
-- HookExecutor.\_try_get_qa_result_for_hook() parameter
 
 - PoolOrchestrator.\_execute_single_hook_standard() parameter
 
@@ -1962,14 +1858,6 @@ This document shows where API components are used throughout the codebase.
 
 - StateManager.\_process_stage_issues() parameter
 
-- BaseToolAdapter.\_count_issues_by_severity() parameter
-
-- BaseToolAdapter.\_determine_qa_status_and_message() parameter
-
-- BaseToolAdapter.\_build_details_from_issues() parameter
-
-- BaseToolAdapter.\_convert_to_qa_result() parameter
-
 - FileResult.add() parameter
 
 - PatternCache.cache_successful_pattern() parameter
@@ -2159,12 +2047,6 @@ This document shows where API components are used throughout the codebase.
 - ManagedTask base class
 
 - ManagedFileHandle base class
-
-## MdformatSettings
-
-**Referenced in:**
-
-- MdformatAdapter.__init__() parameter
 
 ## MergeStrategy
 
@@ -2544,20 +2426,6 @@ This document shows where API components are used throughout the codebase.
 
 - UnifiedConfigurationService.__init__() parameter
 
-## OsvScannerSettings
-
-**Referenced in:**
-
-- OsvScannerAdapter.__init__() parameter
-
-- OsvScannerAdapter.\_add_format_options() parameter
-
-- OsvScannerAdapter.\_add_fix_options() parameter
-
-- OsvScannerAdapter.\_add_cache_dir() parameter
-
-- OsvScannerAdapter.\_add_ignored_vulns() parameter
-
 ## PackageCleaningResult
 
 **Referenced in:**
@@ -2784,119 +2652,11 @@ This document shows where API components are used throughout the codebase.
 
 - \_TrustedPublishingSentinel base class
 
-## PymetricaSettings
-
-**Referenced in:**
-
-- PymetricaAdapter.__init__() parameter
-
 ## PyprojectVersionSource
 
 **Referenced in:**
 
 - PythonLifecycle.__init__() parameter
-
-## PyreflySettings
-
-**Referenced in:**
-
-- PyreflyAdapter.__init__() parameter
-
-## PyscnSettings
-
-**Referenced in:**
-
-- PyscnAdapter.__init__() parameter
-
-## QAAdapterBase
-
-**Referenced in:**
-
-- AdapterRegistry.register() parameter
-
-- BaseToolAdapter base class
-
-- TreeSitterAdapter base class
-
-- UtilityCheckAdapter base class
-
-## QABaseSettings
-
-**Referenced in:**
-
-- ToolAdapterSettings base class
-
-- TreeSitterSettings base class
-
-- UtilityCheckSettings base class
-
-## QACheckConfig
-
-**Referenced in:**
-
-- BaseToolAdapter.build_command() parameter
-
-- BaseToolAdapter.\_get_standard_excludes() parameter
-
-- BaseToolAdapter.\_collect_candidate_files() parameter
-
-- QAAdapterBase.\_should_check_file() parameter
-
-- CodespellAdapter.build_command() parameter
-
-- TreeSitterAdapter.\_prepare_files_to_check() parameter
-
-- SyrupyAdapter.build_command() parameter
-
-- GitleaksAdapter.build_command() parameter
-
-- BetterleaksAdapter.build_command() parameter
-
-- ComplexipyAdapter.build_command() parameter
-
-- PymetricaAdapter.build_command() parameter
-
-- OsvScannerAdapter.build_command() parameter
-
-- PyreflyAdapter.build_command() parameter
-
-- TyAdapter.build_command() parameter
-
-- MdformatAdapter.build_command() parameter
-
-- RuffAdapter.build_command() parameter
-
-- ScaleneAdapter.build_command() parameter
-
-- SASTAdapterProtocol.build_command() parameter
-
-- SemgrepAdapter.build_command() parameter
-
-- BanditAdapter.build_command() parameter
-
-- PyscnAdapter.build_command() parameter
-
-- CohesionAdapter.build_command() parameter
-
-- CreosoteAdapter.build_command() parameter
-
-- RefurbAdapter.build_command() parameter
-
-## QAResult
-
-**Referenced in:**
-
-- BaseToolAdapter.\_create_result() parameter
-
-- TreeSitterAdapter.\_create_result() parameter
-
-## QAResultStatus
-
-**Referenced in:**
-
-- BaseToolAdapter.\_create_result() parameter
-
-- TreeSitterAdapter.\_create_result() parameter
 
 ## RateLimitConfig
 
@@ -2905,12 +2665,6 @@ This document shows where API components are used throughout the codebase.
 - ResourceMonitor.__init__() parameter
 
 - RateLimitMiddleware.__init__() parameter
-
-## RefurbSettings
-
-**Referenced in:**
-
-- RefurbAdapter.__init__() parameter
 
 ## RegexParser
 
@@ -3016,12 +2770,6 @@ This document shows where API components are used throughout the codebase.
 
 - ResourceManager.register_resource() parameter
 
-## RuffSettings
-
-**Referenced in:**
-
-- RuffAdapter.__init__() parameter
-
 ## RuleRecord
 
 **Referenced in:**
@@ -3045,12 +2793,6 @@ This document shows where API components are used throughout the codebase.
 **Referenced in:**
 
 - SafeFileModifier base class
-
-## ScaleneSettings
-
-**Referenced in:**
-
-- ScaleneAdapter.__init__() parameter
 
 ## ScalingMetrics
 
@@ -3157,12 +2899,6 @@ This document shows where API components are used throughout the codebase.
 - VectorStore.__init__() parameter
 
 - EmbeddingService.__init__() parameter
-
-## SemgrepSettings
-
-**Referenced in:**
-
-- SemgrepAdapter.__init__() parameter
 
 ## ServiceConfig
 
@@ -3290,12 +3026,6 @@ This document shows where API components are used throughout the codebase.
 
 - MalformedManifestError base class
 
-## SmartFileFilter
-
-**Referenced in:**
-
-- RefurbAdapter.__init__() parameter
-
 ## SmartFileFilterProtocol
 
 **Referenced in:**
@@ -3385,12 +3115,6 @@ This document shows where API components are used throughout the codebase.
 - LocalSequentialClient.__init__() parameter
 
 - SwarmManager.__init__() parameter
-
-## SyrupySettings
-
-**Referenced in:**
-
-- SyrupyAdapter.__init__() parameter
 
 ## Task
 
@@ -3722,91 +3446,11 @@ This document shows where API components are used throughout the codebase.
 
 - AsyncTimeoutManager.\_update_circuit_breaker_on_failure() parameter
 
-## ToolAdapterSettings
-
-**Referenced in:**
-
-- BaseToolAdapter.__init__() parameter
-
-- CodespellSettings base class
-
-- SyrupySettings base class
-
-- GitleaksSettings base class
-
-- BetterleaksSettings base class
-
-- ComplexipySettings base class
-
-- PymetricaSettings base class
-
-- OsvScannerSettings base class
-
-- PyreflySettings base class
-
-- TySettings base class
-
-- MdformatSettings base class
-
-- RuffSettings base class
-
-- ScaleneSettings base class
-
-- SemgrepSettings base class
-
-- BanditSettings base class
-
-- PyscnSettings base class
-
-- CohesionSettings base class
-
-- CreosoteSettings base class
-
-- RefurbSettings base class
-
-## ToolExecutionResult
-
-**Referenced in:**
-
-- BaseToolAdapter.\_determine_qa_status_and_message() parameter
-
-- BaseToolAdapter.\_convert_to_qa_result() parameter
-
-## ToolIssue
-
-**Referenced in:**
-
-- BaseToolAdapter.\_count_issues_by_severity() parameter
-
-- BaseToolAdapter.\_determine_qa_status_and_message() parameter
-
-- BaseToolAdapter.\_build_details_from_issues() parameter
-
-- BaseToolAdapter.\_convert_to_qa_result() parameter
-
 ## ToolProfiler
 
 **Referenced in:**
 
 - IncrementalExecutor.__init__() parameter
-
-## TySettings
-
-**Referenced in:**
-
-- TyAdapter.__init__() parameter
-
-## UtilityCheckSettings
-
-**Referenced in:**
-
-- UtilityCheckAdapter.__init__() parameter
-
-## UtilityCheckType
-
-**Referenced in:**
-
-- UtilityCheckAdapter.\_get_config_for_check_type() parameter
 
 ## ValidationConfig
 
@@ -4978,43 +4622,9 @@ This document shows where API components are used throughout the codebase.
 
 - TenantContextPack.\_body_keys_must_be_known_files() parameter
 
-- TreeSitterAdapter.\_update_metrics() parameter
-
-- TreeSitterAdapter.\_update_metrics() parameter
-
-- TreeSitterAdapter.\_determine_status() parameter
-
-- TreeSitterAdapter.\_build_message() parameter
-
-- TreeSitterAdapter.\_build_message() parameter
-
-- TreeSitterAdapter.\_build_details() parameter
-
-- BetterleaksAdapter.\_build_finding_issue() parameter
-
-- ComplexipyAdapter.\_process_complexipy_data() parameter
-
-- ComplexipyAdapter.\_process_file_data() parameter
-
-- ComplexipyAdapter.\_create_issue_if_needed() parameter
-
-- ComplexipyAdapter.\_build_issue_message() parameter
-
-- OsvScannerAdapter.\_create_issues_from_entry() parameter
-
-- OsvScannerAdapter.\_count_affected_packages() parameter
-
-- PyreflyAdapter.\_extract_message_from_item() parameter
-
-- PyreflyAdapter.\_extract_code_from_item() parameter
-
 - BaseCodeFixer.\_validate_fix_quality() parameter
 
 - BaseCodeFixer.\_enhance_prompt_for_retry() parameter
-
-- ScaleneAdapter.\_process_file_profile() parameter
-
-- ScaleneAdapter.\_analyze_line() parameter
 
 ## fail
 
@@ -5027,12 +4637,6 @@ This document shows where API components are used throughout the codebase.
 - SQLiteQueryOptimizer.track_search_interaction() parameter
 
 - SQLiteQueryOptimizer.\_update_query_pattern() parameter
-
-## format
-
-**Referenced in:**
-
-- MdformatAdapter.__init__() parameter
 
 ## init
 
@@ -5119,8 +4723,6 @@ This document shows where API components are used throughout the codebase.
 - HookExecutor.\_create_timeout_result() parameter
 
 - HookExecutor.\_create_error_result() parameter
-
-- HookExecutor.\_try_get_qa_result_for_hook() parameter
 
 - PoolOrchestrator.\_execute_single_hook_standard() parameter
 
@@ -5641,20 +5243,6 @@ This document shows where API components are used throughout the codebase.
 - ToolExecutionError.__init__() parameter
 
 - ToolExecutionError.\_format_output() parameter
-
-- BaseToolAdapter.build_command() parameter
-
-- BaseToolAdapter.\_count_issues_by_severity() parameter
-
-- BaseToolAdapter.\_determine_qa_status_and_message() parameter
-
-- BaseToolAdapter.\_build_details_from_issues() parameter
-
-- BaseToolAdapter.\_convert_to_qa_result() parameter
-
-- BaseToolAdapter.\_convert_to_qa_result() parameter
-
-- BaseToolAdapter.\_create_result() parameter
 
 - CloneGrouper.group_pairs() parameter
 
@@ -6292,103 +5880,11 @@ This document shows where API components are used throughout the codebase.
 
 - AdvancedOptimizer.\_build_optimization_result() parameter
 
-- CodespellAdapter.build_command() parameter
-
-- TreeSitterAdapter.\_update_metrics() parameter
-
-- TreeSitterAdapter.\_prepare_files_to_check() parameter
-
-- TreeSitterAdapter.\_determine_status() parameter
-
-- TreeSitterAdapter.\_create_result() parameter
-
-- TreeSitterAdapter.\_build_message() parameter
-
-- TreeSitterAdapter.\_build_details() parameter
-
-- SyrupyAdapter.build_command() parameter
-
-- GitleaksAdapter.build_command() parameter
-
-- BetterleaksAdapter.build_command() parameter
-
-- ComplexipyAdapter.build_command() parameter
-
-- ComplexipyAdapter.\_process_complexipy_data() parameter
-
-- ComplexipyAdapter.\_process_file_data() parameter
-
-- PymetricaAdapter.build_command() parameter
-
-- OsvScannerAdapter.build_command() parameter
-
-- OsvScannerAdapter.\_add_format_options() parameter
-
-- OsvScannerAdapter.\_add_fix_options() parameter
-
-- OsvScannerAdapter.\_add_cache_dir() parameter
-
-- OsvScannerAdapter.\_add_ignored_vulns() parameter
-
-- OsvScannerAdapter.\_add_input_files() parameter
-
-- OsvScannerAdapter.\_add_input_files() parameter
-
-- OsvScannerAdapter.\_build_vulnerability_message() parameter
-
-- PyreflyAdapter.build_command() parameter
-
-- PyreflyAdapter.\_parse_error_items() parameter
-
-- TyAdapter.build_command() parameter
-
 - BaseCodeFixer.\_raise_if_dangerous_imports_found() parameter
 
 - BaseCodeFixer.\_validate_fix_quality() parameter
 
 - BaseCodeFixer.\_enhance_prompt_for_retry() parameter
-
-- MdformatAdapter.build_command() parameter
-
-- MdformatAdapter.\_create_issues_from_processed_files() parameter
-
-- RuffAdapter.build_command() parameter
-
-- RuffAdapter.\_add_check_mode_options() parameter
-
-- RuffAdapter.\_add_format_mode_options() parameter
-
-- RuffAdapter.\_parse_format_output() parameter
-
-- ScaleneAdapter.build_command() parameter
-
-- ScaleneAdapter.\_detect_test_file() parameter
-
-- SASTAdapterProtocol.build_command() parameter
-
-- SemgrepAdapter.build_command() parameter
-
-- BanditAdapter.build_command() parameter
-
-- PyscnAdapter.build_command() parameter
-
-- CohesionAdapter.build_command() parameter
-
-- CreosoteAdapter.build_command() parameter
-
-- RefurbAdapter.build_command() parameter
-
-- UtilityCheckAdapter.\_is_file_excluded() parameter
-
-- UtilityCheckAdapter.\_apply_exclude_filters() parameter
-
-- UtilityCheckAdapter.\_apply_exclude_filters() parameter
-
-- UtilityCheckAdapter.\_process_file_lines() parameter
-
-- UtilityCheckAdapter.\_create_pattern_result() parameter
-
-- UtilityCheckAdapter.\_create_pattern_result() parameter
 
 ## process
 
@@ -6467,8 +5963,6 @@ This document shows where API components are used throughout the codebase.
 - HookExecutor.\_parse_semgrep_output() parameter
 
 - HookExecutor.\_parse_semgrep_json_output() parameter
-
-- HookExecutor.\_try_get_qa_result_for_hook() parameter
 
 - GitService.\_handle_commit_failure() parameter
 

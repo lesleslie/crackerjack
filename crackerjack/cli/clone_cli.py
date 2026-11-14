@@ -6,13 +6,9 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
-from crackerjack.adapters.sast.pyscn import (
-    PyscnAdapter,
-    PyscnCloneScanError,
-    PyscnSettings,
-)
 from crackerjack.clone.classifier import ExtractionTargetClassifier
 from crackerjack.clone.grouper import CloneGroup
+from crackerjack.clone.pyscn_scanner import PyscnCloneScanError, scan_clone_groups
 from crackerjack.clone.refactor_engine import CloneDecision, CloneRefactorEngine
 from crackerjack.utils.path_redaction import redact_path
 
@@ -31,9 +27,8 @@ def _clone_groups(path: Path, threshold: float = 0.9) -> list[CloneGroup] | None
         caller must not read ``None`` as "no clones" -- a broken pyscn
         install has to say so, not report a clean repo.
     """
-    adapter = PyscnAdapter(settings=PyscnSettings(clone_threshold=threshold))
     try:
-        return adapter.parse_clone_groups(path)
+        return scan_clone_groups(path, threshold=threshold)
     except PyscnCloneScanError as exc:
         console.print(f"[red]pyscn failed: {exc}[/red]")
         return None

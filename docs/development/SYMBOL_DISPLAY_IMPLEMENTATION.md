@@ -1,14 +1,29 @@
 ---
-status: active
-role: canonical
+status: complete
+role: historical
 date: 2026-07-17
-last_reviewed: 2026-07-17
+last_reviewed: 2026-11-14
 superseded_by: null
 blocks_on: []
 topic: architecture
 ---
 
 # Symbol Display Implementation - Summary
+
+> **Historical.** This document describes a mechanism that was never fully
+> wired. The producer side -- setting `is_config_error = True` when
+> `qa_result.status == QAResultStatus.ERROR` -- lived in
+> `crackerjack/orchestration/hook_orchestrator.py`, a module path that no
+> longer exists. Nothing in production code ever assigned `is_config_error`
+> to `True`, so the flag was always `False`.
+>
+> The consumer side is still live: `crackerjack/core/phase_coordinator.py`
+> counts `is_config_error` and renders a `(N config)` suffix, but that
+> branch can never fire until a producer is added.
+>
+> The `QAResult` / `QAResultStatus` vocabulary used below was removed on
+> 2026-11-14 along with the QA adapter layer. See
+> `docs/plans/2026-11-14-consolidate-tool-taxonomies.md`.
 
 ## Overview
 

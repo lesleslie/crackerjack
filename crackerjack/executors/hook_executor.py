@@ -677,20 +677,10 @@ class HookExecutor:
 
         exit_code, error_message = self._determine_exit_code_and_error(status, result)
 
-        # The QA adapter re-runs the tool it reports on, so it is only
-        # worth running when the text parsers produced nothing. Otherwise
-        # it repeats work we already have, at the cost of a second run of
-        # the tool over the whole package -- and its result would only
-        # duplicate the issues already parsed.
-        qa_result = None
-        if status == "failed" and not issues_found:
-            qa_result = self._try_get_qa_result_for_hook(hook, result, duration)
-
         issues_found = self._handle_no_issues_for_failed_hook(
             status,
             issues_found,
             result,
-            qa_result,
         )
 
         issues_count = self._calculate_issues_count(status, issues_found)
@@ -721,7 +711,6 @@ class HookExecutor:
             output=result.stdout,
             error=result.stderr,
             advisory_issues=parsed_output.get("advisory_issues", []),
-            qa_result=qa_result,
         )
 
     def _create_skipped_hook_result(
@@ -845,45 +834,13 @@ class HookExecutor:
             error_message = result.stderr.strip()[:500]
         return exit_code, error_message
 
-    def _qa_result_issues(self, qa_result: t.Any | None) -> list[str]:
-        """Flatten a ``QAResult``'s structured issues into report strings.
-
-        The adapter reports each issue as a dict of ``file_path``,
-        ``line_number``, ``column_number``, ``message``, ``code``,
-        ``severity`` and ``suggestion``. The report format elsewhere is
-        ``<path>:<line> - <code>: <message>`` -- the same shape the
-        semgrep parser produces from the tool's own JSON.
-        """
-        if qa_result is None:
-            return []
-
-        issues: list[str] = []
-        for issue in getattr(qa_result, "parsed_issues", None) or []:
-            if not isinstance(issue, dict):
-                continue
-            path = issue.get("file_path") or "unknown"
-            line = issue.get("line_number")
-            code = issue.get("code")
-            message = issue.get("message") or ""
-            location = f"{path}:{line}" if line else path
-            if code:
-                issues.append(f"{location} - {code}: {message}")
-            else:
-                issues.append(f"{location}: {message}")
-        return issues
-
     def _handle_no_issues_for_failed_hook(
         self,
         status: str,
         issues_found: list[str],
         result: subprocess.CompletedProcess[str],
-        qa_result: t.Any | None = None,
     ) -> list[str]:
         if status == "failed" and not issues_found:
-            qa_issues = self._qa_result_issues(qa_result)
-            if qa_issues:
-                return qa_issues
-
             stderr = (result.stderr or "").strip()
             stdout = (result.stdout or "").strip()
 
@@ -1032,6 +989,12 @@ class HookExecutor:
             from crackerjack.parsers.factory import ParserFactory
 
             factory = ParserFactory()
+            if not factory.has_parser(tool_name):
+                # No parser is registered for this tool, so there is
+                # nothing to read the report with. Returning early keeps
+                # the generic-extractor fallback quiet instead of
+                # logging a warning for every unregistered tool name.
+                return []
             issues = factory.parse_with_validation(tool_name, output)
             return [
                 f"{issue.file_path}:{issue.line_number}: {issue.message}"
@@ -1242,6 +1205,21 @@ class HookExecutor:
                 return self._extract_issues_via_json_parser("ruff-check", error_output)
 
         if error_output and error_output.strip().startswith(("{", "[")):
+            # The generic line extractor cannot read JSON, so it used to
+            # give up here and the hook reported no issues at all --
+            # even for tools whose findings are sitting in that JSON
+            # waiting for the parser that understands them. ``check-json``
+            # and ``check-jsonschema`` are the live casualties: the first
+            # emits JSON on failure, the second always does.
+            #
+            # Hand the output to the registered parser instead. If no
+            # parser is registered for this tool, or the parser cannot
+            # read the report, fall back to the previous behaviour of
+            # reporting nothing -- the generic extractor would only
+            # produce noise from JSON.
+            parsed = self._extract_issues_via_json_parser(hook.name, error_output)
+            if parsed:
+                return parsed
             return []
 
         if error_output:
@@ -2293,106 +2271,6 @@ class HookExecutor:
             "PIPENV_ACTIVE",
             "POETRY_ACTIVE",
         }
-
-    def _try_get_qa_result_for_hook(
-        self,
-        hook: HookDefinition,
-        result: subprocess.CompletedProcess[str],
-        duration: float,
-    ) -> t.Any | None:
-
-        if result.returncode == 0 and hook.name not in {
-            "complexipy",
-            "refurb",
-            "gitleaks",
-            "creosote",
-        }:
-            return None
-
-        try:
-            import asyncio
-
-            from crackerjack.adapters.factory import DefaultAdapterFactory
-            from crackerjack.models.qa_config import QACheckConfig
-            from crackerjack.models.qa_results import QACheckType
-
-            adapter_factory = DefaultAdapterFactory()
-
-            # The hook names a *tool*; the factory is keyed by *adapter*
-            # name. ``DefaultAdapterFactory.TOOL_TO_ADAPTER_NAME`` is the
-            # translation, and it is the only place that knows it.
-            #
-            # Passing the hook name straight through raised
-            # ``ValueError: Unknown adapter: ruff-check``, which the
-            # ``except Exception`` below swallowed -- so the QA-result path
-            # silently produced nothing for every tool, and the structured
-            # failure report that was supposed to replace a raw subprocess
-            # dump never appeared.
-            adapter_name = adapter_factory.get_adapter_name(hook.name)
-            if adapter_name is None:
-                return None
-
-            # The adapter re-runs the tool it is reporting on, over the
-            # whole package. Its own timeout defaults to 300s, which for
-            # a package-wide scan would outlive the hook that triggered
-            # it -- so the hook's budget is the adapter's budget.
-            adapter_settings = adapter_factory.create_settings(
-                adapter_name,
-                timeout_seconds=hook.timeout,
-            )
-            adapter = adapter_factory.create_adapter(
-                adapter_name,
-                adapter_settings,
-            )
-
-            if adapter is None:
-                return None
-
-            asyncio.run(adapter.init())
-
-            config = QACheckConfig(
-                check_id=adapter.module_id,  # type: ignore
-                check_name=hook.name,
-                check_type=QACheckType.LINT,
-                enabled=True,
-                file_patterns=["**/*.py"],
-                timeout_seconds=hook.timeout,
-            )
-
-            check_start = time.monotonic()
-            qa_result = asyncio.run(adapter.check(config=config))
-            execution_time_ms = int((time.monotonic() - check_start) * 1000)
-
-            if self._adapter_learner_integration is not None:
-                with suppress(Exception):
-                    self._adapter_learner_integration.track_adapter_execution(
-                        adapter_name=hook.name,
-                        file_path=str(self.pkg_path),
-                        file_size=0,
-                        project_context={},
-                        success=qa_result.is_success if qa_result else True,
-                        execution_time_ms=execution_time_ms,
-                        error_type=qa_result.details
-                        if qa_result and not qa_result.is_success
-                        else None,
-                    )
-
-            if qa_result and qa_result.parsed_issues:
-                if self.verbose:
-                    self.console.print(
-                        f"[dim]✅ Cached QAResult for '{hook.name}' "
-                        f"({len(qa_result.parsed_issues)} issues)[/dim]"
-                    )
-                return qa_result
-
-            return None
-
-        except Exception as e:
-            if self.debug:
-                self.console.print(
-                    f"[yellow]QA adapter failed for '{hook.name}': {e}[/yellow]"
-                )
-            return None
 
     def _print_summary(
         self,

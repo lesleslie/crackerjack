@@ -19,7 +19,8 @@ a new version-aware resolver picks it out of `PATH` even when an unrelated
 project's venv holds an older pyscn earlier on the path. The pyscn JSON
 parser reads the >= 1.30 snake_case report schema and fails loudly when a
 report cannot be parsed. Wired into the `pyscn` quality-gate hook, the
-`PyscnAdapter`, and the clone CLI.
+pyscn JSON and regex parsers, and the clone CLI
+(`crackerjack/clone/pyscn_scanner.py`).
 
 ## Why
 

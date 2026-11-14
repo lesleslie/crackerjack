@@ -24,9 +24,7 @@ from .health_check import (
     SystemHealthReport,
     health_check_wrapper,
 )
-from .protocols import OptionsProtocol, QAAdapterProtocol
-from .qa_config import QACheckConfig
-from .qa_results import QACheckType, QAResult, QAResultStatus
+from .protocols import OptionsProtocol
 from .session_metrics import SessionMetrics
 from .task import HookResult, SessionTracker, TaskStatus
 from .validation_contracts import (
@@ -57,11 +55,6 @@ __all__ = [
     "OptionsProtocol",
     "ProgressConfig",
     "PublishConfig",
-    "QAAdapterProtocol",
-    "QACheckConfig",
-    "QACheckType",
-    "QAResult",
-    "QAResultStatus",
     "QualityGateCheck",
     "QualityGateReport",
     "SessionMetrics",

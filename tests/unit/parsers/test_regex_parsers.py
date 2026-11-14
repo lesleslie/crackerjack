@@ -513,7 +513,7 @@ class TestPymetricaRegexParser:
         <line> - ... exceeds the fail threshold
 
     Cyclomatic complexity metrics are skipped (ruff C901 handles CC
-    in the fast stage) — see ``PymetricaAdapter.parse_output``.
+    in the fast stage) — see ``PymetricaRegexParser.parse_text``.
     """
 
     @pytest.fixture

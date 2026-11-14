@@ -3,10 +3,22 @@ status: draft
 role: implementation
 topic: lifecycle
 date: 2026-08-06
-last_reviewed: 2026-09-09
+last_reviewed: 2026-11-14
 ---
 
 # Crackerjack Ruff Fix Policy Implementation Plan
+
+> **Update 2026-11-14.** Stages 0-2 have landed, but in the **config layer**
+> rather than in an adapter: the opt-in flag is `HookSettings.ruff_unsafe_fixes`
+> (`crackerjack/config/settings.py`), the hook surface is
+> `HookDefinition.allow_unsafe_fixes` (`crackerjack/config/hooks.py`), and the
+> `--unsafe-fixes` injection happens in `crackerjack/config/tool_commands.py`.
+>
+> Task 3 below refers to `crackerjack.adapters.format.ruff.RuffAdapter.build_command`.
+> That adapter was deleted on 2026-11-14 along with the QA adapter layer, so
+> that step is moot as written; the equivalent behaviour now lives in
+> `crackerjack/config/tool_commands.py`. See
+> `docs/plans/2026-11-14-consolidate-tool-taxonomies.md`.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 

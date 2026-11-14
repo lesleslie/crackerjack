@@ -120,43 +120,30 @@ def handle_health_check(
 
 
 def _check_adapters(pkg_path: Path) -> ComponentHealth:
+    """Health-check the live language-adapter discovery path.
+
+    The QA adapter layer (the Ruff/Bandit/Semgrep/... wrappers) was removed
+    in favour of the parser registry, so there is no adapter base class or
+    factory left to inspect. What remains is entry-point discovery for
+    third-party language adapters, and that is what this reports on.
+    """
     results: dict[str, HealthCheckResult] = {}
 
     try:
-        from crackerjack.adapters._qa_adapter_base import QAAdapterBase
+        from crackerjack.adapters.registry import discover_adapters
 
-        if hasattr(QAAdapterBase, "health_check"):
-            results["adapter_base"] = HealthCheckResult.healthy(
-                message="Adapter base class implements health_check",
-                component_name="QAAdapterBase",
-                details={"has_protocol": True},
-            )
-        else:
-            results["adapter_base"] = HealthCheckResult.degraded(
-                message="Adapter base class does not implement health_check",
-                component_name="QAAdapterBase",
-                details={"has_protocol": False},
-            )
-
-        try:
-            results["adapter_factory"] = HealthCheckResult.healthy(
-                message="DefaultAdapterFactory is available",
-                component_name="DefaultAdapterFactory",
-                details={"has_factory": True},
-            )
-        except Exception as e:
-            results["adapter_factory"] = HealthCheckResult.degraded(
-                message=f"Could not import factory: {e!s}",
-                component_name="DefaultAdapterFactory",
-                details={"error": str(e)},
-            )
-
+        adapters = discover_adapters()
+        results["language_adapters"] = HealthCheckResult.healthy(
+            message=f"Discovered {len(adapters)} language adapter(s)",
+            component_name="language_adapters",
+            details={"adapters": sorted(adapters)},
+        )
     except Exception as e:
-        logger.exception("Failed to load adapters")
-        results["adapters"] = HealthCheckResult.unhealthy(
-            message=f"Failed to load adapter module: {e!s}",
-            component_name="adapters",
-            details={"error_type": type(e).__name__},
+        logger.exception("Failed to discover language adapters")
+        results["language_adapters"] = HealthCheckResult.unhealthy(
+            message=f"Failed to discover language adapters: {e!s}",
+            component_name="language_adapters",
+            details={"error": str(e)},
         )
 
     return ComponentHealth.from_results("adapters", results)

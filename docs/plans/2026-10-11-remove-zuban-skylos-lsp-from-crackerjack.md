@@ -7,10 +7,18 @@ status: active
 role: implementation
 topic: architecture
 date: 2026-10-11
-last_reviewed: 2026-10-11
+last_reviewed: 2026-11-14
 superseded_by: null
 blocks_on: []
 ---
+
+> **Update 2026-11-14.** The `crackerjack/adapters/lsp/` package this plan
+> removes has already been deleted — the directory is empty. The
+> "Type-checker tool classification" step below quotes
+> `_tool_adapter_base.py:566` and its `QACheckType.TYPE` return; that file
+> was deleted on 2026-11-14 along with the QA adapter layer, so the quoted
+> code no longer exists and that step is moot. See
+> `docs/plans/2026-11-14-consolidate-tool-taxonomies.md`.
 
 # Remove Zuban + Skylos LSP Adapters from Crackerjack
 

@@ -1,14 +1,24 @@
 ---
-status: active
-role: canonical
+status: complete
+role: historical
 date: 2026-07-17
-last_reviewed: 2026-07-17
-superseded_by: null
+last_reviewed: 2026-11-14
+superseded_by: docs/plans/2026-11-14-consolidate-tool-taxonomies.md
 blocks_on: []
 topic: lifecycle
 ---
 
 # Phase 2 Optimization: Eliminate Redundant Tool Execution
+
+> **Historical.** The duplication described below was eliminated on
+> 2026-11-14 — but by **removing** the second execution rather than by
+> caching its output. The QA adapter layer that re-ran each tool was
+> deleted, and the hook executor now feeds JSON tool output straight into
+> the registered parser (`crackerjack/parsers/`), which emits
+> `crackerjack.models.issues.Issue`. The `QAResult` caching strategy
+> described below is therefore moot.
+>
+> See `docs/plans/2026-11-14-consolidate-tool-taxonomies.md`.
 
 ## Current State (Inefficient)
 

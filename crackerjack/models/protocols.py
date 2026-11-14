@@ -16,8 +16,6 @@ if TYPE_CHECKING:
     from crackerjack.config.settings import CrackerjackSettings
     from crackerjack.models.agent_context import AgentContext
     from crackerjack.models.issues import FixResult, Issue
-    from crackerjack.models.qa_config import QACheckConfig
-    from crackerjack.models.qa_results import QAResult
 
 
 @t.runtime_checkable
@@ -679,34 +677,6 @@ class EnhancedFileSystemServiceProtocol(ServiceProtocol, t.Protocol):
     def exists(self, path: str | Path) -> bool: ...
 
     def mkdir(self, path: str | Path, parents: bool = False) -> None: ...
-
-
-@t.runtime_checkable
-class AdapterProtocol(t.Protocol):
-    @property
-    def adapter_name(self) -> str: ...
-
-    async def init(self) -> None: ...
-
-    async def check(
-        self,
-        files: list[Path] | None = None,
-        config: QACheckConfig | None = None,
-    ) -> QAResult: ...
-
-    async def health_check(self) -> dict[str, t.Any]: ...
-
-
-QAAdapterProtocol = AdapterProtocol
-
-
-@t.runtime_checkable
-class AdapterFactoryProtocol(t.Protocol):
-    def create_adapter(
-        self,
-        adapter_name: str,
-        settings: t.Any | None = None,
-    ) -> AdapterProtocol: ...
 
 
 @t.runtime_checkable

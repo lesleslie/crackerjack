@@ -53,7 +53,6 @@ class HookResult:
     returncode: int | None = None
     output: str | None = None
     error: str | None = None
-    qa_result: t.Any | None = None
     advisory_issues: list[str] = field(default_factory=list)
 
     def __post_init__(self) -> None:

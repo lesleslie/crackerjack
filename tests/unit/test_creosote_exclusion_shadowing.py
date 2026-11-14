@@ -28,9 +28,11 @@ satisfied the third-party ``ty`` distribution. The exclusion for ``ty``
 became unreachable, the comprehensive stage failed, and the autofixer
 was one keystroke away from deleting a legitimate exclusion.
 
-The fix was to rename the module to ``ty_adapter.py``. This test pins
-the invariant so the next module that shadows a distribution name is
-caught here rather than by a failing quality gate.
+The fix was to rename the module to ``ty_adapter.py``. That module was
+later removed along with the rest of the QA adapter layer, so the
+invariant now holds trivially -- but the guard still matters: it pins
+the rule so the next module that shadows a distribution name is caught
+here rather than by a failing quality gate.
 """
 
 from __future__ import annotations

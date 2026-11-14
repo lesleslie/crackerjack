@@ -810,33 +810,6 @@ def health_command(
 
 
 @app.command()
-def qa_health() -> t.Never:
-    from crackerjack.server import CrackerjackServer
-
-    settings = load_settings(CrackerjackSettings)
-    server = CrackerjackServer(settings)
-    health = server.get_health_snapshot()
-
-    qa_status = health.lifecycle_state.get("qa_adapters", {})
-    enabled_flags = qa_status.get("enabled_flags", {})
-
-    console.print("\n[bold]QA Adapter Health[/bold]")
-    console.print(f"Total adapters: {qa_status.get('total', 0)}")
-    console.print(f"Healthy adapters: {qa_status.get('healthy', 0)}")
-
-    console.print("\n[bold]Enabled Adapters:[/bold]")
-    for adapter_name, enabled in enabled_flags.items():
-        status = "✅" if enabled else "❌"
-        console.print(f" {status} {adapter_name}")
-
-    if qa_status.get("total", 0) == qa_status.get("healthy", 0):
-        console.print("\n[green]✅ All adapters healthy[/green]")
-        raise typer.Exit(0)
-    console.print("\n[yellow]⚠️ Some adapters unhealthy[/yellow]")
-    raise typer.Exit(1)
-
-
-@app.command()
 def shell() -> None:
     from crackerjack.config import CrackerjackSettings, load_settings
     from crackerjack.shell import CrackerjackShell

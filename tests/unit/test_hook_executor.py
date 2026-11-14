@@ -1,5 +1,6 @@
 """Unit tests for hook executor components."""
 
+import json
 import subprocess
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -503,6 +504,83 @@ class TestHookExecutorInternalMethods:
         assert hook_result.issues_count == 1
         assert "network resolution unavailable" not in (hook_result.error_message or "")
 
+    def test_json_output_is_read_by_the_registered_parser(self) -> None:
+        """A hook whose output is JSON must not have its findings discarded.
+
+        The generic line extractor cannot read JSON, so the executor used
+        to give up and report no issues at all -- even for tools whose
+        findings were sitting in that JSON waiting for the parser that
+        understands them. ``check-jsonschema`` is the live casualty.
+        """
+        executor = HookExecutor(console=MagicMock(), pkg_path=Path("/tmp"))
+
+        hook = MagicMock()
+        hook.name = "check-jsonschema"
+        hook.is_formatting = False
+        hook.stage = MagicMock()
+        hook.stage.value = "fast"
+        hook.timeout = 30
+
+        report = json.dumps(
+            [
+                {
+                    "instancePath": "/settings.json#/foo",
+                    "message": "must be a string",
+                }
+            ]
+        )
+        result = subprocess.CompletedProcess(
+            args=[],
+            returncode=1,
+            stdout=report,
+            stderr="",
+        )
+
+        hook_result = executor._create_hook_result_from_process(
+            hook,
+            result,
+            duration=1.23,
+        )
+
+        assert hook_result.status == "failed"
+        assert hook_result.issues_count >= 1
+
+    def test_json_output_without_a_registered_parser_reports_nothing(self) -> None:
+        """JSON output with no parser for the tool still reports no issues.
+
+        The generic extractor would only produce noise from JSON, so the
+        previous behaviour (no findings) is kept for tools the registry
+        does not know.
+        """
+        executor = HookExecutor(console=MagicMock(), pkg_path=Path("/tmp"))
+
+        hook = MagicMock()
+        hook.name = "not-a-registered-tool"
+        hook.is_formatting = False
+        hook.stage = MagicMock()
+        hook.stage.value = "fast"
+        hook.timeout = 30
+
+        result = subprocess.CompletedProcess(
+            args=[],
+            returncode=1,
+            stdout='[{"something": "happened"}]',
+            stderr="",
+        )
+
+        hook_result = executor._create_hook_result_from_process(
+            hook,
+            result,
+            duration=1.23,
+        )
+
+        assert hook_result.status == "failed"
+        # No finding was parsed; the single issue is the generic
+        # "reported no parseable issues" fallback, not a parsed result.
+        assert hook_result.issues_found == [
+            "Hook exited with code 1 but reported no parseable issues"
+        ]
+
     def test_create_hook_result_preserves_ruff_issue_lines(self) -> None:
         """Test Ruff hook results keep raw issue lines for downstream repair."""
         executor = HookExecutor(console=MagicMock(), pkg_path=Path("/tmp"))
@@ -524,12 +602,11 @@ class TestHookExecutorInternalMethods:
             stderr="",
         )
 
-        with patch.object(executor, "_try_get_qa_result_for_hook", return_value=None):
-            hook_result = executor._create_hook_result_from_process(
-                hook,
-                result,
-                duration=1.23,
-            )
+        hook_result = executor._create_hook_result_from_process(
+            hook,
+            result,
+            duration=1.23,
+        )
 
         assert hook_result.status == "failed"
         assert hook_result.output == result.stdout
@@ -562,12 +639,11 @@ class TestHookExecutorInternalMethods:
             stderr="",
         )
 
-        with patch.object(executor, "_try_get_qa_result_for_hook", return_value=None):
-            hook_result = executor._create_hook_result_from_process(
-                hook,
-                result,
-                duration=1.23,
-            )
+        hook_result = executor._create_hook_result_from_process(
+            hook,
+            result,
+            duration=1.23,
+        )
 
         assert hook_result.status == "failed"
         assert hook_result.exit_code == 1

@@ -1062,37 +1062,50 @@ merge_result = config_merge_service.smart_merge_pyproject(
 
 ### Using the legacy dependency injection system
 
-Example: Custom QA Adapter
+Example: Custom language adapter
+
+Language adapters are discovered through the
+`crackerjack.language_adapters` entry-point group. Implement
+`LanguageAdapterBase`, register the class as an entry point, and
+crackerjack picks it up at startup.
 
 ```python
-import uuid
-from contextlib import suppress
-from legacy.depends import depends
-from crackerjack.adapters._qa_adapter_base import QAAdapterBase
+from pathlib import Path
 
-# Module-level registration (legacy pattern)
-MODULE_ID = uuid.UUID("01937d86-xxxx-xxxx-xxxx-xxxxxxxxxxxx")
-MODULE_STATUS = "stable"
+from crackerjack.adapters.base import Capabilities, LanguageAdapterBase
 
 
-class CustomAdapter(QAAdapterBase):
-    @property
-    def adapter_name(self) -> str:
-        return "Custom Checker"
+class CustomAdapter(LanguageAdapterBase):
+    """A third-party language adapter."""
 
-    @property
-    def module_id(self) -> uuid.UUID:
-        return MODULE_ID
+    name = "custom"
 
-    async def check(self, files, config):
-        # Your quality check logic here
-        return QAResult(passed=True, issues=[])
+    def detect(self, project_root: Path) -> bool:
+        """Return True if this adapter applies to the project."""
+        return (project_root / "custom.toml").exists()
 
-
-# Register with DI container
-with suppress(Exception):
-    depends.set(CustomAdapter)
+    def capabilities(self, project_root: Path) -> Capabilities:
+        """Single source of truth for what this adapter offers."""
+        return Capabilities()
 ```
+
+Register it in your package metadata:
+
+```toml
+[project.entry-points."crackerjack.language_adapters"]
+custom = "my_package.adapters:CustomAdapter"
+```
+
+Discovery is then a single call:
+
+```python
+from crackerjack.adapters.registry import discover_adapters
+
+adapters = discover_adapters()  # {"custom": CustomAdapter(...)}
+```
+
+A broken third-party adapter is logged and skipped, never raised — a bad
+external package cannot brick crackerjack.
 
 ### Performance Optimization
 
@@ -1241,21 +1254,20 @@ This pattern management system standardizes regex validation and helps reduce sp
 
 ## Adapters
 
-![Adapter Taxonomy](docs/diagrams/adapter-taxonomy.png)
-*26 QA adapters organized by category (verified 2026-08-19 via `crackerjack/adapters/`) with protocol-based registration. Note: the diagram still references the Q1 2026 taxonomy image; `docs/diagrams/README.md` says "18 QA adapters" — both are stale. Use `python -c "from pathlib import Path; [print(p.parent.name + '/' + p.stem) for p in Path('crackerjack/adapters').rglob('adapter.py') if not p.name.startswith('_')]" | wc -l` to re-derive the count.*
+The QA adapter layer was removed on 2026-11-14. What remains under
+`crackerjack/adapters/` is the language-adapter registry (`base.py`,
+`registry.py`, `kotlin/`, `python/`, `swift/`, `web/`) and the AI provider
+registry (`ai/`). The deleted QA adapter categories, their generated docs,
+and their tests are recorded in
+[`docs/plans/2026-11-14-consolidate-tool-taxonomies.md`](docs/plans/2026-11-14-consolidate-tool-taxonomies.md).
 
-Adapters connect Crackerjack to external tools and subsystems (e.g., Ruff, Bandit) using legacy patterns. Each adapter exposes typed settings, async initialization, and standardized results.
+For the surviving adapter surfaces, start here:
 
 - AI — Claude-powered code fixes: [crackerjack/adapters/ai/README.md](./crackerjack/adapters/ai/README.md)
-- Complexity — Code complexity analysis (Complexipy): [crackerjack/adapters/complexity/README.md](./crackerjack/adapters/complexity/README.md)
-- Format — Python/Markdown formatting (Ruff, Mdformat): [crackerjack/adapters/format/README.md](./crackerjack/adapters/format/README.md)
-- Lint — Spelling and simple linters (Codespell): [crackerjack/adapters/lint/README.md](./crackerjack/adapters/lint/README.md)
-- Refactor — Modernization and dead code, unused deps (Refurb, Creosote): [crackerjack/adapters/refactor/README.md](./crackerjack/adapters/refactor/README.md)
-- Security — Static analysis and secrets (Bandit, Gitleaks, Pyscn): [crackerjack/adapters/security/README.md](./crackerjack/adapters/security/README.md)
-- Type — Static type checking (Pyrefly, Ty): [crackerjack/adapters/type/README.md](./crackerjack/adapters/type/README.md)
-- Utility — Config-driven checks (EOF newline, regex, size, lock): [crackerjack/adapters/utility/README.md](./crackerjack/adapters/utility/README.md)
+- Language adapter base: [crackerjack/adapters/base.py](./crackerjack/adapters/base.py)
+- Language adapter registry: [crackerjack/adapters/registry.py](./crackerjack/adapters/registry.py)
 
-Quick index: [crackerjack/adapters/README.md](./crackerjack/adapters/README.md).
+For the historical taxonomy that was removed, see the consolidation plan.
 
 ## Language Adapters
 

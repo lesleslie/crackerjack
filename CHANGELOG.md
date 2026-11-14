@@ -92,6 +92,15 @@ topic: changelog
   the developer's desktop. The sweep now skips the stdlib modules whose
   import has a visible side effect (`antigravity`, `this`), which is the
   same set mypy skips as `ANNOYING_STDLIB_MODULES`.
+- executors: JSON hook output was thrown away, so `check-jsonschema`'s
+  findings never reached the report. When a hook failed, the executor
+  handed the output to the generic line extractor, which cannot read
+  JSON; it gave up, and the hook reported the generic "exited with code
+  1 but reported no parseable issues" fallback even though the tool's
+  findings were sitting in that JSON the whole time. JSON output now
+  goes to the parser registered for that tool
+  (`crackerjack.parsers.ParserFactory`), and a tool with no registered
+  parser reports nothing rather than guessing.
 
 ### Security
 
@@ -112,22 +121,6 @@ topic: changelog
 
 ### Removed
 
-- adapters: `crackerjack.adapters.type.pyright.py` and
-  `crackerjack.adapters.refactor.vulture.py` — the Pyright and Vulture
-  QA adapters, and their two test files. Neither tool has a
-  `HookDefinition` anywhere in `crackerjack/config/hooks.py`, so no hook
-  can ever produce the name the factory would need to look them up; the
-  factory's name table (`DefaultAdapterFactory.TOOL_TO_ADAPTER_NAME`)
-  and its instantiation table listed neither, and the plugin loader
-  never scans `crackerjack/adapters/**`. Their only remaining consumers
-  were their own test files and the `__init__.py` re-exports, so those
-  go too. The `pyright` tool itself is not a declared dependency — the
-  `pyrightconfig.json` entry in `settings/crackerjack.yaml` is a file
-  mapping, unrelated to the adapter. The `pyright` *output patterns* in
-  `crackerjack/services/patterns/tool_output/pyright.py` are a separate
-  registry and are deliberately left in place: the
-  `individual_hook_executor` still reads them, and that module is
-  scheduled for removal by a separate plan.
 - adapters: `crackerjack.adapters.type.pyright.py` and
   `crackerjack.adapters.refactor.vulture.py` — the Pyright and Vulture
   QA adapters, and their two test files. Neither tool has a
@@ -199,6 +192,55 @@ topic: changelog
     deleted AST-transform surgeon. `libcst` stays.
   - Net: 73 files and 52,338 lines.
   - Plan: `docs/plans/2026-11-13-remove-dead-ai-fix-module-cluster.md`.
+- adapters: The QA adapter layer, in full —
+  `crackerjack.adapters._qa_adapter_base`,
+  `crackerjack.adapters._tool_adapter_base`, `crackerjack.adapters.factory`,
+  `crackerjack.adapters.health_mixin`, the twelve tool-adapter packages
+  (`complexity`, `dependency`, `format`, `lint`, `performance`, `refactor`,
+  `sast`, `security`, `test`, `treesitter`, `type`, `utility`), the
+  `crackerjack.models.qa_config` and `crackerjack.models.qa_results` types,
+  and the vestigial `crackerjack.server`. 49 production modules, plus the
+  50 test files that covered them.
+
+  The layer duplicated the parser registry. Every tool had an adapter that
+  re-ran the tool and parsed its output, while the hook executor had
+  already run the tool and parsed the same output through
+  `crackerjack.parsers`. Two parsers, two issue types
+  (`crackerjack.models.issues.Issue` and the adapter-only `ToolIssue`), and
+  two aggregation paths for the same findings.
+
+  The adapter's one distinct behaviour was a "structured re-run" fallback
+  for when the text parsers found nothing. It was not better than the
+  parser for any of the six adapters the factory could build: the re-run
+  scanned the whole package a second time, with its own 300-second
+  timeout, to produce the same findings. Deleting the fallback beat
+  keeping it.
+
+  `crackerjack.adapters` now holds only the language adapters (`base`,
+  `registry`, `kotlin`, `python`, `swift`, `web`) and the AI provider
+  registry (`ai`). The four PEP 621 entry points and the four MCP tools
+  they back are untouched, and `crackerjack.models.issues.Issue` plus
+  `crackerjack.parsers.ParserFactory` are the single taxonomy for tool
+  findings.
+
+  Also gone with it: `crackerjack.server`, a second MCP server whose only
+  job was initializing QA adapters and whose only caller was the
+  `qa-health` CLI command; `HookResult.qa_result`; and the
+  `AdapterProtocol`, `AdapterFactoryProtocol`, and `QAAdapterProtocol`
+  declarations. The `qa-health` command goes with it, and the health
+  check's "adapters" category now reports on the live language-adapter
+  discovery (`crackerjack.adapters.registry.discover_adapters`) instead of
+  a base class that no longer exists.
+
+  The clone scan moves rather than disappears: `crackerjack.adapters.sast.pyscn`
+  was a quality-check adapter wrapping a feature, so the scan itself now
+  lives in `crackerjack.clone.pyscn_scanner`, beside the grouper and the
+  classifier it feeds.
+
+  `HookResult.is_config_error` survives: production code never set it to
+  `True`, even before this change, so nothing that worked stops working.
+
+  Plan: `docs/plans/2026-11-14-consolidate-tool-taxonomies.md`.
 
 ## [0.93.0] - 2026-11-07
 

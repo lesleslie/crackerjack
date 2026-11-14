@@ -91,6 +91,15 @@ class ParserFactory:
         self._regex_parsers[tool_name] = parser_class
         logger.debug(f"Registered regex parser for '{tool_name}'")
 
+    def has_parser(self, tool_name: str) -> bool:
+        """True when ``tool_name`` has a registered JSON or regex parser.
+
+        Callers that fall back to a generic extractor use this to avoid
+        raising -- and logging a warning -- for every unregistered tool
+        name they encounter.
+        """
+        return tool_name in self._json_parsers or tool_name in self._regex_parsers
+
     def create_parser(self, tool_name: str) -> JSONParser | RegexParser:
         if tool_name in self._parser_cache:
             return self._parser_cache[tool_name]

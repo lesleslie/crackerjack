@@ -77,12 +77,6 @@ The models package provides the foundational data structures and protocol-based 
 
 ### Configuration Models
 
-**qa_config.py** - Quality assurance configuration:
-
-- `QACheckConfig` - Configuration for individual QA checks
-- Check-specific settings (file patterns, timeouts, retries)
-- Pydantic validation for type safety
-
 **config.py** - Core configuration models:
 
 - Project-wide configuration structures
@@ -95,12 +89,6 @@ The models package provides the foundational data structures and protocol-based 
 - Legacy config migration support
 
 ### Result Models
-
-**qa_results.py** - Quality assurance results:
-
-- `QAResult` - Individual check results
-- `QACheckType` - Enumeration of check types
-- Result aggregation structures
 
 **results.py** - Execution results:
 

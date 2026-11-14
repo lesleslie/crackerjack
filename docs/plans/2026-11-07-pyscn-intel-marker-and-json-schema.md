@@ -243,7 +243,7 @@ CLI path cannot drift apart.
 - **The CLI invocations.** `pyscn check --max-complexity N <files>` and
   `pyscn analyze --json --select clones --clone-threshold T <root>` are supported by
   both versions; 1.33 only *adds* flags.
-- **The text-output parser.** `PyscnAdapter._parse_text_output` matches
+- **The text-output parser.** `PyscnRegexParser.parse_text` matches
   `"is too complex"`, and both versions emit the identical line format:
   `path/file.py:1:1: f is too complex (17 > 15)`.
 - **The `clone` section parsing.** `clone.clone_pairs` is unchanged across versions.

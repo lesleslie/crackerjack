@@ -2,9 +2,9 @@
 
 Covers the Typer ``clone`` sub-app with five commands: ``detect``,
 ``refactor``, ``status``, ``approve``, ``skip``. The ``_clone_groups``
-helper delegates to ``PyscnAdapter.parse_clone_groups``, which is the
-single implementation of the clone scan; tests patch ``subprocess.run``
-and seed a fake report file under ``.pyscn/reports/``.
+helper delegates to ``crackerjack.clone.pyscn_scanner.scan_clone_groups``,
+which is the single implementation of the clone scan; tests patch
+``subprocess.run`` and seed a fake report file under ``.pyscn/reports/``.
 """
 
 from __future__ import annotations

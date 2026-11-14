@@ -193,19 +193,3 @@ def test_health_command_basic():
         )
     except Exception as e:
         pytest.fail(f"Unexpected error in health_command: {e}")
-
-def test_qa_health_basic():
-    """Test basic functionality of qa_health."""
-    try:
-        result = qa_health()
-        assert result is not None or result is None
-    except TypeError:
-        pytest.skip(
-            "Function requires specific arguments - manual implementation needed"
-        )
-    except NameError:
-        pytest.skip(
-            "Symbol not exported from __main__ - manual implementation needed",
-        )
-    except Exception as e:
-        pytest.fail(f"Unexpected error in qa_health: {e}")

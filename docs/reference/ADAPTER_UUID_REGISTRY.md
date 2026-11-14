@@ -2,7 +2,7 @@
 status: active
 role: canonical
 date: 2026-07-17
-last_reviewed: 2026-07-17
+last_reviewed: 2026-11-14
 superseded_by: null
 blocks_on: []
 topic: mcp-design
@@ -11,10 +11,25 @@ topic: mcp-design
 # Adapter UUID Registry
 
 **Generated**: 2025-12-27
-**Purpose**: Static UUID assignments for all QA adapters
-**Total**: 19 adapters
+**Last updated**: 2026-11-14
+**Purpose**: Static UUID assignments for the retired QA adapter layer
+**Total**: 19 adapters (all retired)
 
-## UUID Assignments
+## Status
+
+The QA adapter layer was removed on 2026-11-14. Tool output is now parsed
+through a single taxonomy — the parser registry in `crackerjack/parsers/`
+— and the per-tool adapter wrappers that used to carry these UUIDs are
+gone. See `docs/plans/2026-11-14-consolidate-tool-taxonomies.md`.
+
+The UUIDs below are **retained as historical identifiers**. They are not
+assigned to any live module, and no code reads this file. They are kept
+so that an audit trail, migration note, or incident report that cites
+one of these values can still be resolved to the adapter it referred to.
+
+Do not reuse any of these UUIDs for a new module.
+
+## Retired UUID Assignments
 
 These UUIDs are **permanent** and must never change once assigned. They uniquely identify each adapter across all Crackerjack installations.
 
@@ -96,19 +111,6 @@ zuban_type = UUID(
 checks = UUID("ed516d6d-b273-458a-a2fc-c656046897cd")
 ```
 
-## Usage in Adapters
-
-Each adapter file should include these lines at the module level:
-
-```python
-from uuid import UUID
-from crackerjack.models.adapter_metadata import AdapterStatus
-
-# Static UUID from registry (NEVER change once set)
-MODULE_ID = UUID("...")
-MODULE_STATUS = AdapterStatus.STABLE
-```
-
 ## Notes
 
 - **Duplicate Detection**: `skylos` appears in both `lsp/` and `refactor/` directories - assigned separate UUIDs
@@ -116,26 +118,27 @@ MODULE_STATUS = AdapterStatus.STABLE
 - **UUID Format**: Standard UUID4 format (fallback, as uuidv7 not installed)
 - **Immutability**: These UUIDs are permanent identifiers - do not regenerate
 
-## Migration Checklist
+## Retirement Checklist
 
-Track progress updating each adapter:
+Modules that carried these UUIDs. Every one was deleted on 2026-11-14
+along with the QA adapter layer.
 
-- [ ] ai/claude.py
-- [ ] complexity/complexipy.py
-- [ ] dependency/pip_audit.py
-- [ ] format/mdformat.py
-- [ ] format/ruff.py
-- [ ] lint/codespell.py
-- [ ] lsp/skylos.py
-- [ ] lsp/zuban.py
-- [ ] refactor/creosote.py
-- [ ] refactor/refurb.py
-- [ ] refactor/skylos.py
-- [ ] sast/bandit.py
-- [ ] sast/pyscn.py
-- [ ] sast/semgrep.py
-- [ ] security/gitleaks.py
-- [ ] type/pyrefly.py
-- [ ] type/ty_adapter.py
-- [ ] type/zuban.py
-- [ ] utility/checks.py
+- [x] ai/claude.py
+- [x] complexity/complexipy.py
+- [x] dependency/pip_audit.py
+- [x] format/mdformat.py
+- [x] format/ruff.py
+- [x] lint/codespell.py
+- [x] lsp/skylos.py
+- [x] lsp/zuban.py
+- [x] refactor/creosote.py
+- [x] refactor/refurb.py
+- [x] refactor/skylos.py
+- [x] sast/bandit.py
+- [x] sast/pyscn.py
+- [x] sast/semgrep.py
+- [x] security/gitleaks.py
+- [x] type/pyrefly.py
+- [x] type/ty_adapter.py
+- [x] type/zuban.py
+- [x] utility/checks.py

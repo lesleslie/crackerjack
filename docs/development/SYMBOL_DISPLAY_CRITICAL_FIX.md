@@ -1,14 +1,24 @@
 ---
-status: active
-role: canonical
+status: complete
+role: historical
 date: 2026-07-17
-last_reviewed: 2026-07-17
+last_reviewed: 2026-11-14
 superseded_by: null
 blocks_on: []
 topic: architecture
 ---
 
 # CRITICAL FIX: Symbol Display Issue Count Bug
+
+> **Historical.** The fix described here applied to
+> `crackerjack/orchestration/hook_orchestrator.py`, a module path that no
+> longer exists. The `is_config_error` producer it depended on was never
+> wired into production code, so the flag was always `False` and the
+> `QAResultStatus.ERROR` branch it keyed off never fired.
+>
+> The `QAResult` / `QAResultStatus` vocabulary used below was removed on
+> 2026-11-14 along with the QA adapter layer. See
+> `docs/plans/2026-11-14-consolidate-tool-taxonomies.md`.
 
 ## Executive Summary
 

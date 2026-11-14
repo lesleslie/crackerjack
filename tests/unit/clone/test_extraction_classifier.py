@@ -73,11 +73,11 @@ class TestExtractionTargetClassifier:
     def test_classifier_local_for_non_extractable_domain_code(self) -> None:
         """Code importing crackerjack itself → local (same-repo, can't extract)."""
         code = textwrap.dedent("""\
-            from crackerjack.models.qa_results import QACheckType
+            from crackerjack.models.issues import Issue
 
-            def check_type() -> QACheckType:
-                return QACheckType.SAST
+            def issue_type() -> Issue:
+                return Issue()
         """)
         classifier = ExtractionTargetClassifier()
-        proposal = classifier.classify(code, pattern_description="qa check type helper")
+        proposal = classifier.classify(code, pattern_description="issue helper")
         assert proposal.target_repo == "local"

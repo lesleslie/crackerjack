@@ -4,6 +4,16 @@ Status: Active
 Date: 2026-11-01
 Related: `2026-10-31-ty-version-pin-must-be-transitive.md`
 
+> **Update 2026-11-14.** The rule this decision records still stands: no
+> module's dotted path may end in a path element equal to an excluded
+> dependency name. It is enforced by
+> `tests/unit/test_creosote_exclusion_shadowing.py`.
+>
+> Both modules named here are now gone. `crackerjack/adapters/type/ty.py`
+> was renamed to `ty_adapter.py`; that file was then deleted along with the
+> rest of the QA adapter layer on 2026-11-14, so the `ty` shadowing this
+> decision fixed no longer exists in any form.
+
 ## Context
 
 The comprehensive stage failed with:

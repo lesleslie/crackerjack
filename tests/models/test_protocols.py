@@ -10,8 +10,6 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from crackerjack.models.protocols import (
-    AdapterFactoryProtocol,
-    AdapterProtocol,
     AgentDelegatorProtocol,
     APIExtractorProtocol,
     AsyncCommandExecutorProtocol,
@@ -753,62 +751,6 @@ class TestFileSystemServiceProtocol:
         mock_fs.ensure_directory = MagicMock(return_value=None)
 
         assert isinstance(mock_fs, FileSystemServiceProtocol)
-
-
-# ============================================================================
-# Adapter Protocols Tests
-# ============================================================================
-
-
-class TestAdapterProtocol:
-    """Tests for AdapterProtocol."""
-
-    @pytest.mark.asyncio
-    async def test_adapter_protocol_is_runtime_checkable(self) -> None:
-        """Verify AdapterProtocol can be checked with isinstance."""
-        mock_adapter = AsyncMock()
-        mock_adapter.adapter_name = "test-adapter"
-        mock_adapter.init = AsyncMock(return_value=None)
-        mock_adapter.check = AsyncMock(return_value=MagicMock())
-        mock_adapter.health_check = AsyncMock(return_value={})
-
-        assert isinstance(mock_adapter, AdapterProtocol)
-
-    def test_adapter_protocol_with_property(self) -> None:
-        """Verify AdapterProtocol with property decorator."""
-
-        class SimpleAdapter:
-            @property
-            def adapter_name(self) -> str:
-                return "test-adapter"
-
-            async def init(self) -> None:
-                pass
-
-            async def check(
-                self,
-                files: list[Path] | None = None,
-                config: t.Any | None = None,
-            ) -> t.Any:
-                return None
-
-            async def health_check(self) -> dict[str, t.Any]:
-                return {}
-
-        adapter = SimpleAdapter()
-        assert isinstance(adapter, AdapterProtocol)
-        assert adapter.adapter_name == "test-adapter"
-
-
-class TestAdapterFactoryProtocol:
-    """Tests for AdapterFactoryProtocol."""
-
-    def test_adapter_factory_is_runtime_checkable(self) -> None:
-        """Verify AdapterFactoryProtocol can be checked with isinstance."""
-        mock_factory = MagicMock()
-        mock_factory.create_adapter = MagicMock(return_value=MagicMock())
-
-        assert isinstance(mock_factory, AdapterFactoryProtocol)
 
 
 # ============================================================================

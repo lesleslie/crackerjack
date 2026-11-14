@@ -1,17 +1,22 @@
 # Adapters
 
-Interfaces and adapters to external tools/services or subsystems. Each adapter follows legacy-style patterns with typed settings, async initialization, and standardized results.
+Interfaces and adapters to external tools/services or subsystems.
+
+The QA adapter layer was removed on 2026-11-14. What remains here is the
+language-adapter registry (`base.py`, `registry.py`, `kotlin/`, `python/`,
+`swift/`, `web/`) and the AI provider registry (`ai/`).
 
 ## Index
 
 - [AI](./ai/README.md) — Claude-powered code fixing and AI helpers
-- [Complexity](./complexity/README.md) — Code complexity analysis (Complexipy)
-- [Format](./format/README.md) — Code and docs formatting (Ruff, Mdformat)
-- [Lint](./lint/README.md) — Spelling and simple linters (Codespell)
-- [Refactor](./refactor/README.md) — Modernization and dead-code (Refurb, Creosote)
-- [SAST](./sast/README.md) — Static application security testing (Semgrep, Bandit, Pyscn)
-- [Security](./security/README.md) — Secret leak prevention and credential detection (Gitleaks)
-- [Type](./type/README.md) — Static type checking (Pyrefly, Ty)
-- [Utility](./utility/README.md) — Small config-driven checks (EOF newline, regex, size)
+- [Language adapter base](./base.py) — The `LanguageAdapter` protocol and
+  shared adapter primitives
+- [Language adapter registry](./registry.py) — Entry-point discovery for
+  third-party language adapters
 
-See `crackerjack/models/qa_config.py` and `crackerjack/models/qa_results.py` for configuration and result schemas used across adapters.
+## Historical note
+
+The removed QA adapter categories are recorded in
+`docs/plans/2026-11-14-consolidate-tool-taxonomies.md`. Their old package
+README files and category pages were deleted along with the adapters they
+used to describe.
