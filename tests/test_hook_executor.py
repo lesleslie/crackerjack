@@ -519,6 +519,18 @@ class TestHookExecutorOutputParsing:
 
         assert len(issues) > 0
 
+    def test_parse_refurb_issues_ignores_test_paths(self, executor: HookExecutor) -> None:
+        """Refurb findings in test files are noise, not gate failures."""
+        output = (
+            "session_buddy/tests/test_thing.py:10:5 [FURB149]: Use truthy\n"
+            "src/main.py:12:5 [FURB123]: Use dataclass"
+        )
+
+        issues = executor._parse_refurb_issues(output)
+
+        assert len(issues) == 1
+        assert "src/main.py" in issues[0]
+
     def test_parse_gitleaks_issues_found(self, executor: HookExecutor) -> None:
         """Test gitleaks issue parsing when leaks found."""
         output = "Secret detected in file.py: api_key=abc123"

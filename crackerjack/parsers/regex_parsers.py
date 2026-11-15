@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 from crackerjack.models.issues import Issue, IssueType, Priority
 from crackerjack.parsers.base import RegexParser
 from crackerjack.parsers.lychee_parser import LycheeRegexParser
+from crackerjack.utils.test_paths import is_test_path
 
 if TYPE_CHECKING:
     from crackerjack.parsers.factory import ParserFactory
@@ -111,6 +112,11 @@ class RefurbRegexParser(RegexParser):
 
         try:
             file_path = parts[0].strip()
+            # Test files are not shipped code: a style finding in one is
+            # noise, and gating on it fails the hook on the one directory
+            # whose findings nobody acts on.
+            if is_test_path(file_path):
+                return None
             line_number = int(parts[1].strip())
             message = parts[3].strip() if len(parts) > 3 else line
 

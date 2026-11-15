@@ -21,6 +21,7 @@ from crackerjack.services.security_logger import get_security_logger
 from crackerjack.utils.issue_detection import (
     extract_issue_lines,
 )
+from crackerjack.utils.test_paths import is_test_path
 
 logger = logging.getLogger(__name__)
 
@@ -1342,6 +1343,12 @@ class HookExecutor:
 
             if match:
                 file_path, line_num, error_code, message = match.groups()
+
+                # Test files are not shipped code: a style finding in one
+                # is noise, and gating on it fails the hook on the one
+                # directory whose findings nobody acts on.
+                if is_test_path(file_path):
+                    continue
 
                 short_path = self._shorten_path(file_path)
 

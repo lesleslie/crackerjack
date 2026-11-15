@@ -107,6 +107,23 @@ file.py:2:1: RUF002 Issue 2
 
         assert issues == []
 
+    def test_parse_skips_test_directory(self, parser):
+        """Findings under a tests/ directory are not shipped code."""
+        output = "session_buddy/tests/test_thing.py:10:5: FURB149 Use truthy"
+
+        issues = parser.parse_text(output)
+
+        assert issues == []
+
+    def test_parse_keeps_production_findings(self, parser):
+        """A production file is still reported."""
+        output = "session_buddy/utils/thing.py:10:5: FURB149 Use truthy"
+
+        issues = parser.parse_text(output)
+
+        assert len(issues) == 1
+        assert issues[0].file_path == "session_buddy/utils/thing.py"
+
 
 class TestPyscnRegexParser:
     """Test Pyscn regex parser."""
