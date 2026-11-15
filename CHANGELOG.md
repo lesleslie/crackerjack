@@ -10,6 +10,89 @@ blocks_on: []
 topic: changelog
 ---
 
+## [0.94.0] - 2026-11-15
+
+### Added
+
+- hooks: Make the ty-ignore-syntax gate on by default
+- tools: Add a strip-and-observe tool for migrating ty suppressions
+
+### Changed
+
+- adapters: Delete the dead benchmark adapter and its UUID collision
+- adapters: Delete the stale ty adapter shadowing the ty distribution
+- Consolidate the pyscn clone scan into the adapter
+- core: Delete autofix_coordinator and its exclusive support modules
+- core: Move JSONC stripping out of autofix_coordinator
+- crackerjack: Remove QA adapter layer
+- Delete the dead AI-fix module cluster
+- Delete the unreachable pyright and vulture adapters
+- docs: Apply mdformat to the generated API reference
+- Feat/component-prefix-sweep -> main
+- Feat/mcp-tool-disambiguation -> main
+- Feature/phase4-oneiric-llm-swap -> main
+- Fix/gate-and-stale -> main
+- Fix/stale-tests-after-adapter-removal -> main
+- tests: Sort the tool-groups mapping by key
+
+### Fixed
+
+- core: Prune session artifacts on every run, sparing the coverage ratchet
+- coverage: Keep the ratchet and the release audit telling one story
+- crackerjack: Clear the ty, creosote and refurb hook failures
+- crackerjack: Convert blanket type-ignores to specific ty rules
+- crackerjack: Fix undefined names hidden by type-ignore suppressions
+- crackerjack: Restore the pyscn complexity ceiling to 15
+- crackerjack: Stop convert-blanket destroying directives on a dry run
+- examples: Call the skills tracker directly instead of through AgentContext
+- executors: Bound the QA adapter to the hook that triggered it
+- executors: Resolve QA adapters by name instead of swallowing a ValueError
+- Generate the API docs into the tracked package tree
+- lint: Rename stale ty ignore rules to their current names
+- lint: Sync KNOWN_TY_CODES with the migrated ty-ignore decision file
+- mcp: Give the published tool functions descriptions
+- tools: Decide a prose segment's nested marker by what survives
+- tools: Do not leave trailing whitespace where a comment was removed
+- tools: Do not report a directive that a comment only documents
+- tools: Do not rewrite a directive that a comment only documents
+- tools: Keep a nested hash marker before a comment's prose
+- tools: Keep the stdlib sweep from importing antigravity
+- tools: Make the ty ratchet measure the tree it claims to measure
+- tools: Rebuild comments from their parts when migrating directives
+- tools: Require a directive to start a comment segment
+- tools: Reword a comment that nested double backticks
+- tools: Scan the repo root, not a crackerjack-only path
+- tools: Skip archived directories when migrating
+- tools: Strip the bare directives when converting them
+
+### Documentation
+
+- Drop the links to the deleted agent and intelligence packages
+- plans: Add crackerjack's own plan template
+- plans: Correct the patterns-family line count
+- plans: Plan the removal of the dead AI-fix module cluster
+- plans: Plan the removal of the dead module cluster
+- plans: Plan the tool-taxonomy consolidation
+- plans: Record how the QA-adapter path was bounded
+- plans: Record the execution outcome of the AI-fix cluster removal
+- plans: Record the Phase 1 relocation collision
+- plans: Record the three defect fixes and the fourth finding
+- plans: Resolve the conformance review's four blockers
+- plans: Revise the tool-taxonomy plan after a four-lens review
+- Repoint the references to the deleted AI-fix modules
+- Stop describing the git-analytics server as a live surface
+
+### Internal
+
+- changelog: Record the removal of the stale ty adapter
+- crackerjack: Drop mypy configuration in favour of ty
+- crackerjack: Keep the prod ratchet at zero and tighten the test budget
+- crackerjack: Remove bracketed mypy ignore directives
+- deps: Raise the mcp-common floor to 0.36.0
+- git: Ignore the local session-buddy SQLite store
+- tests: Drop the last references to the deleted AI-fix modules
+- tests: Drop the leftover plan-index tamper marker
+
 ## [Unreleased]
 
 ### Fixed

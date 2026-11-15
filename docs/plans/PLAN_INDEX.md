@@ -1,6 +1,6 @@
 # Plan Index
 
-_Regenerated 2026-11-14 by `crackerjack.tools.plan_index_sync` (phase)._
+_Regenerated 2026-11-15 by `crackerjack.tools.plan_index_sync` (phase)._
 
 ### Docs: adr
 
@@ -41,7 +41,7 @@ _Regenerated 2026-11-14 by `crackerjack.tools.plan_index_sync` (phase)._
 | [`docs/plans/2026-11-07-ruff-pin-range.md`](2026-11-07-ruff-pin-range.md) | 2026-11-07 | `draft` | `implementation` | `dependency-management` | Replace the Exact `ruff==0.16.0` Pin with a Bounded Version Range |
 | [`docs/plans/2026-11-07-xdg-runtime-paths-and-observability.md`](2026-11-07-xdg-runtime-paths-and-observability.md) | 2026-11-07 | `complete` | `implementation` | `testing-infrastructure` | XDG Runtime Paths and Run-State Observability |
 | [`docs/plans/2026-11-13-remove-dead-ai-fix-module-cluster.md`](2026-11-13-remove-dead-ai-fix-module-cluster.md) | 2026-11-13 | `active` | `implementation` | `architecture` | Remove the Dead AI-Fix Module Cluster from Crackerjack |
-| [`docs/plans/2026-11-14-consolidate-tool-taxonomies.md`](2026-11-14-consolidate-tool-taxonomies.md) | 2026-11-14 | `draft` | `implementation` | `architecture` | Consolidate the Tool Taxonomies in Crackerjack |
+| [`docs/plans/2026-11-14-consolidate-tool-taxonomies.md`](2026-11-14-consolidate-tool-taxonomies.md) | 2026-11-14 | `active` | `implementation` | `architecture` | Consolidate the Tool Taxonomies in Crackerjack |
 | [`docs/plans/2026-11-14-remove-dead-module-cluster.md`](2026-11-14-remove-dead-module-cluster.md) | 2026-11-14 | `active` | `implementation` | `architecture` | Remove the Dead Module Cluster from Crackerjack |
 | [`docs/plans/TEMPLATE.md`](TEMPLATE.md) | 2026-11-14 | `active` | `canonical` | `process-discipline` | Plan Template — Integration-Contract Required |
 
@@ -92,8 +92,8 @@ _Regenerated 2026-11-14 by `crackerjack.tools.plan_index_sync` (phase)._
 | Role \\ Lifecycle | draft | active | partial | shipped | complete | Total |
 |---|---|---|---|---|---|---|
 | `canonical` | · | 11 | · | · | 2 | **13** |
-| `implementation` | 18 | 25 | · | · | 3 | **46** |
+| `implementation` | 17 | 26 | · | · | 3 | **46** |
 | `umbrella` | · | · | · | · | · | **0** |
 | `historical` | · | · | · | · | 1 | **1** |
 | `superseded` | · | · | · | · | · | **0** |
-| **Total** | **18** | **36** | **·** | **·** | **6** | **60** |
+| **Total** | **17** | **37** | **·** | **·** | **6** | **60** |
