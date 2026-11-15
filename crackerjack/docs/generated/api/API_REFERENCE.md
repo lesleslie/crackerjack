@@ -3847,9 +3847,18 @@ If `target_path` already exists, append a numeric suffix.
 - `self` ():
   **Returns:** dict\[(str, list\[dict[(str, str)]\])\]
 
-#### `get_archivable_files`
+#### `lifecycle_permits_archival`
 
-Return the list of files that should be archived.
+Return whether the file's declared lifecycle allows auto-archival.
+**Parameters:**
+
+- `self` ():
+- `filepath` (Path):
+  **Returns:** bool
+
+#### `get_archival_candidates`
+
+Return the files whose *names* match an archival category.
 **Parameters:**
 
 - `self` ():

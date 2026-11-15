@@ -198,7 +198,7 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
             return False
 
     def get_documentation_coverage(self) -> dict[str, t.Any]:
-        source_files = self._find_source_files()
+        source_files = self._visible_source_files()
 
         api_data = self.extract_api_documentation(source_files)
 
@@ -215,11 +215,40 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
             "undocumented_items": total_items - documented_items,
         }
 
-    def _find_source_files(self) -> list[Path]:
+    def _visible_source_files(self) -> list[Path]:
+        """Return the package's Python files, skipping hidden directories.
+
+        The hidden-directory test is applied to each file's path
+        *relative to the package root* — ``self.pkg_path``, which is
+        the tree this generator documents, not necessarily the
+        repository root. Testing the absolute path would drop every
+        file in a checkout that lives under a dotted directory — and
+        this fleet's worktrees live under ``~/.local/state/``, so the
+        generator found **zero** files and wrote an empty API reference
+        over a committed 18,000-line one.
+
+        ``.venv``, ``.git`` and ``.mypy_cache`` inside the package are
+        still skipped: they are hidden *relative to the root*, which is
+        what the relative-path test sees.
+        """
         source_files = list[t.Any](self.pkg_path.glob("**/*.py"))
         return [
-            f for f in source_files if not any(part.startswith(".") for part in f.parts)
+            f
+            for f in source_files
+            if not any(part.startswith(".") for part in self._relative_parts(f))
         ]
+
+    def _relative_parts(self, path: Path) -> tuple[str, ...]:
+        """Return a path's parts relative to the package root.
+
+        Falls back to the absolute parts for a path outside the root,
+        which is the conservative answer: a dotted component anywhere in
+        the path then hides the file rather than exposing it.
+        """
+        try:
+            return path.relative_to(self.pkg_path).parts
+        except ValueError:
+            return path.parts
 
     def _count_documentation_items(self, api_data: dict[str, t.Any]) -> tuple[int, int]:
         total_items = 0
@@ -317,12 +346,20 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
                 "[cyan]📚[/cyan] Generating complete API documentation...",
             )
 
-            source_files = list[t.Any](self.pkg_path.glob("**/*.py"))
-            source_files = [
-                f
-                for f in source_files
-                if not any(part.startswith(".") for part in f.parts)
-            ]
+            source_files = self._visible_source_files()
+
+            # Refuse to regenerate on an empty scan. Writing a reference
+            # generated from zero files replaces a committed document
+            # with a stub — which is exactly what happened when the
+            # hidden-directory filter dropped every file in a checkout
+            # under a dotted path. An empty scan is a failed scan, not
+            # an empty API.
+            if not source_files:
+                self.console.print(
+                    "[red]❌ Refusing to regenerate the API reference: no "
+                    f"Python source files were found under {self.pkg_path}.[/red]",
+                )
+                return False
 
             api_data = self.extract_api_documentation(source_files)
 

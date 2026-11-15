@@ -300,7 +300,7 @@ class TestGetDocumentationCoverage:
         service = DocumentationServiceImpl(pkg_path=tmp_path)
 
         # Mock the source file finder
-        service._find_source_files = Mock(return_value=[])
+        service._visible_source_files = Mock(return_value=[])
         # Mock the extraction
         service.extract_api_documentation = Mock(return_value={})
 
@@ -341,7 +341,7 @@ class TestGetDocumentationCoverage:
             }
         )
 
-        with patch.object(service, "_find_source_files", return_value=[]):
+        with patch.object(service, "_visible_source_files", return_value=[]):
             result = service.get_documentation_coverage()
 
         # Should return coverage data
@@ -509,16 +509,18 @@ class TestGenerateDocumentation:
         service.extract_api_documentation.assert_called_once()
 
     def test_generate_full_api_documentation_failure(self, tmp_path) -> None:
-        """Test full API documentation generation with failure."""
+        """Test full API documentation generation with an empty scan."""
         service = DocumentationServiceImpl(pkg_path=tmp_path)
 
         # Mock to return no files
-        service._find_source_files = Mock(return_value=[])
+        service._visible_source_files = Mock(return_value=[])
 
         result = service.generate_full_api_documentation()
 
-        # Should still return True even with no files
-        assert result is True
+        # An empty scan is a failed scan. Regenerating from it would
+        # replace a committed reference with a stub, which is exactly
+        # what happened when the file scan silently came back empty.
+        assert result is False
 
 
 @pytest.mark.unit
@@ -676,3 +678,74 @@ class TestGenerateDocumentationContent:
 
         assert isinstance(result, str)
         assert len(result) > 0
+
+
+@pytest.mark.unit
+class TestVisibleSourceFiles:
+    """Test discovery of the repository's own Python source files."""
+
+    def test_files_are_found_under_a_dotted_checkout_path(self, tmp_path) -> None:
+        """A checkout under a dotted path must still yield its source files.
+
+        The hidden-directory filter used to test the *absolute* path's
+        parts. Every file in a checkout under ``~/.local/state/...`` has
+        a dotted component in its absolute path, so every file was
+        filtered out: the generator reported "Extracted documentation
+        from 0 files" and wrote an empty API reference over a committed
+        18,000-line one.
+        """
+        root = tmp_path / ".local" / "state" / "repo"
+        (root / "crackerjack" / "services").mkdir(parents=True)
+        (root / "crackerjack" / "services" / "thing.py").write_text(
+            "x = 1\n",
+            encoding="utf-8",
+        )
+
+        service = DocumentationServiceImpl(pkg_path=root)
+        found = {
+            str(path.relative_to(root)) for path in service._visible_source_files()
+        }
+
+        # Assert the relative path, not the basename: a filter that only
+        # looked at the first path segment would pass a basename check.
+        assert "crackerjack/services/thing.py" in found
+
+    def test_hidden_directories_inside_the_repo_are_still_skipped(
+        self,
+        tmp_path,
+    ) -> None:
+        """``.venv`` and friends inside the repo stay hidden."""
+        root = tmp_path / "repo"
+        (root / "crackerjack").mkdir(parents=True)
+        (root / "crackerjack" / "real.py").write_text("x = 1\n", encoding="utf-8")
+        (root / ".venv" / "lib").mkdir(parents=True)
+        (root / ".venv" / "lib" / "vendored.py").write_text(
+            "y = 2\n",
+            encoding="utf-8",
+        )
+
+        service = DocumentationServiceImpl(pkg_path=root)
+        found = {
+            str(path.relative_to(root)) for path in service._visible_source_files()
+        }
+
+        assert "crackerjack/real.py" in found
+        assert ".venv/lib/vendored.py" not in found
+
+    def test_regeneration_refuses_an_empty_scan(self, tmp_path) -> None:
+        """An empty scan must not replace a committed reference with a stub.
+
+        The generator once wrote a 23-line reference over a committed
+        18,441-line one because its file scan came back empty. The cause
+        is fixed, but the failure mode — "regenerate" silently meaning
+        "truncate" — deserves its own guard.
+        """
+        api_dir = tmp_path / "docs" / "generated" / "api"
+        api_dir.mkdir(parents=True, exist_ok=True)
+        reference = api_dir / "API_REFERENCE.md"
+        reference.write_text("# The committed reference\n", encoding="utf-8")
+
+        service = DocumentationServiceImpl(pkg_path=tmp_path)
+
+        assert service.generate_full_api_documentation() is False
+        assert reference.read_text(encoding="utf-8") == "# The committed reference\n"

@@ -896,7 +896,9 @@ This document describes all service implementations in the codebase.
 
 - `analyze_all`:
 
-- `get_archivable_files`: Return the list of files that should be archived.
+- `lifecycle_permits_archival`: Return whether the file's declared lifecycle allows auto-archival.
+
+- `get_archival_candidates`: Return the files whose *names* match an archival category.
 
 - `get_archive_subdirectory`: Return the category sub-directory for `filepath`.
 
