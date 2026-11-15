@@ -10,6 +10,7 @@ This test suite verifies the automatic documentation cleanup feature:
 
 from __future__ import annotations
 
+import ast
 import tarfile
 import tempfile
 from pathlib import Path
@@ -19,6 +20,7 @@ import pytest
 from rich.console import Console
 
 from crackerjack.config.settings import CrackerjackSettings, DocumentationSettings
+from crackerjack.services import documentation_cleanup
 from crackerjack.services.backup_service import BackupMetadata
 from crackerjack.services.documentation_cleanup import (
     ArchiveMapping,
@@ -145,6 +147,274 @@ class TestDetectArchivableFiles:
 
         assert archivable == []
 
+    def test_legacy_detection_path_respects_the_lifecycle_gate(
+        self,
+        documentation_cleanup_service: DocumentationCleanup,
+        temp_pkg_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ):
+        """The fallback detector must not become a gate bypass.
+
+        ``_detect_archivable_files`` falls back to the legacy pattern
+        matcher when the categorizer raises. That fallback matches by
+        filename alone, so without the gate it would sweep a governed
+        document — exactly the failure the gate exists to prevent.
+        """
+        governed = temp_pkg_path / "SPRINT1_PLAN.md"
+        governed.write_text(
+            "---\nstatus: complete\nrole: implementation\n---\n\n# Plan\n",
+            encoding="utf-8",
+        )
+
+        def _categorizer_unavailable() -> list[Path]:
+            raise RuntimeError("categorizer unavailable")
+
+        monkeypatch.setattr(
+            documentation_cleanup_service.categorizer,
+            "get_archival_candidates",
+            _categorizer_unavailable,
+        )
+
+        archivable = documentation_cleanup_service._detect_archivable_files()
+
+        assert "SPRINT1_PLAN.md" not in {f.name for f in archivable}
+
+    def test_legacy_detection_path_still_archives_ungoverned_files(
+        self,
+        documentation_cleanup_service: DocumentationCleanup,
+        temp_pkg_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ):
+        """A file with no lifecycle is still swept by the fallback path."""
+
+        def _categorizer_unavailable() -> list[Path]:
+            raise RuntimeError("categorizer unavailable")
+
+        monkeypatch.setattr(
+            documentation_cleanup_service.categorizer,
+            "get_archival_candidates",
+            _categorizer_unavailable,
+        )
+        (temp_pkg_path / "SPRINT1_PLAN.md").write_text("# Scratch\n", encoding="utf-8")
+
+        archivable = documentation_cleanup_service._detect_archivable_files()
+
+        assert "SPRINT1_PLAN.md" in {f.name for f in archivable}
+
+    def test_detection_applies_the_gate_to_the_categorizer_path(
+        self,
+        documentation_cleanup_service: DocumentationCleanup,
+        temp_pkg_path: Path,
+    ):
+        """The primary detection path is gated too — this is the contract.
+
+        The two OTel substrate plans in mahavishnu matched the
+        ``implementation_reports`` name pattern and were swept three
+        times because nothing read their frontmatter.
+        """
+        governed = temp_pkg_path / "2026-10-19-example-implementation.md"
+        governed.write_text(
+            "---\nstatus: complete\nrole: implementation\n---\n\n# Plan\n",
+            encoding="utf-8",
+        )
+        shipped = temp_pkg_path / "2026-10-20-example-implementation.md"
+        shipped.write_text(
+            "---\nstatus: shipped\nrole: implementation\n---\n\n# Plan\n",
+            encoding="utf-8",
+        )
+
+        archivable = documentation_cleanup_service._detect_archivable_files()
+
+        names = {f.name for f in archivable}
+        assert "2026-10-19-example-implementation.md" not in names
+        assert "2026-10-20-example-implementation.md" in names
+
+    def test_a_backup_of_a_document_is_gated_too(
+        self,
+        documentation_cleanup_service: DocumentationCleanup,
+        temp_pkg_path: Path,
+    ):
+        """``foo.md.backup`` holds a document's content, so it is gated.
+
+        The gate keys on the name rather than the suffix: a backup of a
+        governed document carries that document's frontmatter, and a
+        sweep must not decide a live document's fate — not even by way
+        of a copy of it.
+        """
+        (temp_pkg_path / "2026-10-19-example.md.backup").write_text(
+            "---\nstatus: active\nrole: implementation\n---\n\n# Plan\n",
+            encoding="utf-8",
+        )
+
+        archivable = documentation_cleanup_service._detect_archivable_files()
+
+        assert "2026-10-19-example.md.backup" not in {f.name for f in archivable}
+
+    def test_non_markdown_artifacts_are_not_lifecycle_gated(
+        self,
+        documentation_cleanup_service: DocumentationCleanup,
+        temp_pkg_path: Path,
+    ):
+        """A non-markdown root artifact has no lifecycle — it is still swept.
+
+        Only markdown carries a frontmatter lifecycle. The loose
+        ``.py`` / ``.json`` / ``.txt`` / ``.backup`` files the archiver
+        also sweeps have none, and a binary ``.backup`` cannot even be
+        read as UTF-8 — gating them would make them unarchivable.
+        """
+        (temp_pkg_path / "pyproject.toml.backup").write_bytes(b"\x00\x01\x02binary")
+
+        archivable = documentation_cleanup_service._detect_archivable_files()
+
+        assert "pyproject.toml.backup" in {f.name for f in archivable}
+
+
+class TestEndToEndSurvival:
+    """A governed document survives a real cleanup run.
+
+    The unit tests exercise the detector in isolation. This one runs the
+    whole phase — detect, back up, move — and checks that the document
+    is still on disk afterwards, which is the property the mahavishnu
+    incident was about: a plan that was "archived" into a gitignored
+    directory was simply gone from the repository.
+    """
+
+    def test_a_complete_plan_survives_a_real_cleanup(
+        self,
+        documentation_cleanup_service: DocumentationCleanup,
+        temp_pkg_path: Path,
+    ):
+        plan = temp_pkg_path / "2026-10-19-example-implementation.md"
+        plan.write_text(
+            "---\nstatus: complete\nrole: implementation\n---\n\n# Plan\n",
+            encoding="utf-8",
+        )
+
+        result = documentation_cleanup_service.cleanup_documentation()
+
+        assert result.success
+        assert plan.exists(), "a governed document must not be moved"
+        assert result.files_moved == 0
+
+    def test_a_shipped_plan_is_archived_by_a_real_cleanup(
+        self,
+        documentation_cleanup_service: DocumentationCleanup,
+        temp_pkg_path: Path,
+    ):
+        plan = temp_pkg_path / "2026-10-19-example-implementation.md"
+        plan.write_text(
+            "---\nstatus: shipped\nrole: implementation\n---\n\n# Plan\n",
+            encoding="utf-8",
+        )
+
+        result = documentation_cleanup_service.cleanup_documentation()
+
+        assert result.success
+        assert result.files_moved == 1
+        assert not plan.exists()
+
+
+class TestSingleChokePoint:
+    """Pin the shape that makes the gate unbypassable.
+
+    The lifecycle gate is applied at exactly one place. That property is
+    what makes it safe: a path added outside it would bypass the rule
+    silently, and no test of behaviour would notice until a governed
+    document vanished from the repository.
+    """
+
+    @staticmethod
+    def _module_source() -> str:
+        from crackerjack.services import documentation_cleanup
+
+        return Path(documentation_cleanup.__file__).read_text(encoding="utf-8")
+
+    @staticmethod
+    def _callers(source: str, attribute: str) -> dict[str, list[int]]:
+        """Map each function name to the lines where it calls ``attribute``."""
+        tree = ast.parse(source)
+        callers: dict[str, list[int]] = {}
+        for node in ast.walk(tree):
+            if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                continue
+            for child in ast.walk(node):
+                if (
+                    isinstance(child, ast.Call)
+                    and isinstance(child.func, ast.Attribute)
+                    and child.func.attr == attribute
+                ):
+                    callers.setdefault(node.name, []).append(child.lineno)
+        return callers
+
+    def test_only_the_cleanup_moves_files(self) -> None:
+        """``_move_files_to_archive`` has exactly one caller."""
+        callers = self._callers(self._module_source(), "_move_files_to_archive")
+
+        assert set(callers) == {"cleanup_documentation"}
+        assert len(callers["cleanup_documentation"]) == 1
+
+    def test_the_mover_takes_its_list_from_the_gated_detector(self) -> None:
+        """The mover's file list comes from the gated detector."""
+        callers = self._callers(self._module_source(), "_detect_archivable_files")
+
+        assert set(callers) == {"cleanup_documentation"}
+
+    def test_the_candidate_list_has_one_consumer(self) -> None:
+        """Only the gated detector reads the candidate list.
+
+        A second consumer of ``get_archival_candidates`` would be a
+        second path to the archive, and therefore a second way to skip
+        the gate.
+        """
+        callers = self._callers(self._module_source(), "get_archival_candidates")
+
+        assert set(callers) == {"_detect_archivable_files"}
+
+    def test_the_legacy_fallback_has_one_caller(self) -> None:
+        """Only the gated detector reads the legacy fallback's candidates.
+
+        The fallback returns candidates with no gate of its own. A second
+        caller would take that ungated list straight to the archive.
+        """
+        callers = self._callers(
+            self._module_source(), "_detect_archivable_files_legacy"
+        )
+
+        assert set(callers) == {"_detect_archivable_files"}
+
+    def test_no_other_module_reaches_the_archive(self) -> None:
+        """Nothing outside the cleanup service can move a document.
+
+        The gate protects a governed document only if every path to the
+        archive passes through it. A new module that asked the
+        categorizer for candidates, or composed an archive path itself,
+        would bypass the rule without failing any test above.
+        """
+        package_root = Path(documentation_cleanup.__file__).resolve().parent.parent
+        offenders: dict[str, set[str]] = {}
+
+        for source_path in package_root.rglob("*.py"):
+            if "test" in source_path.parts:
+                continue
+            source = source_path.read_text(encoding="utf-8")
+            for attribute in ("get_archival_candidates", "archive_target_path"):
+                if f".{attribute}" not in source:
+                    continue
+                callers = self._callers(source, attribute)
+                if not callers:
+                    continue
+                expected = (
+                    {"_detect_archivable_files"}
+                    if attribute == "get_archival_candidates"
+                    else {"_move_files_to_archive"}
+                )
+                if set(callers) != expected:
+                    offenders.setdefault(
+                        str(source_path.relative_to(package_root)), set()
+                    ).add(f"{attribute}: {sorted(callers)}")
+
+        assert offenders == {}
+
 
 class TestEssentialFilesPreserved:
     """Test that essential files are never archived."""
@@ -177,8 +447,12 @@ class TestArchivePatternMatching:
         documentation_cleanup_service: DocumentationCleanup,
     ):
         """Test exact pattern matching."""
-        assert documentation_cleanup_service._matches_archive_patterns("SPRINT1_PLAN.md")
-        assert documentation_cleanup_service._matches_archive_patterns("PHASE2_SUMMARY.md")
+        assert documentation_cleanup_service._matches_archive_patterns(
+            "SPRINT1_PLAN.md"
+        )
+        assert documentation_cleanup_service._matches_archive_patterns(
+            "PHASE2_SUMMARY.md"
+        )
         assert documentation_cleanup_service._matches_archive_patterns("SPRINT3.md")
 
     def test_matches_archive_patterns_case_sensitive(
@@ -186,9 +460,15 @@ class TestArchivePatternMatching:
         documentation_cleanup_service: DocumentationCleanup,
     ):
         """Test that pattern matching is case-sensitive."""
-        assert documentation_cleanup_service._matches_archive_patterns("SPRINT1_PLAN.md")
-        assert not documentation_cleanup_service._matches_archive_patterns("sprint1_plan.md")
-        assert not documentation_cleanup_service._matches_archive_patterns("Sprint1_Plan.md")
+        assert documentation_cleanup_service._matches_archive_patterns(
+            "SPRINT1_PLAN.md"
+        )
+        assert not documentation_cleanup_service._matches_archive_patterns(
+            "sprint1_plan.md"
+        )
+        assert not documentation_cleanup_service._matches_archive_patterns(
+            "Sprint1_Plan.md"
+        )
 
     def test_matches_archive_patterns_no_match(
         self,
@@ -196,7 +476,9 @@ class TestArchivePatternMatching:
     ):
         """Test files that don't match any pattern."""
         assert not documentation_cleanup_service._matches_archive_patterns("README.md")
-        assert not documentation_cleanup_service._matches_archive_patterns("RANDOM_FILE.md")
+        assert not documentation_cleanup_service._matches_archive_patterns(
+            "RANDOM_FILE.md"
+        )
 
 
 class TestArchiveSubdirectoryDetection:
@@ -747,3 +1029,283 @@ class TestGitIndexSync:
                     f"rm_files was passed the archive destination "
                     f"({path}); git rm cannot act on untracked paths"
                 )
+
+
+class TestTheGateHoldBacksAreVisible:
+    """A held file must read as *held*, not as never found.
+
+    The gate's whole job is to leave a governed document in the tree.
+    When it did that silently, the cleanup reported "no files to
+    cleanup - all files are essential" — which is false for a file
+    that matched an archival category and was held. The operator
+    could not tell a mis-declared lifecycle from "there was nothing
+    to do", and the plan's observability contract asked for the
+    declined files to be reported.
+    """
+
+    @staticmethod
+    def _write_held(path: Path) -> None:
+        path.write_text(
+            "---\nstatus: complete\nrole: implementation\n---\n\n# Plan\n",
+            encoding="utf-8",
+        )
+
+    def test_a_held_file_is_named_in_the_summary(
+        self,
+        documentation_cleanup_service: DocumentationCleanup,
+        temp_pkg_path: Path,
+    ):
+        self._write_held(temp_pkg_path / "2026-10-19-example-implementation.md")
+
+        result = documentation_cleanup_service.cleanup_documentation(dry_run=True)
+
+        assert result.success is True
+        assert result.gated_files == ["2026-10-19-example-implementation.md"]
+        assert "held by the lifecycle gate" in result.summary
+        assert "2026-10-19-example-implementation.md" in result.summary
+        assert "all files are essential" not in result.summary
+
+    def test_nothing_gated_keeps_the_plain_summary(
+        self,
+        documentation_cleanup_service: DocumentationCleanup,
+        temp_pkg_path: Path,
+    ):
+        result = documentation_cleanup_service.cleanup_documentation(dry_run=True)
+
+        assert result.gated_files == []
+        assert result.summary == "No files to cleanup - all files are essential"
+
+    def test_the_held_files_are_displayed(
+        self,
+        documentation_cleanup_service: DocumentationCleanup,
+        temp_pkg_path: Path,
+        mock_console: Mock,
+    ):
+        self._write_held(temp_pkg_path / "2026-10-19-example-implementation.md")
+
+        documentation_cleanup_service.cleanup_documentation(dry_run=True)
+
+        printed = "\n".join(
+            call.args[0] for call in mock_console.print.call_args_list
+        )
+        assert "held by the lifecycle gate" in printed
+        assert "2026-10-19-example-implementation.md" in printed
+
+    def test_a_run_that_moves_files_still_reports_the_held_ones(
+        self,
+        documentation_cleanup_service: DocumentationCleanup,
+        temp_pkg_path: Path,
+    ):
+        """The count belongs in the summary of a run that did move things."""
+        self._write_held(temp_pkg_path / "2026-10-19-example-implementation.md")
+        (temp_pkg_path / "2026-10-20-example-implementation.md").write_text(
+            "---\nstatus: shipped\nrole: implementation\n---\n\n# Plan\n",
+            encoding="utf-8",
+        )
+
+        result = documentation_cleanup_service.cleanup_documentation(dry_run=True)
+
+        assert result.success is True
+        assert result.gated_files == ["2026-10-19-example-implementation.md"]
+        assert "Files held by the lifecycle gate: 1" in result.summary
+
+
+class TestTheGateMessageNamesTheConfiguredCriterion:
+    """The message has to name the criterion the gate actually applies.
+
+    The gate's vocabulary is configurable: a repo with a different
+    lifecycle overrides ``archivable_statuses``. A message that names
+    one status is then false, and it is false in the way that costs
+    the most: it names the status to *set*, so an operator who sets
+    ``status: shipped`` in a repo whose criterion is ``complete`` finds
+    the document still not archivable.
+    """
+
+    @staticmethod
+    def _write_held(path: Path) -> None:
+        path.write_text(
+            "---\nstatus: draft\nrole: implementation\n---\n\n# Plan\n",
+            encoding="utf-8",
+        )
+
+    @staticmethod
+    def _write_status(path: Path, status: str) -> None:
+        path.write_text(
+            f"---\nstatus: {status}\nrole: implementation\n---\n\n# Plan\n",
+            encoding="utf-8",
+        )
+
+    @staticmethod
+    def _service_with_statuses(
+        base: DocumentationCleanup,
+        statuses: list[str],
+    ) -> DocumentationCleanup:
+        """A service whose categorizer *applies* ``statuses``.
+
+        The vocabulary is snapshotted when the categorizer is built, so
+        the settings have to carry the override **before** construction.
+        A service built with the default criterion and then mutated still
+        applies the default -- so a message that read the live settings
+        would name a criterion the gate never used.
+        """
+        base.settings.documentation.archivable_statuses = statuses
+        return DocumentationCleanup(
+            console=base.console,
+            pkg_path=base.pkg_path,
+            git_service=base.git_service,
+            settings=base.settings,
+        )
+
+    def test_the_default_criterion_names_the_default_status(
+        self,
+        documentation_cleanup_service: DocumentationCleanup,
+        temp_pkg_path: Path,
+    ):
+        self._write_held(temp_pkg_path / "2026-10-19-example-implementation.md")
+
+        result = documentation_cleanup_service.cleanup_documentation(dry_run=True)
+
+        assert "status is not 'shipped'" in result.summary
+
+    def test_the_message_names_the_criterion_the_gate_applied(
+        self,
+        documentation_cleanup_service: DocumentationCleanup,
+        temp_pkg_path: Path,
+    ):
+        """A criterion changed after construction must not change the message.
+
+        The categorizer snapshots the configured vocabulary when the
+        cleanup is built, so a later mutation changes the settings but
+        not the gate. A message that read the live settings would then
+        name a criterion the gate never applied -- which is the exact
+        false statement this gate exists to avoid, and it points the
+        operator at the wrong status to set.
+        """
+        documentation_cleanup_service.settings.documentation.archivable_statuses = [
+            "complete"
+        ]
+        self._write_held(temp_pkg_path / "2026-10-19-example-implementation.md")
+
+        result = documentation_cleanup_service.cleanup_documentation(dry_run=True)
+
+        assert "status is not 'shipped'" in result.summary
+        assert "complete" not in result.summary
+
+    def test_an_overridden_criterion_names_the_override(
+        self,
+        documentation_cleanup_service: DocumentationCleanup,
+        temp_pkg_path: Path,
+    ):
+        """The override has to reach the gate, not only the message.
+
+        The document declares ``status: shipped``. Under the default
+        criterion it would be archived, so holding it proves the gate
+        really applied the override rather than the default.
+        """
+        service = self._service_with_statuses(
+            documentation_cleanup_service, ["complete"]
+        )
+        self._write_status(
+            temp_pkg_path / "2026-10-19-example-implementation.md", "shipped"
+        )
+
+        result = service.cleanup_documentation(dry_run=True)
+
+        assert result.gated_files, "the gate held nothing - it never applied"
+        assert "status is not 'complete'" in result.summary
+        assert "shipped" not in result.summary
+
+    def test_several_configured_statuses_are_all_named(
+        self,
+        documentation_cleanup_service: DocumentationCleanup,
+        temp_pkg_path: Path,
+    ):
+        service = self._service_with_statuses(
+            documentation_cleanup_service, ["complete", "shipped"]
+        )
+        self._write_held(temp_pkg_path / "2026-10-19-example-implementation.md")
+
+        result = service.cleanup_documentation(dry_run=True)
+
+        assert "status is not one of 'complete', 'shipped'" in result.summary
+
+    def test_the_named_criterion_is_normalised_like_the_gate(
+        self,
+        documentation_cleanup_service: DocumentationCleanup,
+        temp_pkg_path: Path,
+    ):
+        """The message names the status the gate actually compares against.
+
+        The categorizer normalises the configured vocabulary the same way
+        it normalises a document's status, so a configuration written as
+        ``"Shipped"`` matches a ``status: shipped`` document. A message
+        naming the un-normalised spelling would send the operator to
+        write a status the gate does not accept.
+        """
+        service = self._service_with_statuses(
+            documentation_cleanup_service, ["Shipped"]
+        )
+        self._write_held(temp_pkg_path / "2026-10-19-example-implementation.md")
+
+        result = service.cleanup_documentation(dry_run=True)
+
+        assert "status is not 'shipped'" in result.summary
+
+    def test_an_empty_criterion_says_so_without_naming_a_status(
+        self,
+        documentation_cleanup_service: DocumentationCleanup,
+        temp_pkg_path: Path,
+    ):
+        """An empty vocabulary must not produce a message naming a status.
+
+        With nothing archivable, the gate holds every governed document.
+        The message has to say the criterion is empty rather than name
+        some status -- there is no status to set that would help.
+        """
+        service = self._service_with_statuses(documentation_cleanup_service, [])
+        self._write_held(temp_pkg_path / "2026-10-19-example-implementation.md")
+
+        result = service.cleanup_documentation(dry_run=True)
+
+        assert "status is not archivable" in result.summary
+
+
+class TestTheHeldFileIsNamedForTheOperator:
+    """A held file is named so the operator can find it.
+
+    Two documents with the same name in different directories are two
+    files, so the name alone is ambiguous -- the label has to carry the
+    path relative to the package root.
+    """
+
+    def test_a_held_file_is_named_by_its_path_under_the_package(
+        self,
+        documentation_cleanup_service: DocumentationCleanup,
+        temp_pkg_path: Path,
+    ):
+        nested = temp_pkg_path / "docs" / "plans"
+        nested.mkdir(parents=True)
+        (nested / "2026-10-19-example-implementation.md").write_text(
+            "---\nstatus: draft\nrole: implementation\n---\n\n# Plan\n",
+            encoding="utf-8",
+        )
+
+        result = documentation_cleanup_service.cleanup_documentation(dry_run=True)
+
+        assert "docs/plans/2026-10-19-example-implementation.md" in result.summary
+
+    def test_a_file_outside_the_package_is_named_by_its_name_alone(
+        self,
+        documentation_cleanup_service: DocumentationCleanup,
+    ):
+        """A path outside the package root has no relative form.
+
+        ``relative_to`` raises for such a path, and the label falls back
+        to the file's name -- a degraded label is better than a report
+        that raises while naming what it held back.
+        """
+        outside = Path("/tmp/elsewhere/2026-10-19-example-implementation.md")
+
+        label = documentation_cleanup_service._gated_label(outside)
+
+        assert label == "2026-10-19-example-implementation.md"

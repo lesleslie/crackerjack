@@ -86,7 +86,12 @@ def _format_bytes(n: int) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Constants — mirror crackerjack.services.frontmatter where it exists.
+# Constants — mirror crackerjack.core.lifecycle where it exists.
+#
+# The membership is the shared vocabulary's; the *order* is this
+# tool's, because the index renders the lifecycle as a column order and
+# a set has none. The membership is pinned against the shared source by
+# ``tests/unit/test_plan_index_sync.py``.
 # ---------------------------------------------------------------------------
 
 LIFECYCLE_VALUES: tuple[str, ...] = (

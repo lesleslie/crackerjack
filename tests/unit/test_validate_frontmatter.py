@@ -59,6 +59,29 @@ def test_extract_frontmatter_returns_mapping() -> None:
     assert front.get("role") == "canonical"
 
 
+def test_extract_frontmatter_strips_a_leading_bom() -> None:
+    """A UTF-8 BOM is an encoding artifact, not content.
+
+    The gate reads a document's lifecycle through this function, so a
+    BOM left in place makes the anchored frontmatter block invisible:
+    the document reads as "no frontmatter" and the gate stops governing
+    it. The BOM is pinned here directly rather than only through the
+    gate, so a regression in the strip is reported as what it is
+    instead of as a downstream gate change.
+    """
+    text = (
+        "﻿---\n"
+        "status: shipped\n"
+        "role: canonical\n"
+        "---\n"
+        "body\n"
+    )
+    front, err, _ = validator_module.extract_frontmatter(text)
+    assert err is None
+    assert isinstance(front, dict)
+    assert front.get("status") == "shipped"
+
+
 def test_main_accepts_repo_root_flag(tmp_path: Path) -> None:
     """The validator's main() accepts --repo-root as a CLI argument."""
     plans = tmp_path / "docs" / "plans"

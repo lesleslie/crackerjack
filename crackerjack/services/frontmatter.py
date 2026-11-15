@@ -12,9 +12,13 @@ from importlib import resources
 from pathlib import Path
 from typing import Any
 
-LIFECYCLE_VALUES = {"draft", "active", "partial", "shipped", "complete"}
-ROLE_VALUES = {"canonical", "implementation", "umbrella", "historical", "superseded"}
-RESERVED_WORDS = LIFECYCLE_VALUES | ROLE_VALUES
+# The vocabulary lives in the core package: the config package
+# reads it, and a configuration must not depend on the services layer.
+from crackerjack.core.lifecycle import (
+    LIFECYCLE_VALUES,
+    RESERVED_WORDS,
+    ROLE_VALUES,
+)
 
 ISO_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 TOPIC_SLUG_RE = re.compile(r"^[a-z][a-z0-9-]{2,40}$")
@@ -221,7 +225,14 @@ def extract_frontmatter(
       when no frontmatter exists.
     - ``error_message`` is non-``None`` when parsing failed; ``error_line``
       is the 1-indexed file line where the parse broke (0 when unknown).
+
+    A leading UTF-8 BOM is stripped before matching. The BOM is an
+    encoding artifact, not content: left in place it makes an anchored
+    frontmatter block invisible, which reads as "this document has no
+    frontmatter" — a silent miss rather than an error.
     """
+    text = text.removeprefix("\ufeff")
+
     match = _FRONTMATTER_RE.match(text)
     if match is None:
         return None, None, 0

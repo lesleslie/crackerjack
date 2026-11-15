@@ -260,8 +260,11 @@ crackerjack-*/
 # Archived Documentation (excluded from quality checks)
 # ============================================================================
 # Per-area archives live at `<area>/.archive/<category>/` (e.g.
-# `docs/plans/.archive/implementation-plans/`). Each is re-included below
-# so the moved files stay tracked.
+# `docs/plans/.archive/implementation-plans/`). They are *not* tracked:
+# the fleet-wide `**/.archive/` rule below matches them, and the last
+# matching pattern in a .gitignore wins. An archived document leaves the
+# tree without becoming a tracked file -- see
+# docs/decisions/2026-11-15-archive-lifecycle-gate.md.
 # (Legacy `docs/archive/` was removed when the cleanup stage switched to
 # the per-area scheme.)
 
@@ -339,20 +342,17 @@ test-results/
 # are committed under their canonical paths, never under `.superpowers/`.
 .superpowers/
 
-!docs/plans/.archive/
-!docs/plans/.archive/**
-!docs/specs/.archive/
-!docs/specs/.archive/**
-!docs/decisions/.archive/
-!docs/decisions/.archive/**
-!docs/.archive/
-!docs/.archive/**
+# (The per-area `!docs/**/.archive/` negations that used to live here
+# were dead: the fleet-wide `**/.archive/` rule below comes later in this
+# file, and the last matching pattern wins. An archived document is
+# untracked -- see docs/decisions/2026-11-15-archive-lifecycle-gate.md.)
 
 # Generated test/coverage artifacts reach the archive via the
 # `test_artifacts` category (matches `coverage.json`, `report.txt`,
 # `test_*.{py,txt}`, `*.backup`, `TASK_*.txt`). The files themselves
-# are runtime outputs and must never be tracked — even inside
-# per-area archives, which the negation rules above re-include.
+# are runtime outputs and must never be tracked — including inside
+# per-area archives, which the fleet-wide `**/.archive/` rule below
+# ignores like every other archive.
 # Without these overrides, `crackerjack check-added-large-files`
 # rejects the archives (e.g. a 15 MB coverage.json).
 docs/.archive/test-artifacts/

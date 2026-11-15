@@ -174,6 +174,25 @@ def test_default_stores_match_akosha_canonical_set() -> None:
     )
 
 
+def test_lifecycle_values_mirror_the_shared_vocabulary() -> None:
+    """The tool's lifecycle column must hold the shared vocabulary's statuses.
+
+    The tool keeps its own tuple because the index renders the
+    lifecycle as a column *order*, and the shared vocabulary is a set
+    with no order of its own. The membership is what must not drift:
+    a status added to the vocabulary and forgotten here would leave a
+    document's lifecycle out of the index's columns, and a status kept
+    here after it left the vocabulary would render a column for a
+    status no document may declare.
+    """
+    from crackerjack.core.lifecycle import LIFECYCLE_VALUES as SHARED
+    from crackerjack.core.lifecycle import ROLE_VALUES as SHARED_ROLES
+    from crackerjack.tools import plan_index_sync as pis
+
+    assert set(pis.LIFECYCLE_VALUES) == set(SHARED)
+    assert set(pis.ROLE_VALUES) == set(SHARED_ROLES)
+
+
 def test_entry_link_targets_resolve_from_plans_dir() -> None:
     """Every link ``_entry_link`` emits must resolve to an existing file
     when read from ``docs/plans/PLAN_INDEX.md``.

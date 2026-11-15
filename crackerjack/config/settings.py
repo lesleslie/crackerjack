@@ -7,6 +7,7 @@ from oneiric.core.config import OneiricMCPConfig
 from oneiric.core.substrate_settings import SubstrateSettings
 from pydantic import Field, model_validator
 
+from crackerjack.core.lifecycle import ARCHIVABLE_STATUSES
 from crackerjack.utils.xdg_paths import data_dir
 
 from .validators import reshape_adapter_timeouts, warn_unknown_pyproject_subtables
@@ -186,6 +187,18 @@ class DocumentationSettings(OneiricMCPConfig):
         "*CONFIG*.md": "config-automation",
         "*PERFORMANCE*.md": "performance",
     }
+    # Lifecycle statuses that permit a governed document (one carrying YAML
+    # frontmatter) to be auto-archived by the documentation cleanup. A
+    # document at any other status is live work and is never swept, no
+    # matter what its filename looks like. ``shipped`` is the only status
+    # in the shared vocabulary that means "closed".
+    #
+    # The default comes from one place — ``ARCHIVABLE_STATUSES`` — so the
+    # setting and the tool cannot drift apart. Values are matched
+    # case-insensitively.
+    #
+    # See docs/plans/2026-11-15-archive-lifecycle-gate.md.
+    archivable_statuses: list[str] = sorted(ARCHIVABLE_STATUSES)
 
 
 class AdvancedSettings(OneiricMCPConfig):

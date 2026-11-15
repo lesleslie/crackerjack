@@ -46,6 +46,14 @@ class DocumentationCleanupResult:
     summary: str = ""
     error_message: str | None = None
     archived_files: dict[str, list[str]] = field(default_factory=dict)
+    #: The candidates the lifecycle gate held back, by path relative
+    #: to the package root. A file here matched an archival category
+    #: but its lifecycle did not permit moving it — it is still in the
+    #: tree, and the operator needs to see that it was *held* rather
+    #: than never found. The path is relative because the bare name
+    #: is ambiguous: two documents with the same name in different
+    #: directories are two files.
+    gated_files: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -75,9 +83,17 @@ class DocumentationCleanup:
         self.settings = settings
         self.security_logger = get_security_logger()
 
-        self.categorizer = DocumentationCategorizer(self.pkg_path)
+        self.categorizer = DocumentationCategorizer(
+            self.pkg_path,
+            archivable_statuses=self.settings.documentation.archivable_statuses,
+        )
 
         self._archive_mappings = self._build_archive_mappings()
+
+        #: The candidates the lifecycle gate held back on the last
+        #: detection, filled in by :meth:`_detect_archivable_files` —
+        #: the single place the gate is applied.
+        self._gated_files: list[Path] = []
 
         self.backup_service = PackageBackupService(
             backup_root=self.pkg_path / "docs" / ".backups"
@@ -93,10 +109,12 @@ class DocumentationCleanup:
 
         try:
             archivable_files = self._detect_archivable_files()
+            gated_files = self._gated_files.copy()
+            result.gated_files = [self._gated_label(path) for path in gated_files]
 
             if not archivable_files:
                 result.success = True
-                result.summary = "No files to cleanup - all files are essential"
+                result.summary = self._summarize_no_moves(gated_files)
                 self._display_completion(result)
                 return result
 
@@ -216,17 +234,82 @@ class DocumentationCleanup:
             return False
 
     def _detect_archivable_files(self) -> list[Path]:
+        """Return the files the archiver will take.
+
+        This is the **single** place the lifecycle gate is applied. Both
+        detection paths — the categorizer's and the legacy fallback's —
+        produce candidates and pass through the gate here, so adding or
+        removing a detection path cannot open a bypass: the gate is either
+        applied to every path or to none.
+
+        That single-choke-point shape is deliberate. A gate applied once
+        per detection path would fail *quietly* if an editor deleted one
+        of the two calls; a gate applied once, here, fails *loudly* —
+        removing it removes the rule entirely.
+
+        The files the gate holds back are recorded in
+        :attr:`_gated_files`. The gate is where the two lists are
+        separated, so this is the only place that can say which
+        candidates were *held* rather than never found — and the
+        cleanup's report needs that, because "all files are essential"
+        is false for a file that matched a category and was held.
+        """
         try:
-            return self.categorizer.get_archivable_files()
+            candidates = self.categorizer.get_archival_candidates()
 
         except Exception as e:
             logger.exception(f"Regex-based file detection failed: {e}")
 
-            return self._detect_archivable_files_legacy()
+            candidates = self._detect_archivable_files_legacy()
+
+        archivable: list[Path] = []
+        self._gated_files = []
+        for path in candidates:
+            if self._passes_lifecycle_gate(path):
+                archivable.append(path)
+            else:
+                self._gated_files.append(path)
+        return archivable
+
+    def _passes_lifecycle_gate(self, path: Path) -> bool:
+        """Apply the lifecycle gate to markdown documents.
+
+        Only markdown carries a frontmatter lifecycle, so only markdown is
+        gated. The non-markdown root artifacts the archiver also sweeps —
+        loose ``.py`` / ``.json`` / ``.txt`` / ``.backup`` files — have no
+        lifecycle to declare, and a binary ``.backup`` cannot even be read
+        as UTF-8. Gating them would make them unarchivable, which is the
+        cleanup's actual job.
+
+        A *copy* of a document counts as one: a candidate whose name
+        carries ``.md`` is gated even when it is not markdown-suffixed.
+        The check is on the name rather than the suffix, and it is
+        case-insensitive because the categorisation is —
+        ``categorize_file`` matches its patterns with ``re.IGNORECASE``.
+
+        This is a live path, not a hypothetical one. ``re.match`` anchors
+        at the *start* of the name, so a pattern that is not end-anchored
+        matches a prefix: the ``analysis`` category's ``TEST_.*\\.md``
+        pattern classifies ``TEST_foo.md.backup`` as an analysis
+        document, and the ``*.backup`` glob proposes it. A suffix test
+        would have swept that copy ungated; the name test gates it like
+        the document it copies.
+        """
+        name = path.name.lower()
+        if ".md" not in name and ".markdown" not in name:
+            return True
+        return self.categorizer.lifecycle_permits_archival(path)
 
     def _detect_archivable_files_legacy(self) -> list[Path]:
+        """Name-only fallback detector, used when the categorizer raises.
+
+        The candidates it returns are gated by
+        :meth:`_detect_archivable_files`, like every other path.
+        """
         try:
-            md_files = list(self.pkg_path.glob("*.md"))
+            md_files = list(
+                self.pkg_path.glob(DocumentationCategorizer.MARKDOWN_PATTERN)
+            )
             archivable = []
 
             for md_file in md_files:
@@ -427,15 +510,78 @@ class DocumentationCleanup:
 
     def _count_essential_files(self) -> int:
         essential_files = self.settings.documentation.essential_files
-        md_files = list(self.pkg_path.glob("*.md"))
+        md_files = list(self.pkg_path.glob(DocumentationCategorizer.MARKDOWN_PATTERN))
 
         return sum(1 for f in md_files if f.name in essential_files)
+
+    def _gated_label(self, path: Path) -> str:
+        """How a held file is named to the operator.
+
+        The name alone is ambiguous: two documents with the same name in
+        different directories are two files, and the operator has to be
+        able to tell which one the gate held.
+        """
+        try:
+            return str(path.relative_to(self.pkg_path))
+        except ValueError:
+            return path.name
+
+    def _gate_criterion(self) -> str:
+        """The statuses the lifecycle gate accepts, as the operator reads them.
+
+        The gate's criterion is configurable -- a repo with a different
+        vocabulary overrides ``archivable_statuses`` -- so a message
+        that names one status is a false statement in that repo. It is
+        worse than cosmetic: the message names the status to *set*, and
+        a repo whose criterion is ``complete`` would set ``shipped`` and
+        then find the document still not archivable.
+
+        The criterion is read from the **categorizer**, not from the
+        settings, because the categorizer is what the gate asks. It
+        holds the set the gate actually compares against: the settings
+        are snapshotted when it is built, and the set is normalised the
+        same way a document's status is, so a configuration written as
+        ``"Shipped"`` matches a ``status: shipped`` document. Reading
+        the settings here would name a criterion the gate never
+        applied -- the moment the two disagree, the message tells the
+        operator to set a status the gate does not accept.
+        """
+        statuses = sorted(self.categorizer.archivable_statuses)
+        if not statuses:
+            return "status is not archivable"
+        if len(statuses) == 1:
+            return f"status is not {statuses[0]!r}"
+        listed = ", ".join(repr(s) for s in statuses)
+        return f"status is not one of {listed}"
+
+    def _summarize_no_moves(self, gated: list[Path]) -> str:
+        """The summary for a run that moved nothing.
+
+        "No files to cleanup - all files are essential" is only true
+        when the gate held nothing back. A file the gate held is in the
+        tree on purpose, and the operator needs to know it was *held*
+        rather than never found — otherwise a mis-declared lifecycle
+        reads exactly like "there was nothing to do".
+        """
+        if not gated:
+            return "No files to cleanup - all files are essential"
+        names = ", ".join(sorted(self._gated_label(path) for path in gated))
+        return (
+            f"No files to cleanup - {len(gated)} file(s) held by the "
+            f"lifecycle gate ({self._gate_criterion()}): {names}"
+        )
 
     def _generate_summary(self, result: DocumentationCleanupResult) -> str:
         lines = [
             f"Files moved: {result.files_moved}",
             f"Files preserved: {result.files_preserved} (essential)",
         ]
+
+        if result.gated_files:
+            lines.append(
+                f"Files held by the lifecycle gate: {len(result.gated_files)} "
+                f"({self._gate_criterion()})"
+            )
 
         if result.backup_metadata:
             lines.append(
@@ -461,9 +607,21 @@ class DocumentationCleanup:
                 self.console.print(
                     "[cyan]ℹ️ Documentation cleanup: No files to move[/cyan]"
                 )
+                if not result.gated_files:
+                    self.console.print(
+                        "[dim]All root files are essential or already archived.[/dim]"
+                    )
+            if result.gated_files:
+                # The gate held files back. Saying "no files to move"
+                # without saying that is the mis-report this fixes: the
+                # operator cannot tell a held file from a file that
+                # never matched.
                 self.console.print(
-                    "[dim]All root files are essential or already archived.[/dim]"
+                    f"[yellow]⚠️  {len(result.gated_files)} file(s) held by the "
+                    f"lifecycle gate ({self._gate_criterion()}):[/yellow]"
                 )
+                for name in result.gated_files:
+                    self.console.print(f"   [yellow]• {name}[/yellow]")
         else:
             self.console.print("[red]❌ Documentation cleanup failed[/red]")
             if result.error_message:
