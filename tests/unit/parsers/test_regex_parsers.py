@@ -623,6 +623,40 @@ Found unused dependencies: requests, numpy
         assert len(issues) == 1
         assert "requests" in issues[0].message
 
+    def test_excluded_but_not_installed_is_not_a_finding(self, parser):
+        """An exclusion that does not apply to this venv is not a defect.
+
+        A dependency that is declared but never imported by name has to
+        be excluded or creosote reports it as unused. A dependency
+        declared with a platform marker is then legitimately missing
+        from the venv on the platforms its marker excludes -- pyscn on
+        Intel macOS, where PyPI publishes no wheel and no sdist past
+        1.5.0 and the binary is built from source through Homebrew.
+
+        Creosote itself exits 0 for that advisory, so the parser must
+        not turn it into an issue either.
+        """
+        output = (
+            "Excluded dependencies not found in virtual environment: pyscn\n"
+            "No unused dependencies found! ✨\n"
+        )
+
+        issues = parser.parse_text(output)
+
+        assert issues == []
+
+    def test_redundant_exclusion_is_still_a_finding(self, parser):
+        """A redundant exclusion is a real defect and must still fail."""
+        output = (
+            "Redundant exclusion 'pytest-snob': not found in pyproject.toml\n"
+        )
+
+        issues = parser.parse_text(output)
+
+        assert len(issues) == 1
+        assert "Redundant exclusion" in issues[0].message
+        assert "pytest-snob" in issues[0].message
+
 
 class TestLocalLinkCheckerRegexParser:
     """Test Local Link Checker regex parser."""

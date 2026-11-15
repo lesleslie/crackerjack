@@ -209,7 +209,7 @@ def main(argv: list[str] | None = None) -> int:
         "paths",
         nargs="*",
         type=Path,
-        default=[Path(".")],
+        default=[Path()],
         help=(
             "Files or directories to scan (default: the repository root). "
             "The root is the default because this tool runs in every repo in "

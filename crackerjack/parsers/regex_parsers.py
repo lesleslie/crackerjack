@@ -543,6 +543,12 @@ class CreosoteRegexParser(RegexParser):
         if "bloated venv" in line.lower():
             return False
 
+        # An excluded dependency that is absent from the venv is a fact
+        # about the local environment, not a defect in the project, and
+        # creosote itself exits 0 for it. See ``_parse_creosote_line``.
+        if "Excluded dependencies not found in virtual environment" in line:
+            return False
+
         if line.startswith(
             ("Found unused dependencies:", "Unused dependencies found:")
         ):
@@ -560,8 +566,6 @@ class CreosoteRegexParser(RegexParser):
             return self._parse_inline_dependency(line)
         if line.startswith(("Redundant exclusion ", "redundant exclusion ")):
             return self._parse_redundant_exclusion(line)
-        if "Excluded dependencies not found in virtual environment" in line:
-            return self._parse_excluded_not_found(line)
 
         return []
 
@@ -594,13 +598,6 @@ class CreosoteRegexParser(RegexParser):
         if not match:
             return []
         return [self._create_creosote_exclusion_issue(match.group(1))]
-
-    def _parse_excluded_not_found(self, line: str) -> list[Issue]:
-        if ":" not in line:
-            return []
-        deps_part = line.split(":", 1)[1].strip()
-        deps = [d.strip() for d in deps_part.split(",") if d.strip()]
-        return [self._create_creosote_exclusion_issue(dep) for dep in deps]
 
     def _create_creosote_issue(self, dep: str) -> Issue:
         return Issue(

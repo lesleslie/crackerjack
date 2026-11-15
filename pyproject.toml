@@ -839,6 +839,21 @@ exclude-deps = [
     # flake8-bugbear dep is consumed indirectly via ruff tooling, not
     # imported by name.
     "unidiff",
+    # The quality scanners below are the comprehensive stage's own tools.
+    # Each is invoked as an external CLI (or `python -m` subprocess) by the
+    # hook command table in crackerjack/config/tool_commands.py, so
+    # creosote -- which scans `import` statements -- cannot see them in use.
+    # cohesion/pymetrica/pyscn are binaries resolved by
+    # preferred_binary_command; refurb runs as `python -m refurb`.
+    "cohesion",
+    "creosote",
+    "pymetrica",
+    "pyscn",
+    "refurb",
+    # syrupy is a pytest plugin for snapshot testing: it auto-registers via
+    # the pytest11 entry-point group and is never imported by name, same as
+    # pytest-testmon and pytest-json-report above.
+    "syrupy",
 ]
 
 [tool.refurb]

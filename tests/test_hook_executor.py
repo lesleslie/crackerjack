@@ -582,12 +582,11 @@ class TestHookExecutorOutputParsing:
 
         issues = executor._parse_creosote_issues(output)
 
-        # Five distinct findings: 1 excluded-not-found, 3 redundant exclusions,
-        # 1 unused-dependencies group. The two noise lines
-        # ("Found dependencies..." and "Oh no, bloated venv!") must be filtered.
-        assert len(issues) == 5
-        assert any("Excluded dependencies not found" in i for i in issues)
-        assert any("scipy_stubs, pytest_snob" in i for i in issues)
+        # Four distinct findings: 3 redundant exclusions, 1
+        # unused-dependencies group. The three noise lines
+        # ("Found dependencies...", "Oh no, bloated venv!", and the
+        # excluded-but-not-installed advisory) must be filtered.
+        assert len(issues) == 4
         assert sum(1 for i in issues if "Redundant exclusion" in i) == 3
         assert any("'pytest'" in i for i in issues)
         assert any("'pytest-snob'" in i for i in issues)
@@ -597,6 +596,58 @@ class TestHookExecutorOutputParsing:
         # Noise lines must not appear
         assert not any("Found dependencies in pyproject.toml" in i for i in issues)
         assert not any("bloated venv" in i for i in issues)
+        assert not any("Excluded dependencies not found" in i for i in issues)
+
+    def test_parse_creosote_excluded_but_not_installed_is_not_a_finding(
+        self, executor: HookExecutor
+    ) -> None:
+        """An exclusion that does not apply to this venv is not a defect.
+
+        A dependency that is declared but never imported by name has to
+        be excluded or creosote reports it as unused. A dependency
+        declared with a platform marker is then legitimately missing
+        from the venv on the platforms its marker excludes -- pyscn on
+        Intel macOS, where PyPI publishes no wheel and no sdist past
+        1.5.0 and the binary is built from source through Homebrew.
+
+        Creosote itself exits 0 for that advisory (it only fails under
+        the experimental ``fail-excluded-and-not-installed`` feature).
+        Failing the gate on it would make the exclusion impossible to
+        express: excluded gives the advisory, not excluded gives the
+        unused-dependency finding.
+        """
+        output = (
+            "\x1b[33m\x1b[1mExcluded dependencies not found in virtual environment: "
+            "pyscn\x1b[0m\n"
+            "No unused dependencies found! ✨\n"
+        )
+
+        issues = executor._parse_creosote_issues(output)
+
+        assert issues == []
+
+    def test_parse_creosote_redundant_exclusion_is_still_a_finding(
+        self, executor: HookExecutor
+    ) -> None:
+        """A redundant exclusion is a real defect and must still fail.
+
+        Two ways an exclusion can be genuinely wrong: it names a
+        distribution the project never declared (a typo or a transitive
+        dependency), or its name is shadowed by a first-party import
+        path so creosote resolves the distribution as imported and the
+        exclusion has become unreachable.
+        """
+        output = (
+            "\x1b[33m\x1b[1mRedundant exclusion 'pytest-snob': not found in "
+            "pyproject.toml\x1b[0m\n"
+            "\x1b[33m\x1b[1mRedundant exclusion 'pytest': import detected in "
+            "source code\x1b[0m\n"
+        )
+
+        issues = executor._parse_creosote_issues(output)
+
+        assert len(issues) == 2
+        assert sum(1 for i in issues if "Redundant exclusion" in i) == 2
 
     def test_parse_pyscn_issues(self, executor: HookExecutor) -> None:
         """Bug: ``extract_issue_lines`` was being used for pyscn (no

@@ -1437,20 +1437,43 @@ class HookExecutor:
     def _parse_creosote_issues(self, output: str) -> list[str]:
         """Extract one bullet per creosote finding from raw output.
 
-        Modern creosote (post-1.x) emits up to five distinct finding
+        Modern creosote (post-1.x) emits three distinct finding
         categories; each is reported as a single panel bullet so the
         count matches the actual issue count rather than the raw line
         count:
 
-            - "Excluded dependencies not found in virtual environment: X, Y"
             - "Redundant exclusion 'X': <reason>"   (one per exclusion)
             - "Unused dependencies found: A, B, C, D"
 
-        Two informational lines are filtered — they look like findings
+        Three informational lines are filtered — they look like findings
         but aren't:
 
             - "Found dependencies in pyproject.toml: ..."  (header)
             - "Oh no, bloated venv! \U0001f922 \U0001faa3"          (status banner)
+            - "Excluded dependencies not found in virtual environment: X, Y"
+
+        The third is the one that has to be explained. Creosote prints it
+        when an *excluded* dependency is absent from the venv it was
+        pointed at. That is a fact about the local environment, not a
+        defect in the project, and creosote agrees: it exits 0 for that
+        line unless the experimental ``fail-excluded-and-not-installed``
+        feature is enabled. Failing the gate on it also makes the
+        exclusion impossible to express — a dependency that is declared
+        but never imported (a CLI binary, an entry-point plugin) has to
+        be excluded to keep creosote quiet, and a dependency declared
+        with a platform marker is legitimately missing from the venv on
+        the platforms its marker excludes. ``pyscn`` is that case on
+        Intel macOS: PyPI publishes no wheel and no sdist for it past
+        1.5.0, so it is built from source through Homebrew and never
+        lands in the venv.
+
+        The sibling category that stays a finding is "Redundant
+        exclusion 'X'", which catches the two ways an exclusion can
+        actually be wrong: it names something the project never
+        declared (a typo, or a transitive dependency), or its name is
+        shadowed by a first-party import path so creosote resolves the
+        distribution as imported and the exclusion has become
+        unreachable.
 
         Supports the legacy format (``"unused dependencies found:"``
         followed by a ``- pkg`` bullet list or bare dep names) for
@@ -1500,15 +1523,23 @@ class HookExecutor:
 
     @staticmethod
     def _is_creosote_noise_line(stripped: str) -> bool:
-        """True for creosote's informational header + summary banner.
+        """True for creosote's informational header, banner, and advisory.
 
-        Both lines look like findings to a naive line-counter but
+        The first two lines look like findings to a naive line-counter but
         carry no concrete issue — they describe what creosote saw and
         emit an emoji-laden summary.
+
+        The third line ("Excluded dependencies not found in virtual
+        environment: X") reports that an excluded dependency is absent
+        from the venv. That is a property of the local environment, not
+        of the project, and creosote itself exits 0 for it — see
+        ``_parse_creosote_issues`` for why failing on it makes the
+        exclusion inexpressible.
         """
         return (
             "Found dependencies in pyproject.toml" in stripped
             or "Oh no, bloated venv" in stripped
+            or "Excluded dependencies not found in virtual environment" in stripped
         )
 
     @staticmethod
@@ -1518,20 +1549,9 @@ class HookExecutor:
 
         Categories handled:
 
-            - ``"Excluded dependencies not found in virtual environment: X, Y"``
             - ``"Redundant exclusion 'X': <reason>"``  (one per exclusion)
             - ``"Unused dependencies found: A, B, C, D"``
         """
-        if "Excluded dependencies not found in virtual environment:" in stripped:
-            tail = stripped.split(":", 1)[1].strip()
-            deps = [d.strip() for d in tail.split(",") if d.strip()]
-            if deps:
-                return (
-                    "Excluded dependencies not found in virtual environment: "
-                    + ", ".join(deps)
-                )
-            return ""
-
         m = re.search(r"[Rr]edundant exclusion\s+['\"]([^'\"]+)['\"]", stripped)
         if m:
             return f"Redundant exclusion '{m.group(1)}'"
