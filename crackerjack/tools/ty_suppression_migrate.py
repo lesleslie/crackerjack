@@ -480,20 +480,21 @@ def _ty_diagnostics(repo: Path, trees: list[str], python: str | None) -> list[di
 def _strip_bare_directives(
     bare_by_file: dict[Path, list[Directive]],
     originals: dict[Path, str],
-) -> dict[Path, str]:
+) -> list[Path]:
     """Strip every bare directive, writing the stripped file out.
 
-    Returns the stripped text of every file that was written, so the
-    caller can put it back.
+    Returns the paths that were written, so the caller can put the
+    original text back.
     """
-    stripped: dict[Path, str] = {}
+    written: list[Path] = []
     for path, directives in bare_by_file.items():
         targets = {(d.line, d.col) for d in directives}
-        stripped[path] = strip_directives(
-            originals[path], targets, kinds=("bare",)
+        path.write_text(
+            strip_directives(originals[path], targets, kinds=("bare",)),
+            encoding="utf-8",
         )
-        path.write_text(stripped[path], encoding="utf-8")
-    return stripped
+        written.append(path)
+    return written
 
 
 def _revealed_rules(
@@ -512,13 +513,18 @@ def _revealed_rules(
     """
     # Strip every bare directive, ask ty what appears, then write back.
     before = _ty_diagnostics(repo, trees, python)
-    stripped_text = _strip_bare_directives(bare_by_file, originals)
+    stripped_paths = _strip_bare_directives(bare_by_file, originals)
     after: list[dict] = []
     try:
         after = _ty_diagnostics(repo, trees, python)
     finally:
-        for path, text in stripped_text.items():
-            path.write_text(text, encoding="utf-8")
+        # The *original* text, not the stripped text: restoring the stripped
+        # text would leave the working tree with its bare directives gone.
+        # That is data loss in every path that does not go on to write the
+        # converted result -- a dry run, or an exception during the second
+        # ty pass.
+        for path in stripped_paths:
+            path.write_text(originals[path], encoding="utf-8")
 
     revealed = _difference(after, before)
     rules_by_site: dict[tuple[str, int], list[str]] = {}
@@ -723,7 +729,7 @@ def main(argv: list[str] | None = None) -> int:
             f"across {report['files_scanned']} file(s) with directives."
         )
         if args.dry_run:
-            print("  (dry run — no file was written)")
+            print("  (dry run — the working tree is left unchanged)")
     return 0
 
 

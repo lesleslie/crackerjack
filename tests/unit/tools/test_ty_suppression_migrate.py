@@ -15,6 +15,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from crackerjack.tools.ty_suppression_migrate import (
     convert_blanket,
     find_comments,
@@ -22,6 +24,10 @@ from crackerjack.tools.ty_suppression_migrate import (
     migrate,
     strip_directives,
 )
+
+# The ty the migration runs has to resolve against this repo's environment,
+# so the diagnostics it reports are the ones the real migration would see.
+_VENV_PYTHON = str(Path(__file__).resolve().parents[3] / ".venv" / "bin" / "python")
 
 
 class TestFindDirectives:
@@ -172,6 +178,80 @@ class TestMigrateConvertBlanket:
         compile(
             (tmp_path / "pkg" / "mod.py").read_text(encoding="utf-8"), "mod.py", "exec"
         )
+
+    def test_dry_run_leaves_the_file_unchanged(self, tmp_path: Path) -> None:
+        """A dry run must not touch the working tree.
+
+        Revealing the rules a directive was hiding needs ty to see the file
+        without it, so the stripped text is written out for that pass. The
+        original text has to be written back afterwards -- restoring the
+        stripped text instead leaves the file with its directive gone.
+        """
+        (tmp_path / "pkg").mkdir()
+        original = "a = 1  # type: ignore\n"
+        (tmp_path / "pkg" / "mod.py").write_text(original, encoding="utf-8")
+
+        report = migrate(
+            tmp_path,
+            mode="convert-blanket",
+            prod_dir="pkg",
+            python=_VENV_PYTHON,
+            dry_run=True,
+        )
+
+        assert (tmp_path / "pkg" / "mod.py").read_text(encoding="utf-8") == original
+        # It still reports what a real run would do.
+        assert report["deleted"] == 1
+
+    def test_dry_run_reports_what_a_real_run_does(self, tmp_path: Path) -> None:
+        """The dry run must not change what the real run sees."""
+        (tmp_path / "pkg").mkdir()
+        (tmp_path / "pkg" / "mod.py").write_text(
+            "a = 1  # type: ignore\n", encoding="utf-8"
+        )
+
+        dry = migrate(
+            tmp_path,
+            mode="convert-blanket",
+            prod_dir="pkg",
+            python=_VENV_PYTHON,
+            dry_run=True,
+        )
+        real = migrate(
+            tmp_path,
+            mode="convert-blanket",
+            prod_dir="pkg",
+            python=_VENV_PYTHON,
+            dry_run=False,
+        )
+
+        assert dry["converted"] == real["converted"]
+        assert dry["deleted"] == real["deleted"]
+
+    def test_a_failed_ty_pass_restores_the_original(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A crash during the second ty pass must not strip the directives."""
+        import crackerjack.tools.ty_suppression_migrate as module
+
+        (tmp_path / "pkg").mkdir()
+        original = "a = 1  # type: ignore\n"
+        (tmp_path / "pkg" / "mod.py").write_text(original, encoding="utf-8")
+
+        calls: list[int] = []
+
+        def exploding(*args: object, **kwargs: object) -> list[dict]:
+            calls.append(1)
+            if len(calls) == 2:
+                raise RuntimeError("ty exploded")
+            return []
+
+        monkeypatch.setattr(module, "_ty_diagnostics", exploding)
+
+        with pytest.raises(RuntimeError):
+            migrate(tmp_path, mode="convert-blanket", prod_dir="pkg")
+
+        assert (tmp_path / "pkg" / "mod.py").read_text(encoding="utf-8") == original
 
 
 class TestProseSurvivesDirectiveRemoval:
