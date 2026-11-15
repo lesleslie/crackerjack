@@ -24,10 +24,29 @@ apart:
 |------|------------------|------------------|---------------|
 | ruff mccabe | `pyproject.toml:164` (`[tool.ruff.lint.mccabe].max-complexity`) | 25 | 25 |
 | complexipy | `pyproject.toml:409` (`[tool.complexipy].max_complexity`) **and** `crackerjack/config/tool_commands.py:236` (CLI flag `--max-complexity-allowed`) | 15 | 25 |
-| pyscn | `crackerjack/config/tool_commands.py:282` (CLI flag `--max-complexity`) | 15 | 15 |
+| pyscn | `crackerjack/models/tool_config.py` (`PYSCN_MAX_COMPLEXITY`) | 15 | 15 |
 
 Mccabe and complexipy now agree on 25. pyscn remains at 15 — that's deliberate (see
 Decision).
+
+**Where the pyscn threshold is enforced.** It is not a CLI flag on the pyscn
+command any more. `crackerjack/config/tool_commands.py` runs `pyscn analyze
+--select complexity,deadcode --json --min-complexity 5` with **no** complexity
+ceiling, and `.pyscn.toml` sets `max_complexity = 0` (no limit). The ceiling is
+applied by `crackerjack/parsers/json_parsers.py` (`PyscnJSONParser`), which counts
+functions whose `metrics.complexity` exceeds `PYSCN_MAX_COMPLEXITY`. That constant
+is the single enforcement point.
+
+**Amendment 2026-11-14 — the metric moved under the threshold.** pyscn >= 1.30
+changed how complexity is scored: the same function measures 13 under pyscn 1.5.0
+and 23 under pyscn 1.33.0. The threshold of 15 had therefore never actually been
+enforced — pyscn 1.5.0 could not parse the repo's PEP 758 `except A, B:` files and
+reported no complexity violations at all. On 2026-11-07 the constant was raised to 25
+so that both gates expressed one policy (commit `3107ff52`); that raised the
+*number* without amending this ADR, which still records 15. Because the metric rose
+while the threshold did not, holding 15 under pyscn 1.33.0 is a tighter ceiling than
+15 ever was under 1.5.0. The threshold is restored to 15 here, and the functions
+extracted to meet it are ones the old threshold was not measuring at all.
 
 A separate but related issue surfaced: `crackerjack/executors/individual_hook_executor.py:490`
 hardcoded `issues_count = 1 if status == "failed" else 0`, which made every failed hook
@@ -121,7 +140,7 @@ Run any of these to confirm the post-fix state:
 # 1. Confirm the thresholds match
 grep -n "max-complexity" pyproject.toml
 grep -n "max-complexity-allowed" crackerjack/config/tool_commands.py
-grep -n '"--max-complexity"' crackerjack/config/tool_commands.py
+grep -n "PYSCN_MAX_COMPLEXITY" crackerjack/models/tool_config.py
 
 # 2. Confirm the count bug fix
 grep -n "issues_count" crackerjack/executors/individual_hook_executor.py
@@ -129,6 +148,9 @@ grep -n "issues_count" crackerjack/executors/individual_hook_executor.py
 # 3. Live run (should report real issue count, not always "1")
 uv run crackerjack run -v -c 2>&1 | grep -E "(complexipy|Issues found)"
 ```
+
+The pyscn ceiling is enforced in the parser, not on the command line, so the
+grep above reads the constant rather than a flag — see the amendment above.
 
 ## Related
 

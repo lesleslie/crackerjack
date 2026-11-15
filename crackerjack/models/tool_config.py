@@ -6,18 +6,23 @@ from enum import StrEnum
 # Maximum cyclomatic complexity a function may have before the complexity
 # gates report it.
 #
-# pyscn >= 1.30 changed its complexity metric: the same function scores 13
-# under pyscn 1.5.0 and 23 under pyscn 1.33.0 (measured on
+# ADR-025 sets this at 15: pyscn is the strict backend (it also reports clone
+# duplication), while ruff mccabe and complexipy sit at 25. See
+# docs/adr/ADR-025-complexity-scanning-defaults.md.
+#
+# The metric moved underneath this number. pyscn >= 1.30 changed how complexity
+# is scored: the same function scores 13 under pyscn 1.5.0 and 23 under
+# pyscn 1.33.0 (measured on
 # crackerjack/fixers/ast_transform/patterns/extract_method.py, since deleted).
-# The previous
-# threshold of 15 was calibrated against the pre-1.30 metric and was never
-# actually enforced -- pyscn 1.5.0 could not parse the repo's PEP 758
+# The old threshold of 15 was calibrated against the pre-1.30 metric and was
+# never actually enforced -- pyscn 1.5.0 could not parse the repo's PEP 758
 # `except A, B:` files, and reported no complexity violations at all.
 #
-# 25 matches the threshold complexipy already enforces in this repo
-# (`--max-complexity-allowed 25`), so both complexity gates now express one
-# policy, and no function in the tree exceeds it under the current metric.
-PYSCN_MAX_COMPLEXITY = 25
+# 15 is kept because it is the documented policy, but the metric it is now
+# measured against is stricter, so holding 15 under pyscn 1.33.0 is a tighter
+# ceiling than 15 ever was under 1.5.0. The functions extracted to meet it are
+# ones the old threshold was not measuring at all.
+PYSCN_MAX_COMPLEXITY = 15
 
 
 class OutputFormat(StrEnum):

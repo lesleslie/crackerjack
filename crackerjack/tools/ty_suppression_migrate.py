@@ -400,6 +400,209 @@ def _tree_names(repo: Path, prod_dir: str | None, test_dir: str | None) -> list[
     return trees
 
 
+def _scan_files(repo: Path) -> tuple[dict[Path, str], dict[Path, list[Directive]]]:
+    """Read every source file that carries a mypy directive.
+
+    Files that cannot be read, and files that carry no directive at all, are
+    left out of the result: the report counts the files *with* directives,
+    not the files that were seen.
+    """
+    originals: dict[Path, str] = {}
+    per_file: dict[Path, list[Directive]] = {}
+    for path in iter_python_files(repo):
+        try:
+            text = path.read_text(encoding="utf-8")
+        except OSError, UnicodeDecodeError:
+            continue
+        directives = find_directives(text)
+        if not directives:
+            continue
+        originals[path] = text
+        per_file[path] = directives
+    return originals, per_file
+
+
+def _migrate_delete_bracketed(
+    repo: Path,
+    originals: dict[Path, str],
+    per_file: dict[Path, list[Directive]],
+    dry_run: bool,
+) -> tuple[int, list[dict[str, object]]]:
+    """Remove every bracketed directive and report what was removed.
+
+    The count is of the *comments* that carried a bracketed directive; the
+    sites list holds one entry per directive, so a comment that carried two
+    of them adds one to the count and two to the list.
+    """
+    deleted = 0
+    sites: list[dict[str, object]] = []
+    for path, directives in per_file.items():
+        targets = {(d.line, d.col) for d in directives if d.kind == "bracketed"}
+        if not targets:
+            continue
+        deleted += len(targets)
+        for d in directives:
+            if d.kind == "bracketed":
+                sites.append(
+                    {
+                        "file": str(path.relative_to(repo)),
+                        "line": d.line,
+                        "action": "deleted",
+                    }
+                )
+        if not dry_run:
+            path.write_text(
+                strip_directives(originals[path], targets), encoding="utf-8"
+            )
+    return deleted, sites
+
+
+def _bare_directives(
+    per_file: dict[Path, list[Directive]],
+) -> dict[Path, list[Directive]]:
+    """The bare directives of every file that has any."""
+    bare_by_file = {
+        path: [d for d in directives if d.kind == "bare"]
+        for path, directives in per_file.items()
+    }
+    return {path: bare for path, bare in bare_by_file.items() if bare}
+
+
+def _ty_diagnostics(repo: Path, trees: list[str], python: str | None) -> list[dict]:
+    """Every diagnostic ty reports over ``trees``."""
+    diagnostics: list[dict] = []
+    for tree in trees:
+        if (repo / tree).is_dir():
+            diagnostics.extend(run_ty(repo / tree, repo, python))
+    return diagnostics
+
+
+def _strip_bare_directives(
+    bare_by_file: dict[Path, list[Directive]],
+    originals: dict[Path, str],
+) -> dict[Path, str]:
+    """Strip every bare directive, writing the stripped file out.
+
+    Returns the stripped text of every file that was written, so the
+    caller can put it back.
+    """
+    stripped: dict[Path, str] = {}
+    for path, directives in bare_by_file.items():
+        targets = {(d.line, d.col) for d in directives}
+        stripped[path] = strip_directives(
+            originals[path], targets, kinds=("bare",)
+        )
+        path.write_text(stripped[path], encoding="utf-8")
+    return stripped
+
+
+def _revealed_rules(
+    repo: Path,
+    trees: list[str],
+    python: str | None,
+    bare_by_file: dict[Path, list[Directive]],
+    originals: dict[Path, str],
+) -> dict[tuple[str, int], list[str]]:
+    """The rules ty revealed once every bare directive was stripped.
+
+    Discovering the revealed rules needs ty to see the files *without* their
+    bare directives, so the stripped text is written out for the second ty
+    pass and the original text is written back afterwards. The caller writes
+    the converted result, if it is writing one at all.
+    """
+    # Strip every bare directive, ask ty what appears, then write back.
+    before = _ty_diagnostics(repo, trees, python)
+    stripped_text = _strip_bare_directives(bare_by_file, originals)
+    after: list[dict] = []
+    try:
+        after = _ty_diagnostics(repo, trees, python)
+    finally:
+        for path, text in stripped_text.items():
+            path.write_text(text, encoding="utf-8")
+
+    revealed = _difference(after, before)
+    rules_by_site: dict[tuple[str, int], list[str]] = {}
+    for diagnostic in revealed:
+        key = (diagnostic["file"], diagnostic["line"])
+        rules = rules_by_site.setdefault(key, [])
+        if diagnostic["rule"] not in rules:
+            rules.append(diagnostic["rule"])
+    return rules_by_site
+
+
+def _rules_for(
+    rules_by_site: dict[tuple[str, int], list[str]],
+    relative: str,
+    directive: Directive,
+) -> list[str]:
+    """The rules ty revealed for one directive."""
+    rules = rules_by_site.get((relative, directive.line), [])
+    if not rules:
+        # ty reports the diagnostic on the line the expression
+        # starts, which can differ from the directive's line.
+        rules = _rules_near(rules_by_site, relative, directive.line)
+    return rules
+
+
+def _migrate_convert_blanket(
+    repo: Path,
+    trees: list[str],
+    originals: dict[Path, str],
+    per_file: dict[Path, list[Directive]],
+    python: str | None,
+    dry_run: bool,
+) -> tuple[int, int, list[dict[str, object]]]:
+    """Rewrite each bare directive to the ty rule it was hiding.
+
+    A directive that revealed nothing was suppressing nothing, so it is
+    dropped rather than converted.
+
+    A dry run reports the same result but leaves every file exactly as it
+    found it: revealing the rules needs ty to see the files without their
+    bare directives, so the stripped text is written out for that pass and
+    the original text is written back afterwards.
+    """
+    bare_by_file = _bare_directives(per_file)
+    if not bare_by_file:
+        return 0, 0, []
+
+    rules_by_site = _revealed_rules(repo, trees, python, bare_by_file, originals)
+
+    deleted = 0
+    converted = 0
+    sites: list[dict[str, object]] = []
+    for path, directives in bare_by_file.items():
+        relative = path.relative_to(repo).as_posix()
+        replacements: dict[tuple[int, int], str] = {}
+        for directive in directives:
+            rules = _rules_for(rules_by_site, relative, directive)
+            if rules:
+                body = ", ".join(rules)
+                replacements[(directive.line, directive.col)] = f"ty: ignore[{body}]"
+                converted += 1
+                sites.append(
+                    {
+                        "file": relative,
+                        "line": directive.line,
+                        "action": "converted",
+                        "rules": rules,
+                    }
+                )
+            else:
+                # Nothing appeared when the directive was removed, so it
+                # was suppressing nothing. Drop it.
+                replacements[(directive.line, directive.col)] = ""
+                deleted += 1
+                sites.append(
+                    {"file": relative, "line": directive.line, "action": "deleted"}
+                )
+        if replacements and not dry_run:
+            path.write_text(
+                convert_blanket(originals[path], replacements), encoding="utf-8"
+            )
+    return deleted, converted, sites
+
+
 def migrate(
     repo: Path,
     mode: str,
@@ -410,20 +613,7 @@ def migrate(
 ) -> dict:
     """Run one migration mode over ``repo`` and return a report."""
     trees = _tree_names(repo, prod_dir, test_dir)
-    files = iter_python_files(repo)
-    originals: dict[Path, str] = {}
-    per_file: dict[Path, list[Directive]] = {}
-
-    for path in files:
-        try:
-            text = path.read_text(encoding="utf-8")
-        except OSError, UnicodeDecodeError:
-            continue
-        directives = find_directives(text)
-        if not directives:
-            continue
-        originals[path] = text
-        per_file[path] = directives
+    originals, per_file = _scan_files(repo)
 
     report = {
         "mode": mode,
@@ -437,101 +627,18 @@ def migrate(
     }
 
     if mode == "delete-bracketed":
-        for path, directives in per_file.items():
-            targets = {(d.line, d.col) for d in directives if d.kind == "bracketed"}
-            if not targets:
-                continue
-            report["deleted"] += len(targets)
-            for d in directives:
-                if d.kind == "bracketed":
-                    report["sites"].append(
-                        {
-                            "file": str(path.relative_to(repo)),
-                            "line": d.line,
-                            "action": "deleted",
-                        }
-                    )
-            if not dry_run:
-                path.write_text(
-                    strip_directives(originals[path], targets), encoding="utf-8"
-                )
+        deleted, sites = _migrate_delete_bracketed(repo, originals, per_file, dry_run)
+        report["deleted"] += deleted
+        report["sites"].extend(sites)
         return report
 
     if mode == "convert-blanket":
-        bare_by_file = {
-            path: [d for d in directives if d.kind == "bare"]
-            for path, directives in per_file.items()
-        }
-        bare_by_file = {p: d for p, d in bare_by_file.items() if d}
-        if not bare_by_file:
-            return report
-
-        # Strip every bare directive, ask ty what appears, then write back.
-        before: list[dict] = []
-        for tree in trees:
-            if (repo / tree).is_dir():
-                before.extend(run_ty(repo / tree, repo, python))
-
-        stripped_text: dict[Path, str] = {}
-        for path, directives in bare_by_file.items():
-            targets = {(d.line, d.col) for d in directives}
-            stripped_text[path] = strip_directives(
-                originals[path], targets, kinds=("bare",)
-            )
-            path.write_text(stripped_text[path], encoding="utf-8")
-
-        after: list[dict] = []
-        try:
-            for tree in trees:
-                if (repo / tree).is_dir():
-                    after.extend(run_ty(repo / tree, repo, python))
-        finally:
-            for path, text in stripped_text.items():
-                path.write_text(text, encoding="utf-8")
-
-        revealed = _difference(after, before)
-        rules_by_site: dict[tuple[str, int], list[str]] = {}
-        for diagnostic in revealed:
-            key = (diagnostic["file"], diagnostic["line"])
-            rules = rules_by_site.setdefault(key, [])
-            if diagnostic["rule"] not in rules:
-                rules.append(diagnostic["rule"])
-
-        for path, directives in bare_by_file.items():
-            relative = path.relative_to(repo).as_posix()
-            replacements: dict[tuple[int, int], str] = {}
-            for directive in directives:
-                rules = rules_by_site.get((relative, directive.line), [])
-                if not rules:
-                    # ty reports the diagnostic on the line the expression
-                    # starts, which can differ from the directive's line.
-                    rules = _rules_near(rules_by_site, relative, directive.line)
-                if rules:
-                    body = ", ".join(rules)
-                    replacements[(directive.line, directive.col)] = (
-                        f"ty: ignore[{body}]"
-                    )
-                    report["converted"] += 1
-                    report["sites"].append(
-                        {
-                            "file": relative,
-                            "line": directive.line,
-                            "action": "converted",
-                            "rules": rules,
-                        }
-                    )
-                else:
-                    # Nothing appeared when the directive was removed, so it
-                    # was suppressing nothing. Drop it.
-                    replacements[(directive.line, directive.col)] = ""
-                    report["deleted"] += 1
-                    report["sites"].append(
-                        {"file": relative, "line": directive.line, "action": "deleted"}
-                    )
-            if replacements and not dry_run:
-                path.write_text(
-                    convert_blanket(originals[path], replacements), encoding="utf-8"
-                )
+        deleted, converted, sites = _migrate_convert_blanket(
+            repo, trees, originals, per_file, python, dry_run
+        )
+        report["deleted"] += deleted
+        report["converted"] += converted
+        report["sites"].extend(sites)
         return report
 
     raise ValueError(f"unknown mode: {mode}")

@@ -1,6 +1,20 @@
 import typing as t
 from contextlib import suppress
 
+# Ordered mapping of error category -> keywords that identify it. The order
+# matters: the first category with a matching keyword wins, so more specific
+# categories must come before the broader ones.
+_ERROR_CATEGORY_KEYWORDS: tuple[tuple[str, tuple[str, ...]], ...] = (
+    ("syntax_errors", ("syntax", "invalid syntax", "unexpected token")),
+    ("import_errors", ("import", "module", "no module named")),
+    ("type_errors", ("type", "annotation", "mypy", "pyright")),
+    ("test_failures", ("test", "assert", "pytest", "failed")),
+    ("security_issues", ("security", "bandit", "vulnerability")),
+    ("complexity_issues", ("complexity", "complex", "cognitive")),
+    ("dependency_issues", ("dependency", "requirement", "package")),
+    ("formatting_issues", ("format", "style", "ruff", "black")),
+)
+
 
 def analyze_errors_with_caching(
     context: t.Any,
@@ -94,37 +108,9 @@ def _categorize_error_patterns(patterns: list[t.Any]) -> dict[str, list[t.Any]]:
 def _classify_error_pattern(pattern: t.Any) -> str:
     pattern_str = str(pattern).lower()
 
-    if any(
-        keyword in pattern_str
-        for keyword in ("syntax", "invalid syntax", "unexpected token")
-    ):
-        return "syntax_errors"
-    if any(
-        keyword in pattern_str for keyword in ("import", "module", "no module named")
-    ):
-        return "import_errors"
-    if any(
-        keyword in pattern_str for keyword in ("type", "annotation", "mypy", "pyright")
-    ):
-        return "type_errors"
-    if any(
-        keyword in pattern_str for keyword in ("test", "assert", "pytest", "failed")
-    ):
-        return "test_failures"
-    if any(
-        keyword in pattern_str for keyword in ("security", "bandit", "vulnerability")
-    ):
-        return "security_issues"
-    if any(
-        keyword in pattern_str for keyword in ("complexity", "complex", "cognitive")
-    ):
-        return "complexity_issues"
-    if any(
-        keyword in pattern_str for keyword in ("dependency", "requirement", "package")
-    ):
-        return "dependency_issues"
-    if any(keyword in pattern_str for keyword in ("format", "style", "ruff", "black")):
-        return "formatting_issues"
+    for category, keywords in _ERROR_CATEGORY_KEYWORDS:
+        if any(keyword in pattern_str for keyword in keywords):
+            return category
     return "unknown"
 
 

@@ -6,6 +6,7 @@ import os
 import re
 import subprocess
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 
 from crackerjack.tools._ty_binary import resolve_ty_binary
@@ -149,6 +150,114 @@ def _zero_result() -> subprocess.CompletedProcess[str]:
     )
 
 
+@dataclass(frozen=True)
+class _DirGate:
+    """Outcome of one directory's ty ratchet gate."""
+
+    result: subprocess.CompletedProcess[str]
+    count: int
+    max_errors: int
+    gate_error: bool
+    gate_passes: bool
+
+
+def _run_dir_gate(directory: str, exists: bool, max_errors: int) -> _DirGate:
+    """Measure one directory with ty and evaluate its gate.
+
+    ``exists`` is False for a missing directory, in which case the gate is
+    measured vacuously (zero diagnostics, no gate error).
+    """
+    result = run_ty(directory, _include_glob(directory)) if exists else _zero_result()
+    count = _count_diagnostics(result.stdout + result.stderr)
+
+    # A gate that found no files in a directory that holds Python files
+    # measured nothing. That is a tooling error, not a clean run, and must
+    # never be reported as a pass. An empty directory is a different case:
+    # there was nothing to check, so zero diagnostics is the honest answer.
+    no_files = bool(
+        _NO_FILES_FOUND_RE.search(result.stderr) and _has_python_files(directory)
+    )
+
+    # ty exits non-zero when it reports error-level diagnostics. For a
+    # ratchet that is expected: the budget is what decides, and "count <=
+    # max" means the known diagnostics are still within the allowance. A
+    # non-zero exit with *zero* diagnostics means ty could not run, which is
+    # a tooling error rather than a measurement.
+    ty_failed = result.returncode != 0 and count == 0
+
+    gate_error = no_files or ty_failed
+    gate_passes = not gate_error and 0 <= count <= max_errors
+    return _DirGate(
+        result=result,
+        count=count,
+        max_errors=max_errors,
+        gate_error=gate_error,
+        gate_passes=gate_passes,
+    )
+
+
+def _gate_status(gate: _DirGate) -> str:
+    """Human-readable status label for one directory gate."""
+    if gate.gate_error:
+        return "GATE ERROR"
+    return "PASS" if gate.gate_passes else "FAIL"
+
+
+def _print_diagnostic_tail(
+    result: subprocess.CompletedProcess[str], verbose: bool
+) -> None:
+    """Print the diagnostic tail for a failing gate.
+
+    The tail is truncated to the last 20 lines unless ``verbose`` is set.
+    """
+    combined = (result.stdout + result.stderr).splitlines()
+    if not verbose:
+        combined = combined[-20:]
+    print("\n".join(combined), file=sys.stderr)
+
+
+def _print_split_report(
+    args: argparse.Namespace, prod: _DirGate, test: _DirGate
+) -> None:
+    """Print the human-readable split-mode report."""
+    print(
+        f"ty ratchet [split] prod: {_gate_status(prod)} "
+        f"({prod.count}/{prod.max_errors})"
+    )
+    print(
+        f"ty ratchet [split] test: {_gate_status(test)} "
+        f"({test.count}/{test.max_errors})"
+    )
+    if prod.gate_error:
+        print(
+            f"⚠️ ty_ratchet: GATE ERROR — ty could not measure "
+            f"{args.prod_dir!r} (found no files, or exited "
+            f"{prod.result.returncode} without reporting any). The prod "
+            f"gate is not evidence of a clean run. Check the repo's "
+            f"[tool.ty] src.include setting.",
+            file=sys.stderr,
+        )
+    if test.gate_error:
+        print(
+            f"⚠️ ty_ratchet: GATE ERROR — ty could not measure "
+            f"{args.test_dir!r} (found no files, or exited "
+            f"{test.result.returncode} without reporting any). The test "
+            f"gate is not evidence of a clean run. Check the repo's "
+            f"[tool.ty] src.include setting.",
+            file=sys.stderr,
+        )
+    if not test.gate_passes and not test.gate_error:
+        print(
+            f"⚠️ ty: test ratchet FAIL ({test.count}/{test.max_errors}) — "
+            f"advisory only; prod gate {'PASS' if prod.gate_passes else 'FAIL'} "
+            f"({prod.count}/{prod.max_errors}) controls the exit code.",
+            file=sys.stderr,
+        )
+        _print_diagnostic_tail(test.result, args.verbose)
+    if not prod.gate_passes and not prod.gate_error:
+        _print_diagnostic_tail(prod.result, args.verbose)
+
+
 def _run_split(args: argparse.Namespace) -> int:
     prod_max = _read_split_budget(
         args.pyproject,
@@ -177,47 +286,8 @@ def _run_split(args: argparse.Namespace) -> int:
             file=sys.stderr,
         )
 
-    prod_result = (
-        run_ty(args.prod_dir, _include_glob(args.prod_dir))
-        if prod_exists
-        else _zero_result()
-    )
-    test_result = (
-        run_ty(args.test_dir, _include_glob(args.test_dir))
-        if test_exists
-        else _zero_result()
-    )
-    prod_count = _count_diagnostics(prod_result.stdout + prod_result.stderr)
-    test_count = _count_diagnostics(test_result.stdout + test_result.stderr)
-
-    # A gate that found no files in a directory that holds Python files
-    # measured nothing. That is a tooling error, not a clean run, and must
-    # never be reported as a pass. An empty directory is a different case:
-    # there was nothing to check, so zero diagnostics is the honest answer.
-    prod_no_files = bool(
-        _NO_FILES_FOUND_RE.search(prod_result.stderr)
-        and _has_python_files(args.prod_dir)
-    )
-    test_no_files = bool(
-        _NO_FILES_FOUND_RE.search(test_result.stderr)
-        and _has_python_files(args.test_dir)
-    )
-
-    # ty exits non-zero when it reports error-level diagnostics. For a
-    # ratchet that is expected: the budget is what decides, and "count <=
-    # max" means the known diagnostics are still within the allowance. A
-    # non-zero exit with *zero* diagnostics means ty could not run, which is
-    # a tooling error rather than a measurement.
-    prod_ty_failed = prod_result.returncode != 0 and prod_count == 0
-    test_ty_failed = test_result.returncode != 0 and test_count == 0
-
-    prod_gate_error = prod_no_files or prod_ty_failed
-    test_gate_error = test_no_files or test_ty_failed
-
-    prod_gate = not prod_gate_error and 0 <= prod_count <= prod_max
-    test_gate = not test_gate_error and 0 <= test_count <= test_max
-
-    overall_exit = prod_gate
+    prod = _run_dir_gate(args.prod_dir, prod_exists, prod_max)
+    test = _run_dir_gate(args.test_dir, test_exists, test_max)
 
     summary = {
         "mode": "split",
@@ -226,75 +296,32 @@ def _run_split(args: argparse.Namespace) -> int:
         "test_dir": args.test_dir,
         "prod_dir_exists": prod_exists,
         "test_dir_exists": test_exists,
-        "gate_passes": prod_gate and test_gate,
-        "prod_gate_passes": prod_gate,
-        "ty_exit_code": max(prod_result.returncode, test_result.returncode),
+        "gate_passes": prod.gate_passes and test.gate_passes,
+        "prod_gate_passes": prod.gate_passes,
+        "ty_exit_code": max(prod.result.returncode, test.result.returncode),
         "prod": {
-            "diagnostic_count": prod_count,
-            "max_errors": prod_max,
-            "gate_passes": prod_gate,
-            "gate_error": prod_gate_error,
+            "diagnostic_count": prod.count,
+            "max_errors": prod.max_errors,
+            "gate_passes": prod.gate_passes,
+            "gate_error": prod.gate_error,
         },
         "test": {
-            "diagnostic_count": test_count,
-            "max_errors": test_max,
-            "gate_passes": test_gate,
-            "gate_error": test_gate_error,
+            "diagnostic_count": test.count,
+            "max_errors": test.max_errors,
+            "gate_passes": test.gate_passes,
+            "gate_error": test.gate_error,
         },
     }
 
     if args.as_json:
         print(json.dumps(summary, indent=2))
     else:
-        if prod_gate_error:
-            prod_status = "GATE ERROR"
-        else:
-            prod_status = "PASS" if prod_gate else "FAIL"
-        if test_gate_error:
-            test_status = "GATE ERROR"
-        else:
-            test_status = "PASS" if test_gate else "FAIL"
-        print(f"ty ratchet [split] prod: {prod_status} ({prod_count}/{prod_max})")
-        print(f"ty ratchet [split] test: {test_status} ({test_count}/{test_max})")
-        if prod_gate_error:
-            print(
-                f"⚠️ ty_ratchet: GATE ERROR — ty could not measure "
-                f"{args.prod_dir!r} (found no files, or exited "
-                f"{prod_result.returncode} without reporting any). The prod "
-                f"gate is not evidence of a clean run. Check the repo's "
-                f"[tool.ty] src.include setting.",
-                file=sys.stderr,
-            )
-        if test_gate_error:
-            print(
-                f"⚠️ ty_ratchet: GATE ERROR — ty could not measure "
-                f"{args.test_dir!r} (found no files, or exited "
-                f"{test_result.returncode} without reporting any). The test "
-                f"gate is not evidence of a clean run. Check the repo's "
-                f"[tool.ty] src.include setting.",
-                file=sys.stderr,
-            )
-        if not test_gate and not test_gate_error:
-            test_combined = (test_result.stdout + test_result.stderr).splitlines()
-            if not args.verbose:
-                test_combined = test_combined[-20:]
-            print(
-                f"⚠️ ty: test ratchet FAIL ({test_count}/{test_max}) — "
-                f"advisory only; prod gate {'PASS' if prod_gate else 'FAIL'} "
-                f"({prod_count}/{prod_max}) controls the exit code.",
-                file=sys.stderr,
-            )
-            print("\n".join(test_combined), file=sys.stderr)
-        if not prod_gate and not prod_gate_error:
-            prod_combined = (prod_result.stdout + prod_result.stderr).splitlines()
-            if not args.verbose:
-                prod_combined = prod_combined[-20:]
-            print("\n".join(prod_combined), file=sys.stderr)
+        _print_split_report(args, prod, test)
 
     if args.dry_run:
         return 0
 
-    return 0 if overall_exit else 1
+    return 0 if prod.gate_passes else 1
 
 
 def main(argv: list[str] | None = None) -> int:

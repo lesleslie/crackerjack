@@ -530,6 +530,92 @@ def restart(
     start(force=True, detach=True, json_output=json_output)
 
 
+def _snapshot_health(settings: CrackerjackMCPSettings) -> dict[str, Any]:
+    """Collect the snapshot-related portion of the health payload.
+
+    Returns the keys to merge into the health payload: ``snapshot`` and
+    ``snapshot_fresh`` when a snapshot could be read, ``snapshot`` (None) when
+    no snapshot file exists, ``snapshot_error`` when reading the snapshot
+    failed, and no keys at all when the file exists but holds no snapshot.
+    """
+    health: dict[str, Any] = {}
+    snapshot_path = settings.health_snapshot_path()
+
+    if not snapshot_path.exists():
+        return {"snapshot": None, "snapshot_fresh": False}
+
+    try:
+        from crackerjack.runtime import read_runtime_health
+
+        snapshot = read_runtime_health(snapshot_path)
+        if snapshot is not None:
+            health["snapshot"] = {
+                "orchestrator_pid": snapshot.orchestrator_pid,
+                "watchers_running": snapshot.watchers_running,
+                "lifecycle_state": snapshot.lifecycle_state,
+            }
+
+            if (
+                snapshot_path.stat().st_mtime
+                < time.time() - settings.health_ttl_seconds
+            ):
+                health["snapshot_fresh"] = False
+            else:
+                health["snapshot_fresh"] = True
+    except Exception as e:
+        health["snapshot_error"] = str(e)
+
+    return health
+
+
+def _is_healthy(health_data: dict[str, Any], probe: bool) -> bool:
+    """Decide the overall health verdict from the collected health data."""
+    is_healthy = bool(
+        health_data.get("process_alive", False)
+        and health_data.get("snapshot_fresh", False)
+    )
+
+    if probe and health_data.get("http_probe", {}).get("status") != "healthy":
+        is_healthy = False
+
+    return is_healthy
+
+
+def _print_health_text(
+    pid: int | None,
+    health_data: dict[str, Any],
+    probe: bool,
+    is_healthy: bool,
+) -> None:
+    """Render the human-readable health report."""
+    console.print("\n[bold]Crackerjack MCP Server Health[/bold]")
+    console.print(f" PID: {pid or 'N/A'}")
+    console.print(
+        f" Process: {'[green]alive[/green]' if health_data['process_alive'] else '[red]dead[/red]'}"
+    )
+
+    snapshot = health_data.get("snapshot")
+    if snapshot is not None:
+        console.print(
+            f" Watchers: {'[green]running[/green]' if snapshot.get('watchers_running') else '[red]stopped[/red]'}"
+        )
+        console.print(
+            f" Snapshot: {'[green]fresh[/green]' if health_data.get('snapshot_fresh') else '[red]stale[/red]'}"
+        )
+    else:
+        console.print(" Snapshot: [yellow]not available[/yellow]")
+
+    if probe:
+        http_status = health_data.get("http_probe", {}).get("status", "unknown")
+        console.print(
+            f" HTTP Probe: {'[green]' + http_status + '[/green]' if http_status == 'healthy' else '[red]' + http_status + '[/red]'}"
+        )
+
+    console.print(
+        f"\n Overall: {'[bold green]HEALTHY[/bold green]' if is_healthy else '[bold red]UNHEALTHY[/bold red]'}"
+    )
+
+
 @app.command()
 def health(
     probe: bool = typer.Option(
@@ -562,75 +648,20 @@ def health(
         health_data["process_alive"] = _is_process_alive(pid)
 
     settings = _get_settings()
-    snapshot_path = settings.health_snapshot_path()
-
-    if snapshot_path.exists():
-        try:
-            from crackerjack.runtime import read_runtime_health
-
-            snapshot = read_runtime_health(snapshot_path)
-            if snapshot is not None:
-                health_data["snapshot"] = {
-                    "orchestrator_pid": snapshot.orchestrator_pid,
-                    "watchers_running": snapshot.watchers_running,
-                    "lifecycle_state": snapshot.lifecycle_state,
-                }
-
-                if (
-                    snapshot_path.stat().st_mtime
-                    < time.time() - settings.health_ttl_seconds
-                ):
-                    health_data["snapshot_fresh"] = False
-                else:
-                    health_data["snapshot_fresh"] = True
-        except Exception as e:
-            health_data["snapshot_error"] = str(e)
-    else:
-        health_data["snapshot"] = None
-        health_data["snapshot_fresh"] = False
+    health_data.update(_snapshot_health(settings))
 
     if probe:
         http_health = _check_http_health(endpoint)
         health_data["http_probe"] = http_health
 
-    is_healthy = health_data.get("process_alive", False) and health_data.get(
-        "snapshot_fresh", False
-    )
-
-    if probe and health_data.get("http_probe", {}).get("status") != "healthy":
-        is_healthy = False
+    is_healthy = _is_healthy(health_data, probe)
 
     health_data["status"] = "healthy" if is_healthy else "unhealthy"
 
     if json_output:
         typer.echo(json.dumps(health_data, indent=2))
     else:
-        console.print("\n[bold]Crackerjack MCP Server Health[/bold]")
-        console.print(f" PID: {pid or 'N/A'}")
-        console.print(
-            f" Process: {'[green]alive[/green]' if health_data['process_alive'] else '[red]dead[/red]'}"
-        )
-
-        snapshot = health_data.get("snapshot")
-        if snapshot is not None:
-            console.print(
-                f" Watchers: {'[green]running[/green]' if snapshot.get('watchers_running') else '[red]stopped[/red]'}"
-            )
-            console.print(
-                f" Snapshot: {'[green]fresh[/green]' if health_data.get('snapshot_fresh') else '[red]stale[/red]'}"
-            )
-        else:
-            console.print(" Snapshot: [yellow]not available[/yellow]")
-
-        if probe:
-            http_status = health_data.get("http_probe", {}).get("status", "unknown")
-            console.print(
-                f" HTTP Probe: {'[green]' + http_status + '[/green]' if http_status == 'healthy' else '[red]' + http_status + '[/red]'}"
-            )
-
-        console.print(
-            f"\n Overall: {'[bold green]HEALTHY[/bold green]' if is_healthy else '[bold red]UNHEALTHY[/bold red]'}"
-        )
+        _print_health_text(pid, health_data, probe, is_healthy)
 
     sys.exit(ExitCode.SUCCESS if is_healthy else ExitCode.HEALTH_CHECK_FAILED)
 

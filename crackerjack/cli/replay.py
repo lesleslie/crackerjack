@@ -91,6 +91,45 @@ def _summary(events: list[AIFixEvent]) -> dict[str, int]:
     return summary
 
 
+def _count_events(events: list[AIFixEvent], event_type: type[AIFixEvent]) -> int:
+    """Count the events in *events* that are instances of *event_type*."""
+    return sum(1 for e in events if isinstance(e, event_type))
+
+
+def _total_no_op_fixes(events: list[AIFixEvent]) -> int:
+    """Sum the no-op fix counts reported by every finished fix session."""
+    return sum(e.no_op_count for e in events if isinstance(e, FixSessionFinished))
+
+
+def _first_run_finished(events: list[AIFixEvent]) -> RunFinished | None:
+    """Return the first ``RunFinished`` event of the run, if there is one."""
+    return next((e for e in events if isinstance(e, RunFinished)), None)
+
+
+def _build_summary_table(events: list[AIFixEvent]) -> Table:
+    """Build the "Run summary" table shown at the end of a replay."""
+    table = Table(title="Run summary", show_header=True, header_style="bold cyan")
+    table.add_column("Metric")
+    table.add_column("Value", justify="right")
+    resolved = _count_events(events, IssueResolved)
+    failed = _count_events(events, IssueFailed)
+    dispatched = _count_events(events, AgentDispatched)
+    sessions_started = _count_events(events, FixSessionStarted)
+    sessions_finished = _count_events(events, FixSessionFinished)
+    no_ops = _total_no_op_fixes(events)
+    iterations = _count_events(events, IterationStarted)
+    run_finished = _first_run_finished(events)
+    table.add_row("iterations started", str(iterations))
+    table.add_row("agents dispatched", str(dispatched))
+    table.add_row("issues resolved", str(resolved))
+    table.add_row("issues failed", str(failed))
+    table.add_row("fix sessions", f"{sessions_finished}/{sessions_started}")
+    table.add_row("total no-op fixes", str(no_ops))
+    if run_finished is not None:
+        table.add_row("run success", str(run_finished.success))
+    return table
+
+
 def render_replay(
     run_id: str,
     *,
@@ -119,29 +158,8 @@ def render_replay(
     for event in events_list:
         console.print(_format_event(event))
 
-    table = Table(title="Run summary", show_header=True, header_style="bold cyan")
-    table.add_column("Metric")
-    table.add_column("Value", justify="right")
-    resolved = sum(1 for e in events_list if isinstance(e, IssueResolved))
-    failed = sum(1 for e in events_list if isinstance(e, IssueFailed))
-    dispatched = sum(1 for e in events_list if isinstance(e, AgentDispatched))
-    sessions_started = sum(1 for e in events_list if isinstance(e, FixSessionStarted))
-    sessions_finished = sum(1 for e in events_list if isinstance(e, FixSessionFinished))
-    no_ops = sum(
-        e.no_op_count for e in events_list if isinstance(e, FixSessionFinished)
-    )
-    iterations = sum(1 for e in events_list if isinstance(e, IterationStarted))
-    run_finished = next((e for e in events_list if isinstance(e, RunFinished)), None)
-    table.add_row("iterations started", str(iterations))
-    table.add_row("agents dispatched", str(dispatched))
-    table.add_row("issues resolved", str(resolved))
-    table.add_row("issues failed", str(failed))
-    table.add_row("fix sessions", f"{sessions_finished}/{sessions_started}")
-    table.add_row("total no-op fixes", str(no_ops))
-    if run_finished is not None:
-        table.add_row("run success", str(run_finished.success))
     console.print()
-    console.print(table)
+    console.print(_build_summary_table(events_list))
     return 0
 
 

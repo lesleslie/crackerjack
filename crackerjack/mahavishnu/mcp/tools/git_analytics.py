@@ -76,17 +76,9 @@ def get_portfolio_velocity_dashboard(
             aggregator.get_cross_project_git_dashboard(project_paths_str, days_back)
         )
 
-        portfolio_velocity = sum(r.avg_commits_per_day for r in dashboard.repositories)
-        total_commits = sum(r.total_commits for r in dashboard.repositories)
-        avg_health = (
-            sum(r.health_score for r in dashboard.repositories)
-            / len(dashboard.repositories)
-            if dashboard.repositories
-            else 0.0
+        portfolio_velocity, total_commits, avg_health = _aggregate_portfolio_totals(
+            dashboard.repositories
         )
-
-        high_performers = [r for r in dashboard.repositories if r.health_score >= 80]
-        needs_attention = [r for r in dashboard.repositories if r.health_score < 50]
 
         result = {
             "portfolio": {
@@ -97,48 +89,19 @@ def get_portfolio_velocity_dashboard(
                 "total_commits": total_commits,
                 "avg_health_score": round(avg_health, 1),
             },
-            "velocity_distribution": {
-                "high_performers": len(high_performers),
-                "healthy": len(
-                    [r for r in dashboard.repositories if 50 <= r.health_score < 80]
-                ),
-                "needs_attention": len(needs_attention),
-                "critical": len(
-                    [r for r in dashboard.repositories if r.health_score < 40]
-                ),
-            },
-            "repositories": [
-                {
-                    "name": repo.repository_name,
-                    "path": repo.repository_path,
-                    "commits": repo.total_commits,
-                    "commits_per_day": round(repo.avg_commits_per_day, 2),
-                    "health_score": round(repo.health_score, 1),
-                    "trend": repo.trend_direction,
-                    "conventional_compliance": round(
-                        repo.conventional_compliance_rate * 100, 1
-                    ),
-                }
-                for repo in sorted(
-                    dashboard.repositories, key=lambda r: r.health_score, reverse=True
-                )
-            ],
+            "velocity_distribution": _build_velocity_distribution(
+                dashboard.repositories
+            ),
+            "repositories": _build_repository_velocity_rows(dashboard.repositories),
             "top_performers": [
                 {"name": Path(p).name, "path": p} for p in dashboard.top_performers
             ],
             "needs_attention": [
                 {"name": Path(p).name, "path": p} for p in dashboard.needs_attention
             ],
-            "cross_project_patterns": [
-                {
-                    "type": pattern.pattern_type,
-                    "severity": pattern.severity,
-                    "description": pattern.description,
-                    "affected_count": len(pattern.affected_repositories),
-                    "recommendation": pattern.recommendation,
-                }
-                for pattern in dashboard.cross_project_patterns
-            ],
+            "cross_project_patterns": _build_cross_project_pattern_rows(
+                dashboard.cross_project_patterns
+            ),
         }
 
         logger.info(
@@ -152,6 +115,88 @@ def get_portfolio_velocity_dashboard(
     except Exception as e:
         logger.error(f"Failed to generate portfolio dashboard: {e}")
         raise
+
+
+def _aggregate_portfolio_totals(
+    repositories: list[RepositoryVelocity],
+) -> tuple[float, int, float]:
+    """Aggregate portfolio velocity, commit count and average health score.
+
+    Returns the raw (unrounded) totals so callers can both round them
+    for the dashboard payload and format them for logging.
+    """
+    portfolio_velocity = sum(r.avg_commits_per_day for r in repositories)
+    total_commits = sum(r.total_commits for r in repositories)
+    avg_health = (
+        sum(r.health_score for r in repositories) / len(repositories)
+        if repositories
+        else 0.0
+    )
+    return portfolio_velocity, total_commits, avg_health
+
+
+def _build_velocity_distribution(repositories: list[RepositoryVelocity]) -> dict:
+    """Bucket repositories by health score into performance tiers.
+
+    The buckets overlap by design: every repository scoring below 40 is
+    also counted as needing attention.
+    """
+    high_performers = 0
+    healthy = 0
+    needs_attention = 0
+    critical = 0
+
+    for repo in repositories:
+        score = repo.health_score
+        if score >= 80:
+            high_performers += 1
+        if score >= 50 and score < 80:
+            healthy += 1
+        if score < 50:
+            needs_attention += 1
+        if score < 40:
+            critical += 1
+
+    return {
+        "high_performers": high_performers,
+        "healthy": healthy,
+        "needs_attention": needs_attention,
+        "critical": critical,
+    }
+
+
+def _build_repository_velocity_rows(
+    repositories: list[RepositoryVelocity],
+) -> list[dict]:
+    """Build the per-repository rows of the velocity dashboard."""
+    return [
+        {
+            "name": repo.repository_name,
+            "path": repo.repository_path,
+            "commits": repo.total_commits,
+            "commits_per_day": round(repo.avg_commits_per_day, 2),
+            "health_score": round(repo.health_score, 1),
+            "trend": repo.trend_direction,
+            "conventional_compliance": round(
+                repo.conventional_compliance_rate * 100, 1
+            ),
+        }
+        for repo in sorted(repositories, key=lambda r: r.health_score, reverse=True)
+    ]
+
+
+def _build_cross_project_pattern_rows(patterns: list) -> list[dict]:
+    """Build the cross-project pattern rows of the velocity dashboard."""
+    return [
+        {
+            "type": pattern.pattern_type,
+            "severity": pattern.severity,
+            "description": pattern.description,
+            "affected_count": len(pattern.affected_repositories),
+            "recommendation": pattern.recommendation,
+        }
+        for pattern in patterns
+    ]
 
 
 @mcp.tool()
@@ -865,113 +910,128 @@ def _analyze_conflict_patterns(
 ) -> list[dict]:
     patterns = []
 
+    config_pattern = _config_file_conflict_pattern(file_type_conflicts)
+    if config_pattern:
+        patterns.append(config_pattern)
+
+    lock_pattern = _lock_file_conflict_pattern(file_conflicts)
+    if lock_pattern:
+        patterns.append(lock_pattern)
+
+    large_file_pattern = _large_file_conflict_pattern(all_conflicts, file_conflicts)
+    if large_file_pattern:
+        patterns.append(large_file_pattern)
+
+    hotspot_pattern = _directory_hotspot_pattern(directory_conflicts)
+    if hotspot_pattern:
+        patterns.append(hotspot_pattern)
+
+    language_pattern = _language_specific_pattern(file_type_conflicts)
+    if language_pattern:
+        patterns.append(language_pattern)
+
+    return patterns
+
+
+def _conflict_percentage(count: int, totals: Counter) -> float:
+    """Percentage share of ``count`` within ``totals``, rounded to one decimal."""
+    if not totals:
+        return 0
+    return round(count / sum(totals.values()) * 100, 1)
+
+
+def _config_file_conflict_pattern(file_type_conflicts: Counter) -> dict | None:
+    """Detect a configuration-file conflict concentration pattern."""
     config_extensions = {".json", ".yaml", ".yml", ".toml", ".xml", ".ini", ".conf"}
     config_conflicts = sum(
         count for ext, count in file_type_conflicts.items() if ext in config_extensions
     )
-    if config_conflicts > 0:
-        patterns.append(
-            {
-                "pattern_type": "configuration_files",
-                "description": "Frequent conflicts in configuration files",
-                "count": config_conflicts,
-                "percentage": round(
-                    (config_conflicts / sum(file_type_conflicts.values()) * 100)
-                    if file_type_conflicts
-                    else 0,
-                    1,
-                ),
-                "severity": "medium"
-                if config_conflicts < sum(file_type_conflicts.values()) * 0.2
-                else "high",
-                "recommendation": "Use environment-specific configuration files and config management tools",
-            }
-        )
+    if config_conflicts <= 0:
+        return None
+    return {
+        "pattern_type": "configuration_files",
+        "description": "Frequent conflicts in configuration files",
+        "count": config_conflicts,
+        "percentage": _conflict_percentage(config_conflicts, file_type_conflicts),
+        "severity": "medium"
+        if config_conflicts < sum(file_type_conflicts.values()) * 0.2
+        else "high",
+        "recommendation": "Use environment-specific configuration files and config management tools",
+    }
 
+
+def _lock_file_conflict_pattern(file_conflicts: Counter) -> dict | None:
+    """Detect a dependency lock file conflict concentration pattern."""
     lock_files = sum(
         count
         for file_path, count in file_conflicts.items()
         if "lock" in file_path.lower()
     )
-    if lock_files > 0:
-        patterns.append(
-            {
-                "pattern_type": "lock_files",
-                "description": "Dependency lock file conflicts",
-                "count": lock_files,
-                "percentage": round(
-                    (lock_files / sum(file_conflicts.values()) * 100)
-                    if file_conflicts
-                    else 0,
-                    1,
-                ),
-                "severity": "low",
-                "recommendation": "Implement automated dependency update workflows to reduce concurrent lock changes",
-            }
-        )
+    if lock_files <= 0:
+        return None
+    return {
+        "pattern_type": "lock_files",
+        "description": "Dependency lock file conflicts",
+        "count": lock_files,
+        "percentage": _conflict_percentage(lock_files, file_conflicts),
+        "severity": "low",
+        "recommendation": "Implement automated dependency update workflows to reduce concurrent lock changes",
+    }
 
+
+def _large_file_conflict_pattern(
+    all_conflicts: list[dict], file_conflicts: Counter
+) -> dict | None:
+    """Detect conflicts concentrated in large files."""
     large_files = [
         c
         for c in all_conflicts
         if c.get("line_count", 0) > 500 or c.get("file_size", 0) > 50000
     ]
-    if large_files:
-        large_file_conflicts = sum(c["conflicts"] for c in large_files)
-        patterns.append(
-            {
-                "pattern_type": "large_files",
-                "description": "Conflicts in large files (>500 lines or 50KB)",
-                "count": large_file_conflicts,
-                "percentage": round(
-                    (large_file_conflicts / sum(file_conflicts.values()) * 100)
-                    if file_conflicts
-                    else 0,
-                    1,
-                ),
-                "severity": "high",
-                "recommendation": "Refactor large files into smaller modules to reduce conflict surface area",
-            }
-        )
+    if not large_files:
+        return None
+    large_file_conflicts = sum(c["conflicts"] for c in large_files)
+    return {
+        "pattern_type": "large_files",
+        "description": "Conflicts in large files (>500 lines or 50KB)",
+        "count": large_file_conflicts,
+        "percentage": _conflict_percentage(large_file_conflicts, file_conflicts),
+        "severity": "high",
+        "recommendation": "Refactor large files into smaller modules to reduce conflict surface area",
+    }
 
-    if directory_conflicts:
-        top_dir = directory_conflicts.most_common(1)[0]
-        patterns.append(
-            {
-                "pattern_type": "directory_hotspot",
-                "description": f"Directory '{top_dir[0]}' has highest conflict concentration",
-                "count": top_dir[1],
-                "percentage": round(
-                    (top_dir[1] / sum(directory_conflicts.values()) * 100)
-                    if directory_conflicts
-                    else 0,
-                    1,
-                ),
-                "severity": "medium",
-                "recommendation": f"Review ownership and modification patterns in '{top_dir[0]}' directory",
-            }
-        )
 
-    if file_type_conflicts:
-        top_type = file_type_conflicts.most_common(1)[0]
-        if top_type[0] != "(no extension)":
-            language = _detect_language(top_type[0])
-            patterns.append(
-                {
-                    "pattern_type": "language_specific",
-                    "description": f"High conflict rate in {language} files",
-                    "count": top_type[1],
-                    "percentage": round(
-                        (top_type[1] / sum(file_type_conflicts.values()) * 100)
-                        if file_type_conflicts
-                        else 0,
-                        1,
-                    ),
-                    "severity": "low",
-                    "recommendation": f"Review {language} code organization and team coordination practices",
-                }
-            )
+def _directory_hotspot_pattern(directory_conflicts: Counter) -> dict | None:
+    """Detect the directory holding the highest conflict concentration."""
+    if not directory_conflicts:
+        return None
+    top_dir = directory_conflicts.most_common(1)[0]
+    return {
+        "pattern_type": "directory_hotspot",
+        "description": f"Directory '{top_dir[0]}' has highest conflict concentration",
+        "count": top_dir[1],
+        "percentage": _conflict_percentage(top_dir[1], directory_conflicts),
+        "severity": "medium",
+        "recommendation": f"Review ownership and modification patterns in '{top_dir[0]}' directory",
+    }
 
-    return patterns
+
+def _language_specific_pattern(file_type_conflicts: Counter) -> dict | None:
+    """Detect a language-specific conflict concentration pattern."""
+    if not file_type_conflicts:
+        return None
+    top_type = file_type_conflicts.most_common(1)[0]
+    if top_type[0] == "(no extension)":
+        return None
+    language = _detect_language(top_type[0])
+    return {
+        "pattern_type": "language_specific",
+        "description": f"High conflict rate in {language} files",
+        "count": top_type[1],
+        "percentage": _conflict_percentage(top_type[1], file_type_conflicts),
+        "severity": "low",
+        "recommendation": f"Review {language} code organization and team coordination practices",
+    }
 
 
 def _expected_impact_to_int(impact: t.Any) -> int:
@@ -994,94 +1054,64 @@ def _generate_conflict_prevention_recommendations(
     recommendations = []
 
     critical_hotspots = [f for f in hotspot_files if f.get("threshold_exceeded", False)]
-    if critical_hotspots:
-        total_hotspot_conflicts = sum(f["conflicts"] for f in critical_hotspots)
-        expected_reduction = round(
-            (total_hotspot_conflicts / sum(file_conflicts.values()) * 100)
-            if file_conflicts
-            else 0,
-            1,
-        )
-        recommendations.append(
-            {
-                "priority": "high",
-                "action": "refactor_hotspots",
-                "title": "Refactor Critical Hotspot Files",
-                "description": f"Break down {len(critical_hotspots)} files that exceed 10% merge conflict threshold",
-                "affected_files": [f["path"] for f in critical_hotspots[:5]],
-                "expected_impact": f"{expected_reduction}% reduction in conflicts",
-                "effort": "high",
-                "implementation": "Split large files, extract modules, reduce coupling",
-            }
-        )
-
-    config_pattern = next(
-        (p for p in conflict_patterns if p["pattern_type"] == "configuration_files"),
-        None,
+    hotspot_recommendation = _hotspot_refactor_recommendation(
+        critical_hotspots, file_conflicts
     )
-    if config_pattern and config_pattern["severity"] == "high":
-        recommendations.append(
-            {
-                "priority": "medium",
-                "action": "config_management",
-                "title": "Implement Configuration Management",
-                "description": "Use environment-specific configs and schema validation",
-                "expected_impact": f"{config_pattern['percentage']}% reduction in config conflicts",
-                "effort": "medium",
-                "implementation": "Adopt config-as-pattern, use .env files, implement config validation",
-            }
-        )
+    if hotspot_recommendation:
+        recommendations.append(hotspot_recommendation)
 
-    lock_pattern = next(
-        (p for p in conflict_patterns if p["pattern_type"] == "lock_files"), None
+    config_recommendation = _pattern_recommendation(
+        conflict_patterns,
+        "configuration_files",
+        {
+            "priority": "medium",
+            "action": "config_management",
+            "title": "Implement Configuration Management",
+            "description": "Use environment-specific configs and schema validation",
+            "impact_template": "{percentage}% reduction in config conflicts",
+            "effort": "medium",
+            "implementation": "Adopt config-as-pattern, use .env files, implement config validation",
+        },
+        required_severity="high",
     )
-    if lock_pattern:
-        recommendations.append(
-            {
-                "priority": "low",
-                "action": "dependency_automation",
-                "title": "Automate Dependency Updates",
-                "description": "Schedule automated dependency updates to reduce concurrent lock changes",
-                "expected_impact": f"{lock_pattern['percentage']}% reduction in lock file conflicts",
-                "effort": "low",
-                "implementation": "Use Dependabot, Renovate, or similar tools",
-            }
-        )
+    if config_recommendation:
+        recommendations.append(config_recommendation)
 
-    large_pattern = next(
-        (p for p in conflict_patterns if p["pattern_type"] == "large_files"), None
+    dependency_recommendation = _pattern_recommendation(
+        conflict_patterns,
+        "lock_files",
+        {
+            "priority": "low",
+            "action": "dependency_automation",
+            "title": "Automate Dependency Updates",
+            "description": "Schedule automated dependency updates to reduce concurrent lock changes",
+            "impact_template": "{percentage}% reduction in lock file conflicts",
+            "effort": "low",
+            "implementation": "Use Dependabot, Renovate, or similar tools",
+        },
     )
-    if large_pattern:
-        recommendations.append(
-            {
-                "priority": "high",
-                "action": "large_file_refactoring",
-                "title": "Refactor Large Files",
-                "description": "Split files >500 lines into smaller, focused modules",
-                "expected_impact": f"{large_pattern['percentage']}% reduction in conflicts",
-                "effort": "high",
-                "implementation": "Apply Single Responsibility Principle, extract classes/functions",
-            }
-        )
+    if dependency_recommendation:
+        recommendations.append(dependency_recommendation)
 
-    if total_merges > 0:
-        overall_conflict_rate = (
-            sum(f["conflicts"] for f in hotspot_files) / total_merges
-            if total_merges > 0
-            else 0
-        )
-        if overall_conflict_rate > 0.2:
-            recommendations.append(
-                {
-                    "priority": "medium",
-                    "action": "branch_strategy_review",
-                    "title": "Review Branch Management Strategy",
-                    "description": "High overall conflict rate indicates need for better branch coordination",
-                    "expected_impact": "10-20% reduction through shorter-lived branches",
-                    "effort": "medium",
-                    "implementation": "Use trunk-based development, reduce branch lifetime, improve feature flags",
-                }
-            )
+    large_file_recommendation = _pattern_recommendation(
+        conflict_patterns,
+        "large_files",
+        {
+            "priority": "high",
+            "action": "large_file_refactoring",
+            "title": "Refactor Large Files",
+            "description": "Split files >500 lines into smaller, focused modules",
+            "impact_template": "{percentage}% reduction in conflicts",
+            "effort": "high",
+            "implementation": "Apply Single Responsibility Principle, extract classes/functions",
+        },
+    )
+    if large_file_recommendation:
+        recommendations.append(large_file_recommendation)
+
+    branch_recommendation = _branch_strategy_recommendation(hotspot_files, total_merges)
+    if branch_recommendation:
+        recommendations.append(branch_recommendation)
 
     priority_order = {"high": 0, "medium": 1, "low": 2}
     recommendations.sort(
@@ -1092,6 +1122,88 @@ def _generate_conflict_prevention_recommendations(
     )
 
     return recommendations
+
+
+def _hotspot_refactor_recommendation(
+    critical_hotspots: list[dict], file_conflicts: Counter
+) -> dict | None:
+    """Recommend refactoring the files that exceed the conflict threshold."""
+    if not critical_hotspots:
+        return None
+    total_hotspot_conflicts = sum(f["conflicts"] for f in critical_hotspots)
+    expected_reduction = round(
+        (total_hotspot_conflicts / sum(file_conflicts.values()) * 100)
+        if file_conflicts
+        else 0,
+        1,
+    )
+    return {
+        "priority": "high",
+        "action": "refactor_hotspots",
+        "title": "Refactor Critical Hotspot Files",
+        "description": f"Break down {len(critical_hotspots)} files that exceed 10% merge conflict threshold",
+        "affected_files": [f["path"] for f in critical_hotspots[:5]],
+        "expected_impact": f"{expected_reduction}% reduction in conflicts",
+        "effort": "high",
+        "implementation": "Split large files, extract modules, reduce coupling",
+    }
+
+
+def _pattern_recommendation(
+    conflict_patterns: list[dict],
+    pattern_type: str,
+    recommendation: dict,
+    required_severity: str | None = None,
+) -> dict | None:
+    """Build a recommendation from the first conflict pattern of ``pattern_type``.
+
+    ``recommendation`` carries the static payload; its ``impact_template`` is
+    rendered with the matched pattern's ``percentage`` to form the expected
+    impact. When ``required_severity`` is given, only a pattern of that
+    severity produces a recommendation.
+    """
+    pattern = next(
+        (p for p in conflict_patterns if p["pattern_type"] == pattern_type), None
+    )
+    if not pattern:
+        return None
+    if required_severity is not None and pattern["severity"] != required_severity:
+        return None
+    return {
+        "priority": recommendation["priority"],
+        "action": recommendation["action"],
+        "title": recommendation["title"],
+        "description": recommendation["description"],
+        "expected_impact": recommendation["impact_template"].format(
+            percentage=pattern["percentage"]
+        ),
+        "effort": recommendation["effort"],
+        "implementation": recommendation["implementation"],
+    }
+
+
+def _branch_strategy_recommendation(
+    hotspot_files: list[dict], total_merges: int
+) -> dict | None:
+    """Recommend a branch strategy review when the overall conflict rate is high."""
+    if total_merges <= 0:
+        return None
+    overall_conflict_rate = (
+        sum(f["conflicts"] for f in hotspot_files) / total_merges
+        if total_merges > 0
+        else 0
+    )
+    if overall_conflict_rate <= 0.2:
+        return None
+    return {
+        "priority": "medium",
+        "action": "branch_strategy_review",
+        "title": "Review Branch Management Strategy",
+        "description": "High overall conflict rate indicates need for better branch coordination",
+        "expected_impact": "10-20% reduction through shorter-lived branches",
+        "effort": "medium",
+        "implementation": "Use trunk-based development, reduce branch lifetime, improve feature flags",
+    }
 
 
 def _generate_merge_recommendations(
@@ -2672,85 +2784,103 @@ def _create_health_recommendations(
     large_files: list[dict],
     stale_branches: list[dict],
 ) -> list[dict]:
-    recommendations = []
-
-    low_activity_count = len(
-        [r for r in health_data if r["component_scores"]["activity"] < 60]
-    )
-    if low_activity_count > 0:
-        recommendations.append(
-            {
-                "category": "activity",
-                "priority": "high"
-                if low_activity_count > len(health_data) * 0.5
-                else "medium",
-                "recommendation": f"{low_activity_count} repositories have low activity - "
-                f"review CI/CD bottlenecks",
-                "expected_impact": "Improved velocity and developer engagement",
-                "affected_repositories": low_activity_count,
-            }
+    recommendations = [
+        recommendation
+        for recommendation in (
+            _activity_recommendation(health_data),
+            _quality_recommendation(health_data),
+            _workflow_recommendation(health_data),
+            _hygiene_recommendation(stale_branches),
+            _code_quality_recommendation(large_files),
         )
-
-    low_compliance_count = len(
-        [r for r in health_data if r["metrics"]["commits"]["conventional_rate"] < 70]
-    )
-    if low_compliance_count > 0:
-        recommendations.append(
-            {
-                "category": "quality",
-                "priority": "high",
-                "recommendation": f"{low_compliance_count} repositories have low "
-                f"conventional compliance - implement commit linting",
-                "expected_impact": "Better changelogs and commit clarity",
-                "affected_repositories": low_compliance_count,
-            }
-        )
-
-    high_conflict_repos = [
-        r for r in health_data if r["metrics"]["merges"]["conflict_rate"] > 15
+        if recommendation
     ]
-    if high_conflict_repos:
-        recommendations.append(
-            {
-                "category": "workflow",
-                "priority": "critical",
-                "recommendation": f"{len(high_conflict_repos)} repositories have high "
-                f"conflict rates - consider feature flags",
-                "expected_impact": "Reduced merge time and conflicts",
-                "affected_repositories": len(high_conflict_repos),
-            }
-        )
-
-    if stale_branches:
-        critical_stale = len([b for b in stale_branches if b["severity"] == "critical"])
-        recommendations.append(
-            {
-                "category": "hygiene",
-                "priority": "high" if critical_stale > 0 else "medium",
-                "recommendation": f"{len(stale_branches)} stale branches detected "
-                f"({critical_stale} critical) - implement branch cleanup policy",
-                "expected_impact": "Cleaner repository and reduced confusion",
-                "affected_repositories": len({b["repository"] for b in stale_branches}),
-            }
-        )
-
-    if large_files:
-        critical_large = len([f for f in large_files if f["severity"] == "critical"])
-        recommendations.append(
-            {
-                "category": "code_quality",
-                "priority": "high" if critical_large > 0 else "low",
-                "recommendation": f"{len(large_files)} large files detected - "
-                f"consider Git LFS or refactoring",
-                "expected_impact": "Smaller repository size and faster clones",
-                "affected_repositories": len({f["repository"] for f in large_files}),
-            }
-        )
 
     priority_order = {"critical": 0, "high": 1, "medium": 2, "low": 3}
     recommendations.sort(key=lambda r: priority_order.get(r["priority"], 4))
 
     return recommendations[:15]
+
+
+def _activity_recommendation(health_data: list[dict]) -> dict | None:
+    """Recommend a CI/CD review for repositories showing low activity."""
+    low_activity_count = len(
+        [r for r in health_data if r["component_scores"]["activity"] < 60]
+    )
+    if low_activity_count <= 0:
+        return None
+    return {
+        "category": "activity",
+        "priority": "high" if low_activity_count > len(health_data) * 0.5 else "medium",
+        "recommendation": f"{low_activity_count} repositories have low activity - "
+        f"review CI/CD bottlenecks",
+        "expected_impact": "Improved velocity and developer engagement",
+        "affected_repositories": low_activity_count,
+    }
+
+
+def _quality_recommendation(health_data: list[dict]) -> dict | None:
+    """Recommend commit linting for repositories with low commit compliance."""
+    low_compliance_count = len(
+        [r for r in health_data if r["metrics"]["commits"]["conventional_rate"] < 70]
+    )
+    if low_compliance_count <= 0:
+        return None
+    return {
+        "category": "quality",
+        "priority": "high",
+        "recommendation": f"{low_compliance_count} repositories have low "
+        f"conventional compliance - implement commit linting",
+        "expected_impact": "Better changelogs and commit clarity",
+        "affected_repositories": low_compliance_count,
+    }
+
+
+def _workflow_recommendation(health_data: list[dict]) -> dict | None:
+    """Recommend feature flags for repositories with high conflict rates."""
+    high_conflict_repos = [
+        r for r in health_data if r["metrics"]["merges"]["conflict_rate"] > 15
+    ]
+    if not high_conflict_repos:
+        return None
+    return {
+        "category": "workflow",
+        "priority": "critical",
+        "recommendation": f"{len(high_conflict_repos)} repositories have high "
+        f"conflict rates - consider feature flags",
+        "expected_impact": "Reduced merge time and conflicts",
+        "affected_repositories": len(high_conflict_repos),
+    }
+
+
+def _hygiene_recommendation(stale_branches: list[dict]) -> dict | None:
+    """Recommend a branch cleanup policy when stale branches are detected."""
+    if not stale_branches:
+        return None
+    critical_stale = len([b for b in stale_branches if b["severity"] == "critical"])
+    return {
+        "category": "hygiene",
+        "priority": "high" if critical_stale > 0 else "medium",
+        "recommendation": f"{len(stale_branches)} stale branches detected "
+        f"({critical_stale} critical) - implement branch cleanup policy",
+        "expected_impact": "Cleaner repository and reduced confusion",
+        "affected_repositories": len({b["repository"] for b in stale_branches}),
+    }
+
+
+def _code_quality_recommendation(large_files: list[dict]) -> dict | None:
+    """Recommend Git LFS or refactoring when large files are detected."""
+    if not large_files:
+        return None
+    critical_large = len([f for f in large_files if f["severity"] == "critical"])
+    return {
+        "category": "code_quality",
+        "priority": "high" if critical_large > 0 else "low",
+        "recommendation": f"{len(large_files)} large files detected - "
+        f"consider Git LFS or refactoring",
+        "expected_impact": "Smaller repository size and faster clones",
+        "affected_repositories": len({f["repository"] for f in large_files}),
+    }
 
 
 __all__ = ["mcp"]
@@ -2955,65 +3085,87 @@ def _correlate_quality_metrics(repo_workflow_data: list[dict]) -> dict:
     if not repo_workflow_data:
         return {}
 
-    correlations = []
+    correlations = [
+        _build_correlation_item(repo_data) for repo_data in repo_workflow_data
+    ]
 
-    for repo_data in repo_workflow_data:
-        velocity = repo_data["velocity"]
-        merge_metrics = repo_data.get("merge_metrics")
-
-        correlation_item = {
-            "repository": velocity.repository_name,
-            "health_score": velocity.health_score,
-            "velocity": velocity.avg_commits_per_day,
-            "compliance": velocity.conventional_compliance_rate,
-            "conflict_rate": velocity.merge_conflict_rate,
-        }
-
-        if merge_metrics:
-            correlation_item["merge_success_rate"] = merge_metrics.merge_success_rate
-            correlation_item["conflict_files_count"] = len(
-                merge_metrics.most_conflicted_files
-            )
-
-        correlations.append(correlation_item)
-
-    high_health = [c for c in correlations if c["health_score"] >= 70]
-    low_health = [c for c in correlations if c["health_score"] < 50]
-
-    if high_health and low_health:
-        avg_velocity_high = sum(c["velocity"] for c in high_health) / len(high_health)
-        avg_velocity_low = sum(c["velocity"] for c in low_health) / len(low_health)
-
-        avg_conflict_high = sum(c["conflict_rate"] for c in high_health) / len(
-            high_health
-        )
-        avg_conflict_low = sum(c["conflict_rate"] for c in low_health) / len(low_health)
-
-        insights = []
-        if avg_velocity_high > avg_velocity_low * 1.5:
-            insights.append(
-                f"High-health repos have {avg_velocity_high / avg_velocity_low:.1f}x higher velocity"
-            )
-
-        if avg_conflict_high < avg_conflict_low * 0.7:
-            insights.append(
-                f"High-health repos have {avg_conflict_low / avg_conflict_high:.1f}x lower conflict rate"
-            )
-    else:
-        insights = ["Insufficient data for correlation analysis"]
+    high_health, low_health = _partition_by_health(correlations)
 
     return {
         "correlations": correlations,
-        "insights": insights,
-        "summary": {
-            "high_health_count": len(high_health),
-            "low_health_count": len(low_health),
-            "avg_health_score": round(
-                sum(c["health_score"] for c in correlations) / len(correlations), 1
-            )
-            if correlations
-            else 0.0,
-        },
+        "insights": _derive_correlation_insights(high_health, low_health),
+        "summary": _summarize_correlation_health(correlations, high_health, low_health),
+    }
+
+
+def _build_correlation_item(repo_data: dict) -> dict:
+    """Build the correlation record for a single repository."""
+    velocity = repo_data["velocity"]
+    merge_metrics = repo_data.get("merge_metrics")
+
+    correlation_item = {
+        "repository": velocity.repository_name,
+        "health_score": velocity.health_score,
+        "velocity": velocity.avg_commits_per_day,
+        "compliance": velocity.conventional_compliance_rate,
+        "conflict_rate": velocity.merge_conflict_rate,
+    }
+
+    if merge_metrics:
+        correlation_item["merge_success_rate"] = merge_metrics.merge_success_rate
+        correlation_item["conflict_files_count"] = len(
+            merge_metrics.most_conflicted_files
+        )
+
+    return correlation_item
+
+
+def _partition_by_health(correlations: list[dict]) -> tuple[list[dict], list[dict]]:
+    """Split correlation rows into high-health and low-health buckets."""
+    high_health = [c for c in correlations if c["health_score"] >= 70]
+    low_health = [c for c in correlations if c["health_score"] < 50]
+    return high_health, low_health
+
+
+def _derive_correlation_insights(
+    high_health: list[dict], low_health: list[dict]
+) -> list[str]:
+    """Derive velocity and conflict insights from the health buckets."""
+    if not high_health or not low_health:
+        return ["Insufficient data for correlation analysis"]
+
+    avg_velocity_high = sum(c["velocity"] for c in high_health) / len(high_health)
+    avg_velocity_low = sum(c["velocity"] for c in low_health) / len(low_health)
+
+    avg_conflict_high = sum(c["conflict_rate"] for c in high_health) / len(high_health)
+    avg_conflict_low = sum(c["conflict_rate"] for c in low_health) / len(low_health)
+
+    insights = []
+    if avg_velocity_high > avg_velocity_low * 1.5:
+        insights.append(
+            f"High-health repos have {avg_velocity_high / avg_velocity_low:.1f}x higher velocity"
+        )
+
+    if avg_conflict_high < avg_conflict_low * 0.7:
+        insights.append(
+            f"High-health repos have {avg_conflict_low / avg_conflict_high:.1f}x lower conflict rate"
+        )
+
+    return insights
+
+
+def _summarize_correlation_health(
+    correlations: list[dict], high_health: list[dict], low_health: list[dict]
+) -> dict:
+    """Summarise the health distribution of the correlated repositories."""
+    return {
+        "high_health_count": len(high_health),
+        "low_health_count": len(low_health),
+        "avg_health_score": round(
+            sum(c["health_score"] for c in correlations) / len(correlations), 1
+        )
+        if correlations
+        else 0.0,
     }
 
 

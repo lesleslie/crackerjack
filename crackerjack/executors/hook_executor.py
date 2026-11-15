@@ -1705,44 +1705,73 @@ class HookExecutor:
                 continue
 
             for pkg in packages:
-                if not isinstance(pkg, dict):
-                    continue
-                package = pkg.get("package")
-                if not isinstance(package, dict):
-                    continue
-                package_name = t.cast(str, package.get("name", "unknown"))
-                package_version = t.cast(str, package.get("version", "unknown"))
-
-                vulns = pkg.get("vulnerabilities")
-                if not isinstance(vulns, list):
-                    continue
-                for vuln in vulns:
-                    if not isinstance(vuln, dict):
-                        continue
-                    vuln_id = t.cast(str, vuln.get("id", "unknown"))
-                    aliases_raw = vuln.get("aliases", [])
-                    aliases = (
-                        t.cast(list[object], aliases_raw)
-                        if isinstance(aliases_raw, list)
-                        else []
-                    )
-                    summary = t.cast(str, vuln.get("summary", ""))
-
-                    all_ids = {vuln_id, *{a for a in aliases if isinstance(a, str)}}
-                    if all_ids & ignore_vulns:
-                        continue
-
-                    issue_msg = self._format_osv_vulnerability_message(
-                        package_name,
-                        package_version,
-                        vuln_id,
-                        aliases,
-                        summary,
-                        source_path,
-                    )
-                    issues.append(issue_msg)
+                issues.extend(
+                    self._extract_osv_package_issues(pkg, source_path, ignore_vulns)
+                )
 
         return issues
+
+    def _extract_osv_package_issues(
+        self,
+        pkg: object,
+        source_path: str,
+        ignore_vulns: set[str],
+    ) -> list[str]:
+        if not isinstance(pkg, dict):
+            return []
+        package = pkg.get("package")
+        if not isinstance(package, dict):
+            return []
+        package_name = t.cast(str, package.get("name", "unknown"))
+        package_version = t.cast(str, package.get("version", "unknown"))
+
+        vulns = pkg.get("vulnerabilities")
+        if not isinstance(vulns, list):
+            return []
+
+        issues: list[str] = []
+        for vuln in vulns:
+            issue_msg = self._extract_osv_vuln_issue(
+                vuln,
+                package_name,
+                package_version,
+                source_path,
+                ignore_vulns,
+            )
+            if issue_msg is not None:
+                issues.append(issue_msg)
+
+        return issues
+
+    def _extract_osv_vuln_issue(
+        self,
+        vuln: object,
+        package_name: str,
+        package_version: str,
+        source_path: str,
+        ignore_vulns: set[str],
+    ) -> str | None:
+        if not isinstance(vuln, dict):
+            return None
+        vuln_id = t.cast(str, vuln.get("id", "unknown"))
+        aliases_raw = vuln.get("aliases", [])
+        aliases = (
+            t.cast(list[object], aliases_raw) if isinstance(aliases_raw, list) else []
+        )
+        summary = t.cast(str, vuln.get("summary", ""))
+
+        all_ids = {vuln_id, *{a for a in aliases if isinstance(a, str)}}
+        if all_ids & ignore_vulns:
+            return None
+
+        return self._format_osv_vulnerability_message(
+            package_name,
+            package_version,
+            vuln_id,
+            aliases,
+            summary,
+            source_path,
+        )
 
     @staticmethod
     def _format_osv_vulnerability_message(

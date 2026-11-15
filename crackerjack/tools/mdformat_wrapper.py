@@ -43,17 +43,12 @@ def should_skip_file(file_path: Path) -> bool:
     return stripped == "---" or (len(stripped) >= 3 and set(stripped) == {"_"})
 
 
-def main(argv: list[str] | None = None) -> int:
-    md_files = get_git_tracked_files("*.md")
-    markdown_files = get_git_tracked_files("*.markdown")
-    all_files = md_files + markdown_files
+def _build_mdformat_cmd(files: list[Path], argv: list[str] | None) -> list[str]:
+    """Assemble the mdformat command line for ``files``.
 
-    files = [f for f in all_files if not should_skip_file(f)]
-
-    if not files:
-        print("No git-tracked markdown files found", file=sys.stderr)
-        return 0
-
+    Prefers the repo's own ``.venv`` binary and falls back to whatever
+    ``mdformat`` is on ``PATH``.
+    """
     mdformat_bin = Path.cwd() / ".venv" / "bin" / "mdformat"
     if mdformat_bin.exists():
         cmd = [str(mdformat_bin), "--no-codeformatters"]
@@ -65,6 +60,72 @@ def main(argv: list[str] | None = None) -> int:
         cmd.extend(argv)
 
     cmd.extend([str(f) for f in files])
+    return cmd
+
+
+def _report_auto_formatted(files: list[Path]) -> None:
+    """Report the files mdformat just rewrote."""
+    # Silent auto-format path: surface what was changed so the
+    # next "mdformat (failed)" message has substance.
+    #
+    # Two downstream parsers both see this output:
+    #
+    # 1. ``crackerjack/parsers/regex_parsers.py`` (regex parser).
+    #    Returns 0 issues because the success marker ``✓`` and
+    #    the substring ``passed`` short-circuit the
+    #    ``success_indicators`` check at
+    #    ``crackerjack/parsers/regex_parsers.py:326``.
+    #
+    # 2. ``crackerjack/utils/issue_detection.extract_issue_lines``
+    #    (line-counting safety net). The ``✓`` prefix hits the
+    #    ``_SUCCESS_PREFIXES`` filter at
+    #    ``crackerjack/utils/issue_detection.py:11`` so each
+    #    diagnostic line is excluded from the count.
+    #
+    # The literal ``files were modified by this hook`` substring
+    # is also emitted because
+    # ``crackerjack/executors/hook_executor.py:802`` requires
+    # it for any hook marked ``is_formatting=True`` that exits 1:
+    # without it the panel re-routes exit-1 to status="failed".
+    try:
+        diff = subprocess.run(
+            ["git", "diff", "--name-only"] + [str(f) for f in files],
+            cwd=Path.cwd(),
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        changed = [line for line in diff.stdout.splitlines() if line.strip()]
+        print(
+            f"✓ mdformat: PASSED hook after auto-formatted "
+            f"{len(changed)} file(s) (re-run to confirm clean "
+            f"state): files were modified by this hook",
+            file=sys.stderr,
+        )
+        for line in changed:
+            print(f"✓   {line}", file=sys.stderr)
+    except Exception:
+        # don't crash the hook just because git wasn't available
+        print(
+            "✓ mdformat: PASSED hook after auto-formatted "
+            "<unknown> (git unavailable): files were modified "
+            "by this hook",
+            file=sys.stderr,
+        )
+
+
+def main(argv: list[str] | None = None) -> int:
+    md_files = get_git_tracked_files("*.md")
+    markdown_files = get_git_tracked_files("*.markdown")
+    all_files = md_files + markdown_files
+
+    files = [f for f in all_files if not should_skip_file(f)]
+
+    if not files:
+        print("No git-tracked markdown files found", file=sys.stderr)
+        return 0
+
+    cmd = _build_mdformat_cmd(files, argv)
 
     try:
         check_cmd = [*cmd, "--check"]
@@ -79,8 +140,6 @@ def main(argv: list[str] | None = None) -> int:
         if check_result.returncode == 0:
             return 0
 
-        needs_formatting = True
-
         format_result = subprocess.run(
             cmd,
             cwd=Path.cwd(),
@@ -91,56 +150,8 @@ def main(argv: list[str] | None = None) -> int:
 
         if format_result.stderr:
             print(format_result.stderr, file=sys.stderr)
-        if needs_formatting:
-            # Silent auto-format path: surface what was changed so the
-            # next "mdformat (failed)" message has substance.
-            #
-            # Two downstream parsers both see this output:
-            #
-            # 1. ``crackerjack/parsers/regex_parsers.py`` (regex parser).
-            #    Returns 0 issues because the success marker ``✓`` and
-            #    the substring ``passed`` short-circuit the
-            #    ``success_indicators`` check at
-            #    ``crackerjack/parsers/regex_parsers.py:326``.
-            #
-            # 2. ``crackerjack/utils/issue_detection.extract_issue_lines``
-            #    (line-counting safety net). The ``✓`` prefix hits the
-            #    ``_SUCCESS_PREFIXES`` filter at
-            #    ``crackerjack/utils/issue_detection.py:11`` so each
-            #    diagnostic line is excluded from the count.
-            #
-            # The literal ``files were modified by this hook`` substring
-            # is also emitted because
-            # ``crackerjack/executors/hook_executor.py:802`` requires
-            # it for any hook marked ``is_formatting=True`` that exits 1:
-            # without it the panel re-routes exit-1 to status="failed".
-            try:
-                diff = subprocess.run(
-                    ["git", "diff", "--name-only"] + [str(f) for f in files],
-                    cwd=Path.cwd(),
-                    capture_output=True,
-                    text=True,
-                    check=False,
-                )
-                changed = [line for line in diff.stdout.splitlines() if line.strip()]
-                print(
-                    f"✓ mdformat: PASSED hook after auto-formatted "
-                    f"{len(changed)} file(s) (re-run to confirm clean "
-                    f"state): files were modified by this hook",
-                    file=sys.stderr,
-                )
-                for line in changed:
-                    print(f"✓   {line}", file=sys.stderr)
-            except Exception:
-                # don't crash the hook just because git wasn't available
-                print(
-                    "✓ mdformat: PASSED hook after auto-formatted "
-                    "<unknown> (git unavailable): files were modified "
-                    "by this hook",
-                    file=sys.stderr,
-                )
-            return 1
-        return 0
+        _report_auto_formatted(files)
+        return 1
     except FileNotFoundError:
         return 127
     except Exception as e:
