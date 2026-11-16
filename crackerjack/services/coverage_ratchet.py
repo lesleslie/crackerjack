@@ -85,8 +85,20 @@ class CoverageRatchetService(CoverageRatchetProtocol):
     def set_custom_metric(self, name: str, value: t.Any) -> None:
         pass
 
-    def initialize_baseline(self, initial_coverage: float) -> None:
-        if self.ratchet_file.exists():
+    def initialize_baseline(self, initial_coverage: float, force: bool = False) -> None:
+        """Write a fresh ratchet at ``initial_coverage``.
+
+        ``force`` overwrites an existing ratchet. Without it this is a
+        no-op when the file is already there — which is what made
+        ``crackerjack coverage-ratchet init --reinit`` print "Ratchet
+        initialized" while leaving the file byte-identical: the
+        command's own "already exists" guard was the only thing
+        ``--reinit`` bypassed, and the write underneath it
+        early-returned. It then mirrored the coverage number into
+        pyproject.toml, so the enforced floor and the ratchet
+        disagreed.
+        """
+        if self.ratchet_file.exists() and not force:
             return
 
         ratchet_data: dict[str, t.Any] = {

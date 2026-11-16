@@ -49,7 +49,10 @@ def init(
         raise typer.Exit(1)
     data = json.loads(coverage_file.read_text())
     coverage = float(data.get("totals", {}).get("percent_covered", 0.0))
-    svc.initialize_baseline(coverage)
+    # ``force`` is what makes ``--reinit`` actually reinitialize: without
+    # it the write underneath early-returns on an existing file, and the
+    # command reports success while changing nothing.
+    svc.initialize_baseline(coverage, force=reinit)
     try:
         svc.mirror_to_pyproject(coverage)
         # Symmetrize with auto-bump path: trim trailing whitespace/newlines.

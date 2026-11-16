@@ -37,6 +37,33 @@ def test_init_refuses_overwrite_without_reinit(tmp_path: Path) -> None:
 
 
 @pytest.mark.unit
+def test_init_with_reinit_actually_rewrites_the_ratchet(tmp_path: Path) -> None:
+    """``--reinit`` must rewrite the file, not just report that it did.
+
+    The command's own "already exists" guard was the only thing
+    ``--reinit`` bypassed; the write underneath it early-returned, so
+    the ratchet came out byte-identical while the command printed
+    "Ratchet initialized" and mirrored a new floor into pyproject.
+    """
+    (tmp_path / "coverage.json").write_text(
+        json.dumps({"totals": {"percent_covered": 62.0}})
+    )
+    (tmp_path / ".coverage-ratchet.json").write_text(
+        json.dumps({"baseline": 50.0, "current_minimum": 50.0})
+    )
+    before = (tmp_path / ".coverage-ratchet.json").read_text()
+
+    result = runner.invoke(app, ["init", "--reinit", "--pkg-path", str(tmp_path)])
+
+    assert result.exit_code == 0, result.output
+    after = (tmp_path / ".coverage-ratchet.json").read_text()
+    assert after != before, "the ratchet was not rewritten"
+    ratchet = json.loads(after)
+    assert ratchet["baseline"] == 62.0
+    assert ratchet["current_minimum"] == 62.0
+
+
+@pytest.mark.unit
 def test_lower_requires_reason(tmp_path: Path) -> None:
     (tmp_path / "coverage.json").write_text(
         json.dumps({"totals": {"percent_covered": 50.0}})
