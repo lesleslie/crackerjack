@@ -10,6 +10,21 @@ blocks_on: []
 topic: changelog
 ---
 
+## [0.95.0] - 2026-11-16
+
+### Changed
+
+- Fix/archive-lifecycle-gate -> main
+
+### Fixed
+
+- crackerjack: Make the doc generator work from a worktree
+- crackerjack: Stop the refurb hook reporting findings in test files
+
+### Documentation
+
+- config: Document the archivable_statuses escape hatch
+
 ## [0.94.0] - 2026-11-15
 
 ### Added
