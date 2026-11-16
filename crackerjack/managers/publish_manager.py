@@ -27,6 +27,13 @@ from crackerjack.utils.path_redaction import redact_path
 
 logger = logging.getLogger(__name__)
 
+#: Repo-local convention: a repo that keeps version claims in its docs ships
+#: this script at the repo root. It reads the version from pyproject.toml and
+#: rewrites the claims, so a release can never bump the version without
+#: moving the claims with it. Repos that keep no claims do not ship it, and
+#: the release path skips the step entirely.
+_VERSION_STAMP_SCRIPT = Path("scripts") / "stamp_version.py"
+
 if t.TYPE_CHECKING:
     from crackerjack.services.git import GitService
     from crackerjack.services.pypistats_service import DownloadTrendClass
@@ -460,6 +467,11 @@ class PublishManagerImpl:
                 self._update_python_version_files(new_version)
 
                 self._update_changelog_for_version(current_version, new_version)
+
+                # Last: a failure above rolls back before any claim is
+                # rewritten, so the rollback never has to restore a document
+                # it did not write.
+                self._stamp_version_claims()
             except Exception:
                 self._restore_bump_files(bump_snapshot)
                 raise
@@ -468,6 +480,50 @@ class PublishManagerImpl:
         except Exception as e:
             self.console.print(f"[red]❌[/red] Version bump failed: {e}")
             raise
+
+    def _stamp_version_claims(self) -> None:
+        """Re-stamp the repo's version claims after the version bump.
+
+        A release bumps ``version`` in ``pyproject.toml``; every doc surface
+        that carries a version claim has to move with it. When it does not,
+        the repo's own version-consistency guard fails on the freshly-bumped
+        main — so the release commit is red on the branch the next release
+        starts from, and the drift stays invisible until someone reads the
+        failing test. That is not hypothetical: the fleet accumulated
+        eleven releases of drift on one README before this existed.
+
+        Repos that keep version claims provide ``scripts/stamp_version.py``:
+        it reads the version from pyproject and rewrites the claims. That is
+        a repo-local convention, so its absence is a no-op — the release
+        path stays usable in repos that keep no claims.
+
+        When the script is present, a failure aborts the release. A release
+        that leaves the claims behind is the exact drift this closes, so
+        failing loud beats publishing a version whose docs disagree with it.
+
+        Runs last in the bump sequence: a failure in the version write or in
+        the changelog rolls back before any claim is rewritten, so the
+        rollback never has to restore a document it did not write.
+        """
+        script = self.pkg_path / _VERSION_STAMP_SCRIPT
+        if not script.is_file():
+            return
+
+        result = self._run_command([sys.executable, str(script), str(self.pkg_path)])
+        if result.returncode != 0:
+            detail = (result.stderr or result.stdout or "").strip()
+            self.console.print(
+                f"[red]❌[/red] Version stamp failed: {script.name} exited {result.returncode}",
+            )
+            if detail:
+                self.console.print(f"[red]{detail}[/red]")
+            msg = (
+                f"{_VERSION_STAMP_SCRIPT.as_posix()} failed with exit code "
+                f"{result.returncode}"
+            )
+            raise RuntimeError(msg)
+
+        self.console.print("[green]✅[/green] Re-stamped version claims")
 
     def _snapshot_bump_files(self) -> dict[Path, str | None]:
         """Read the version-bearing files before mutation.
