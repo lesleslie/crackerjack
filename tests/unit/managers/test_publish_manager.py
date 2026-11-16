@@ -900,12 +900,18 @@ class TestPublishManagerUtilities:
         mock_changelog_gen.generate_changelog_from_commits.assert_called_once()
 
     def test_update_changelog_for_version_failure(self, manager) -> None:
-        """Test updating changelog when generation fails."""
+        """Test updating changelog when generation fails.
+
+        The exception propagates: the bump has already written the new
+        version to pyproject, so swallowing it here would ship a bumped
+        version with no changelog entry. Letting it escape is what lets
+        ``_perform_bump`` roll the version write back.
+        """
         mock_changelog_gen = Mock()
         mock_changelog_gen.generate_changelog_from_commits.side_effect = Exception(
             "Generation failed",
         )
         manager._changelog_generator = mock_changelog_gen
 
-        # Should not raise exception
-        manager._update_changelog_for_version("1.2.3", "1.2.4")
+        with pytest.raises(Exception, match="Generation failed"):
+            manager._update_changelog_for_version("1.2.3", "1.2.4")

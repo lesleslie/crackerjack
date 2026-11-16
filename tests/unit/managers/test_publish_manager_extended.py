@@ -576,11 +576,17 @@ class TestPublishManagerChangelog:
         manager._update_changelog_for_version("1.2.3", "1.2.4")
 
     def test_update_changelog_exception(self, manager) -> None:
-        """Test changelog update with exception."""
+        """A crashing changelog generator propagates to the caller.
+
+        The bump has already written the new version to pyproject when the
+        changelog runs, so swallowing the exception left the version bumped
+        with no changelog entry. Letting it escape is what lets
+        ``_perform_bump`` roll the version write back.
+        """
         manager._changelog_generator.generate_changelog_from_commits.side_effect = Exception("Test error")
 
-        # Should not raise
-        manager._update_changelog_for_version("1.2.3", "1.2.4")
+        with pytest.raises(Exception, match="Test error"):
+            manager._update_changelog_for_version("1.2.3", "1.2.4")
 
 
 @pytest.mark.unit

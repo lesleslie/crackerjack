@@ -750,12 +750,19 @@ class TestPublishManagerChangelogFailure:
         manager.console.print.assert_called()
 
     def test_changelog_generator_raises(self, tmp_path: Path) -> None:
+        """A crashing changelog generator propagates to the caller.
+
+        The bump writes the new version to pyproject before the changelog
+        runs, so swallowing the exception shipped a bumped version with no
+        changelog entry. Letting it escape is what lets ``_perform_bump``
+        roll the version write back.
+        """
         manager = _make_manager(tmp_path)
         manager._changelog_generator.generate_changelog_from_commits.side_effect = (
             RuntimeError("changelog engine offline")
         )
-        # Should swallow the exception and not raise.
-        manager._update_changelog_for_version("1.0.0", "1.0.1")
+        with pytest.raises(RuntimeError, match="changelog engine offline"):
+            manager._update_changelog_for_version("1.0.0", "1.0.1")
         manager.console.print.assert_called()
 
 

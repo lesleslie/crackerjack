@@ -10,10 +10,16 @@ point where the drift is created: the bump itself. Repos that keep no
 version claims ship no ``scripts/stamp_version.py`` and the step is a
 no-op; repos that do ship it cannot publish a version whose docs disagree
 with it, because a failing stamp aborts the release.
+
+The stamper is repo-local code, so the release path only runs it when the
+operator committed it deliberately: a regular file inside the repo root,
+tracked by git. Those tests are here too — an untracked file sitting on
+disk must never run.
 """
 
 from __future__ import annotations
 
+import subprocess
 import sys
 from pathlib import Path
 from unittest.mock import Mock, patch
@@ -56,6 +62,10 @@ sys.exit(2)
 """
 
 
+def _git(root: Path, *args: str) -> None:
+    subprocess.run(["git", "-C", str(root), *args], check=True, capture_output=True)
+
+
 def _write_repo(root: Path, *, stamp_script: str | None) -> Path:
     """Lay out a minimal repo: pyproject, a README claim, maybe a stamper."""
     (root / "pyproject.toml").write_text(
@@ -66,6 +76,15 @@ def _write_repo(root: Path, *, stamp_script: str | None) -> Path:
         scripts = root / "scripts"
         scripts.mkdir(exist_ok=True)
         (scripts / "stamp_version.py").write_text(stamp_script)
+    return root
+
+
+def _make_tracked_repo(root: Path, *, stamp_script: str | None) -> Path:
+    """A repo whose stamper is committed — the operator opted in."""
+    _write_repo(root, stamp_script=stamp_script)
+    _git(root, "init", "-q")
+    if stamp_script is not None:
+        _git(root, "add", "--", "scripts/stamp_version.py")
     return root
 
 
@@ -88,7 +107,7 @@ class TestVersionClaimStamping:
 
     def test_bump_moves_the_claim_with_the_version(self, tmp_path: Path) -> None:
         """The claim surface ends the bump carrying the new version."""
-        root = _write_repo(tmp_path, stamp_script=_FAKE_STAMP_SCRIPT)
+        root = _make_tracked_repo(tmp_path, stamp_script=_FAKE_STAMP_SCRIPT)
         manager = _make_manager(root)
 
         new_version = manager._perform_bump("0.1.0", "patch")
@@ -98,7 +117,7 @@ class TestVersionClaimStamping:
 
     def test_bump_invokes_the_stamper_with_the_repo_root(self, tmp_path: Path) -> None:
         """The script is called with the repo root, not the caller's cwd."""
-        root = _write_repo(tmp_path, stamp_script=_FAKE_STAMP_SCRIPT)
+        root = _make_tracked_repo(tmp_path, stamp_script=_FAKE_STAMP_SCRIPT)
         manager = _make_manager(root)
 
         with patch.object(
@@ -108,15 +127,20 @@ class TestVersionClaimStamping:
         ) as run_command:
             manager._perform_bump("0.1.0", "patch")
 
-        assert run_command.call_count == 1
-        command = run_command.call_args[0][0]
+        stamp_calls = [
+            call
+            for call in run_command.call_args_list
+            if str(call[0][0][1]).endswith("stamp_version.py")
+        ]
+        assert len(stamp_calls) == 1
+        command = stamp_calls[0][0][0]
         assert command[0] == sys.executable
         assert command[1] == str(root / "scripts" / "stamp_version.py")
         assert command[2] == str(root)
 
     def test_bump_without_a_stamper_is_a_no_op(self, tmp_path: Path) -> None:
         """A repo that keeps no version claims publishes without the step."""
-        root = _write_repo(tmp_path, stamp_script=None)
+        root = _make_tracked_repo(tmp_path, stamp_script=None)
         manager = _make_manager(root)
 
         new_version = manager._perform_bump("0.1.0", "patch")
@@ -124,9 +148,35 @@ class TestVersionClaimStamping:
         assert new_version == "0.1.1"
         assert 'version = "0.1.1"' in (root / "pyproject.toml").read_text()
 
+    def test_untracked_stamper_is_not_run(self, tmp_path: Path) -> None:
+        """A stamper that was never committed does not run."""
+        root = _write_repo(tmp_path, stamp_script=_FAKE_STAMP_SCRIPT)
+        _git(root, "init", "-q")
+        manager = _make_manager(root)
+
+        new_version = manager._perform_bump("0.1.0", "patch")
+
+        assert new_version == "0.1.1"
+        assert "**Version:** 0.1.0" in (root / "README.md").read_text()
+
+    def test_symlinked_stamper_is_not_run(self, tmp_path: Path) -> None:
+        """A symlink is not a committed file, so it does not run."""
+        root = _make_tracked_repo(tmp_path, stamp_script=None)
+        scripts = root / "scripts"
+        scripts.mkdir(exist_ok=True)
+        outside = tmp_path.parent / f"outside-{tmp_path.name}.py"
+        outside.write_text(_FAKE_STAMP_SCRIPT)
+        (scripts / "stamp_version.py").symlink_to(outside)
+        manager = _make_manager(root)
+
+        new_version = manager._perform_bump("0.1.0", "patch")
+
+        assert new_version == "0.1.1"
+        assert "**Version:** 0.1.0" in (root / "README.md").read_text()
+
     def test_failing_stamper_aborts_the_bump(self, tmp_path: Path) -> None:
         """A stamp failure aborts the release rather than shipping drift."""
-        root = _write_repo(tmp_path, stamp_script=_FAILING_STAMP_SCRIPT)
+        root = _make_tracked_repo(tmp_path, stamp_script=_FAILING_STAMP_SCRIPT)
         manager = _make_manager(root)
 
         with pytest.raises(RuntimeError, match="stamp_version.py failed"):
@@ -134,7 +184,7 @@ class TestVersionClaimStamping:
 
     def test_failing_stamper_rolls_the_version_back(self, tmp_path: Path) -> None:
         """The aborted bump leaves pyproject at the version it started from."""
-        root = _write_repo(tmp_path, stamp_script=_FAILING_STAMP_SCRIPT)
+        root = _make_tracked_repo(tmp_path, stamp_script=_FAILING_STAMP_SCRIPT)
         manager = _make_manager(root)
 
         with pytest.raises(RuntimeError):
@@ -144,7 +194,7 @@ class TestVersionClaimStamping:
 
     def test_dry_run_does_not_stamp(self, tmp_path: Path) -> None:
         """A dry run changes nothing, so it must not run the stamper."""
-        root = _write_repo(tmp_path, stamp_script=_FAKE_STAMP_SCRIPT)
+        root = _make_tracked_repo(tmp_path, stamp_script=_FAKE_STAMP_SCRIPT)
         manager = PublishManagerImpl(
             git_service=Mock(),
             version_analyzer=Mock(),
@@ -159,3 +209,42 @@ class TestVersionClaimStamping:
         assert new_version == "0.1.1"
         assert "**Version:** 0.1.0" in (root / "README.md").read_text()
         assert 'version = "0.1.0"' in (root / "pyproject.toml").read_text()
+
+
+@pytest.mark.unit
+class TestChangelogFailureRollsBack:
+    """A changelog crash reaches the rollback, not just a warning."""
+
+    def test_changelog_exception_propagates(self, tmp_path: Path) -> None:
+        """The generator's exception escapes so the bump can roll back."""
+        root = _make_tracked_repo(tmp_path, stamp_script=None)
+        manager = _make_manager(root)
+        manager._changelog_generator.generate_changelog_from_commits.side_effect = (
+            RuntimeError("generator crashed")
+        )
+
+        with pytest.raises(RuntimeError, match="generator crashed"):
+            manager._perform_bump("0.1.0", "patch")
+
+    def test_changelog_exception_rolls_the_version_back(self, tmp_path: Path) -> None:
+        """pyproject returns to its pre-bump version when the changelog fails."""
+        root = _make_tracked_repo(tmp_path, stamp_script=None)
+        manager = _make_manager(root)
+        manager._changelog_generator.generate_changelog_from_commits.side_effect = (
+            RuntimeError("generator crashed")
+        )
+
+        with pytest.raises(RuntimeError):
+            manager._perform_bump("0.1.0", "patch")
+
+        assert 'version = "0.1.0"' in (root / "pyproject.toml").read_text()
+
+    def test_changelog_returning_false_does_not_abort(self, tmp_path: Path) -> None:
+        """A soft 'nothing to summarise' result is a warning, not a failure."""
+        root = _make_tracked_repo(tmp_path, stamp_script=None)
+        manager = _make_manager(root)
+        manager._changelog_generator.generate_changelog_from_commits.return_value = False
+
+        new_version = manager._perform_bump("0.1.0", "patch")
+
+        assert new_version == "0.1.1"

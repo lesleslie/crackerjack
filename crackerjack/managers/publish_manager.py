@@ -9,6 +9,8 @@ import typing as t
 from contextlib import suppress
 from pathlib import Path
 
+from rich.markup import escape as escape_markup
+
 from crackerjack.checks.gitignore_conformance import check_repo_gitignore
 from crackerjack.checks.release_audit import check_release_audit
 from crackerjack.core.console import CrackerjackConsole
@@ -481,6 +483,38 @@ class PublishManagerImpl:
             self.console.print(f"[red]❌[/red] Version bump failed: {e}")
             raise
 
+    def _is_trusted_stamp_script(self, script: Path) -> bool:
+        """Decide whether *script* may be executed by the release path.
+
+        The stamper is repo-local code, so running it means trusting the
+        repo. Three conditions narrow that trust to "the operator committed
+        this deliberately":
+
+        - it is a regular file inside the repo root — not a symlink pointing
+          elsewhere, and not a directory;
+        - it is tracked by git in that root, so a file merely *present* on
+          disk (a build artifact, a stray download, something a tool
+          dropped in) never runs;
+        - the root is a git repository, so "tracked" is a question with an
+          answer rather than a silent pass.
+
+        A repo that keeps no version claims ships no stamper, and the step
+        is skipped.
+        """
+        try:
+            if not script.is_file() or script.is_symlink():
+                return False
+            root = self.pkg_path.resolve()
+            if not script.resolve().is_relative_to(root):
+                return False
+        except OSError:
+            return False
+
+        result = self._run_command(
+            ["git", "-C", str(root), "ls-files", "--", _VERSION_STAMP_SCRIPT.as_posix()],
+        )
+        return result.returncode == 0 and bool(result.stdout.strip())
+
     def _stamp_version_claims(self) -> None:
         """Re-stamp the repo's version claims after the version bump.
 
@@ -495,35 +529,40 @@ class PublishManagerImpl:
         Repos that keep version claims provide ``scripts/stamp_version.py``:
         it reads the version from pyproject and rewrites the claims. That is
         a repo-local convention, so its absence is a no-op — the release
-        path stays usable in repos that keep no claims.
+        path stays usable in repos that keep no claims. Whether the script
+        is trusted enough to run is decided by :meth:`_is_trusted_stamp_script`.
 
-        When the script is present, a failure aborts the release. A release
-        that leaves the claims behind is the exact drift this closes, so
-        failing loud beats publishing a version whose docs disagree with it.
+        When the script runs and fails, the release aborts. A release that
+        leaves the claims behind is the exact drift this closes, so failing
+        loud beats publishing a version whose docs disagree with it.
 
         Runs last in the bump sequence: a failure in the version write or in
         the changelog rolls back before any claim is rewritten, so the
         rollback never has to restore a document it did not write.
         """
         script = self.pkg_path / _VERSION_STAMP_SCRIPT
-        if not script.is_file():
+        if not self._is_trusted_stamp_script(script):
             return
 
         result = self._run_command([sys.executable, str(script), str(self.pkg_path)])
         if result.returncode != 0:
-            detail = (result.stderr or result.stdout or "").strip()
+            detail = _sanitize_subprocess_output(
+                result.stderr,
+            ) or _sanitize_subprocess_output(result.stdout)
             self.console.print(
                 f"[red]❌[/red] Version stamp failed: {script.name} exited {result.returncode}",
             )
             if detail:
-                self.console.print(f"[red]{detail}[/red]")
+                self.console.print(f"[red]{escape_markup(detail)}[/red]")
             msg = (
                 f"{_VERSION_STAMP_SCRIPT.as_posix()} failed with exit code "
                 f"{result.returncode}"
             )
             raise RuntimeError(msg)
 
-        self.console.print("[green]✅[/green] Re-stamped version claims")
+        self.console.print(
+            f"[green]✅[/green] Re-stamped version claims via {script.name}",
+        )
 
     def _snapshot_bump_files(self) -> dict[Path, str | None]:
         """Read the version-bearing files before mutation.
@@ -1343,6 +1382,18 @@ class PublishManagerImpl:
         return raw_value.strip("\"'")
 
     def _update_changelog_for_version(self, old_version: str, new_version: str) -> None:
+        """Write the changelog entry for *new_version*.
+
+        A generator that returns ``False`` is a soft outcome — there may be
+        no commits to summarise — so it warns and lets the release proceed.
+
+        A generator that *raises* is not soft. The bump has already written
+        the new version to pyproject, so letting the exception escape is
+        what lets ``_perform_bump`` roll that write back. Swallowing it here
+        left the release path with a rollback it could never reach: the
+        version stayed bumped while the changelog was half-written, and the
+        release shipped.
+        """
         try:
             changelog_generator = self._changelog_generator
 
@@ -1365,3 +1416,4 @@ class PublishManagerImpl:
 
         except Exception as e:
             self.console.print(f"[yellow]⚠️[/yellow] Failed to update changelog: {e}")
+            raise
