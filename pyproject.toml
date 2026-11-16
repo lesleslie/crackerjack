@@ -576,6 +576,16 @@ ignore-words = ".codespell-ignore"
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+# Without this, pytest-asyncio warns on every run and future versions
+# will change the default anyway: unset means "the fixture's own caching
+# scope", while "function" is where pytest-asyncio is heading. Every
+# async fixture in this repo is function-scoped by default and none
+# declares its own scope or loop_scope, so naming it here is behaviour-
+# preserving today and silences the deprecation tomorrow.
+# This file is also the template `crackerjack init` copies for a new
+# project (services/config_merge.py:smart_merge_pyproject returns this
+# pyproject verbatim when the target has none), so new projects inherit it.
+asyncio_default_fixture_loop_scope = "function"
 timeout = 600
 addopts = "--cov=crackerjack --cov-report=term-missing:skip-covered --cov-report=html:htmlcov --cov-report=json --strict-markers --strict-config -ra --tb=short --cov-fail-under=68.4296545707018"
 testpaths = [
