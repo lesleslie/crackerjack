@@ -20,8 +20,10 @@ def test_init_creates_ratchet_at_current_coverage(tmp_path: Path) -> None:
     result = runner.invoke(app, ["init", "--pkg-path", str(tmp_path)])
     assert result.exit_code == 0, result.output
     ratchet = json.loads((tmp_path / ".coverage-ratchet.json").read_text())
-    assert ratchet["baseline"] == 47.5
-    assert ratchet["current_minimum"] == 47.5
+    # The enforced floor is the whole point below the measurement, not
+    # the measurement itself.
+    assert ratchet["baseline"] == 47.0
+    assert ratchet["current_minimum"] == 47.0
 
 
 @pytest.mark.unit

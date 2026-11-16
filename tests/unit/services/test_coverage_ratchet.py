@@ -14,6 +14,7 @@ import pytest
 from crackerjack.services import coverage_ratchet
 
 CoverageRatchetService = coverage_ratchet.CoverageRatchetService
+enforced_floor = coverage_ratchet.enforced_floor
 
 
 @pytest.mark.unit
@@ -134,8 +135,10 @@ class TestInitializeBaseline:
 
         assert service.ratchet_file.exists()
         data = json.loads(service.ratchet_file.read_text())
-        assert data["baseline"] == initial_coverage
-        assert data["current_minimum"] == initial_coverage
+        # The enforced floor is the whole point below the measurement,
+        # not the measurement itself.
+        assert data["baseline"] == 65.0
+        assert data["current_minimum"] == 65.0
         assert data["target"] == 100.0
 
     def test_initialize_baseline_idempotent(self, tmp_path: Path) -> None:
@@ -170,11 +173,11 @@ class TestInitializeBaseline:
         assert "next_milestone" in data
 
         # Check values
-        assert data["baseline"] == 65.5
-        assert data["current_minimum"] == 65.5
+        assert data["baseline"] == 65.0
+        assert data["current_minimum"] == 65.0
         assert data["target"] == 100.0
         assert len(data["history"]) == 1
-        assert data["history"][0]["coverage"] == 65.5
+        assert data["history"][0]["coverage"] == 65.0
         assert data["history"][0]["commit"] == "baseline"
         assert data["history"][0]["milestone"] is False
 
@@ -209,8 +212,8 @@ class TestGetRatchetData:
 
         data = service.get_ratchet_data()
 
-        assert data["baseline"] == 65.5
-        assert data["current_minimum"] == 65.5
+        assert data["baseline"] == 65.0
+        assert data["current_minimum"] == 65.0
 
     def test_get_status_report(self, tmp_path: Path) -> None:
         """Test get_status_report returns ratchet data."""
@@ -219,7 +222,7 @@ class TestGetRatchetData:
 
         report = service.get_status_report()
 
-        assert report["baseline"] == 65.5
+        assert report["baseline"] == 65.0
 
 
 @pytest.mark.unit
@@ -241,7 +244,7 @@ class TestGetBaseline:
 
         baseline = service.get_baseline()
 
-        assert baseline == 65.5
+        assert baseline == 65.0
 
     def test_get_baseline_coverage_alias(self, tmp_path: Path) -> None:
         """Test get_baseline_coverage is alias for get_baseline."""
@@ -293,7 +296,7 @@ class TestUpdateBaselineCoverage:
         result = service.update_baseline_coverage(62.0)
 
         assert result is False
-        assert service.get_baseline() == 65.5  # Unchanged
+        assert service.get_baseline() == 65.0  # Unchanged
 
 
 @pytest.mark.unit
@@ -355,7 +358,7 @@ class TestCalculateCoverageGap:
 
         gap = service.calculate_coverage_gap()
 
-        assert gap == 4.5  # 70.0 - 65.5
+        assert gap == 5.0  # 70.0 - 65.0
 
     def test_calculate_coverage_gap_to_100(self, tmp_path: Path) -> None:
         """Test calculate_coverage_gap to 100% when no next milestone."""
@@ -402,7 +405,7 @@ class TestUpdateCoverage:
         assert result["allowed"] is False
         assert result["baseline_updated"] is False
         assert "regression_amount" in result
-        assert result["regression_amount"] == 3.5
+        assert result["regression_amount"] == 3.0
 
     def test_update_coverage_improvement(self, tmp_path: Path) -> None:
         """Test update_coverage detects improvement."""
@@ -415,7 +418,7 @@ class TestUpdateCoverage:
         assert result["allowed"] is True
         assert result["baseline_updated"] is True
         assert "improvement" in result
-        assert result["improvement"] == 4.5
+        assert result["improvement"] == 5.0
         assert service.get_baseline() == 70.0
 
     def test_update_coverage_maintained(self, tmp_path: Path) -> None:
@@ -429,24 +432,37 @@ class TestUpdateCoverage:
         assert result["status"] == "maintained"
         assert result["allowed"] is True
         assert result["baseline_updated"] is False
-        assert service.get_baseline() == 65.5  # Unchanged
+        assert service.get_baseline() == 65.0  # Unchanged
 
     def test_update_coverage_improvement_threshold(self, tmp_path: Path) -> None:
-        """Test update_coverage improvement threshold (exactly 0.01%).
+        """The floor moves only when the measurement crosses a whole point.
 
-        NOTE: Due to floating point precision, 65.5 + 0.01 != 65.51.
-        The actual threshold check is new_coverage > baseline + 0.01,
-        so we need to exceed 65.51 to trigger improvement.
+        The floor is the whole percentage point below the measurement,
+        so a measurement that stays inside the same point leaves the
+        enforced floor alone. This is what keeps a sub-point coverage
+        change from turning into a suite failure.
         """
         service = CoverageRatchetService(pkg_path=tmp_path)
-        service.initialize_baseline(65.5)
+        service.initialize_baseline(65.5)  # floor 65.0
 
-        # Must exceed threshold (65.5 + 0.01 = 65.51)
-        # Use 65.52 to ensure we're above the threshold
         result = service.update_coverage(65.52)
+
+        assert result["status"] == "maintained"
+        assert result["baseline_updated"] is False
+        assert service.get_baseline() == 65.0
+
+    def test_update_coverage_improvement_crosses_a_whole_point(
+        self, tmp_path: Path
+    ) -> None:
+        """A measurement that crosses into the next point raises the floor."""
+        service = CoverageRatchetService(pkg_path=tmp_path)
+        service.initialize_baseline(65.5)  # floor 65.0
+
+        result = service.update_coverage(66.0)
 
         assert result["status"] == "improved"
         assert result["baseline_updated"] is True
+        assert service.get_baseline() == 66.0
 
     def test_update_coverage_below_improvement_threshold(self, tmp_path: Path) -> None:
         """Test update_coverage below improvement threshold."""
@@ -528,6 +544,74 @@ class TestCheckMilestones:
 
         # 50.0 already achieved, should not be returned
         assert 50.0 not in milestones
+
+    def test_check_milestones_handles_dict_shaped_entries(self, tmp_path: Path) -> None:
+        """A hand-written ratchet may hold dicts in ``milestones_achieved``.
+
+        ``set()`` over a list of dicts raises ``TypeError: cannot use
+        'dict' as a set element``, which turned a coverage IMPROVEMENT
+        — the one case where the ratchet is supposed to rewrite itself
+        — into a crash.
+        """
+        service = CoverageRatchetService(pkg_path=tmp_path)
+        data = {
+            "milestones_achieved": [
+                {"milestone": 50, "date": "2026-09-05T13:30:00.000000", "commit": "wave-3"},
+            ],
+        }
+
+        milestones = service._check_milestones(48.0, 52.0, data)
+
+        assert 50.0 not in milestones
+        assert milestones == []
+
+    def test_check_milestones_ignores_entries_without_a_milestone(
+        self, tmp_path: Path
+    ) -> None:
+        """An entry naming no milestone contributes nothing, not a crash."""
+        service = CoverageRatchetService(pkg_path=tmp_path)
+        data = {"milestones_achieved": [{"date": "2026-09-05T13:30:00.000000"}]}
+
+        milestones = service._check_milestones(48.0, 52.0, data)
+
+        assert milestones == [50.0]
+
+    def test_update_coverage_rewrites_a_dict_shaped_ratchet(self, tmp_path: Path) -> None:
+        """The refresh path rewrites a hand-written ratchet instead of crashing.
+
+        The whole point of the refresh is to record a fresh measurement,
+        so it has to work on a ratchet whose ``milestones_achieved``
+        holds dicts. It also normalises the shape, so the next refresh
+        does not append a duplicate milestone.
+        """
+        service = CoverageRatchetService(pkg_path=tmp_path)
+        service.ratchet_file.write_text(
+            json.dumps(
+                {
+                    "baseline": 50.0,
+                    "current_minimum": 50.0,
+                    "target": 100.0,
+                    "last_updated": "2026-09-05T13:30:00.000000",
+                    "history": [],
+                    "milestones_achieved": [
+                        {"milestone": 50, "date": "2026-09-05T13:30:00.000000"},
+                    ],
+                    "next_milestone": 60,
+                }
+            )
+        )
+        (tmp_path / "coverage.json").write_text(
+            json.dumps({"totals": {"percent_covered": 62.0}})
+        )
+
+        result = service.check_and_update_coverage()
+
+        assert result.get("status") == "improved", result
+        data = json.loads(service.ratchet_file.read_text())
+        assert data["baseline"] == 62.0
+        assert data["current_minimum"] == 62.0
+        # Normalised to the canonical shape: a list of numbers.
+        assert data["milestones_achieved"] == [50.0, 60.0]
 
 
 @pytest.mark.unit
@@ -614,7 +698,7 @@ class TestGetProgressVisualization:
         report = service.get_coverage_report()
 
         assert report is not None
-        assert "66%" in report  # Coverage is formatted as integer percentage
+        assert "65%" in report  # Coverage is formatted as integer percentage
         assert "70%" in report  # Next milestone
 
 
@@ -629,7 +713,7 @@ class TestGetCoverageImprovementNeeded:
 
         needed = service.get_coverage_improvement_needed()
 
-        assert needed == 4.5  # 70.0 - 65.5
+        assert needed == 5.0  # 70.0 - 65.0
 
     def test_get_coverage_improvement_needed_at_100(self, tmp_path: Path) -> None:
         """Test get_coverage_improvement_needed at 100%."""
@@ -782,3 +866,107 @@ class TestCalculateTrend:
         trend = service._calculate_trend(data)
 
         assert trend == "stable"
+
+
+@pytest.mark.unit
+class TestFloorPolicy:
+    """The enforced floor is a whole point below the measurement.
+
+    Pinning the floor to the raw measured float made it a tripwire:
+    the measurement moves on any code change, and the suite failed over
+    a fraction of a percent nobody could act on.
+    """
+
+    def test_enforced_floor_rounds_down_to_a_whole_point(self) -> None:
+        assert enforced_floor(90.9895227008149) == 90.0
+        assert enforced_floor(65.5) == 65.0
+        assert enforced_floor(70.0) == 70.0
+
+    def test_enforced_floor_never_exceeds_the_measurement(self) -> None:
+        """A floor the current code cannot meet fails the suite that set it."""
+        for measured in (0.0, 0.5, 65.5, 90.9895, 99.9, 100.0):
+            assert enforced_floor(measured) <= measured
+
+    def test_a_coverage_drop_never_lowers_the_floor(self, tmp_path: Path) -> None:
+        """The ratchet holds: a regression must not quietly lower the gate."""
+        service = CoverageRatchetService(pkg_path=tmp_path)
+        service.initialize_baseline(70.0)
+
+        # A drop inside the tolerance margin still leaves the floor alone.
+        result = service.update_coverage(69.0)
+
+        assert result["status"] == "maintained"
+        assert service.get_baseline() == 70.0
+
+    def test_the_floor_does_not_churn_on_an_unchanged_measurement(
+        self, tmp_path: Path
+    ) -> None:
+        """Re-measuring the same coverage must not rewrite the floor.
+
+        The floor is derived from the measurement, so comparing the
+        measurement against the floor directly made every refresh look
+        like an improvement and the ratchet rewrote itself on every run.
+        """
+        service = CoverageRatchetService(pkg_path=tmp_path)
+        service.initialize_baseline(65.0)
+
+        result = service.update_coverage(65.5)
+
+        assert result["status"] == "maintained"
+        assert result["baseline_updated"] is False
+        assert service.get_baseline() == 65.0
+
+    def test_normalize_floor_rounds_a_legacy_raw_float_down(
+        self, tmp_path: Path
+    ) -> None:
+        """A ratchet written before the rounding policy is normalized once."""
+        service = CoverageRatchetService(pkg_path=tmp_path)
+        service.ratchet_file.write_text(
+            json.dumps(
+                {
+                    "baseline": 90.9895227008149,
+                    "current_minimum": 90.9895227008149,
+                    "target": 100.0,
+                    "last_updated": "2026-10-14T22:36:31.777288+00:00",
+                    "history": [],
+                    "milestones_achieved": [],
+                    "next_milestone": 95,
+                }
+            )
+        )
+
+        floor = service.normalize_floor()
+
+        assert floor == 90.0
+        data = service.get_ratchet_data()
+        assert data["baseline"] == 90.0
+        assert data["current_minimum"] == 90.0
+
+    def test_normalize_floor_leaves_an_integral_floor_alone(
+        self, tmp_path: Path
+    ) -> None:
+        """Nothing to do for a ratchet that already follows the policy."""
+        service = CoverageRatchetService(pkg_path=tmp_path)
+        service.initialize_baseline(65.5)
+
+        assert service.normalize_floor() is None
+        assert service.get_baseline() == 65.0
+
+    def test_initialize_baseline_force_overwrites_an_existing_ratchet(
+        self, tmp_path: Path
+    ) -> None:
+        """``--reinit`` must actually rewrite the file.
+
+        Without ``force`` the write early-returned on an existing
+        ratchet, so the command printed "Ratchet initialized" while
+        leaving the file byte-identical.
+        """
+        service = CoverageRatchetService(pkg_path=tmp_path)
+        service.initialize_baseline(65.5)
+        before = service.ratchet_file.read_text()
+
+        service.initialize_baseline(91.0, force=True)
+
+        after = service.ratchet_file.read_text()
+        assert after != before
+        assert service.get_baseline() == 91.0

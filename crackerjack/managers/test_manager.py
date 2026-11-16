@@ -189,8 +189,10 @@ class TestManager:
             return RatchetResult(exit_code=1, message=msg)
 
         if current_pct > baseline + tolerance:
-            self.coverage_ratchet.mirror_to_pyproject(current_pct)
-            self.coverage_ratchet.raise_floor(current_pct)
+            # ``raise_floor`` floors the value to a whole point; mirror
+            # the SAME floor so the ratchet and pyproject agree.
+            floor = self.coverage_ratchet.raise_floor(current_pct)
+            self.coverage_ratchet.mirror_to_pyproject(floor)
 
         return RatchetResult(exit_code=0, message=f"Coverage: {current_pct:.2f}%")
 

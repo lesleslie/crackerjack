@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import math
 import re
 import typing as t
 from contextlib import suppress
@@ -29,6 +30,69 @@ def _update_fail_under_mirror(content: str, coverage: float) -> str:
     if not re.search(coverage_pattern, content):
         return content
     return re.sub(coverage_pattern, rf"\g<1>{coverage}", content, count=1)
+
+
+def _achieved_milestone_values(raw: t.Any) -> set[float]:
+    """The milestone values recorded in ``milestones_achieved``.
+
+    Two shapes are in the wild, and both name the same thing:
+
+    - a list of milestone numbers — what ``update_coverage`` writes;
+    - a list of dicts carrying a ``milestone`` key — what a
+      hand-written ratchet holds.
+
+    Reading only the first shape made the refresh path raise
+    ``TypeError: cannot use 'dict' as a set element`` on a
+    hand-written ratchet, which turned a coverage IMPROVEMENT into a
+    crash — the one case where the ratchet was supposed to rewrite
+    itself. Both shapes are read here, and an entry that names no
+    milestone contributes nothing rather than raising.
+    """
+    if not isinstance(raw, list):
+        return set()
+    values: set[float] = set()
+    for entry in raw:
+        candidate = entry.get("milestone") if isinstance(entry, dict) else entry
+        if isinstance(candidate, bool):
+            continue
+        if isinstance(candidate, (int, float)):
+            values.add(float(candidate))
+    return values
+
+
+def _normalize_milestones_achieved(raw: t.Any) -> list[float]:
+    """``milestones_achieved`` in the canonical shape: a list of numbers.
+
+    Written back on every ratchet write so a hand-written ratchet
+    converges to the shape the rest of the service reads, and so the
+    "already achieved" check cannot append a duplicate milestone on
+    every refresh.
+    """
+    return sorted(_achieved_milestone_values(raw))
+
+
+def enforced_floor(measured_coverage: float) -> float:
+    """The coverage floor a measurement justifies.
+
+    The floor is the whole percentage point BELOW the measurement, not
+    the measurement itself. Pinning the floor to the raw measured float
+    makes it a tripwire: the number is re-measured on every run, and
+    any change to the code at all — a new uncovered line, a branch
+    that stops being taken — moves the measurement below the floor and
+    fails the suite over a fraction of a percent that no reader can
+    act on. A floor a whole point below the measurement still refuses
+    a real regression (the coverage cannot drop a full point without
+    the gate noticing) while leaving room for ordinary churn.
+
+    The CLAUDE.md claim is the other side of the same coin: it rounds
+    UP to the whole percentage above the measurement, because the
+    release audit compares the claim against the floor and the
+    measured value.
+
+    Never returns a floor above the measurement: a floor the current
+    code cannot meet fails the suite on the run that set it.
+    """
+    return float(math.floor(measured_coverage))
 
 
 class CoverageRatchetService(CoverageRatchetProtocol):
@@ -101,27 +165,68 @@ class CoverageRatchetService(CoverageRatchetProtocol):
         if self.ratchet_file.exists() and not force:
             return
 
+        floor = enforced_floor(initial_coverage)
         ratchet_data: dict[str, t.Any] = {
-            "baseline": initial_coverage,
-            "current_minimum": initial_coverage,
+            "baseline": floor,
+            "current_minimum": floor,
             "target": 100.0,
             "last_updated": datetime.now(UTC).isoformat(),
             "history": [
                 {
                     "date": datetime.now(UTC).isoformat(),
-                    "coverage": initial_coverage,
+                    "coverage": floor,
                     "commit": "baseline",
                     "milestone": False,
                 },
             ],
             "milestones_achieved": [],
-            "next_milestone": self._get_next_milestone(initial_coverage),
+            "next_milestone": self._get_next_milestone(floor),
         } | self._ratchet_metadata()
 
         self.ratchet_file.write_text(json.dumps(ratchet_data, indent=2))
         self.console.print(
-            f"[cyan]📊[/cyan] Coverage ratchet initialized at {initial_coverage:.0f}% baseline",
+            f"[cyan]📊[/cyan] Coverage ratchet initialized at {floor:.0f}% baseline",
         )
+
+    def normalize_floor(self) -> float | None:
+        """Round a legacy raw-float floor down to the policy floor.
+
+        Ratchets written before the rounding policy pinned the floor to
+        the raw measured float (``90.9895227008149``), which is a
+        tripwire: the measurement moves on any code change, and the
+        suite fails over a fraction of a percent. This rounds such a
+        floor down to the whole point below it and mirrors the change
+        into pyproject.
+
+        Returns the new floor, or ``None`` when there was nothing to
+        normalize (no ratchet, an already-integral floor, or a floor
+        that is already the policy floor).
+
+        Deliberately NOT part of ``update_coverage``: that path may
+        only ever RAISE the floor, so a coverage regression can never
+        quietly lower it. The round-down is a one-time migration an
+        operator asks for explicitly.
+        """
+        data = self.get_ratchet_data()
+        if not data:
+            return None
+
+        stored = data.get("current_minimum")
+        if not isinstance(stored, (int, float)) or isinstance(stored, bool):
+            return None
+        stored = float(stored)
+        if stored.is_integer():
+            return None
+
+        floor = enforced_floor(stored)
+        data["baseline"] = floor
+        data["current_minimum"] = floor
+        data["next_milestone"] = self._get_next_milestone(floor)
+        data["last_updated"] = datetime.now(UTC).isoformat()
+        data.update(self._ratchet_metadata())
+        self.ratchet_file.write_text(json.dumps(data, indent=2))
+        self._update_pyproject_requirement(floor)
+        return floor
 
     def _ratchet_metadata(self) -> dict[str, t.Any]:
         """Build the staleness metadata block for a ratchet write.
@@ -256,7 +361,8 @@ class CoverageRatchetService(CoverageRatchetProtocol):
             }
 
         data = self.get_ratchet_data()
-        current_baseline = data["baseline"]
+        current_baseline = float(data["baseline"])
+        new_floor = enforced_floor(new_coverage)
 
         tolerance_threshold = current_baseline - self.TOLERANCE_MARGIN
         if new_coverage < tolerance_threshold:
@@ -269,19 +375,23 @@ class CoverageRatchetService(CoverageRatchetProtocol):
                 "allowed": False,
                 "baseline_updated": False,
             }
-        if new_coverage > current_baseline + 0.01:
+        # The floor is compared as a FLOOR, not as the raw measurement.
+        # Comparing the measurement against a floor that was itself
+        # derived from a measurement made every refresh look like an
+        # improvement, and the ratchet rewrote itself on every run.
+        if new_floor > current_baseline + 0.01:
             milestones_hit = self._check_milestones(
                 current_baseline,
                 new_coverage,
                 data,
             )
-            self._update_baseline(new_coverage, data, milestones_hit)
-            self._update_pyproject_requirement(new_coverage)
+            self._update_baseline(new_floor, data, milestones_hit)
+            self._update_pyproject_requirement(new_floor)
 
             return {
                 "status": "improved",
-                "message": f"Coverage improved from {current_baseline:.0f}% to {new_coverage:.0f}% !",
-                "improvement": new_coverage - current_baseline,
+                "message": f"Coverage improved from {current_baseline:.0f}% to {new_floor:.0f}% !",
+                "improvement": new_floor - current_baseline,
                 "milestones": milestones_hit,
                 "progress_to_100": f"{new_coverage:.0f}% of the way to 100 % coverage",
                 "next_milestone": self._get_next_milestone(new_coverage),
@@ -307,7 +417,9 @@ class CoverageRatchetService(CoverageRatchetProtocol):
         new_coverage: float,
         data: dict[str, t.Any],
     ) -> list[float]:
-        achieved_milestones = set(data.get("milestones_achieved", []))
+        achieved_milestones = _achieved_milestone_values(
+            data.get("milestones_achieved", [])
+        )
         return [
             milestone
             for milestone in self.MILESTONES
@@ -325,29 +437,43 @@ class CoverageRatchetService(CoverageRatchetProtocol):
 
     def _update_baseline(
         self,
-        new_coverage: float,
+        new_floor: float,
         data: dict[str, t.Any],
         milestones_hit: list[float],
     ) -> None:
-        data["baseline"] = new_coverage
-        data["current_minimum"] = new_coverage
+        """Write the new floor to both floor fields and record it.
+
+        ``new_floor`` is the ENFORCED floor (see ``enforced_floor``),
+        not the raw measurement — the two floor fields are written
+        together so the release audit and the update gate never
+        disagree about what the floor is.
+        """
+        data["baseline"] = new_floor
+        data["current_minimum"] = new_floor
         data["last_updated"] = datetime.now(UTC).isoformat()
 
         data["history"].append(
             {
                 "date": datetime.now(UTC).isoformat(),
-                "coverage": new_coverage,
+                "coverage": new_floor,
                 "commit": "current",
                 "milestone": milestones_hit,
                 "milestones_hit": milestones_hit,
             },
         )
 
+        achieved = data.setdefault("milestones_achieved", [])
         for milestone in milestones_hit:
-            if milestone not in data["milestones_achieved"]:
-                data["milestones_achieved"].append(milestone)
+            if milestone not in achieved:
+                achieved.append(milestone)
+        # Normalize the shape on every write: a hand-written ratchet may
+        # hold dicts, and leaving them in place means the next refresh
+        # compares a number against dicts and appends a duplicate.
+        data["milestones_achieved"] = _normalize_milestones_achieved(
+            data["milestones_achieved"]
+        )
 
-        data["next_milestone"] = self._get_next_milestone(new_coverage)
+        data["next_milestone"] = self._get_next_milestone(new_floor)
 
         if len(data["history"]) > 50:
             data["history"] = data["history"][-50:]
@@ -356,27 +482,35 @@ class CoverageRatchetService(CoverageRatchetProtocol):
 
         self.ratchet_file.write_text(json.dumps(data, indent=2))
 
-    def raise_floor(self, new_coverage: float) -> None:
-        """Raise the enforced floor to ``new_coverage`` and rewrite the ratchet.
+    def raise_floor(self, new_coverage: float) -> float:
+        """Raise the enforced floor and rewrite the ratchet.
 
         The counterpart to :meth:`lower_baseline` for the case where
         coverage improved. Both floor fields are written together and
         the staleness metadata is refreshed, so a ratchet written here
         is as trustworthy as one written by :meth:`update_coverage`.
 
+        The value is floored to a whole point on the way in, like every
+        other write path, so the ratchet and the pyproject mirror can
+        never disagree about the floor.
+
+        Returns the floor written.
+
         Callers must not write ``.coverage-ratchet.json`` directly:
         a hand-written ratchet carries neither the fresh metadata nor
         both floor fields, which is what makes the release audit and
         the ratchet gate disagree.
         """
+        floor = enforced_floor(new_coverage)
         data = self.get_ratchet_data()
         if not data:
-            return
-        data["baseline"] = new_coverage
-        data["current_minimum"] = new_coverage
+            return floor
+        data["baseline"] = floor
+        data["current_minimum"] = floor
         data["last_updated"] = datetime.now(UTC).isoformat()
         data.update(self._ratchet_metadata())
         self.ratchet_file.write_text(json.dumps(data, indent=2))
+        return floor
 
     def _update_pyproject_requirement(self, new_coverage: float) -> None:
         try:
@@ -546,6 +680,10 @@ class CoverageRatchetService(CoverageRatchetProtocol):
         blocking the very publish it was lowered to unblock.
 
         Both fields are therefore written together here.
+
+        The value is floored to a whole point on the way in, like every
+        other write path, so the ratchet and the pyproject mirror stay
+        in agreement and the floor stays a value the suite can meet.
         """
         if not reason or not reason.strip():
             msg = "lower_baseline requires a non-empty reason"
@@ -554,13 +692,14 @@ class CoverageRatchetService(CoverageRatchetProtocol):
         if not data:
             msg = "Coverage ratchet not initialized"
             raise ValueError(msg)
-        data["baseline"] = new_coverage
-        data["current_minimum"] = new_coverage
+        floor = enforced_floor(new_coverage)
+        data["baseline"] = floor
+        data["current_minimum"] = floor
         data["last_updated"] = datetime.now(UTC).isoformat()
         data["history"].append(
             {
                 "date": datetime.now(UTC).isoformat(),
-                "coverage": new_coverage,
+                "coverage": floor,
                 "commit": "lower",
                 "milestone": False,
                 "reason": reason,
@@ -570,14 +709,19 @@ class CoverageRatchetService(CoverageRatchetProtocol):
         self.ratchet_file.write_text(json.dumps(data, indent=2))
 
     def mirror_to_pyproject(self, coverage: float) -> None:
-        """Write --cov-fail-under=<coverage> to pyproject.toml.
+        """Write --cov-fail-under=<floor> to pyproject.toml.
 
         Updates BOTH `[tool.pytest.ini_options].addopts` (pytest-cov CLI flag)
         and `[tool.coverage.report].fail_under` (coverage.py 7.x config block)
         when present. The ratchet is the source of truth — both mirror sites
         must agree, since either entry-point (pytest or `coverage report`) can
         enforce the floor.
+
+        The value is floored to a whole point on the way in, so a caller
+        that measured the coverage and a caller that chose the floor
+        explicitly cannot leave the two mirror sites disagreeing.
         """
+        coverage = enforced_floor(coverage)
         content = self.pyproject_file.read_text()
         pattern = r"--cov-fail-under=\d+(?:\.\d+)?"
         replacement = f"--cov-fail-under={coverage}"

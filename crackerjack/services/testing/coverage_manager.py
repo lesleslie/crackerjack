@@ -93,6 +93,21 @@ class CoverageManager:
             self.console.print(f"[yellow]⚠️[/yellow] Badge update failed: {e}")
 
     def handle_ratchet_result(self, ratchet_result: dict[str, t.Any]) -> bool:
+        if ratchet_result.get("status") == "no_coverage_data":
+            # The refresh had nothing to read, so the ratchet was left
+            # exactly as it was. Reporting that as a plain success is
+            # what made a stale ratchet survive a publish run without
+            # anyone noticing: the phase printed nothing, and the
+            # release audit then failed on the untouched file.
+            self.console.print(
+                "[dim]⏭️ Skipping the coverage ratchet refresh: no coverage.json "
+                "to read, so .coverage-ratchet.json was left untouched. A test "
+                "run that emits a JSON coverage report (--cov-report=json) "
+                "produces one; without it the ratchet stays as it is and the "
+                "release audit reads it as stale.[/dim]",
+            )
+            return True
+
         if ratchet_result.get("success", False):
             if ratchet_result.get("improved", False):
                 self._handle_coverage_improvement(ratchet_result)

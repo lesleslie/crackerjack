@@ -6,7 +6,7 @@ from pathlib import Path
 import typer
 from rich.console import Console
 
-from crackerjack.services.coverage_ratchet import CoverageRatchetService
+from crackerjack.services.coverage_ratchet import CoverageRatchetService, enforced_floor
 from crackerjack.services.filesystem import FileSystemService
 
 app = typer.Typer(
@@ -114,7 +114,8 @@ def lower(
             "[yellow]⚠️  pyproject.toml not found; skipped mirroring.[/yellow]"
         )
     console.print(
-        f"[green]✅ Ratchet lowered to {to_coverage:.2f}% (reason: {reason})[/green]"
+        f"[green]✅ Ratchet lowered to {enforced_floor(to_coverage):.0f}% "
+        f"(reason: {reason})[/green]"
     )
 
 

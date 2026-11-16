@@ -43,7 +43,8 @@ def test_mirror_to_pyproject_handles_array_form_addopts(ratchet: CoverageRatchet
     )
     ratchet.mirror_to_pyproject(68.43)
     content = ratchet.pyproject_file.read_text()
-    assert '"--cov-fail-under=68.43"' in content
+    # The enforced floor is the whole point below the measurement.
+    assert '"--cov-fail-under=68.0"' in content
     # Array form preserved
     assert "addopts = [" in content
     assert '"--cov=crackerjack"' in content
@@ -67,7 +68,7 @@ def test_mirror_to_pyproject_no_double_comma_in_array(ratchet: CoverageRatchetSe
     ratchet.mirror_to_pyproject(87.62)
     content = ratchet.pyproject_file.read_text()
     assert ",," not in content, f"double comma found in:\n{content}"
-    assert '"--cov-fail-under=87.62"' in content
+    assert '"--cov-fail-under=87.0"' in content
 
 
 def test_mirror_to_pyproject_writes_to_coverage_report_block(ratchet: CoverageRatchetService, tmp_path: Path) -> None:
@@ -89,8 +90,9 @@ def test_mirror_to_pyproject_writes_both_mirrors(ratchet: CoverageRatchetService
     )
     ratchet.mirror_to_pyproject(85.5)
     content = ratchet.pyproject_file.read_text()
-    assert "--cov-fail-under=85.5" in content
-    assert "fail_under = 85.5" in content
+    # Both mirror sites carry the SAME floored value.
+    assert "--cov-fail-under=85.0" in content
+    assert "fail_under = 85.0" in content
 
 
 def test_report_status_includes_baseline_and_next_milestone(ratchet: CoverageRatchetService) -> None:

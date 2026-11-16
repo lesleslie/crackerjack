@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import math
 import shutil
 from pathlib import Path
 
@@ -35,13 +36,19 @@ def test_init_then_run_keeps_ratchet_stable(mcp_common_copy: Path) -> None:
     result = runner.invoke(app, ["init", "--pkg-path", str(mcp_common_copy)])
     assert result.exit_code == 0, result.output
     ratchet = json.loads((mcp_common_copy / ".coverage-ratchet.json").read_text())
-    assert ratchet["baseline"] == initial
-    assert ratchet["current_minimum"] == initial
+    # The enforced floor is the whole point below the measurement, not
+    # the measurement itself.
+    expected_floor = float(math.floor(initial))
+    assert ratchet["baseline"] == expected_floor
+    assert ratchet["current_minimum"] == expected_floor
     # Re-run init with --reinit should overwrite
+    before = (mcp_common_copy / ".coverage-ratchet.json").read_text()
     result2 = runner.invoke(
         app, ["init", "--reinit", "--pkg-path", str(mcp_common_copy)]
     )
     assert result2.exit_code == 0, result2.output
+    # And it must actually rewrite the file, not just report that it did.
+    assert (mcp_common_copy / ".coverage-ratchet.json").read_text() != before
 
 
 def test_init_refuses_overwrite_without_reinit(mcp_common_copy: Path) -> None:
