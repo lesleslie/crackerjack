@@ -240,6 +240,13 @@ for oversights:
   subsystem with its own consumers, and changing its extractor is a
   change to it, not to this gate.
 
+  > **Superseded 2026-11-16.** The shared branch was removed; there is no
+  > longer a `use_shared_regenerator` setting and the plan index has one
+  > renderer (`crackerjack.tools.plan_index_sync`). The BOM-stripping
+  > extractor below is therefore the only one, and the limitation
+  > described above applies unconditionally. See
+  > `docs/decisions/2026-11-16-single-plan-index-renderer.md`.
+
 - **The standalone cleanup script still forks the categorizer.**
   `scripts/docs_cleanup.py` carries its own copy of the category table,
   which still emits the old flat `docs/archive/<category>/` routes, and

@@ -1,487 +1,53 @@
-#!/usr/bin/env uv run python
+#!/usr/bin/env python3
+"""Regenerate this repo's ``docs/plans/PLAN_INDEX.md``.
+
+Thin wrapper. The index has exactly one renderer —
+``crackerjack.tools.plan_index_sync`` — and the publish phase writes the
+same bytes with it.
+
+This file used to hold a *copy* of an older renderer. That was the source
+of a long-standing inconsistency: the command documented in
+``docs/schemas/document-frontmatter-v1.md`` produced one format, the
+publish phase produced another, and ``docs/plans/PLAN_INDEX.md`` was
+whichever ran last. One renderer, one output, one path.
+
+Usage:
+    uv run python scripts/regenerate_plan_index.py            # write the index
+    uv run python scripts/regenerate_plan_index.py --dry-run  # report drift only
+    uv run python scripts/regenerate_plan_index.py --out PATH # write elsewhere
+    uv run python scripts/regenerate_plan_index.py --json-summary
+"""
+
 from __future__ import annotations
 
-import argparse
-import datetime
-import re
 import sys
-import tempfile
-from collections import Counter
-from dataclasses import dataclass
-from datetime import UTC
 from pathlib import Path
-from typing import Any
 
-LIFECYCLE_VALUES: tuple[str, ...] = (
-    "draft",
-    "active",
-    "partial",
-    "shipped",
-    "complete",
-    "archived",
-)
-ROLE_VALUES: tuple[str, ...] = (
-    "canonical",
-    "implementation",
-    "umbrella",
-    "historical",
-    "superseded",
-)
-
-
-DEFAULT_STORES: tuple[str, ...] = (
-    "docs/adr/",
-    "docs/plans/",
-    "docs/specs/",
-    ".claude/decisions/",
-    "docs/followups/",
-)
-
-
-STORE_LABELS: dict[str, str] = {
-    "docs/adr/": "Architecture Decision Records (`docs/adr/`)",
-    "docs/plans/": "Plans & Specifications (`docs/plans/`)",
-    "docs/specs/": "Superpowers Specs (`docs/specs/`)",
-    ".claude/decisions/": "Repo-local Decisions (`.claude/decisions/`)",
-    "docs/followups/": "Follow-up Notes (`docs/followups/`)",
-}
-
-
-SELF_SKIP_REL = "docs/plans/PLAN_INDEX.md"
-DRAFTS_PREFIX = "docs/plans/drafts/"
-ARCHIVE_PARTS = ("archive", ".archive")
-BACKUP_SUFFIXES = (".backup", ".backup.json")
-
-
-_FRONTMATTER_RE = re.compile(r"\A---\s*\n(.*?)\n---\s*(?:\n|$)", re.DOTALL)
-
-
-@dataclass(frozen=True)
-class Entry:
-    rel: str
-    store: str
-    date: str
-    status: str
-    role: str
-    topic: str
-    title: str
-
-
-def _load_yaml_module() -> Any:
-    try:
-        import yaml
-    except ImportError as exc:  # pragma: no cover - exercised only on bare envs
-        sys.stderr.write(
-            "PyYAML is required to parse document frontmatter. "
-            "Install with: uv pip install pyyaml\n"
-            f"Original error: {exc}\n"
-        )
-        raise SystemExit(2) from exc
-    return yaml
-
-
-def extract_frontmatter(text: str, yaml_module: Any) -> dict[str, Any] | None:
-    match = _FRONTMATTER_RE.match(text)
-    if match is None:
-        return None
-    raw = match.group(1)
-    parsed = yaml_module.safe_load(raw)
-    if parsed is None:
-        return {}
-    if not isinstance(parsed, dict):
-        return None
-    return parsed
-
-
-def _coerce_date(value: Any) -> str:
-    if isinstance(value, datetime.date):
-        return value.isoformat()
-    if isinstance(value, str):
-        return value
-    return ""
-
-
-def _title_from_text(text: str, fallback: str) -> str:
-    for line in text.splitlines():
-        stripped = line.strip()
-        if stripped.startswith("# "):
-            return stripped[2:].strip()
-    return fallback
-
-
-def _is_excluded(rel: str) -> bool:
-    if rel == SELF_SKIP_REL:
-        return True
-    if rel.startswith(DRAFTS_PREFIX):
-        return True
-    parts = rel.split("/")
-    for part in parts:
-        if part in ARCHIVE_PARTS:
-            return True
-    for suffix in BACKUP_SUFFIXES:
-        if rel.endswith(suffix):
-            return True
-    return False
-
-
-def discover_files(repo_root: Path, store_rel: str) -> list[tuple[Path, str]]:
-    root = repo_root / store_rel.rstrip("/")
-    if not root.is_dir():
-        return []
-    out: list[tuple[Path, str]] = []
-    for path in sorted(root.rglob("*.md")):
-        rel = path.relative_to(repo_root).as_posix()
-        if _is_excluded(rel):
-            continue
-        out.append((path, rel))
-    return out
-
-
-def _entry_from_file(
-    abs_path: Path, rel: str, store: str, yaml_module: Any
-) -> Entry | None:
-    try:
-        text = abs_path.read_text(encoding="utf-8")
-    except OSError:
-        return None
-    front = extract_frontmatter(text, yaml_module)
-    if front is None:
-        return None
-    if not isinstance(front, dict):
-        return None
-
-    date = _coerce_date(front.get("date"))
-    status = front.get("status") if isinstance(front.get("status"), str) else "unknown"
-    role = front.get("role") if isinstance(front.get("role"), str) else "unknown"
-    topic = front.get("topic") if isinstance(front.get("topic"), str) else "—"
-    fallback_title = abs_path.stem.replace("-", " ").replace("_", " ")
-    title = _title_from_text(text, fallback=fallback_title)
-
-    return Entry(
-        rel=rel,
-        store=store,
-        date=date,
-        status=status,
-        role=role,
-        topic=topic,
-        title=title,
-    )
-
-
-STATUS_LEGEND = """\
-
-
-The vocabulary is defined canonically in
-[`docs/schemas/document-frontmatter-v1.md`](../schemas/document-frontmatter-v1.md)
-and reproduced here for index readability.
-
-- **Lifecycle (`status`)** — five values:
-  - `draft` — in preparation; not yet approved for implementation or adoption.
-  - `active` — approved and in current use; being executed or applied as policy.
-  - `partial` — approved and partially implemented; remaining work documented.
-  - `shipped` — delivered and verified in production; closed.
-  - `complete` — delivered; verification or follow-up may still be open.
-- **Role (`role`)** — five values:
-  - `canonical` — authoritative reference; source of truth for its topic.
-  - `implementation` — a plan, spec, or followup that drives concrete work.
-  - `umbrella` — aggregates multiple child plans or decisions under one banner.
-  - `historical` — records decisions or outcomes after they were acted on.
-  - `superseded` — replaced by a newer document; always paired with `superseded_by`.
-- Legal combinations read as lifecycle + role, e.g. `active, implementation`,
-  `draft, umbrella`, `shipped, canonical`.
-"""
-
-
-def _authority_matrix() -> str:
-    return """\
-
-
-| Concern | Authority |
-|---|---|
-| Plan navigation and current ownership | `docs/plans/PLAN_INDEX.md` (this file, regenerated from frontmatter) |
-| Frontmatter vocabulary and migration contract | `docs/schemas/document-frontmatter-v1.md` |
-| Cross-repo LLM provider defaults and Bifrost routing | `docs/plans/2026-05-10-minimax27-provider-migration.md` |
-| Legacy backlog item details | `docs/plans/2026-05-07-mahavishnu-master-backlog.md` |
-| Bodai control-plane convergence C0–C7 | `docs/plans/2026-05-10-bodai-control-plane-convergence-plan.md` |
-| Bodai-wide observability surface | `docs/plans/2026-07-11-phase-6-bodai-observability.md` |
-| Repo-local decisions index | `.claude/decisions/README.md` |
-| Follow-up tracker index | `docs/followups/README.md` |
-| Source plan defining this index | `docs/plans/2026-07-16-plan-lifecycle-unification.md` |
-"""
-
-
-def _review_entry_points(generated_at: str) -> str:
-    return f"""\
-
-
-This file is regenerated mechanically from the per-file YAML frontmatter
-across the six stores. The registry tables below are sorted by `date`
-DESC within each store and group entries by store. The lifecycle × role
-distribution at the bottom is a quick consistency check — it should
-match the counts of the registry rows modulo files in skipped
-directories (see exclusion rules in the script header).
-
-Before implementing from any entry:
-
-1. Confirm the file's lifecycle is `active` or `partial` and its role is
-   `implementation` or `canonical`. Files with `role: historical`,
-   `role: superseded`, or `status: shipped` are reference material only.
-1. If the file has a populated `superseded_by:` field, jump to the
-   successor before reading further.
-1. If the file has a non-empty `blocks_on:` list, verify every entry
-   has shipped before scheduling the dependent work.
-
-Last regenerated: {generated_at}.
-"""
-
-
-def _entry_link(rel: str, store: str) -> str:
-    if rel.startswith("docs/plans/"):
-        return f"[`{rel}`]({rel[len('docs/plans/') :]})"
-    if rel.startswith("docs/"):
-        return f"[`{rel}`](../{rel[len('docs/') :]})"
-
-    return f"[`{rel}`](../{rel})"
-
-
-def _render_store_table(store: str, entries: list[Entry]) -> str:
-    label = STORE_LABELS.get(store, store.rstrip("/"))
-    rows: list[str] = []
-    rows.append(f"### {label}")
-    rows.append("")
-    rows.append("| Path | Date | Status | Role | Topic | Title |")
-    rows.append("|---|---|---|---|---|---|")
-    if not entries:
-        rows.append("| _no entries with valid frontmatter_ | | | | | |")
-        rows.append("")
-        return "\n".join(rows)
-
-    sorted_entries = sorted(entries, key=lambda e: (-_date_sort_key(e.date), e.rel))
-    for entry in sorted_entries:
-        link = _entry_link(entry.rel, entry.store)
-        rows.append(
-            f"| {link} "
-            f"| {entry.date or '—'} "
-            f"| `{entry.status}` "
-            f"| `{entry.role}` "
-            f"| `{entry.topic}` "
-            f"| {entry.title} |"
-        )
-    rows.append("")
-    return "\n".join(rows)
-
-
-def _date_sort_key(value: str) -> int:
-    if not value:
-        return 0
-    match = re.match(r"^(\d{4})-(\d{2})-(\d{2})$", value)
-    if not match:
-        return 0
-    return int(match.group(1)) * 10000 + int(match.group(2)) * 100 + int(match.group(3))
-
-
-def _render_distribution(entries: list[Entry]) -> str:
-    counts: Counter[tuple[str, str]] = Counter()
-    for e in entries:
-        if e.status == "unknown" or e.role == "unknown":
-            continue
-        counts[(e.status, e.role)] += 1
-
-    rows: list[str] = []
-    rows.append("## Lifecycle × Role Distribution")
-    rows.append("")
-    rows.append(
-        "Counts of entries per (lifecycle, role) cell across all six stores. "
-        "Useful as a sanity check that the registry above is internally consistent."
-    )
-    rows.append("")
-
-    header = "| Role \\\\ Lifecycle | " + " | ".join(LIFECYCLE_VALUES) + " | Total |"
-    sep = "|---|" + "|".join(["---"] * (len(LIFECYCLE_VALUES) + 1)) + "|"
-    rows.append(header)
-    rows.append(sep)
-
-    for role in ROLE_VALUES:
-        cells: list[str] = []
-        row_total = 0
-        for lifecycle in LIFECYCLE_VALUES:
-            cell_value = counts.get((lifecycle, role), 0)
-            row_total += cell_value
-            cells.append(str(cell_value) if cell_value else "·")
-        rows.append(f"| `{role}` | " + " | ".join(cells) + f" | **{row_total}** |")
-    rows.append("")
-
-    col_totals: list[str] = []
-    grand_total = 0
-    for lifecycle in LIFECYCLE_VALUES:
-        col_sum = sum(counts.get((lifecycle, role), 0) for role in ROLE_VALUES)
-        grand_total += col_sum
-        col_totals.append(str(col_sum) if col_sum else "·")
-    rows.append(
-        "| **Total** | "
-        + " | ".join(f"**{t}**" for t in col_totals)
-        + f" | **{grand_total}** |"
-    )
-    rows.append("")
-    return "\n".join(rows)
-
-
-def _render_index(entries_by_store: dict[str, list[Entry]], generated_at: str) -> str:
-    sections: list[str] = []
-    sections.append(
-        "---\n"
-        "status: active\n"
-        "role: canonical\n"
-        "date: 2026-07-16\n"
-        "last_reviewed: 2026-07-16\n"
-        "superseded_by: null\n"
-        "blocks_on:\n"
-        " - docs/schemas/document-frontmatter-v1.md\n"
-        "topic: convergence-control-plane\n"
-        "---"
-    )
-    sections.append("")
-    sections.append("# Plan Index")
-    sections.append("")
-    sections.append("**Date:** 2026-07-16")
-    sections.append(f"**Last regenerated:** {generated_at}")
-    sections.append(
-        "**Purpose:** Navigation map for finding and reviewing active "
-        "Mahavishnu/Bodai plans. Generated by `scripts/regenerate_plan_index.py`. "
-        "Do not edit by hand."
-    )
-    sections.append("")
-    sections.append(
-        "Use this file as the first stop before reviewing plan work. Older plans "
-        "remain useful as source material, but the authority matrix below defines "
-        "which document owns each kind of decision."
-    )
-    sections.append("")
-    sections.append(STATUS_LEGEND.rstrip())
-    sections.append("")
-    sections.append(_authority_matrix().rstrip())
-    sections.append("")
-    sections.append(_review_entry_points(generated_at).rstrip())
-    sections.append("")
-
-    sections.append("## Canonical and Active Plan Registry")
-    sections.append("")
-    sections.append(
-        "One table per store. Entries are sorted by `date` DESC, with ties broken "
-        "by path ASC. Files without valid frontmatter are excluded; run "
-        "`crackerjack docs validate --allow-nonstandard` "
-        "to surface them."
-    )
-    sections.append("")
-
-    all_entries: list[Entry] = []
-    for store in DEFAULT_STORES:
-        store_entries = entries_by_store.get(store, [])
-        all_entries.extend(store_entries)
-        sections.append(_render_store_table(store, store_entries).rstrip())
-        sections.append("")
-
-    sections.append(_render_distribution(all_entries).rstrip())
-
-    return "\n".join(sections) + "\n"
-
-
-def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(
-        prog="regenerate_plan_index",
-        description=(
-            "Regenerate docs/plans/PLAN_INDEX.md from the YAML frontmatter "
-            "of all .md files in the six Bodai doc stores."
-        ),
-    )
-    parser.add_argument(
-        "--dry-run",
-        action="store_true",
-        help="Print the generated index to stdout instead of writing the file.",
-    )
-    parser.add_argument(
-        "--out",
-        type=Path,
-        default=Path("docs/plans/PLAN_INDEX.md"),
-        help="Output path (default: docs/plans/PLAN_INDEX.md).",
-    )
-    parser.add_argument(
-        "--json-summary",
-        action="store_true",
-        help=(
-            "Emit a JSON summary of counts (per store + total) on stderr. "
-            "Useful for CI assertions."
-        ),
-    )
-    return parser
+REPO_ROOT = Path(__file__).resolve().parent.parent
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = build_parser()
-    try:
-        args = parser.parse_args(argv)
-    except SystemExit as exc:
-        return 2 if exc.code != 0 else 0
+    """Delegate to the single renderer."""
+    from crackerjack.tools.plan_index_sync import main as sync_main
 
-    repo_root = Path(__file__).resolve().parent.parent
-    yaml_module = _load_yaml_module()
+    args = list(sys.argv[1:] if argv is None else argv)
 
-    entries_by_store: dict[str, list[Entry]] = {}
-    total_with_frontmatter = 0
-    total_discovered = 0
-    for store in DEFAULT_STORES:
-        files = discover_files(repo_root, store)
-        store_entries: list[Entry] = []
-        for abs_path, rel in files:
-            total_discovered += 1
-            entry = _entry_from_file(abs_path, rel, store, yaml_module)
-            if entry is None:
-                continue
-            store_entries.append(entry)
-        entries_by_store[store] = store_entries
-        total_with_frontmatter += len(store_entries)
-
-    generated_at = datetime.datetime.now(UTC).date().isoformat()
-    rendered = _render_index(entries_by_store, generated_at=generated_at)
-
-    if args.dry_run:
-        sys.stdout.write(rendered)
+    # The historical entry point took the repo root as a positional
+    # argument; the renderer takes it as --repo-root.
+    if args and not args[0].startswith("-"):
+        repo_root = Path(args.pop(0)).resolve()
     else:
-        out_path = args.out
-        if not out_path.is_absolute():
-            out_path = (repo_root / out_path).resolve()
-        out_path.parent.mkdir(parents=True, exist_ok=True)
+        repo_root = REPO_ROOT
 
-        with tempfile.NamedTemporaryFile(
-            "w",
-            encoding="utf-8",
-            dir=str(out_path.parent),
-            prefix=f".{out_path.name}.",
-            suffix=".tmp",
-            delete=False,
-        ) as tmp:
-            tmp.write(rendered)
-            tmp_path = Path(tmp.name)
-        try:
-            tmp_path.replace(out_path)
-        except OSError:
-            tmp_path.replace(out_path)
-
-    if args.json_summary:
-        import json
-
-        summary = {
-            "generated_at": generated_at,
-            "discovered": total_discovered,
-            "with_frontmatter": total_with_frontmatter,
-            "per_store": {
-                store: len(entries_by_store.get(store, [])) for store in DEFAULT_STORES
-            },
-        }
-        sys.stderr.write(json.dumps(summary, indent=2) + "\n")
-
-    return 0
+    forwarded = ["--repo-root", str(repo_root)]
+    # The renderer's --out default is relative to the process CWD, which
+    # would write the index wherever the script happened to be invoked
+    # from. Anchor it to the repo root unless the caller said otherwise.
+    if "--out" not in args:
+        forwarded += ["--out", str(repo_root / "docs" / "plans" / "PLAN_INDEX.md")]
+    forwarded += args
+    return sync_main(forwarded)
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    sys.exit(main())

@@ -223,13 +223,19 @@ def test_entry_link_targets_resolve_from_plans_dir() -> None:
     # (rel, expected_target from docs/plans/) — target uses POSIX separators.
     format_cases = [
         ("docs/plans/foo.md", "foo.md"),
-        ("docs/plans/2026-09-27-pyproject-single-source-of-truth.md",
-         "2026-09-27-pyproject-single-source-of-truth.md"),
-        ("docs/adr/ADR-001-mcp-first-architecture.md",
-         "../adr/ADR-001-mcp-first-architecture.md"),
+        (
+            "docs/plans/2026-09-27-pyproject-single-source-of-truth.md",
+            "2026-09-27-pyproject-single-source-of-truth.md",
+        ),
+        (
+            "docs/adr/ADR-001-mcp-first-architecture.md",
+            "../adr/ADR-001-mcp-first-architecture.md",
+        ),
         ("docs/specs/foo.md", "../specs/foo.md"),
-        (".claude/decisions/deployability-discipline.md",
-         "../../.claude/decisions/deployability-discipline.md"),
+        (
+            ".claude/decisions/deployability-discipline.md",
+            "../../.claude/decisions/deployability-discipline.md",
+        ),
     ]
     for rel, expected_target in format_cases:
         rendered = pis._entry_link(rel, "")
@@ -246,12 +252,18 @@ def test_entry_link_targets_resolve_from_plans_dir() -> None:
     # Resolution cases — only real files. Same-dir cases use PLAN_INDEX's
     # actual neighbours; cross-tree cases use well-known canonical docs.
     resolution_cases = [
-        ("docs/plans/2026-05-20-phase-0-event-bus-plan.md",
-         "2026-05-20-phase-0-event-bus-plan.md"),
-        ("docs/adr/ADR-001-mcp-first-architecture.md",
-         "../adr/ADR-001-mcp-first-architecture.md"),
-        (".claude/decisions/deployability-discipline.md",
-         "../../.claude/decisions/deployability-discipline.md"),
+        (
+            "docs/plans/2026-05-20-phase-0-event-bus-plan.md",
+            "2026-05-20-phase-0-event-bus-plan.md",
+        ),
+        (
+            "docs/adr/ADR-001-mcp-first-architecture.md",
+            "../adr/ADR-001-mcp-first-architecture.md",
+        ),
+        (
+            ".claude/decisions/deployability-discipline.md",
+            "../../.claude/decisions/deployability-discipline.md",
+        ),
     ]
     for rel, expected_target in resolution_cases:
         rendered = pis._entry_link(rel, "")
@@ -349,7 +361,9 @@ def test_format_bytes_mib_and_above() -> None:
     assert pis._format_bytes(5 * 1024 * 1024) == "5.0 MB"
 
 
-def test_dry_run_output_uses_relative_path_and_kb(capsys: pytest.CaptureFixture[str]) -> None:
+def test_dry_run_output_uses_relative_path_and_kb(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
     """End-to-end: dry-run output line strips cwd prefix and shows KB units.
 
     Mirrors the user's report (``wrote /Users/les/Projects/<repo>/docs/plans/
@@ -492,8 +506,8 @@ def _raise_file_not_found(*_args: object, **_kwargs: object) -> object:
     raise FileNotFoundError(2, "No such file or directory: 'git'")
 
 
-def test_dry_run_translates_to_check(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """crackerjack's --dry-run flag must translate to oneiric.plan_index.regenerate(check=True).
+def test_dry_run_translates_to_check(tmp_path: Path) -> None:
+    """``--dry-run`` must report drift without writing the index.
 
     Invokes the dispatcher module DIRECTLY (NOT ``crackerjack run``). The
     ``crackerjack run`` CLI does not bind ``--repo-root`` (``grep`` of
@@ -503,17 +517,13 @@ def test_dry_run_translates_to_check(tmp_path: Path, monkeypatch: pytest.MonkeyP
     Calling ``crackerjack run --plan-index-sync --dry-run --repo-root
     <tmp>`` would silently ignore the ``--repo-root`` flag and run against
     the worktree's cwd, NOT against ``tmp_path``. Mirror the existing
-    pattern at ``crackerjack/tests/unit/test_plan_index_sync.py:18`` (the
-    ``_tool_help()`` probe) — direct module invocation only.
+    pattern in this module (the ``_tool_help()`` probe) — direct module
+    invocation only.
 
-    NOTE: env var is ``CRACKERJACK_DOCUMENTATION__USE_SHARED_REGENERATOR``
-    (not ``CRACKERJACK_DOCS__...``). The crackerjack env-overlay at
-    ``crackerjack/config/loader.py:25`` splits on ``__`` and looks the
-    section up in ``CrackerjackSettings.model_fields``; the top-level
-    field is ``documentation`` (``docs`` is not an alias), so the brief
-    env-var spelling would silently no-op.
+    The tool has a single renderer — this module's. There is no shared
+    implementation left to select, so the flag's contract is simply
+    "report, don't write".
     """
-    monkeypatch.setenv("CRACKERJACK_DOCUMENTATION__USE_SHARED_REGENERATOR", "true")
     docs = tmp_path / "docs" / "plans"
     docs.mkdir(parents=True)
     (docs / "foo.md").write_text("---\nstatus: active\n---\n# Foo\n", encoding="utf-8")
@@ -531,6 +541,10 @@ def test_dry_run_translates_to_check(tmp_path: Path, monkeypatch: pytest.MonkeyP
         text=True,
         timeout=30,
         cwd=REPO_ROOT,
+        check=False,
     )
-    # exit 0 = no drift, exit 1 = drift (either is valid; key is no exception)
+    # exit 0 = no drift, exit 1 = drift (either is valid; key is no write)
     assert result.returncode in (0, 1), result.stderr
+    assert not (tmp_path / "docs" / "plans" / "PLAN_INDEX.md").exists(), (
+        "--dry-run wrote the index"
+    )

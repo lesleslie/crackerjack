@@ -3,7 +3,7 @@ status: active
 role: implementation
 topic: lifecycle
 date: 2026-11-15
-last_reviewed: 2026-11-15
+last_reviewed: 2026-11-16
 superseded_by: null
 blocks_on: []
 ---
@@ -788,6 +788,12 @@ real hole in a test:
     ``documentation.use_shared_regenerator`` set, the plan index routes to
     ``oneiric.plan_index.regenerate``, which uses the shared
     BOM-stripping extractor.
+
+    > **Superseded 2026-11-16.** The shared branch was removed and the
+    > ``use_shared_regenerator`` setting with it. The plan index has one
+    > renderer now, so the BOM-blindness described above applies
+    > unconditionally. See
+    > `docs/decisions/2026-11-16-single-plan-index-renderer.md`.
 41. *The generator could still truncate a committed reference.* The
     hidden-directory fix removed the cause of the zero-file scan, but the
     failure mode — "regenerate" silently meaning "truncate" — outlived

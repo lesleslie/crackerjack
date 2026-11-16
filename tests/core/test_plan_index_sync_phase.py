@@ -26,7 +26,6 @@ from unittest.mock import MagicMock
 
 import pytest
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -133,9 +132,9 @@ def test_plan_index_sync_position_between_doc_cleanup_and_fast_hooks() -> None:
     pis_idx = steps.index("plan_index_sync")
     fast_idx = steps.index("fast_hooks")
 
-    assert (
-        doc_idx < pis_idx < fast_idx
-    ), f"expected documentation_cleanup < plan_index_sync < fast_hooks; got {steps!r}"
+    assert doc_idx < pis_idx < fast_idx, (
+        f"expected documentation_cleanup < plan_index_sync < fast_hooks; got {steps!r}"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -169,13 +168,11 @@ def test_plan_index_sync_removed_from_fast_hooks_in_source() -> None:
     Complements the runtime assertion in case the module is re-exported
     from a different namespace in the future.
     """
-    hooks_source = (
-        REPO_ROOT / "crackerjack" / "config" / "hooks.py"
-    ).read_text()
+    hooks_source = (REPO_ROOT / "crackerjack" / "config" / "hooks.py").read_text()
 
-    assert (
-        'name="plan-index-sync"' not in hooks_source
-    ), "plan-index-sync HookDefinition block reappeared in hooks.py"
+    assert 'name="plan-index-sync"' not in hooks_source, (
+        "plan-index-sync HookDefinition block reappeared in hooks.py"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -196,9 +193,7 @@ def test_documentation_settings_expose_auto_plan_index_sync_flag() -> None:
     field_names = set(DocumentationSettings.model_fields.keys())
 
     assert "auto_plan_index_sync_on_publish" in field_names
-    assert (
-        DocumentationSettings().auto_plan_index_sync_on_publish is True
-    )
+    assert DocumentationSettings().auto_plan_index_sync_on_publish is True
 
 
 def test_options_model_carries_plan_index_sync_field() -> None:
@@ -248,7 +243,6 @@ def test_run_plan_index_sync_phase_calls_tool_success(
 ) -> None:
     """``run_plan_index_sync_phase`` delegates to ``plan_index_sync.main``
     and completes when the tool exits 0."""
-    import sys
 
     from crackerjack.core import phase_coordinator as pc
 
@@ -275,9 +269,15 @@ def test_run_plan_index_sync_phase_calls_tool_success(
     # Patch ``sys.modules`` to swap the cached module for our shim so the
     # lazy import resolves to the MagicMock without needing to mutate the
     # package's `__init__`.
-    monkeypatch.setitem(
-        sys.modules, "crackerjack.tools.plan_index_sync", fake_module
-    )
+    # Patch the *package attribute*, not sys.modules. The phase resolves
+    # the tool with ``from crackerjack.tools import plan_index_sync``,
+    # which binds the attribute the package already holds. Patching
+    # sys.modules only takes effect if the submodule was never imported —
+    # so the mock silently did not apply whenever another test had
+    # already imported the real module, and the real tool ran against
+    # /tmp/repo instead. Order-dependent, and it failed only when this
+    # file ran after tests/unit/test_plan_index_sync.py.
+    monkeypatch.setattr("crackerjack.tools.plan_index_sync", fake_module, raising=False)
 
     assert (
         coordinator.run_plan_index_sync_phase(
@@ -295,7 +295,6 @@ def test_run_plan_index_sync_phase_dry_run_message(
 ) -> None:
     """``docs_dry_run=True`` flips the completion message to
     ``"Dry-run complete"`` and passes ``--dry-run`` to the tool."""
-    import sys
 
     from crackerjack.core import phase_coordinator as pc
 
@@ -317,9 +316,15 @@ def test_run_plan_index_sync_phase_dry_run_message(
     fake_module = MagicMock()
     fake_module.main = fake_main
 
-    monkeypatch.setitem(
-        sys.modules, "crackerjack.tools.plan_index_sync", fake_module
-    )
+    # Patch the *package attribute*, not sys.modules. The phase resolves
+    # the tool with ``from crackerjack.tools import plan_index_sync``,
+    # which binds the attribute the package already holds. Patching
+    # sys.modules only takes effect if the submodule was never imported —
+    # so the mock silently did not apply whenever another test had
+    # already imported the real module, and the real tool ran against
+    # /tmp/repo instead. Order-dependent, and it failed only when this
+    # file ran after tests/unit/test_plan_index_sync.py.
+    monkeypatch.setattr("crackerjack.tools.plan_index_sync", fake_module, raising=False)
 
     assert (
         coordinator.run_plan_index_sync_phase(
@@ -338,7 +343,6 @@ def test_run_plan_index_sync_phase_handles_systemexit(
 ) -> None:
     """The argparse error path raises SystemExit — the phase coerces
     ``exc.code`` to an int and fails the task."""
-    import sys
 
     from crackerjack.core import phase_coordinator as pc
 
@@ -362,9 +366,15 @@ def test_run_plan_index_sync_phase_handles_systemexit(
     fake_module = MagicMock()
     fake_module.main = MagicMock(side_effect=raise_system_exit)
 
-    monkeypatch.setitem(
-        sys.modules, "crackerjack.tools.plan_index_sync", fake_module
-    )
+    # Patch the *package attribute*, not sys.modules. The phase resolves
+    # the tool with ``from crackerjack.tools import plan_index_sync``,
+    # which binds the attribute the package already holds. Patching
+    # sys.modules only takes effect if the submodule was never imported —
+    # so the mock silently did not apply whenever another test had
+    # already imported the real module, and the real tool ran against
+    # /tmp/repo instead. Order-dependent, and it failed only when this
+    # file ran after tests/unit/test_plan_index_sync.py.
+    monkeypatch.setattr("crackerjack.tools.plan_index_sync", fake_module, raising=False)
 
     assert (
         coordinator.run_plan_index_sync_phase(
@@ -380,7 +390,6 @@ def test_run_plan_index_sync_phase_handles_systemexit_nonint_code(
 ) -> None:
     """``SystemExit.code`` may be non-int (e.g. None); the phase coerces
     to the safe ``1`` default."""
-    import sys
 
     from crackerjack.core import phase_coordinator as pc
 
@@ -404,9 +413,15 @@ def test_run_plan_index_sync_phase_handles_systemexit_nonint_code(
     fake_module = MagicMock()
     fake_module.main = MagicMock(side_effect=raise_system_exit)
 
-    monkeypatch.setitem(
-        sys.modules, "crackerjack.tools.plan_index_sync", fake_module
-    )
+    # Patch the *package attribute*, not sys.modules. The phase resolves
+    # the tool with ``from crackerjack.tools import plan_index_sync``,
+    # which binds the attribute the package already holds. Patching
+    # sys.modules only takes effect if the submodule was never imported —
+    # so the mock silently did not apply whenever another test had
+    # already imported the real module, and the real tool ran against
+    # /tmp/repo instead. Order-dependent, and it failed only when this
+    # file ran after tests/unit/test_plan_index_sync.py.
+    monkeypatch.setattr("crackerjack.tools.plan_index_sync", fake_module, raising=False)
 
     assert (
         coordinator.run_plan_index_sync_phase(

@@ -136,7 +136,7 @@ The validator runs in **hybrid mode**: known topics pass without warning; unknow
 
 ```bash
 uv run python scripts/regenerate_plan_index.py          # write to docs/plans/PLAN_INDEX.md
-uv run python scripts/regenerate_plan_index.py --dry-run # print to stdout, do not write
+uv run python scripts/regenerate_plan_index.py --dry-run # report drift, do not write (exit 1 on drift)
 uv run python scripts/regenerate_plan_index.py --out path/to/other.md
 uv run python scripts/regenerate_plan_index.py --json-summary # emit per-store counts on stderr
 ```

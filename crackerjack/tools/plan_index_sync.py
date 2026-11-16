@@ -19,9 +19,35 @@ point stays usable for ad-hoc invocations:
     python -m crackerjack.tools.plan_index_sync            # rewrite
     python -m crackerjack.tools.plan_index_sync --dry-run   # print diff
 
-Mirrors the akosha canonical:
-``akosha/scripts/regenerate_plan_index.py``
-:ref:``docs/plans/2026-09-27-pyproject-single-source-of-truth.md``.
+This module is the single renderer for ``docs/plans/PLAN_INDEX.md``
+across the fleet. Two other implementations once competed for the same
+path — a copy of this renderer shipped as
+``scripts/regenerate_plan_index.py`` in each repo, and
+``oneiric.plan_index.regenerate`` — and they produced three different
+formats for one file. The repo-local copies are now thin wrappers around
+this module, so the documented command produces byte-identical output to
+the phase.
+
+One exception: ``mahavishnu/scripts/regenerate_plan_index.py`` is not a
+drifted copy. It renders the *ecosystem* index — thirteen stores rather
+than five, with a status legend, an authority matrix and per-kind tables
+— and it is the shared frontmatter library that
+``mahavishnu/scripts/audit_doc_frontmatter.py`` imports. It stays as it
+is. See ``docs/decisions/2026-11-16-single-plan-index-renderer.md``.
+
+The shared ``oneiric.plan_index`` branch was removed here rather than
+promoted, for three reasons:
+
+- it returns the entry count where a caller expects an exit code, so the
+  publish phase would report failure on success;
+- its output is not mdformat-stable — it writes ``Role \\ Lifecycle`` where
+  mdformat writes ``Role \\\\ Lifecycle``, which the docs gate rewrites on
+  every run, leaving the tree dirty for a change nobody made;
+- it does not filter to git-tracked files, so a stray untracked README
+  would be indexed and its rendered link would fail ``check-local-links``
+  on a fresh clone.
+
+This renderer keeps all three guarantees, and its unit tests pin them.
 """
 
 from __future__ import annotations
@@ -44,9 +70,6 @@ except ImportError as exc:  # pragma: no cover - import guard
         f"Original error: {exc}\n"
     )
     raise SystemExit(2) from exc
-
-from crackerjack.config.loader import load_settings
-from crackerjack.config.settings import CrackerjackSettings
 
 # ---------------------------------------------------------------------------
 # Output formatting — local-only helpers for console lines below.
@@ -402,6 +425,14 @@ def _render_index(entries_by_store: dict[str, list[Entry]], generated_at: str) -
 
 def render_plan_index(repo_root: Path) -> str:
     """Walk the six stores; return the rendered ``PLAN_INDEX.md`` body."""
+    return _render_index(
+        scan_plan_index_entries(repo_root),
+        generated_at=datetime.datetime.now(tz=datetime.UTC).date().isoformat(),
+    )
+
+
+def scan_plan_index_entries(repo_root: Path) -> dict[str, list[Entry]]:
+    """Return the indexable entries per store, keyed by store path."""
     entries_by_store: dict[str, list[Entry]] = {}
     for store in DEFAULT_STORES:
         files = _discover_files(repo_root, store)
@@ -412,10 +443,22 @@ def render_plan_index(repo_root: Path) -> str:
                 continue
             store_entries.append(entry)
         entries_by_store[store] = store_entries
-    return _render_index(
-        entries_by_store,
-        generated_at=datetime.datetime.now(tz=datetime.UTC).date().isoformat(),
-    )
+    return entries_by_store
+
+
+def _emit_json_summary(entries_by_store: dict[str, list[Entry]]) -> None:
+    """Print per-store entry counts to stderr, as JSON."""
+    import json
+
+    summary = {
+        "generated_at": datetime.datetime.now(tz=datetime.UTC).date().isoformat(),
+        "discovered": sum(len(v) for v in entries_by_store.values()),
+        "with_frontmatter": sum(len(v) for v in entries_by_store.values()),
+        "per_store": {
+            store: len(entries) for store, entries in entries_by_store.items()
+        },
+    }
+    print(json.dumps(summary, indent=2), file=sys.stderr)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -443,30 +486,21 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Print whether the index would change without writing",
     )
+    parser.add_argument(
+        "--json-summary",
+        action="store_true",
+        help="Emit per-store entry counts to stderr",
+    )
     args = parser.parse_args(argv)
 
-    settings = load_settings(CrackerjackSettings)
-    use_shared = getattr(settings.documentation, "use_shared_regenerator", False)
-    if use_shared:
-        from oneiric.plan_index import regenerate as shared_regenerate
+    entries_by_store = scan_plan_index_entries(args.repo_root)
+    if args.json_summary:
+        _emit_json_summary(entries_by_store)
 
-        # --dry-run ≡ check=True (per spec acceptance criterion I-1)
-        return shared_regenerate(
-            repo_root=args.repo_root.resolve(),
-            out_path=(args.out.resolve() if args.out else None),
-            check=bool(args.dry_run),
-        )
-
-    # LEGACY BRANCH: inline the pre-dispatch body of main() (originally
-    # at crackerjack/tools/plan_index_sync.py:407-454 before this rewrite).
-    #
-    # Per crackerjack-specialist review C3: do NOT extract to
-    # ``_legacy_render(args)``. Inlining is preferable — fewer new
-    # symbols, tighter review diff, and the legacy branch is small
-    # once the shared import is removed. The CLI surface
-    # (``--repo-root``, ``--out``, ``--dry-run``) stays identical so the
-    # existing ``test_help_smoke`` continues to pass.
-    new_content = render_plan_index(args.repo_root)
+    new_content = _render_index(
+        entries_by_store,
+        generated_at=datetime.datetime.now(tz=datetime.UTC).date().isoformat(),
+    )
 
     if args.dry_run:
         existing = args.out.read_text(encoding="utf-8") if args.out.exists() else ""

@@ -93,7 +93,6 @@ documentation:
   dry_run_by_default: false
   backup_before_cleanup: true
   archivable_statuses: ["shipped"]  # Lifecycle statuses a doc may hold to be auto-archived
-  use_shared_regenerator: false  # NEW: opt-in per sibling; flip when oneiric.plan_index is available
 
   essential_files:
     - AGENTS.md
