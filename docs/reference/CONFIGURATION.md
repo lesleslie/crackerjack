@@ -118,6 +118,7 @@ documentation:
   auto_plan_index_sync_on_publish: true  # Regenerate docs/plans/PLAN_INDEX.md on publish
   dry_run_by_default: false              # Dry run mode
   backup_before_cleanup: true            # Backup before cleanup
+  archivable_statuses: ["shipped"]       # Lifecycle statuses that permit auto-archiving
 ```
 
 ### Essential Documentation Files
