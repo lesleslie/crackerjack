@@ -425,7 +425,7 @@ def _read_ratchet_floor(path: Path) -> float | None:
     **stale** (older than ``RATCHET_MAX_AGE_DAYS`` days, or its recorded
     ``coverage_data_mtime`` no longer matches the on-disk
     ``coverage.json``). A stale ratchet is treated as missing so the
-    operator must regenerate it via ``crackerjack run --publish``
+    operator must regenerate it from a fresh coverage measurement
     before the release audit can certify a coverage claim. See
     ``.claude/decisions/2026-10-13-ratchet-staleness.md`` for the
     policy.
@@ -457,7 +457,16 @@ def _ratchet_defect_message(ratchet_path: Path) -> str:
     if defect == "stale":
         return (
             "is stale — it no longer describes the measured coverage. "
-            "Regenerate it with `crackerjack run --publish` before releasing."
+            "Regenerate it from a fresh coverage measurement: run the "
+            "tests so they write coverage.json (`pytest --cov=<pkg> "
+            "--cov-report=json`, or any run whose addopts carry "
+            "`--cov-report=json`), and THEN refresh the ratchet with "
+            "`crackerjack run --coverage-ratchet`. The order matters — "
+            "the ratchet records the mtime of the coverage.json it was "
+            "derived from, so a test run after the refresh makes it "
+            "stale again. Running the publish stage alone will NOT "
+            "refresh it: that stage runs no tests, so there is no "
+            "coverage.json for the refresh to read."
         )
     if defect == "malformed":
         return "could not be read (malformed JSON)"
@@ -465,9 +474,9 @@ def _ratchet_defect_message(ratchet_path: Path) -> str:
 
 
 # Maximum age for a ratchet file to be considered trustworthy. After
-# this window, a fresh `crackerjack run --publish` is required. The
-# value is conservative (30 days) because a coverage floor older than
-# the code's last release is more likely to be a stale claim than a
+# this window, a fresh coverage measurement is required. The value is
+# conservative (30 days) because a coverage floor older than the
+# code's last release is more likely to be a stale claim than a
 # trustworthy one. Configurable per-repo (TODO: surface in
 # settings.documentation.coverage_ratchet_max_age_days).
 RATCHET_MAX_AGE_DAYS = 30

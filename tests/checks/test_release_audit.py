@@ -32,6 +32,7 @@ from crackerjack.checks.release_audit import (
     _parse_claude_md,
     _read_pyproject_version,
     _read_ratchet_floor,
+    _ratchet_defect_message,
     _symbol_in_source,
     _verify_added,
     _verify_coverage,
@@ -587,6 +588,46 @@ def test_read_ratchet_floor_coverage_data_mtime_drift_returns_none(
         )
     )
     assert _read_ratchet_floor(p) is None
+
+
+def test_ratchet_defect_message_stale_names_a_remedy_that_works(
+    tmp_path: Path,
+) -> None:
+    """The stale-ratchet remedy must not name the publish stage.
+
+    The publish stage runs no tests, so it has no ``coverage.json`` to
+    refresh the ratchet from — telling the operator to run it sent them
+    in a circle: they ran the publish stage, it failed on the stale
+    ratchet, and the message told them to run the publish stage again.
+    """
+    import datetime
+
+    p = tmp_path / ".coverage-ratchet.json"
+    p.write_text(
+        json.dumps(
+            {
+                "current_minimum": 89.0,
+                # Older than RATCHET_MAX_AGE_DAYS (30): the ratchet is
+                # time-stale, which is the defect this message reports.
+                "generated_at": (
+                    datetime.datetime.now(datetime.UTC) - datetime.timedelta(days=40)
+                ).isoformat(),
+            }
+        )
+    )
+
+    message = _ratchet_defect_message(p)
+
+    assert "is stale" in message
+    # The publish stage cannot refresh the ratchet; naming it is the bug.
+    assert "--publish" not in message
+    # It must name what actually regenerates the ratchet.
+    assert "coverage.json" in message
+    assert "--coverage-ratchet" in message
+    # And it must state the order: the ratchet records the mtime of the
+    # coverage.json it was derived from, so a test run after the
+    # refresh invalidates it again.
+    assert "THEN" in message
 
 
 # ---------------------------------------------------------------------------
