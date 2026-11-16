@@ -1065,6 +1065,7 @@ def create_options(
     refresh_cache: bool = False,
     strip_code: bool | None = None,
     run_tests: bool = False,
+    incremental_tests: bool = True,
     xcode_tests: bool = False,
     xcode_project: str = "app/MdInjectApp/MdInjectApp.xcodeproj",
     xcode_scheme: str = "MdInjectApp",
