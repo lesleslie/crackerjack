@@ -36,6 +36,21 @@ logger = logging.getLogger(__name__)
 #: the release path skips the step entirely.
 _VERSION_STAMP_SCRIPT = Path("scripts") / "stamp_version.py"
 
+#: Git's own environment variables can redirect a git command away from the
+#: repository it names: ``GIT_DIR`` wins over the directory ``-C`` selects,
+#: and ``GIT_INDEX_FILE`` names the index to read. The release path's trust
+#: decisions have to be about the repo it was pointed at, so these are
+#: stripped from the environment of any git call it makes.
+_GIT_ENV_VARS: tuple[str, ...] = (
+    "GIT_DIR",
+    "GIT_WORK_TREE",
+    "GIT_COMMON_DIR",
+    "GIT_INDEX_FILE",
+    "GIT_CONFIG",
+    "GIT_CONFIG_GLOBAL",
+    "GIT_OBJECT_DIRECTORY",
+)
+
 if t.TYPE_CHECKING:
     from crackerjack.services.git import GitService
     from crackerjack.services.pypistats_service import DownloadTrendClass
@@ -289,10 +304,14 @@ class PublishManagerImpl:
         mask_stdout: bool = True,
         mask_stderr: bool = True,
         additional_env: dict[str, str] | None = None,
+        scrub_git_env: bool = False,
     ) -> subprocess.CompletedProcess[str]:
         secure_env = self.security.create_secure_command_env()
         if additional_env:
             secure_env.update(additional_env)
+        if scrub_git_env:
+            for var in _GIT_ENV_VARS:
+                secure_env.pop(var, None)
 
         result = subprocess.run(
             cmd,
@@ -487,19 +506,27 @@ class PublishManagerImpl:
         """Decide whether *script* may be executed by the release path.
 
         The stamper is repo-local code, so running it means trusting the
-        repo. Three conditions narrow that trust to "the operator committed
-        this deliberately":
+        repo. The trust is narrowed to "the bytes that will execute are the
+        bytes that were committed and reviewed":
 
         - it is a regular file inside the repo root — not a symlink pointing
           elsewhere, and not a directory;
-        - it is tracked by git in that root, so a file merely *present* on
-          disk (a build artifact, a stray download, something a tool
-          dropped in) never runs;
-        - the root is a git repository, so "tracked" is a question with an
-          answer rather than a silent pass.
+        - the path exists in ``HEAD``, so the operator committed it rather
+          than it merely being present on disk (a build artifact, a stray
+          download, something a tool dropped in);
+        - the working tree copy is byte-identical to ``HEAD``'s, so a
+          staged-but-uncommitted or locally-modified edit cannot be what
+          runs.
 
-        A repo that keeps no version claims ships no stamper, and the step
-        is skipped.
+        The middle check is deliberately about ``HEAD`` and not the index:
+        ``git ls-files`` reads the index, and the index is exactly where an
+        unreviewed edit would sit before a commit. The last check is what
+        makes the decision about the bytes that actually execute — the
+        working tree — rather than about some other copy of the file.
+
+        The git calls run with git's own environment variables stripped, so
+        a poisoned ``GIT_DIR`` cannot redirect them at a different repo and
+        make a different tree answer the question.
         """
         try:
             if not script.is_file() or script.is_symlink():
@@ -510,10 +537,29 @@ class PublishManagerImpl:
         except OSError:
             return False
 
-        result = self._run_command(
-            ["git", "-C", str(root), "ls-files", "--", _VERSION_STAMP_SCRIPT.as_posix()],
+        relative = _VERSION_STAMP_SCRIPT.as_posix()
+        committed = self._run_command(
+            [
+                "git",
+                "-C",
+                str(root),
+                "ls-tree",
+                "-z",
+                "--full-tree",
+                "HEAD",
+                "--",
+                relative,
+            ],
+            scrub_git_env=True,
         )
-        return result.returncode == 0 and bool(result.stdout.strip())
+        if committed.returncode != 0 or not committed.stdout.strip("\x00 \t\n"):
+            return False
+
+        unchanged = self._run_command(
+            ["git", "-C", str(root), "diff", "--quiet", "HEAD", "--", relative],
+            scrub_git_env=True,
+        )
+        return unchanged.returncode == 0
 
     def _stamp_version_claims(self) -> None:
         """Re-stamp the repo's version claims after the version bump.
@@ -532,6 +578,13 @@ class PublishManagerImpl:
         path stays usable in repos that keep no claims. Whether the script
         is trusted enough to run is decided by :meth:`_is_trusted_stamp_script`.
 
+        The script runs with ``-I`` (isolated mode), which takes its own
+        directory off ``sys.path``. Without it, a sibling file in
+        ``scripts/`` named ``re.py`` or ``subprocess.py`` would shadow the
+        standard library module the stamper imports — the gate validates one
+        file, and the interpreter would load a whole directory's worth of
+        unreviewed code alongside it.
+
         When the script runs and fails, the release aborts. A release that
         leaves the claims behind is the exact drift this closes, so failing
         loud beats publishing a version whose docs disagree with it.
@@ -541,10 +594,18 @@ class PublishManagerImpl:
         rollback never has to restore a document it did not write.
         """
         script = self.pkg_path / _VERSION_STAMP_SCRIPT
+        if not script.exists():
+            return
         if not self._is_trusted_stamp_script(script):
+            self.console.print(
+                f"[yellow]⚠️[/yellow] Skipping version stamp: {script.name} is not a "
+                "committed, unmodified file in this repository",
+            )
             return
 
-        result = self._run_command([sys.executable, str(script), str(self.pkg_path)])
+        result = self._run_command(
+            [sys.executable, "-I", str(script), str(self.pkg_path)],
+        )
         if result.returncode != 0:
             detail = _sanitize_subprocess_output(
                 result.stderr,

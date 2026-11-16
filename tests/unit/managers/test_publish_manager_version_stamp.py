@@ -66,6 +66,23 @@ def _git(root: Path, *args: str) -> None:
     subprocess.run(["git", "-C", str(root), *args], check=True, capture_output=True)
 
 
+def _commit(root: Path, message: str) -> None:
+    """Commit with a fixed identity, so the test never depends on the host's."""
+    _git(
+        root,
+        "-c",
+        "user.email=stamp@example.com",
+        "-c",
+        "user.name=Stamp",
+        "-c",
+        "commit.gpgsign=false",
+        "commit",
+        "-q",
+        "-m",
+        message,
+    )
+
+
 def _write_repo(root: Path, *, stamp_script: str | None) -> Path:
     """Lay out a minimal repo: pyproject, a README claim, maybe a stamper."""
     (root / "pyproject.toml").write_text(
@@ -85,6 +102,7 @@ def _make_tracked_repo(root: Path, *, stamp_script: str | None) -> Path:
     _git(root, "init", "-q")
     if stamp_script is not None:
         _git(root, "add", "--", "scripts/stamp_version.py")
+        _commit(root, "add stamper")
     return root
 
 
@@ -130,13 +148,14 @@ class TestVersionClaimStamping:
         stamp_calls = [
             call
             for call in run_command.call_args_list
-            if str(call[0][0][1]).endswith("stamp_version.py")
+            if call[0][0] and call[0][0][0] == sys.executable
         ]
         assert len(stamp_calls) == 1
         command = stamp_calls[0][0][0]
         assert command[0] == sys.executable
-        assert command[1] == str(root / "scripts" / "stamp_version.py")
-        assert command[2] == str(root)
+        assert command[1] == "-I"
+        assert command[2] == str(root / "scripts" / "stamp_version.py")
+        assert command[3] == str(root)
 
     def test_bump_without_a_stamper_is_a_no_op(self, tmp_path: Path) -> None:
         """A repo that keeps no version claims publishes without the step."""
@@ -158,6 +177,73 @@ class TestVersionClaimStamping:
 
         assert new_version == "0.1.1"
         assert "**Version:** 0.1.0" in (root / "README.md").read_text()
+
+    def test_staged_but_uncommitted_stamper_is_not_run(self, tmp_path: Path) -> None:
+        """A stamper staged in the index but absent from HEAD does not run.
+
+        ``git ls-files`` reads the index, so a staged-only file looks
+        tracked to anything that asks the index. The gate asks HEAD
+        instead, because HEAD is what was reviewed.
+        """
+        root = _write_repo(tmp_path, stamp_script=_FAKE_STAMP_SCRIPT)
+        _git(root, "init", "-q")
+        _git(root, "add", "--", "scripts/stamp_version.py")
+        manager = _make_manager(root)
+
+        new_version = manager._perform_bump("0.1.0", "patch")
+
+        assert new_version == "0.1.1"
+        assert "**Version:** 0.1.0" in (root / "README.md").read_text()
+
+    def test_locally_modified_stamper_is_not_run(self, tmp_path: Path) -> None:
+        """A committed stamper with local edits does not run.
+
+        The bytes that execute are the working tree's bytes, so the gate
+        requires them to match the committed ones. Otherwise an unreviewed
+        edit would be what runs.
+        """
+        root = _make_tracked_repo(tmp_path, stamp_script=_FAKE_STAMP_SCRIPT)
+        (root / "scripts" / "stamp_version.py").write_text(
+            _FAKE_STAMP_SCRIPT + "\n# an unreviewed local edit\n",
+        )
+        manager = _make_manager(root)
+
+        new_version = manager._perform_bump("0.1.0", "patch")
+
+        assert new_version == "0.1.1"
+        assert "**Version:** 0.1.0" in (root / "README.md").read_text()
+
+    def test_poisoned_git_dir_cannot_redirect_the_gate(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """A GIT_DIR pointing elsewhere cannot make an untrusted script run.
+
+        ``GIT_DIR`` wins over the directory ``-C`` selects, so with it set,
+        the trust questions would be answered by whichever repo it names —
+        not the one the release path was pointed at. The git calls strip
+        git's environment, so the answers come from the right repo.
+        """
+        elsewhere = tmp_path / "elsewhere"
+        elsewhere.mkdir()
+        _write_repo(elsewhere, stamp_script=_FAKE_STAMP_SCRIPT)
+        _git(elsewhere, "init", "-q")
+        _git(elsewhere, "add", "--", "scripts/stamp_version.py")
+        _commit(elsewhere, "a committed stamper elsewhere")
+
+        victim = tmp_path / "victim"
+        victim.mkdir()
+        _write_repo(victim, stamp_script=_FAKE_STAMP_SCRIPT)
+        _git(victim, "init", "-q")
+
+        monkeypatch.setenv("GIT_DIR", str(elsewhere / ".git"))
+        manager = _make_manager(victim)
+
+        new_version = manager._perform_bump("0.1.0", "patch")
+
+        assert new_version == "0.1.1"
+        assert "**Version:** 0.1.0" in (victim / "README.md").read_text()
 
     def test_symlinked_stamper_is_not_run(self, tmp_path: Path) -> None:
         """A symlink is not a committed file, so it does not run."""
