@@ -1142,6 +1142,36 @@ def test_check_release_audit_historical_added_symbol_missing_does_not_fail(
     ), [r.message for r in report.results]
 
 
+def test_count_tests_does_not_collect_coverage(tmp_path: Path) -> None:
+    """The test COUNT must not run with coverage on.
+
+    pytest-cov writes the reports named in the repo's ``addopts``, and
+    a collect-only run executes no tests -- so without ``--no-cov`` the
+    run rewrites ``coverage.json`` with an empty measurement. The
+    ratchet records that file's mtime as the provenance of its floor,
+    so the audit would invalidate the ratchet it had just validated and
+    the next publish would fail on a "stale" ratchet that nothing had
+    actually changed.
+    """
+    recorded: list[list[str]] = []
+
+    class _Result:
+        stdout = "42 tests collected\n"
+        stderr = ""
+
+    def _fake_run(args, **kwargs):
+        recorded.append(list(args))
+        return _Result()
+
+    with patch("crackerjack.checks.release_audit.subprocess.run", _fake_run):
+        assert _count_tests(tmp_path) == 42
+
+    assert recorded, "the test count did not run pytest"
+    assert "--no-cov" in recorded[0], (
+        f"the test-count run collects coverage: {recorded[0]}"
+    )
+
+
 def test_check_release_audit_version_mismatch(tmp_path: Path) -> None:
     paths = _make_minimal_project(tmp_path)
     paths["claude_md"].write_text(

@@ -598,10 +598,28 @@ def _is_ratchet_stale(
 
 
 def _count_tests(test_root: Path) -> int | None:
-    """Run pytest --collect-only -q and parse the count."""
+    """Run pytest --collect-only -q and parse the count.
+
+    ``--no-cov`` is not optional here. pytest-cov writes the reports
+    named in the repo's ``addopts``, and a collect-only run executes no
+    tests -- so without it the run rewrites ``coverage.json`` with an
+    empty measurement. That changes the file's mtime, and the ratchet
+    records that mtime as the provenance of its floor: the audit would
+    invalidate the very ratchet it had just validated, and the NEXT
+    publish would fail on a "stale" ratchet that nothing had actually
+    changed. A test COUNT has no business collecting coverage.
+    """
     try:
         result = subprocess.run(
-            [sys.executable, "-m", "pytest", "--collect-only", "-q", "--no-header"],
+            [
+                sys.executable,
+                "-m",
+                "pytest",
+                "--collect-only",
+                "-q",
+                "--no-header",
+                "--no-cov",
+            ],
             cwd=test_root,
             capture_output=True,
             text=True,
