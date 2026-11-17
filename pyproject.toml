@@ -587,7 +587,12 @@ asyncio_mode = "auto"
 # pyproject verbatim when the target has none), so new projects inherit it.
 asyncio_default_fixture_loop_scope = "function"
 timeout = 600
-addopts = "--cov=crackerjack --cov-report=term-missing:skip-covered --cov-report=html:htmlcov --cov-report=json --strict-markers --strict-config -ra --tb=short --cov-fail-under=68.4296545707018"
+# The floor is the whole point BELOW the measured coverage: 75, for a
+# measured 75.10%. The 68.4296545707018 this replaced was a raw measured
+# float from the 2026-08-11 ratchet adoption sweep, and it sat 6.6pp
+# BELOW what the code actually measures -- so for three months the gate
+# was not failing on regressions, it was not gating anything at all.
+addopts = "--cov=crackerjack --cov-report=term-missing:skip-covered --cov-report=html:htmlcov --cov-report=json --strict-markers --strict-config -ra --tb=short --cov-fail-under=75.0"
 testpaths = [
     "tests",
 ]
