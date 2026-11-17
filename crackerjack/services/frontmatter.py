@@ -150,17 +150,16 @@ def load_seed_topics(
     *,
     allow_degrade: bool = False,
 ) -> set[str]:
-    """Parse topic-vocabulary-v1.md and return the seed slug set.
+    """Parse topic-vocabulary-v1.md and return the merged seed slug set.
 
     Args:
-        repo_root: Repository root. The last-resort location for the
-            vocabulary file -- see ``_resolve_vocab_path`` for the full
-            resolution order.
-        vocab_path: Explicit vocabulary file path. When None, the packaged
-            ``oneiric.schemas/topic-vocabulary-v1.md`` is preferred and the
-            repo-local ``docs/schemas/topic-vocabulary-v1.md`` is the
-            fallback. Pass an explicit path to point at any other location
-            without renaming files in the repo.
+        repo_root: Repository root. The repo-local vocabulary lives under
+            ``docs/schemas/topic-vocabulary-v1.md``.
+        vocab_path: Explicit vocabulary file path. When provided, only that
+            file is loaded. When omitted, the validator loads the packaged
+            ``oneiric.schemas/topic-vocabulary-v1.md`` resource and unions it
+            with the repo-local ``docs/schemas/topic-vocabulary-v1.md`` file
+            when present.
         allow_degrade: When True, return an empty set instead of raising
             VocabFileNotFoundError. Caller is responsible for emitting the
             visible warning. Defaults to False so silent failures are
@@ -170,44 +169,69 @@ def load_seed_topics(
         Set of seed slug strings from the vocabulary's ## Seed List table.
 
     Raises:
-        VocabFileNotFoundError: When the vocabulary file does not exist and
+        VocabFileNotFoundError: When no vocabulary file can be found and
             allow_degrade is False.
     """
-    resolved = _resolve_vocab_path(vocab_path, repo_root)
-    if not resolved.is_file():
-        if allow_degrade:
-            return set()
-        raise VocabFileNotFoundError(
-            f"Topic vocabulary file not found at {resolved!s}. "
-            f"The validator cannot verify topic: slugs without it. "
-            f"Either (a) upgrade ``oneiric`` so the packaged schema at "
-            f"``oneiric.schemas/topic-vocabulary-v1.md`` is reachable via "
-            f"importlib.resources, (b) copy the canonical schema from "
-            f"``oneiric``'s docs/schemas/ into {resolved!s} and ensure "
-            f"the repo_root argument points at the right tree, (c) pass "
-            f"--vocab-path=PATH to point at any location you control, or "
-            f"(d) pass --allow-nonstandard to opt into the legacy "
-            f"silent-degrade behavior (NOT recommended for new code)."
-        )
+    if vocab_path is not None:
+        resolved = vocab_path
+        if not resolved.is_file():
+            if allow_degrade:
+                return set()
+            raise VocabFileNotFoundError(
+                f"Topic vocabulary file not found at {resolved!s}. "
+                f"The validator cannot verify topic: slugs without it. "
+                f"Either (a) upgrade ``oneiric`` so the packaged schema at "
+                f"``oneiric.schemas/topic-vocabulary-v1.md`` is reachable via "
+                f"importlib.resources, (b) copy the canonical schema from "
+                f"``oneiric``'s docs/schemas/ into {resolved!s} and ensure "
+                f"the repo_root argument points at the right tree, (c) pass "
+                f"--vocab-path=PATH to point at any location you control, or "
+                f"(d) pass --allow-nonstandard to opt into the legacy "
+                f"silent-degrade behavior (NOT recommended for new code)."
+            )
+        sources = [resolved]
+    else:
+        sources = []
+        packaged = _try_oneiric_schemas_vocab()
+        if packaged is not None and packaged.is_file():
+            sources.append(packaged)
+        repo_local = repo_root / "docs/schemas/topic-vocabulary-v1.md"
+        if repo_local.is_file():
+            sources.append(repo_local)
+        if not sources:
+            if allow_degrade:
+                return set()
+            raise VocabFileNotFoundError(
+                f"Topic vocabulary file not found at {repo_local!s}. "
+                f"The validator cannot verify topic: slugs without it. "
+                f"Either (a) upgrade ``oneiric`` so the packaged schema at "
+                f"``oneiric.schemas/topic-vocabulary-v1.md`` is reachable via "
+                f"importlib.resources, (b) copy the canonical schema from "
+                f"``oneiric``'s docs/schemas/ into {repo_local!s} and ensure "
+                f"the repo_root argument points at the right tree, (c) pass "
+                f"--vocab-path=PATH to point at any location you control, or "
+                f"(d) pass --allow-nonstandard to opt into the legacy "
+                f"silent-degrade behavior (NOT recommended for new code)."
+            )
 
-    text = resolved.read_text(encoding="utf-8")
     seeds: set[str] = set()
+    for source in sources:
+        text = source.read_text(encoding="utf-8")
+        in_seed_section = False
+        for line in text.splitlines():
+            stripped = line.strip()
+            if stripped.startswith("## "):
+                in_seed_section = stripped.lower().startswith("## seed list")
+                continue
+            if not in_seed_section:
+                continue
 
-    in_seed_section = False
-    for line in text.splitlines():
-        stripped = line.strip()
-        if stripped.startswith("## "):
-            in_seed_section = stripped.lower().startswith("## seed list")
-            continue
-        if not in_seed_section:
-            continue
-
-        if "|" not in stripped:
-            continue
-        seeds.update(
-            match.group(1)
-            for match in re.finditer(r"`([a-z][a-z0-9-]{2,40})`", stripped)
-        )
+            if "|" not in stripped:
+                continue
+            seeds.update(
+                match.group(1)
+                for match in re.finditer(r"`([a-z][a-z0-9-]{2,40})`", stripped)
+            )
     return seeds
 
 
@@ -620,9 +644,12 @@ def _validate_blocks_on_link(
 
 
 def _check_inline_status_heading(
-    text: str, allow_nonstandard: bool, result: FileResult
+    text: str,
+    allow_nonstandard: bool,
+    rel: str,
+    result: FileResult,
 ) -> None:
-    if allow_nonstandard:
+    if allow_nonstandard or rel.startswith(("docs/adr/", "docs/followups/")):
         return
     match = INLINE_STATUS_HEADING_RE.search(text)
     if match is None:
@@ -731,7 +758,7 @@ def validate_file(
         )
 
     _validate_role_status_pair(front, result, role_line=field_lines.get("role", 0))
-    _check_inline_status_heading(text, allow_nonstandard, result)
+    _check_inline_status_heading(text, allow_nonstandard, rel, result)
     _finalize_status(result)
     return result
 

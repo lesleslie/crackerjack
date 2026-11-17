@@ -10,6 +10,29 @@ blocks_on: []
 topic: changelog
 ---
 
+## [0.96.0] - 2026-11-17
+
+### Added
+
+- coverage: Enforce whole-point floors across every ratchet write
+- docs: One renderer for the plan index
+- publish: Re-stamp version claims as part of the version bump
+- release: Stamp crackerjack's own version claim, and harden the step
+
+### Fixed
+
+- audit: Count tests without collecting coverage
+- audit: Name a ratchet remedy that actually regenerates the ratchet
+- audit: Verify only the release being published, not the whole history
+- cli: Wire --full-tests through the run command
+- publish: Anchor the version-stamp trust gate to HEAD, and isolate the script
+- ratchet: Make --reinit actually rewrite the baseline
+
+### Internal
+
+- pytest: Name the async fixture loop scope
+- Raise the coverage floor to the measured value
+
 ## [0.95.0] - 2026-11-16
 
 ### Changed

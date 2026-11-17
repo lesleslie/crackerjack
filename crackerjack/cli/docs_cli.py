@@ -209,10 +209,11 @@ def validate(
         metavar="PATH",
         help=(
             "Override the topic vocabulary file location. Default: "
+            "packaged oneiric vocabulary merged with "
             "docs/schemas/topic-vocabulary-v1.md under the repo root. "
-            "Use this to point at a non-default location when the "
-            "canonical path is empty (the most common symptom is "
-            "VocabFileNotFoundError causing the run to exit non-zero)."
+            "Use this to point at a non-default location when you need "
+            "to override the merged vocabulary (the most common symptom "
+            "is VocabFileNotFoundError causing the run to exit non-zero)."
         ),
     ),
 ) -> None:

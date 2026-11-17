@@ -14,7 +14,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with th
 
 For a shorter, tool-neutral bootstrap document, start with `AGENTS.md`.
 
-**Current Status: v0.95.0** — the released version of this package.
+**Current Status: v0.96.0** — the released version of this package.
 
 `scripts/stamp_version.py` rewrites that line from `pyproject.toml`, and the
 release audit (`crackerjack/checks/release_audit.py`) checks it. If you

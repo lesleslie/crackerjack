@@ -466,6 +466,108 @@ def test_load_seed_topics_vocab_path_override(tmp_path: Path) -> None:
     assert seeds == {"alpha"}
 
 
+def test_validate_accepts_repo_local_vocabulary_additions(tmp_path: Path) -> None:
+    """Repo-local topic additions are merged with the packaged vocabulary."""
+    from crackerjack.services.frontmatter_validator import FrontmatterValidator
+
+    plans = tmp_path / "docs" / "plans"
+    schemas = tmp_path / "docs" / "schemas"
+    plans.mkdir(parents=True)
+    schemas.mkdir(parents=True)
+    (schemas / "topic-vocabulary-v1.md").write_text(
+        "## Seed List\n\n"
+        "| Slug | Definition |\n|------|------------|\n"
+        "| `custom-topic` | test fixture |\n",
+        encoding="utf-8",
+    )
+    (plans / "custom-topic.md").write_text(
+        "---\n"
+        "status: active\n"
+        "role: implementation\n"
+        "kind: plan\n"
+        "date: 2026-11-16\n"
+        "last_reviewed: 2026-11-16\n"
+        "superseded_by: null\n"
+        "blocks_on: []\n"
+        "topic: custom-topic\n"
+        "---\n\n"
+        "# Custom Topic\n",
+        encoding="utf-8",
+    )
+
+    result = FrontmatterValidator(pkg_path=tmp_path).validate(strict=True)
+    assert result.success is True
+    assert result.files_scanned == 1
+    assert result.error_count == 0
+    assert result.warning_count == 0
+
+
+def test_validate_ignores_adr_inline_status_headings(tmp_path: Path) -> None:
+    """ADR status prose is allowed even when allow_nonstandard is false."""
+    from crackerjack.services.frontmatter_validator import FrontmatterValidator
+
+    adr = tmp_path / "docs" / "adr"
+    adr.mkdir(parents=True)
+    (adr / "001-example.md").write_text(
+        "---\n"
+        "status: complete\n"
+        "role: canonical\n"
+        "kind: decision\n"
+        "date: 2026-11-16\n"
+        "last_reviewed: 2026-11-16\n"
+        "superseded_by: null\n"
+        "blocks_on: []\n"
+        "topic: mcp-design\n"
+        "decision_date: 2026-11-16\n"
+        "---\n\n"
+        "# ADR 001: Example\n\n"
+        "## Status\n\n"
+        "**Accepted**\n\n"
+        "## Context\n\n"
+        "Body text.\n",
+        encoding="utf-8",
+    )
+
+    result = FrontmatterValidator(pkg_path=tmp_path).validate(
+        allow_nonstandard=False,
+    )
+    assert result.success is True
+    assert result.files_scanned == 1
+    assert result.error_count == 0
+    assert result.warning_count == 0
+
+
+def test_validate_ignores_followup_inline_status_headings(tmp_path: Path) -> None:
+    """Followup status prose is allowed even when allow_nonstandard is false."""
+    from crackerjack.services.frontmatter_validator import FrontmatterValidator
+
+    followups = tmp_path / "docs" / "followups"
+    followups.mkdir(parents=True)
+    (followups / "2026-11-16-example.md").write_text(
+        "---\n"
+        "status: partial\n"
+        "role: canonical\n"
+        "date: 2026-11-16\n"
+        "last_reviewed: 2026-11-16\n"
+        "topic: mcp-design\n"
+        "---\n\n"
+        "# Example Followup\n\n"
+        "## Status\n\n"
+        "**Open**\n\n"
+        "## Trigger\n\n"
+        "Body text.\n",
+        encoding="utf-8",
+    )
+
+    result = FrontmatterValidator(pkg_path=tmp_path).validate(
+        allow_nonstandard=False,
+    )
+    assert result.success is True
+    assert result.files_scanned == 1
+    assert result.error_count == 0
+    assert result.warning_count == 0
+
+
 def test_wrapper_surfaces_vocab_file_not_found_error(tmp_path: Path) -> None:
     """The FrontmatterValidator wrapper surfaces VocabFileNotFoundError
     as a synthetic error in the result.

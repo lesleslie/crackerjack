@@ -372,11 +372,9 @@ class TestRollback:
 class TestIdempotence:
     """Running cleanup twice must converge to a stable state.
 
-    NOTE: The pyproject.toml merge write path is currently broken
-    (ImportError on _dump_toml in config_service), so the public cleanup
-    path is exercised with dry_run=True for merge assertions. The
-    remove/cache/output cleanup phases do not depend on the broken write
-    path and are exercised end-to-end.
+    NOTE: The public cleanup path is exercised with dry_run=True for merge
+    assertions. The remove/cache/output cleanup phases are exercised
+    end-to-end.
     """
 
     def test_repair_removes_all_drift_on_first_run(
@@ -592,7 +590,7 @@ class TestMergeEdgeCases:
             '[tool.mypy]\npython_version = "3.13"\n'
         )
         # Make the import inside _write_pyproject_config fail to simulate
-        # a write failure (the actual _dump_toml symbol is missing today).
+        # a write failure on the error path.
         import sys
         original = sys.modules.get("crackerjack.services.config_service")
         try:
@@ -608,6 +606,40 @@ class TestMergeEdgeCases:
                 sys.modules.pop(
                     "crackerjack.services.config_service", None
                 )
+
+    def test_write_pyproject_persists_merged_config(
+        self,
+        service: ConfigCleanupService,
+        temp_pkg_path: Path,
+    ):
+        """The merged config must actually reach pyproject.toml on disk."""
+        (temp_pkg_path / "pyproject.toml").write_text(
+            '[tool.mypy]\npython_version = "3.13"\n'
+        )
+
+        service._write_pyproject_config({"tool": {"mypy": {"python_version": "3.14"}}})
+
+        written = tomllib.loads(
+            (temp_pkg_path / "pyproject.toml").read_text(encoding="utf-8")
+        )
+        assert written["tool"]["mypy"]["python_version"] == "3.14"
+
+    def test_merge_writes_merged_config_end_to_end(
+        self,
+        service: ConfigCleanupService,
+        temp_pkg_path: Path,
+    ):
+        """A real merge must land in pyproject.toml, not only in the helper."""
+        (temp_pkg_path / "pyproject.toml").write_text('[tool]\nname = "x"\n')
+        (temp_pkg_path / "mypy.ini").write_text("[mypy]\npython_version = 3.14\n")
+
+        result = service.cleanup_configs(dry_run=False)
+
+        assert result.success
+        written = tomllib.loads(
+            (temp_pkg_path / "pyproject.toml").read_text(encoding="utf-8")
+        )
+        assert written["tool"]["mypy"]["python_version"] == "3.14"
 
     def test_ini_converts_bool_and_int_values(
         self,
