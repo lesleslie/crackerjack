@@ -8,6 +8,11 @@ Verifies that:
 5. CLAUDE.md test count claim matches pytest --collect-only
 6. CLAUDE.md package structure paths exist on disk
 
+The CHANGELOG claims checked are the ones in the release being
+published — the topmost version section. Historical sections are not
+re-verified against today's source; see :func:`_parse_changelog` for
+why that distinction matters.
+
 Used by `crackerjack --all` to prevent broken releases (e.g., 0.24.0
 where documented methods were silently removed in the version bump).
 """
@@ -78,12 +83,41 @@ def _parse_changelog(text: str) -> list[ChangelogClaim]:
     Recognizes both formats:
     - Structured: ### Added\n- `fully.qualified.symbol`
     - Prose: ### Added\n- Add SymbolName (Plan Task X)
+
+    Only the TOPMOST version section is parsed — the release being
+    published. A publish gate asks "do the claims in THIS release
+    describe the tree?", and the topmost section is that release:
+    ``ChangelogGenerator._insert_new_section`` prepends the new
+    version's section at the first ``## [`` heading during the bump,
+    and the changelogs are newest-first.
+
+    History is not parsed, and that is the whole point. A symbol that
+    was legitimately added in 0.34.0 may have moved to another repo
+    since, and re-verifying every historical ``### Added`` bullet
+    against today's source makes the gate fail FOREVER on a changelog
+    that was accurate when it was written. mcp-common is the live
+    case: 0.34.0 claims ``ProviderConfig.default_headers``, the whole
+    LLM layer moved to oneiric on 2026-11-14, and every publish since
+    fails on a bullet that was true when it was written.
+
+    A changelog with no version heading at all is parsed in full —
+    there is no section to scope to, so nothing is silently dropped.
     """
     claims: list[ChangelogClaim] = []
     current_section: ClaimType | None = None
+    version_heading_seen = False
 
     for line in text.splitlines():
         stripped = line.strip()
+        if stripped.startswith("## "):
+            # A version heading opens a release section. The first one
+            # is the release being published; the next one starts
+            # history, which this gate does not verify.
+            if version_heading_seen:
+                break
+            version_heading_seen = True
+            current_section = None
+            continue
         if stripped == "### Added":
             current_section = ClaimType.ADDED
             continue

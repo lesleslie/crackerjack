@@ -165,6 +165,72 @@ def test_parse_changelog_section_change_resets() -> None:
     assert out[1].claim_type is ClaimType.REMOVED
 
 
+def test_parse_changelog_only_parses_the_topmost_version_section() -> None:
+    """Only the release being published is verified against the source.
+
+    A publish gate asks whether the claims in THIS release describe the
+    tree. Re-verifying every historical ``### Added`` bullet against
+    today's source makes the gate fail forever on a changelog that was
+    accurate when it was written — a symbol that has since moved to
+    another repo takes the whole repo's publish down with it.
+    """
+    text = (
+        "## [0.36.0] - 2026-11-13\n"
+        "### Added\n- `mymod.Current`\n"
+        "\n"
+        "## [0.34.0] - 2026-10-29\n"
+        "### Added\n- `mymod.MovedToAnotherRepo`\n"
+        "### Removed\n- `mymod.LongGone`\n"
+    )
+    out = _parse_changelog(text)
+    assert [c.symbol for c in out] == ["mymod.Current"]
+    assert out[0].claim_type is ClaimType.ADDED
+
+
+def test_parse_changelog_history_is_not_verified() -> None:
+    """A historical claim whose symbol is gone must not fail the gate.
+
+    This is the live mcp-common case: 0.34.0 claims
+    ``ProviderConfig.default_headers`` and the LLM layer moved to
+    oneiric on 2026-11-14, so the symbol no longer exists in
+    ``mcp_common/``. The claim was true when it was written.
+    """
+    text = (
+        "## [0.36.0] - 2026-11-13\n"
+        "### Added\n- health: Let a server contribute its own readiness state\n"
+        "\n"
+        "## [0.34.0] - 2026-10-29\n"
+        "### Added\n- llm: `ProviderConfig.default_headers` — extra HTTP headers\n"
+    )
+    assert _parse_changelog(text) == []
+
+
+def test_parse_changelog_without_a_version_heading_parses_everything() -> None:
+    """No version heading means no section to scope to — parse it all.
+
+    Scoping must not silently drop claims from a changelog whose shape
+    it does not recognise.
+    """
+    text = "### Added\n- `mymod.A`\n### Removed\n- `mymod.B`\n"
+    out = _parse_changelog(text)
+    assert [c.symbol for c in out] == ["mymod.A", "mymod.B"]
+
+
+def test_parse_changelog_topmost_section_still_verifies_removed() -> None:
+    """Scoping must not weaken the check on the release being published."""
+    text = (
+        "## [0.36.0] - 2026-11-13\n"
+        "### Removed\n- `mymod.RemovedNow`\n"
+        "\n"
+        "## [0.34.0] - 2026-10-29\n"
+        "### Added\n- `mymod.Historical`\n"
+    )
+    out = _parse_changelog(text)
+    assert len(out) == 1
+    assert out[0].claim_type is ClaimType.REMOVED
+    assert out[0].symbol == "mymod.RemovedNow"
+
+
 def test_parse_changelog_bare_word_rejected() -> None:
     """Single-word bullets like 'Prometheus' lack a module path → skipped."""
     text = "## v1.0.0\n### Added\n- Prometheus\n"
@@ -1041,6 +1107,39 @@ def test_check_release_audit_removed_symbol_still_present(tmp_path: Path) -> Non
     )
     assert report.passed is False
     assert any("still exists" in r.message for r in report.results)
+
+
+def test_check_release_audit_historical_added_symbol_missing_does_not_fail(
+    tmp_path: Path,
+) -> None:
+    """A bogus claim in a HISTORICAL section must not fail the publish.
+
+    The end-to-end shape of the mcp-common blocker: 0.34.0 claims
+    ``ProviderConfig.default_headers`` and the symbol has since moved to
+    oneiric, so it is no longer in this repo's source. The claim was
+    true when it was written; the gate verifies the release being
+    published, not the history.
+    """
+    paths = _make_minimal_project(tmp_path)
+    paths["changelog"].write_text(
+        "## [0.36.0] - 2026-11-13\n"
+        "### Added\n- health: Let a server contribute its own readiness state\n"
+        "\n"
+        "## [0.34.0] - 2026-10-29\n"
+        "### Added\n- `mymod.NotThere.moved_to_another_repo`\n"
+    )
+    report = check_release_audit(
+        project_root=paths["project_root"],
+        changelog_path=paths["changelog"],
+        claude_md_path=paths["claude_md"],
+        pyproject_path=paths["pyproject"],
+        ratchet_path=paths["ratchet"],
+        source_root=paths["source_root"],
+        test_root=paths["test_root"],
+    )
+    assert not any(
+        "moved_to_another_repo" in r.message for r in report.results
+    ), [r.message for r in report.results]
 
 
 def test_check_release_audit_version_mismatch(tmp_path: Path) -> None:
