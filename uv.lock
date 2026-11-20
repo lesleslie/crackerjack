@@ -826,7 +826,7 @@ wheels = [
 
 [[package]]
 name = "crackerjack"
-version = "0.95.0"
+version = "0.96.0"
 source = { editable = "." }
 dependencies = [
     { name = "aiofiles" },
@@ -851,6 +851,7 @@ dependencies = [
     { name = "linkcheckmd" },
     { name = "mcp-common" },
     { name = "mdformat" },
+    { name = "mdformat-frontmatter" },
     { name = "mdformat-ruff" },
     { name = "numpy" },
     { name = "oneiric" },
@@ -933,6 +934,7 @@ requires-dist = [
     { name = "linkcheckmd", specifier = ">=1.4.0" },
     { name = "mcp-common", specifier = ">=0.36.0" },
     { name = "mdformat", specifier = ">=1.0.0" },
+    { name = "mdformat-frontmatter", specifier = ">=2.2.0" },
     { name = "mdformat-ruff", specifier = ">=0.1.3" },
     { name = "numpy", specifier = ">=2.5.3" },
     { name = "oneiric", specifier = ">=0.36.0" },
@@ -2379,6 +2381,20 @@ wheels = [
 ]
 
 [[package]]
+name = "mdformat-frontmatter"
+version = "2.2.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "mdformat" },
+    { name = "mdit-py-plugins" },
+    { name = "ruamel-yaml" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/8d/dd/6e5d98bd900213b7f619c9df97abc05e9cd16232e9f7aef94d8032203de9/mdformat_frontmatter-2.2.0.tar.gz", hash = "sha256:5559bfeb187354ab1dfba81fb85af3f9dda44fd38a893a842761564b9394bb6a", size = 9447, upload-time = "2026-10-27T06:37:16.508Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/40/06/0c90c4ec435c5f179fdafc265689868893707f4c7cea3aa687c8f92ae6e9/mdformat_frontmatter-2.2.0-py3-none-any.whl", hash = "sha256:3ec539929a9ee4937a14c9f5483b3af4145003f68da9db94fb883ad341b04ce8", size = 4939, upload-time = "2026-10-27T06:37:15.175Z" },
+]
+
+[[package]]
 name = "mdformat-ruff"
 version = "0.1.3"
 source = { registry = "https://pypi.org/simple" }
@@ -2388,6 +2404,18 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/3a/e2/9003dc57c78aea34b21f67854d842985ceac48028d288432efa113df3887/mdformat_ruff-0.1.3.tar.gz", hash = "sha256:2ddd2758dd3f6738c1c7bfbeb89320d271454f4cd8c28a99968a50d3578b15d6", size = 3416, upload-time = "2024-02-11T01:03:58.143Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/b1/22/3f2464d478f145bbcb731cee9fe720b9e4d69efb6ffd8bc4491f14ca20a2/mdformat_ruff-0.1.3-py3-none-any.whl", hash = "sha256:9c0cf7bfe6bf99b9e0e617e960041d06e9fa84300d5645f922306dd2ed0d1296", size = 3932, upload-time = "2024-02-11T01:03:57.01Z" },
+]
+
+[[package]]
+name = "mdit-py-plugins"
+version = "0.7.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "markdown-it-py" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/ad/a4/77a4e1be19fd9b08993c76d5e54979ac836b327754f1f5fecfed1b56cc67/mdit_py_plugins-0.7.0.tar.gz", hash = "sha256:26d2179227aaf4d1dc7acffe7a738cbd15cade6b5a61cff0a2cbf9fed93efede", size = 51268, upload-time = "2026-11-10T16:29:31.081Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/4d/d3/d07e61326f150944ead0da9d0b39fb20d7fa367bbc951b10fca6bb1c7382/mdit_py_plugins-0.7.0-py3-none-any.whl", hash = "sha256:7f8e30403f3dd8bfe3afcdcbc6e61066d3f2e714167507b9c26eb385ec399353", size = 72937, upload-time = "2026-11-10T16:29:29.847Z" },
 ]
 
 [[package]]
@@ -3966,6 +3994,15 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/af/9e/418094adaee6b056ce199051b255448ed872829051e341b2294c80da0977/rpds_py-2026.9.1-cp315-cp315t-musllinux_1_2_x86_64.whl", hash = "sha256:1c2d1f6da5128eabf34e963d7163a818846075a52568250d006c4c953b40f903", size = 582764, upload-time = "2026-10-04T16:31:36.665Z" },
     { url = "https://files.pythonhosted.org/packages/3d/9b/1698ebf6b840ddfe8b472198abbed6ace35c6e398faeecd6c47dae742a4e/rpds_py-2026.9.1-cp315-cp315t-win32.whl", hash = "sha256:5c6ee90dee3e85e055ddfd502d611643d9b0fd94c818220bda84ec3dacd9b27b", size = 203795, upload-time = "2026-10-04T16:31:38.53Z" },
     { url = "https://files.pythonhosted.org/packages/8a/e2/91f70d804c61f8eac39a417e82aa1024f655ab9e8bdd7393b196242bc41b/rpds_py-2026.9.1-cp315-cp315t-win_amd64.whl", hash = "sha256:fe5ad0664ec772b02c45859041aa17655709cced7a31005817fbbbd988c25567", size = 223037, upload-time = "2026-10-04T16:31:40.468Z" },
+]
+
+[[package]]
+name = "ruamel-yaml"
+version = "0.19.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/c7/3b/ebda527b56beb90cb7652cb1c7e4f91f48649fbcd8d2eb2fb6e77cd3329b/ruamel_yaml-0.19.1.tar.gz", hash = "sha256:53eb66cd27849eff968ebf8f0bf61f46cdac2da1d1f3576dd4ccee9b25c31993", size = 142709, upload-time = "2026-01-02T16:50:31.84Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b8/0c/51f6841f1d84f404f92463fc2b1ba0da357ca1e3db6b7fbda26956c3b82a/ruamel_yaml-0.19.1-py3-none-any.whl", hash = "sha256:27592957fedf6e0b62f281e96effd28043345e0e66001f97683aa9a40c667c93", size = 118102, upload-time = "2026-01-02T16:50:29.201Z" },
 ]
 
 [[package]]

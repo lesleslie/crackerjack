@@ -3,7 +3,14 @@
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-from crackerjack.tools.mdformat_wrapper import main, should_skip_file
+from crackerjack.tools.mdformat_wrapper import (
+    _build_mdformat_cmd,
+    _frontmatter_documents,
+    _frontmatter_extension_available,
+    _resolve_mdformat_bin,
+    main,
+    should_skip_file,
+)
 
 
 class TestShouldSkipFile:
@@ -64,6 +71,158 @@ class TestShouldSkipFile:
         """Test that non-markdown files are not skipped."""
         assert not should_skip_file(Path("script.py"))
         assert not should_skip_file(Path("config.yaml"))
+
+    def test_skip_frontmatter_documents(self, tmp_path):
+        """Frontmatter documents are still kept out of scope.
+
+        This is the current contract: mdformat 1.0.0 core destroys YAML
+        frontmatter, so a document whose first line is ``---`` is
+        excluded rather than mangled. The ``mdformat-frontmatter``
+        plugin makes it safe to lift this skip; that lift is a separate,
+        deliberately reviewed change, not an incidental edit.
+
+        The skip keys off the file's FIRST LINE, so the file has to
+        exist for the rule to apply.
+        """
+        plan = tmp_path / "plan.md"
+        plan.write_text("---\nstatus: draft\n---\n\n# Body\n")
+        assert should_skip_file(plan)
+
+        readme = tmp_path / "README.md"
+        readme.write_text("# Body\n")
+        assert not should_skip_file(readme)
+
+
+class TestFrontmatterSafety:
+    """The formatter must not destroy YAML frontmatter.
+
+    mdformat 1.0.0 core has no frontmatter support: it rewrites the
+    ``---`` fence into a horizontal rule and flattens the YAML into
+    body text. A mangled plan can then fail extraction and vanish from
+    ``PLAN_INDEX.md``.
+    """
+
+    def test_resolve_mdformat_bin_prefers_repo_venv(self):
+        """The repo's own venv binary wins over whatever is on PATH."""
+        with patch.object(Path, "exists", return_value=True):
+            resolved = _resolve_mdformat_bin()
+        assert resolved.endswith(".venv/bin/mdformat")
+
+    def test_build_cmd_does_not_pass_an_extensions_flag(self):
+        """Naming one extension RESTRICTS the enabled set.
+
+        ``mdformat --extensions frontmatter`` disables every other
+        installed extension -- verified against mdformat-gfm, whose
+        ``tables`` extension stopped formatting tables. The CLI enables
+        all installed extensions by default, so the wrapper names none.
+        """
+        cmd = _build_mdformat_cmd([Path("README.md")], None)
+        assert "--extensions" not in cmd
+        assert "--no-codeformatters" in cmd
+
+    def test_extension_available_when_probe_reports_true(self):
+        """A probe printing True means the plugin is registered."""
+        with patch("crackerjack.tools.mdformat_wrapper.subprocess.run") as mock_run:
+            mock_run.return_value = Mock(stdout="True\n", stderr="", returncode=0)
+            assert _frontmatter_extension_available("/tmp/x/mdformat") is True
+
+    def test_extension_unavailable_when_probe_reports_false(self):
+        """A probe printing False means the plugin is missing."""
+        with patch("crackerjack.tools.mdformat_wrapper.subprocess.run") as mock_run:
+            mock_run.return_value = Mock(stdout="False\n", stderr="", returncode=0)
+            assert _frontmatter_extension_available("/tmp/x/mdformat") is False
+
+    def test_extension_unavailable_when_probe_crashes(self):
+        """A probe that cannot run must not be read as available."""
+        with patch(
+            "crackerjack.tools.mdformat_wrapper.subprocess.run",
+            side_effect=OSError("boom"),
+        ):
+            assert _frontmatter_extension_available("/tmp/x/mdformat") is False
+
+    def test_frontmatter_documents_detects_the_fence(self, tmp_path):
+        """Only files whose FIRST line opens a YAML block are detected."""
+        with_frontmatter = tmp_path / "plan.md"
+        with_frontmatter.write_text("---\nstatus: draft\n---\n\n# Body\n")
+        without = tmp_path / "readme.md"
+        without.write_text("# Body\n")
+
+        found = _frontmatter_documents([with_frontmatter, without])
+        assert found == [with_frontmatter]
+
+    @patch("crackerjack.tools.mdformat_wrapper.get_git_tracked_files")
+    @patch("crackerjack.tools.mdformat_wrapper.subprocess.run")
+    def test_main_fails_loud_when_extension_is_missing(
+        self,
+        mock_run,
+        mock_get_files,
+        tmp_path,
+        capsys,
+    ):
+        """A tracked frontmatter document with no plugin must stop the run.
+
+        Silently formatting it would destroy the frontmatter, which is
+        how a plan ends up missing from the plan index.
+
+        The guard scans every tracked document, not only the ones in
+        scope: ``should_skip_file`` removes frontmatter documents
+        before formatting, so a scope-limited check would never fire.
+        """
+        target = tmp_path / "plan.md"
+        target.write_text("---\nstatus: draft\n---\n\n# Body\n")
+        mock_get_files.return_value = [target]
+
+        mock_run.return_value = Mock(stdout="False\n", stderr="", returncode=0)
+
+        result = main()
+        captured = capsys.readouterr()
+
+        assert result == 1
+        assert "frontmatter" in captured.err
+        assert "uv sync --all-groups" in captured.err
+
+    @patch("crackerjack.tools.mdformat_wrapper.get_git_tracked_files")
+    @patch("crackerjack.tools.mdformat_wrapper.subprocess.run")
+    def test_main_proceeds_when_the_extension_is_installed(
+        self,
+        mock_run,
+        mock_get_files,
+        tmp_path,
+    ):
+        """A tracked frontmatter document is safe when the plugin exists."""
+        target = tmp_path / "plan.md"
+        target.write_text("---\nstatus: draft\n---\n\n# Body\n")
+        mock_get_files.return_value = [target]
+
+        mock_probe = Mock(stdout="True\n", stderr="", returncode=0)
+        mock_check = Mock(returncode=0, stdout="", stderr="")
+        mock_run.side_effect = [mock_probe, mock_check]
+
+        assert main() == 0
+        # the preflight actually ran: the first subprocess call is the
+        # extension probe, not the formatter's --check
+        probe_call = mock_run.call_args_list[0].args[0]
+        assert "-c" in probe_call
+        assert any("frontmatter" in str(part) for part in probe_call)
+
+    @patch("crackerjack.tools.mdformat_wrapper.get_git_tracked_files")
+    @patch("crackerjack.tools.mdformat_wrapper.subprocess.run")
+    def test_main_proceeds_when_no_frontmatter_is_tracked(
+        self,
+        mock_run,
+        mock_get_files,
+        tmp_path,
+    ):
+        """No frontmatter anywhere means the missing plugin is irrelevant."""
+        target = tmp_path / "README.md"
+        target.write_text("# Body\n")
+        mock_get_files.return_value = [target]
+
+        mock_check = Mock()
+        mock_check.returncode = 0
+        mock_run.return_value = mock_check
+
+        assert main() == 0
 
 
 class TestMdformatMain:
@@ -186,7 +345,11 @@ class TestMdformatMain:
     @patch("crackerjack.tools.mdformat_wrapper.get_git_tracked_files")
     @patch("subprocess.run")
     def test_main_auto_format_surfaces_diff(
-        self, mock_run, mock_get_files, tmp_path, capsys,
+        self,
+        mock_run,
+        mock_get_files,
+        tmp_path,
+        capsys,
     ):
         """When mdformat auto-formats files, surface the diff on stderr.
 
@@ -255,7 +418,11 @@ class TestMdformatMain:
     @patch("crackerjack.tools.mdformat_wrapper.get_git_tracked_files")
     @patch("subprocess.run")
     def test_main_auto_format_handles_git_failure(
-        self, mock_run, mock_get_files, tmp_path, capsys,
+        self,
+        mock_run,
+        mock_get_files,
+        tmp_path,
+        capsys,
     ):
         """If ``git diff`` fails (e.g., not a git repo), the hook still
         returns 1 with whatever stderr mdformat produced. The diff
@@ -296,7 +463,11 @@ class TestMdformatMain:
     @patch("crackerjack.tools.mdformat_wrapper.get_git_tracked_files")
     @patch("subprocess.run")
     def test_main_auto_format_not_counted_by_issue_pipeline(
-        self, mock_run, mock_get_files, tmp_path, capsys,
+        self,
+        mock_run,
+        mock_get_files,
+        tmp_path,
+        capsys,
     ):
         """Regression: the diagnostic must not register as issues under
         ``crackerjack.parsers.regex_parsers`` or the line-counting
@@ -330,21 +501,21 @@ class TestMdformatMain:
         from crackerjack.utils.issue_detection import extract_issue_lines
 
         # regex parser: returns 0 issues
-        assert ParserFactory().parse_with_validation(
-            "mdformat", captured.err
-        ) == []
+        assert ParserFactory().parse_with_validation("mdformat", captured.err) == []
         # line counter: every non-blank diagnostic line starts with ``✓``
         # and is filtered out by ``_SUCCESS_PREFIXES``
         counted = extract_issue_lines(captured.err, tool_name="mdformat")
         assert counted == [], (
-            f"diagnostic lines leaked into the line-counting safety net: "
-            f"{counted!r}"
+            f"diagnostic lines leaked into the line-counting safety net: {counted!r}"
         )
 
     @patch("crackerjack.tools.mdformat_wrapper.get_git_tracked_files")
     @patch("subprocess.run")
     def test_main_auto_format_flips_hook_status_to_passed(
-        self, mock_run, mock_get_files, tmp_path,
+        self,
+        mock_run,
+        mock_get_files,
+        tmp_path,
     ):
         """End-to-end: feed the wrapper's stderr into
         ``HookExecutor._determine_initial_status`` for an
@@ -357,8 +528,8 @@ class TestMdformatMain:
         passes". This test pins the contract from both ends so the
         auto-format path always reaches ``status=passed``.
         """
-        from crackerjack.executors.hook_executor import HookExecutor
         from crackerjack.config.hooks import HookDefinition, SecurityLevel
+        from crackerjack.executors.hook_executor import HookExecutor
 
         target = tmp_path / "README.md"
         mock_get_files.return_value = [target]

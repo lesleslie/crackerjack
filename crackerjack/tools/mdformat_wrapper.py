@@ -43,24 +43,95 @@ def should_skip_file(file_path: Path) -> bool:
     return stripped == "---" or (len(stripped) >= 3 and set(stripped) == {"_"})
 
 
-def _build_mdformat_cmd(files: list[Path], argv: list[str] | None) -> list[str]:
-    """Assemble the mdformat command line for ``files``.
+def _resolve_mdformat_bin() -> str:
+    """Locate the mdformat binary.
 
     Prefers the repo's own ``.venv`` binary and falls back to whatever
     ``mdformat`` is on ``PATH``.
     """
     mdformat_bin = Path.cwd() / ".venv" / "bin" / "mdformat"
     if mdformat_bin.exists():
-        cmd = [str(mdformat_bin), "--no-codeformatters"]
-    else:
-        resolved = shutil.which("mdformat")
-        cmd = [resolved or "mdformat", "--no-codeformatters"]
+        return str(mdformat_bin)
+    return shutil.which("mdformat") or "mdformat"
+
+
+def _build_mdformat_cmd(files: list[Path], argv: list[str] | None) -> list[str]:
+    """Assemble the mdformat command line for ``files``.
+
+    The ``--extensions`` flag is deliberately NOT passed. mdformat's CLI
+    enables every installed parser extension by default, and naming one
+    explicitly *restricts* the enabled set to just that one -- passing
+    ``--extensions frontmatter`` silently disables ``tables`` and any
+    other extension that happens to be installed. The frontmatter
+    extension is verified separately, by
+    :func:`_frontmatter_extension_available`.
+    """
+    cmd = [_resolve_mdformat_bin(), "--no-codeformatters"]
 
     if argv:
         cmd.extend(argv)
 
     cmd.extend([str(f) for f in files])
     return cmd
+
+
+# Probes whether the environment that will run mdformat has the
+# ``frontmatter`` parser extension registered. It runs in a subprocess
+# because mdformat is executed as a separate binary: the extension must
+# be present in THAT interpreter's site-packages, not in crackerjack's
+# own imports.
+_FRONTMATTER_PROBE = (
+    "import importlib.metadata as m; "
+    "print(any(e.name == 'frontmatter' for e in "
+    "m.entry_points(group='mdformat.parser_extension')))"
+)
+
+
+def _frontmatter_extension_available(mdformat_bin: str) -> bool:
+    """True when the environment that will run mdformat has the plugin.
+
+    mdformat 1.0.0 core has no frontmatter support at all: given a
+    document whose first line is ``---`` it rewrites the fence into a
+    horizontal rule and flattens the YAML into body text. The
+    ``mdformat-frontmatter`` plugin preserves the block byte-for-byte.
+    """
+    python = Path(mdformat_bin).with_name("python")
+    if not python.exists():
+        # A mdformat on PATH may live outside a venv. The hook itself
+        # runs under the repo's interpreter, so probe that one.
+        python = Path(sys.executable)
+    if not python.exists():
+        return False
+
+    try:
+        result = subprocess.run(
+            [str(python), "-c", _FRONTMATTER_PROBE],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=30,
+        )
+    except OSError, subprocess.SubprocessError:
+        return False
+    return result.stdout.strip() == "True"
+
+
+def _frontmatter_documents(files: list[Path]) -> list[Path]:
+    """The files whose first line opens a YAML frontmatter block.
+
+    Callers pass every tracked document, not only the ones about to be
+    formatted: the skip list removes frontmatter documents before
+    formatting, so a scope-limited check would never fire.
+    """
+    found: list[Path] = []
+    for path in files:
+        try:
+            with path.open(encoding="utf-8") as fh:
+                if fh.readline().strip() == "---":
+                    found.append(path)
+        except OSError:
+            continue
+    return found
 
 
 def _report_auto_formatted(files: list[Path]) -> None:
@@ -118,6 +189,34 @@ def main(argv: list[str] | None = None) -> int:
     md_files = get_git_tracked_files("*.md")
     markdown_files = get_git_tracked_files("*.markdown")
     all_files = md_files + markdown_files
+
+    # Fail loud rather than silently destroy frontmatter.
+    #
+    # mdformat 1.0.0 core rewrites a document's `---` YAML frontmatter
+    # fence into a horizontal rule and flattens the YAML into body
+    # text. A plan whose frontmatter is mangled can then fail
+    # extraction and disappear from PLAN_INDEX.md, making its lifecycle
+    # state invisible.
+    #
+    # The check scans every tracked document, not just the ones in
+    # scope, and it runs BEFORE the "nothing to do" short-circuit:
+    # `should_skip_file` keeps frontmatter documents out of scope
+    # today, so a scope-limited or later check would never fire.
+    # Scoping it to `all_files` makes it a live assertion of the safety
+    # property, and it is the guard that must already be in place
+    # before that skip is lifted.
+    if _frontmatter_documents(all_files) and not _frontmatter_extension_available(
+        _resolve_mdformat_bin()
+    ):
+        print(
+            "mdformat: the 'frontmatter' parser extension is not installed in "
+            "the environment that will run mdformat. Without it mdformat "
+            "rewrites YAML frontmatter into body text, which can drop a "
+            "document out of the plan index. Run 'uv sync --all-groups' in "
+            "the repo (crackerjack declares mdformat-frontmatter) and retry.",
+            file=sys.stderr,
+        )
+        return 1
 
     files = [f for f in all_files if not should_skip_file(f)]
 
