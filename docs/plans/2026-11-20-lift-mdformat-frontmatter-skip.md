@@ -273,17 +273,34 @@ Two further body effects were observed and accepted as style-only:
   CommonMark both render as a code span with identical content, so the
   rendered document is unchanged. It is a source-text change to decision
   records, which the operator may want to know about.
-- **221 table reformats** (column padding). Purely visual.
+- **221 documents lose their table column padding, and `<` inside a
+  table cell is escaped** (`(<500 LOC)` becomes `(\<500 LOC)`). mdformat
+  has no table support at all (§2.9) — a table is a paragraph to it.
+  The padding disappears because markdown-it's inline parser collapses
+  runs of whitespace, and the `<` is escaped because mdformat escapes
+  the characters that could open an HTML tag. Neither changes the
+  rendered document, so both are style-only — but they are source-text
+  changes across 221 documents, which is the larger of the two.
 
 ### 2.5 The `--extensions` flag must not be used
 
 mdformat's `--extensions` flag *requires* and *enables* named
 extensions, and naming one **restricts** the enabled set to just that
-one. Verified against mdformat-gfm: with `--extensions frontmatter`,
-the `tables` extension stopped formatting tables. The CLI enables every
-installed extension by default, so the wrapper names none, and the
-frontmatter extension is verified separately by the probe added in
-`78b3c8ca`.
+one. Confirmed in mdformat's own CLI (`mdformat/_cli.py`: when
+`--extensions` is given the enabled set is
+`{k: PARSER_EXTENSIONS[k] for k in opts["extensions"]}`, otherwise it
+is every installed extension), and observed against mdformat-gfm: with
+`--extensions frontmatter`, the `tables` extension stopped formatting
+tables. The CLI enables every installed extension by default, so the
+wrapper names none, and the frontmatter extension is verified
+separately by the probe added in `78b3c8ca`.
+
+**No fleet repository installs mdformat-gfm.** Measured across all six
+venvs: every one carries mdformat 1.0.0 and none carries the GFM
+extension, so the fleet's mdformat is table-blind everywhere. That is
+why §2.9's table guard is the *only* protection tables have here rather
+than a second line of defence — and why installing mdformat-gfm into a
+fleet venv later would change the fleet's formatting output.
 
 ### 2.6 Where the churn lands
 
@@ -480,6 +497,30 @@ kept the whole 521-file batch from formatting. The batch is now run
 iteratively: the refused file is named in mdformat's own error
 message, dropped from the set, and the batch re-run. The refusal is
 reported, because an excluded document is one nobody notices.
+
+### 2.10 The front-matter extension is required per repository, and the wrapper fails closed
+
+mdformat 1.0.0 core has no frontmatter support: given a document whose
+first line is `---` it rewrites the fence into a horizontal rule and
+flattens the YAML into body text. The `mdformat-frontmatter` plugin is
+what prevents that, and the plugin lives in a *venv*, not in crackerjack's
+source.
+
+The wrapper therefore probes the interpreter that will actually run
+mdformat — the repository's own `.venv/bin/mdformat` when there is one —
+and counts the registered front-matter renderers. Zero means the
+frontmatter would be destroyed, so the wrapper refuses to format and
+says why. Two means two front-matter packages are installed side by side
+under different entry-point names, one of which strips quotes and turns
+a quoted `"yes"` into a YAML 1.1 boolean; that is refused too.
+
+Measured today: all six repositories carry mdformat 1.0.0, and only
+crackerjack's venv has a front-matter extension registered. The other
+five run an *older* crackerjack, whose wrapper skips frontmatter
+documents outright, so nothing is at risk in them today. The change
+arrives with the published release, which carries `mdformat-frontmatter`
+as a hard dependency — the plugin and the code that needs it land in
+the same install, which is what keeps the guard from refusing.
 
 ## 3. Phases
 

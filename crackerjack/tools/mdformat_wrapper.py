@@ -201,9 +201,12 @@ def _build_mdformat_cmd(files: list[Path], argv: list[str] | None) -> list[str]:
     The ``--extensions`` flag is deliberately NOT passed. mdformat's CLI
     enables every installed parser extension by default, and naming one
     explicitly *restricts* the enabled set to just that one -- passing
-    ``--extensions frontmatter`` silently disables ``tables`` and any
-    other extension that happens to be installed. The frontmatter
-    extension is verified separately, by
+    ``--extensions frontmatter`` silently disables ``tables`` (which
+    comes from mdformat-gfm) and any other extension that happens to be
+    installed. No fleet venv installs mdformat-gfm today, so the fleet's
+    mdformat is table-blind either way; the wrapper carries its own
+    table-aware comparison for that reason. The frontmatter extension
+    is verified separately, by
     :func:`_frontmatter_extension_available`.
     """
     cmd = [_resolve_mdformat_bin(), "--no-codeformatters", "--number"]
