@@ -57,12 +57,21 @@ dependencies = [
     # whose first line is `---` it rewrites the YAML frontmatter fence
     # into a horizontal rule and flattens the YAML into body text, which
     # can then make a plan vanish from PLAN_INDEX.md entirely. This
-    # plugin preserves the block byte-for-byte.
+    # plugin re-serializes the block through a ruamel round-trip that
+    # preserves quotes, comments and key order, so the parsed values are
+    # unchanged -- the text is not byte-identical (a null-valued key
+    # comes back as an empty value), which is why the property that
+    # matters is that the frontmatter still parses to the same thing.
     #
     # The singular name is deliberate. `mdformat-front-matters` (plural)
-    # is a DIFFERENT package: it re-serializes the YAML and strips
+    # is a DIFFERENT package: it also re-serializes the YAML but strips
     # quotes, which turns a quoted "yes" into a bare `yes` -- and PyYAML
     # under YAML 1.1 parses that as the boolean True.
+    #
+    # The two register under different entry-point names (`frontmatter`
+    # and `front_matters`), so pip will install both side by side without
+    # complaint. The mdformat hook counts the front-matter extensions and
+    # refuses to run unless there is exactly one.
     "mdformat-frontmatter>=2.2.0",
     "mdformat-ruff>=0.1.3",
     "numpy>=2.5.3",

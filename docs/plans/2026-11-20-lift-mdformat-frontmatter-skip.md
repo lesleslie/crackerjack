@@ -69,15 +69,22 @@ Each condition is mechanically checkable.
 4. For each of the six repositories: `git diff --name-only` contains no
    file with an extension other than `.md` or `.markdown`.
 5. For each of the six repositories: no ordered-list marker is
-   *decreased* by the diff. Every marker that changes increases or
-   stays the same. This is what "source numbering is preserved" has to
-   mean in practice, and it is the property that protects a reference
-   like "item 4": no marker ever decreases, so `2.` never becomes `1.`
-   and the item a reader was pointed at is still the item they find.
+   *decreased* by the diff, compared **numerically** rather than
+   textually. Every marker that changes increases or stays the same.
+   This is what "source numbering is preserved" has to mean in
+   practice, and it is the property that protects a reference like
+   "item 4": no marker ever decreases, so `2.` never becomes `1.` and
+   the item a reader was pointed at is still the item they find.
    (A marker-only hunk is not a failure. `--number` renders consecutive
    numbering, so a list whose markers were collapsed to `1. 1. 1.` by an
    earlier default-mode pass is *repaired* to `1. 2. 3.` — see §2.4 and
-   §2.7.)
+   §2.7. The comparison is numeric because the zero-padded rendering of
+   §2.4 changes `1.` to `01.`, which is numerically equal but
+   textually smaller.)
+   **The one exception:** the two documents named in §2.7 have a
+   genuine hole in a list, and `--number` closes it by decreasing three
+   markers. That is the accepted repair of R4, and those two documents
+   are the only allowed exception.
 6. For each of the six repositories: the plan-index audit reports zero
    frontmatter'd files missing from `PLAN_INDEX.md`.
 7. `pytest tests/unit/tools/test_mdformat_wrapper.py` passes.
@@ -129,15 +136,34 @@ venvs against mdformat 1.0.0:
 
 | | `mdformat-frontmatter` (butler54) | `mdformat-front-matters` (KyleKing) |
 |---|---|---|
-| frontmatter on a hostile fixture | byte-for-byte preserved | re-serialized, quotes stripped |
+| frontmatter on a hostile fixture | re-serialized, **quotes preserved** | re-serialized, quotes stripped |
 | `"yes"` | stays the string `yes` | becomes bare `yes`, which YAML 1.1 parses as the boolean `True` |
 | formats | YAML only | YAML, TOML, JSON |
 | extra CLI | none | `--strict-front-matter`, `--sort-front-matter` |
 
 The plural package's strict mode would fail loudly on *malformed*
 frontmatter, which the fleet's schema validator already covers. It was
-not chosen because re-serializing the YAML is the worse trade for
-frontmatter that machine readers parse.
+not chosen because stripping quotes is the worse trade for frontmatter
+that machine readers parse.
+
+**Neither package preserves the block byte-for-byte.** The singular one
+parses the block with ruamel and dumps it again
+(`preserve_quotes = True`, `indent(mapping=2, sequence=4, offset=2)`,
+`width = maxsize`), so quotes, comments and key order survive and the
+parsed values are unchanged, but the text is not identical — a
+`None`-valued key comes back as an empty value, and long scalars are
+re-wrapped. The byte-preserving path is its *error* fallback, used only
+when the block cannot be parsed. This distinction matters: the earlier
+wording in this plan said "byte-for-byte", and the plan's own
+measurement below is what disproved it.
+
+The two packages register under **different entry-point names** —
+`frontmatter` and `front_matters` — so pip installs both side by side
+without complaint. mdformat then logs a plugin conflict, keeps one
+renderer, and the disagreement about quotes becomes a silent semantic
+change to frontmatter. The guard counts front-matter extensions rather
+than looking for one by name, and refuses to run unless there is exactly
+one.
 
 ### 2.3 What the plugin actually does to the fleet's documents
 
@@ -159,6 +185,10 @@ the same value.
 
 **This is the property that makes the churn safe: the frontmatter the
 tools read does not change, so nothing downstream of it can break.**
+The text does change — that is the ruamel round-trip, and it is exactly
+what the `null`-to-empty rewrite above is. The same measurement over
+crackerjack's full tracked set, 307 documents, gives 277 text-only
+differences and not one of a different kind.
 
 One risk deserves its own measurement, because lifting the skip hands
 mdformat a document it has never seen before: a file whose first line
@@ -169,6 +199,14 @@ document anywhere in the fleet. Where one did exist, the plugin
 degrades it safely: on a `---\n\n# heading` fixture it renders the
 `---` as an underscore horizontal rule and exits 0, which is what the
 `---` meant anyway (a thematic break).
+
+A second lookalike does exist and is handled explicitly: a document
+whose first line is a **byte-order mark followed by** `---`. The
+plugin's front-matter rule is BOM-blind, so formatting such a document
+flattens its frontmatter into a heading and the document drops out of
+`PLAN_INDEX.md`. Such documents are excluded from formatting and
+reported. No tracked document in any of the six repositories currently
+has one.
 
 ### 2.4 The hazard that is NOT about frontmatter
 
@@ -217,11 +255,13 @@ Two consequences the fleet's own documents decide for us:
   consecutive numbering. That is a content change to
   already-committed documents, in the direction of correctness, and it
   is the larger part of the churn.
-- **A list of ten or more items is rendered zero-padded.** `1. 2. …
-  13.` becomes `01. 02. … 13.`. 98 lists in the fleet are long enough
-  to be affected. CommonMark renders the list as `1.` through `13.`
-  regardless — the leading zero is a source-text artefact, not a
-  rendered one.
+- **A list whose last marker reaches 10 is rendered zero-padded.** The
+  rule is `pad = len(str(list_len + starting_number - 1))`, so the
+  trigger is the largest marker in the list, not the number of items:
+  `9. 10.` (two items) becomes `09. 10.`, and `1. … 9.` (nine items)
+  does not change at all. **171** lists in the fleet are affected.
+  CommonMark renders the list as `1.` through `13.` regardless — the
+  leading zero is a source-text artefact, not a rendered one.
 
 **`--number` is therefore a prerequisite for the lift, not an
 afterthought.** Lifting the skip first would collapse the numbering in
@@ -454,6 +494,10 @@ Per repository:
 - Confirm the plan-index audit reports no frontmatter'd file missing
   from `PLAN_INDEX.md`.
 - Confirm `git diff --name-only` lists only `.md` and `.markdown`.
+- Confirm the hook's stderr names no excluded document. A byte-order
+  mark before a frontmatter fence, or a second front-matter extension in
+  the venv, both make the hook report something and both are conditions
+  to fix rather than to commit past.
 - Commit.
 
 #### Integration Contract
@@ -463,7 +507,8 @@ Per repository:
   and its `docs/plans/PLAN_INDEX.md`.
 - **Demonstrable by**: `git diff --name-only` in each repository lists
   only markdown; the plan-index audit reports zero missing files; a
-  second hook run in each repository is a no-op.
+  second hook run in each repository is a no-op; the hook's stderr names
+  no excluded document.
 - **Rollback signal**: any repository whose second hook run still
   reports changes. The formatter is not idempotent over that tree, and
   the commit must not land until it is.
@@ -561,13 +606,17 @@ turned up during execution that the plan did not anticipate.)_
 
 ### Phase 1 — the wrapper change
 
-**Commit:** `e9448967` — `fix(format): format frontmatter documents and
-preserve list numbering`
+**Commits:**
+- `e9448967` — `fix(format): format frontmatter documents and preserve
+  list numbering` — the lift itself
+- `7556b402` — `fix(format): close three holes the frontmatter lift left
+  open` — the review findings below
+
 **Baseline:** `c8bd7d4c`
 **Changed:** `crackerjack/tools/mdformat_wrapper.py`,
 `crackerjack/services/doc_categorizer.py` (docstring only),
 `tests/unit/tools/test_mdformat_wrapper.py`,
-`tests/tools/test_mdformat_wrapper.py` (docstring only).
+`tests/tools/test_mdformat_wrapper.py`.
 
 **What was measured, before the change was made:**
 
@@ -604,11 +653,13 @@ preserve list numbering`
    `--number` renders consecutive numbering, so it *repairs* the 5545
    collapsed lists fleet-wide and those repairs are marker-only hunks.
    The condition now says what its own parenthetical meant: no marker
-   is decreased.
-2. **`--number` zero-pads lists of ten or more items** (`1.` → `01.`).
-   98 lists in the fleet are affected. CommonMark renders the list as
-   `1.` through `13.` either way, so the leading zero is a source-text
-   artefact and not a rendered one.
+   is decreased, compared numerically, with an explicit exception for
+   the two documents of §2.7.
+2. **`--number` zero-pads a list whose last marker reaches 10** (`1.` →
+   `01.`). The trigger is the largest marker, not the item count.
+   **171** lists in the fleet are affected. CommonMark renders the list
+   as `1.` through `13.` either way, so the leading zero is a
+   source-text artefact and not a rendered one.
 3. **The `[N, 1, 1, …]` shape looks like a hazard and is not.** The
    first marker is kept and the rest are numbered consecutively from it,
    so a reference to "item N" still lands on the same item. 53 lists
@@ -620,22 +671,65 @@ preserve list numbering`
 5. **One tracked document has invalid YAML frontmatter already**:
    `crackerjack/mcp/agents/crackerjack-specialist.md`, whose unquoted
    `description` contains a bare colon, so PyYAML rejects it. This
-   change neither causes nor worsens it — the block is byte-identical
-   before and after formatting, and mdformat preserves it and warns.
-   Left alone as out of scope; it is an authoring problem, not a
-   formatter problem.
+   change neither causes nor worsens it — the block comes back with the
+   same text, and mdformat preserves it and warns. Left alone as out of
+   scope; it is an authoring problem, not a formatter problem. (The
+   warning it produces was invisible until `7556b402`: see finding 8.)
 6. **`doc_categorizer` documented itself as mirroring this module's
    `---` rule**, and that claim became false when the skip was lifted.
    The docstring is corrected; the behaviour is deliberately unchanged.
+7. **"Preserves the frontmatter byte-for-byte" was false.** The plugin
+   re-serialises the block through a ruamel round-trip with
+   `preserve_quotes=True`, so the parsed values are unchanged but the
+   text is not — and the plan's own measurement (277 text-only
+   differences, all of them `null` → empty) is what disproved the
+   wording. Corrected in §2.2, in the wrapper's comments and in the test
+   docstrings.
 
-**A note the plan does not need but the record should carry:** this plan
-file is itself one of the damaged documents. Its own §2.4 example list
-is `[3, 1]` in the source — the damage signature of the earlier
-default-mode pass — and `--number` restores it to `[3, 4]`. The plan's
-central hazard, demonstrated on the plan itself.
+**What a fresh review of the lift found, and `7556b402` fixed:**
+
+8. **A BOM'd frontmatter document was destroyed.** The plugin's
+   front-matter rule is BOM-blind, and a byte-order mark is not
+   whitespace, so every `---` test in the wrapper missed it. Formatting
+   such a document flattened its frontmatter into a heading, and the
+   document then dropped out of `PLAN_INDEX.md` — the exact failure the
+   guard exists to prevent. Such documents are now excluded from
+   formatting and reported, because an excluded document is one nobody
+   notices. No tracked document in the fleet has one today.
+9. **A second front-matter extension was invisible.** The two packages
+   register under different entry-point names (`frontmatter` and
+   `front_matters`), so pip installs both side by side; mdformat then
+   logs a plugin conflict, keeps one renderer, and the disagreement
+   about quotes becomes a silent semantic change. The probe now counts
+   front-matter extensions, and the guard refuses to run unless there is
+   exactly one.
+10. **mdformat's own diagnostics were swallowed.** The wrapper
+    discarded `check_result.stderr` entirely when the check passed, so a
+    front-matter block mdformat could not parse — or a plugin conflict —
+    was invisible. They are surfaced now, prefixed with the success
+    marker so they reach the operator without being counted as issues.
+
+**A correction to an earlier note in this record.** An earlier draft
+claimed that this plan file is itself one of the damaged documents, its
+§2.4 example list being `[3, 1]` in the source. That was wrong: the
+`[3, 1]` is inside a fenced code block — it is the illustration of the
+default-mode output — and the plan's actual body lists are consecutive.
+Running the wrapper's exact command line over the plan changes only
+`superseded_by: null` → `superseded_by:`, three continuation-line
+joins and a trailing blank line. No list marker in this file changes.
+The measurement that produced the wrong claim counted fenced code
+blocks.
+
+**Counting note.** §2.1 lists 306 frontmatter'd documents for
+crackerjack; the measurement over the tracked set finds **307** files
+whose first line is `---`. The difference is
+`crackerjack/mcp/agents/crackerjack-specialist.md`, whose frontmatter is
+not valid YAML and so is not counted by a parser-based scan. Both
+numbers are right about different things.
 
 **Phase 2 is not executed.** The wrapper now formats crackerjack's own
-306 frontmatter'd documents on its next run; that churn, plus the
+frontmatter'd documents on its next run — 172 of them are newly in
+scope — and 287 files are in the wrapper's set. That churn, plus the
 regenerated plan index, is Phase 2's crackerjack commit, and it is
-deliberately not folded into Phase 1's commit.
+deliberately not folded into Phase 1's commits.
 
