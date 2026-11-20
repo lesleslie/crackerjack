@@ -73,6 +73,14 @@ dependencies = [
     # complaint. The mdformat hook counts the front-matter extensions and
     # refuses to run unless there is exactly one.
     "mdformat-frontmatter>=2.2.0",
+    # markdown-it-py is mdformat's own parser, but the mdformat hook
+    # imports it DIRECTLY: mdformat's own safety net renders both sides
+    # of a comparison with a parser that has NO GFM table support, so it
+    # cannot see a table whose rows were merged. The hook compares the
+    # GFM rendering itself, and that needs a table-aware renderer.
+    # Declared explicitly rather than relied on transitively, because a
+    # transitive dependency is not a contract.
+    "markdown-it-py>=4.0.0",
     "mdformat-ruff>=0.1.3",
     "numpy>=2.5.3",
     # The Bodai span substrate: crackerjack reports spans to akosha's

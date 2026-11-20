@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import fnmatch
+import re
 import shutil
 import subprocess
 import sys
 from pathlib import Path
+from typing import Any
 
 from ._git_utils import get_git_tracked_files
 
@@ -13,6 +15,87 @@ from ._git_utils import get_git_tracked_files
 # this module would miss it. Documents that open with one are handled
 # explicitly.
 _BOM = "﻿"
+
+# A ``---`` line at column 0 whose next non-empty line is a YAML key
+# opens a YAML block. Counting these blocks is what separates the two
+# file shapes that both begin with ``---``:
+#
+#   * a markdown document with frontmatter -- ONE block, its own opener
+#   * a stream of YAML documents -- MANY blocks, one per document
+#
+# Fenced code blocks are excluded. A ``---`` inside a ```yaml fence is
+# sample content, not a document separator, and the fleet's templates
+# show frontmatter inside such a fence. Tracking the fence state is
+# what keeps those templates in scope.
+_YAML_BLOCK_SEP = re.compile(r"^---[ \t]*$")
+_YAML_BLOCK_KEY = re.compile(r"^[A-Za-z_][A-Za-z0-9_.-]*:")
+_CODE_FENCE = re.compile(r"^\s*(```|~~~)")
+
+
+def _yaml_block_boundaries(text: str) -> int:
+    """How many YAML blocks the text opens, ignoring fenced code.
+
+    Each ``---`` separator at column 0 is tested against the next
+    non-empty line: if that line is a YAML key at column 0 the
+    separator opens a YAML block.
+    """
+    lines = text.splitlines()
+    count = 0
+    in_fence = False
+    for index, line in enumerate(lines):
+        if _CODE_FENCE.match(line):
+            in_fence = not in_fence
+            continue
+        if in_fence or not _YAML_BLOCK_SEP.match(line):
+            continue
+        for following in lines[index + 1 :]:
+            if not following.strip():
+                continue
+            if _YAML_BLOCK_KEY.match(following):
+                count += 1
+            break
+    return count
+
+
+def _is_multi_document_yaml(file_path: Path) -> bool:
+    """True when the file is a stream of YAML documents, not markdown.
+
+    The fleet has files that wear a ``.md`` extension but hold YAML:
+    Claude Code slash-command definitions are a run of ``---``-separated
+    YAML documents. mdformat is a *markdown* formatter, and handed such
+    a file it reads the prose line before each separator as a setext
+    heading underline, so every document separator becomes an ATX
+    heading::
+
+        ---
+        description: Show jot inbox vitals
+        allowed-tools: []
+        ---
+
+    turns into ``## description: Show jot inbox vitals allowed-tools: []``.
+    That is not a formatting difference, it is a destroyed file.
+
+    Two parts to the test, and both are needed:
+
+    * the file must OPEN with a ``---`` fence -- a YAML stream always
+      does, and a markdown document that opens with a heading never
+      does, so this keeps ordinary prose out of the scan;
+    * it must contain at least TWO YAML blocks outside fenced code --
+      one block is frontmatter, the shape every markdown document in
+      the fleet has.
+    """
+    try:
+        text = file_path.read_text(encoding="utf-8")
+    except OSError, UnicodeDecodeError:
+        return False
+    lines = text.splitlines()
+    if not lines or lines[0].strip() != "---":
+        return False
+    # Count over the WHOLE text. The opening fence is itself a
+    # boundary -- it is what makes the first document a YAML block --
+    # so counting only the lines after it would drop one from the total
+    # and miss a two-document stream.
+    return _yaml_block_boundaries(text) >= 2
 
 
 def should_skip_file(file_path: Path) -> bool:
@@ -76,6 +159,12 @@ def should_skip_file(file_path: Path) -> bool:
     #
     # The underscore clause below is a different rule about a different
     # thing and stays.
+    if stripped == "---" and _is_multi_document_yaml(file_path):
+        # A ``.md`` file that is really a stream of YAML documents.
+        # mdformat would turn each document separator into a heading,
+        # which destroys the file rather than formatting it.
+        return True
+
     return len(stripped) >= 3 and set(stripped) == {"_"}
 
 
@@ -216,6 +305,87 @@ def _frontmatter_documents(files: list[Path]) -> list[Path]:
     return found
 
 
+def _multi_document_yaml_documents(files: list[Path]) -> list[Path]:
+    """The files that are streams of YAML documents rather than markdown.
+
+    These are excluded from formatting because mdformat would turn each
+    document separator into a heading and destroy them. They are
+    reported rather than skipped quietly: an excluded file is one
+    nobody notices, and "why is this file never formatted?" is a
+    question every operator eventually asks.
+    """
+    return [path for path in files if _is_multi_document_yaml(path)]
+
+
+# --- GFM rendering comparison -------------------------------------------------
+#
+# mdformat's own safety net is ``mdformat._util.is_md_equal``: it renders
+# both sides of a comparison with mdformat's parser and compares the
+# HTML. That parser has NO table support -- a GFM table is just a
+# paragraph to it.
+#
+# That is the blind spot. mdformat can merge a table's rows into one
+# line, or re-indent a table out of the list item that contains it,
+# and its check cannot see the damage because it cannot parse what
+# changed. The check answers "did the parse tree change?" when the
+# question is "does the document still read the same?".
+#
+# Rendering both sides with a table-aware parser answers the question
+# that matters. If the rendering differs, the document was damaged, and
+# the damage is rolled back.
+
+_GFM_RENDERER: Any = None
+_FRONTMATTER_BLOCK = re.compile(r"\A---\n.*?\n---\n", re.DOTALL)
+_WHITESPACE = re.compile(r"\s+")
+
+
+def _gfm_renderer() -> Any:
+    """A markdown-it renderer with GFM tables and strikethrough.
+
+    Built lazily: importing markdown-it-py costs real time and the
+    wrapper is imported by every hook.
+    """
+    global _GFM_RENDERER
+    if _GFM_RENDERER is None:
+        from markdown_it import MarkdownIt
+        from markdown_it.renderer import RendererHTML
+
+        _GFM_RENDERER = MarkdownIt(renderer_cls=RendererHTML).enable(
+            ["table", "strikethrough"]
+        )
+    return _GFM_RENDERER
+
+
+def _rendered_html(text: str) -> str:
+    """Render a document the way a GFM reader would.
+
+    The frontmatter block is stripped first. This renderer has no
+    frontmatter plugin, so the block would be read as body text -- and
+    the frontmatter plugin re-serialises YAML through a ruamel
+    round-trip that changes that text without changing its meaning.
+    The frontmatter has its own semantic check; this one is about the
+    body.
+    """
+    html = _gfm_renderer().render(_FRONTMATTER_BLOCK.sub("", text, count=1))
+    html = _WHITESPACE.sub(" ", html)
+    html = html.replace("<p> ", "<p>").replace(" </p>", "</p>")
+    return html.strip()
+
+
+def _rendering_changes(before: str, after: str) -> bool:
+    """True when the two documents do not read the same."""
+    return _rendered_html(before) != _rendered_html(after)
+
+
+# mdformat reports the file it refused with a message that names it:
+#
+#     Error: Could not format
+#     "/path/to/doc.md".
+#
+# The path is on its own line, in quotes.
+_COULD_NOT_FORMAT = re.compile(r'Could not format\s*\n"(?P<path>[^"]+)"')
+
+
 def _bom_frontmatter_documents(files: list[Path]) -> list[Path]:
     """The files that open with a byte-order mark before a ``---`` fence.
 
@@ -261,7 +431,14 @@ def _report_tool_output(text: str) -> None:
 
 
 def _report_auto_formatted(files: list[Path]) -> None:
-    """Report the files mdformat just rewrote."""
+    """Report the files mdformat just rewrote.
+
+    The list is the files THIS run changed. An earlier version ran
+    ``git diff --name-only`` over them, which reports every file that
+    differs from HEAD -- including files another session had edited
+    and this run never touched. The report then named work that was
+    not the formatter's.
+    """
     # Silent auto-format path: surface what was changed so the
     # next "mdformat (failed)" message has substance.
     #
@@ -284,31 +461,14 @@ def _report_auto_formatted(files: list[Path]) -> None:
     # ``crackerjack/executors/hook_executor.py:802`` requires
     # it for any hook marked ``is_formatting=True`` that exits 1:
     # without it the panel re-routes exit-1 to status="failed".
-    try:
-        diff = subprocess.run(
-            ["git", "diff", "--name-only"] + [str(f) for f in files],
-            cwd=Path.cwd(),
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        changed = [line for line in diff.stdout.splitlines() if line.strip()]
-        print(
-            f"✓ mdformat: PASSED hook after auto-formatted "
-            f"{len(changed)} file(s) (re-run to confirm clean "
-            f"state): files were modified by this hook",
-            file=sys.stderr,
-        )
-        for line in changed:
-            print(f"✓   {line}", file=sys.stderr)
-    except Exception:
-        # don't crash the hook just because git wasn't available
-        print(
-            "✓ mdformat: PASSED hook after auto-formatted "
-            "<unknown> (git unavailable): files were modified "
-            "by this hook",
-            file=sys.stderr,
-        )
+    print(
+        f"✓ mdformat: PASSED hook after auto-formatted "
+        f"{len(files)} file(s) (re-run to confirm clean "
+        f"state): files were modified by this hook",
+        file=sys.stderr,
+    )
+    for path in files:
+        print(f"✓   {path}", file=sys.stderr)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -390,6 +550,19 @@ def main(argv: list[str] | None = None) -> int:
         for path in bom_docs:
             _report_tool_output(f"excluded (byte-order mark): {path}")
 
+    yaml_docs = _multi_document_yaml_documents(all_files)
+    if yaml_docs:
+        _report_tool_output(
+            f"{len(yaml_docs)} document(s) are streams of YAML documents "
+            "rather than markdown, and are excluded from formatting: "
+            "mdformat reads the prose line before each '---' separator as "
+            "a setext heading underline and turns every separator into an "
+            "ATX heading, which destroys the file rather than formatting "
+            "it. Rename them to a .yaml extension to have them covered."
+        )
+        for path in yaml_docs:
+            _report_tool_output(f"excluded (multi-document YAML): {path}")
+
     files = [f for f in all_files if not should_skip_file(f)]
 
     if not files:
@@ -417,23 +590,152 @@ def main(argv: list[str] | None = None) -> int:
             _report_tool_output(check_result.stderr)
             return 0
 
-        format_result = subprocess.run(
-            cmd,
-            cwd=Path.cwd(),
-            check=False,
-            capture_output=True,
-            text=True,
-        )
+        changed, refused, damaged = _format_with_rollback(files, argv)
 
-        if format_result.stderr:
-            print(format_result.stderr, file=sys.stderr)
-        _report_auto_formatted(files)
-        return 1
+        if refused:
+            _report_tool_output(
+                f"{len(refused)} document(s) could not be formatted by mdformat "
+                "and are left as they are: mdformat refuses a document whose "
+                "formatted output renders to different HTML than the input, "
+                "and it aborts the whole batch at the first refusal. These "
+                "documents are reported so they are not mistaken for "
+                "formatted."
+            )
+            for path in refused:
+                _report_tool_output(f"not formatted (mdformat refused): {path}")
+
+        if damaged:
+            _report_tool_output(
+                f"{len(damaged)} document(s) were changed by mdformat in a way "
+                "that alters how they read, and have been restored: mdformat "
+                "has no GFM table support, so it can merge a table's rows or "
+                "re-indent a table out of its list item without noticing. "
+                "They are left as they were."
+            )
+            for path in damaged:
+                _report_tool_output(f"restored (rendering changed): {path}")
+
+        if changed:
+            _report_auto_formatted(changed)
+            return 1
+        return 0
     except FileNotFoundError:
         return 127
     except Exception as e:
         print(f"Error running mdformat: {e}", file=sys.stderr)
         return 1
+
+
+def _format_with_rollback(
+    files: list[Path],
+    argv: list[str] | None,
+) -> tuple[list[Path], list[Path], list[Path]]:
+    """Format the files, rolling back anything mdformat damages.
+
+    mdformat has two behaviours that make a plain format run unsafe on
+    a fleet-wide tree:
+
+    **It aborts the whole batch at the first file it cannot format.**
+    A document whose formatted output renders to different HTML than
+    the input is refused, and the refusal stops every file after it in
+    the same invocation. The tree is left half-formatted and the
+    formatter reports the same failure on every subsequent run, so the
+    gate never converges. The batch is therefore run iteratively: the
+    refused file is named in mdformat's own error message, dropped from
+    the set, and the batch re-run.
+
+    **Its safety check cannot see table damage.** The check compares
+    the rendering produced by mdformat's parser, which has no GFM table
+    support. So mdformat can merge a table's rows, or re-indent a table
+    out of its list item, and pass its own check. Each file's GFM
+    rendering is compared before and after; a file that reads
+    differently is restored to its original bytes and reported.
+
+    Returns the files that were changed, the files mdformat refused,
+    and the files whose damage was rolled back.
+    """
+    snapshot: dict[Path, str] = {}
+    for path in files:
+        try:
+            snapshot[path] = path.read_text(encoding="utf-8")
+        except OSError, UnicodeDecodeError:
+            snapshot[path] = ""
+
+    pending = list(files)
+    refused: list[Path] = []
+    while pending:
+        result = subprocess.run(
+            _build_mdformat_cmd(pending, argv),
+            cwd=Path.cwd(),
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        if result.returncode == 0:
+            if result.stderr:
+                _report_tool_output(result.stderr)
+            break
+
+        culprit = _refused_file(result.stderr, pending)
+        if culprit is None:
+            # Not a file-level refusal -- a real failure. Surface it
+            # and stop rather than looping on it.
+            print(result.stderr, file=sys.stderr)
+            return [], refused, []
+        refused.append(culprit)
+        pending.remove(culprit)
+
+    changed: list[Path] = []
+    damaged: list[Path] = []
+    for path in pending:
+        try:
+            after = path.read_text(encoding="utf-8")
+        except OSError, UnicodeDecodeError:
+            continue
+        before = snapshot.get(path, "")
+        if after == before:
+            continue
+        if _rendering_changes(before, after):
+            # mdformat changed what the document says. Put it back.
+            try:
+                path.write_text(before, encoding="utf-8")
+            except OSError:
+                pass
+            damaged.append(path)
+            continue
+        changed.append(path)
+
+    return changed, refused, damaged
+
+
+def _refused_file(stderr: str, candidates: list[Path]) -> Path | None:
+    """The file mdformat refused, named in its error message.
+
+    mdformat reports::
+
+        Error: Could not format
+        "/path/to/doc.md".
+
+    The path is matched against the candidates by resolved path, so a
+    relative path on the command line and an absolute path in the
+    message both resolve to the same file.
+    """
+    match = _COULD_NOT_FORMAT.search(stderr)
+    if match is None:
+        return None
+    reported = Path(match.group("path"))
+    try:
+        resolved = reported.resolve()
+    except OSError:
+        resolved = reported
+    for candidate in candidates:
+        try:
+            if candidate.resolve() == resolved:
+                return candidate
+        except OSError:
+            if candidate == reported:
+                return candidate
+    return None
 
 
 if __name__ == "__main__":

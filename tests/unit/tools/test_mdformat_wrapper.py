@@ -9,10 +9,53 @@ from crackerjack.tools.mdformat_wrapper import (
     _frontmatter_documents,
     _frontmatter_extension_available,
     _frontmatter_extension_count,
+    _multi_document_yaml_documents,
     _resolve_mdformat_bin,
     main,
     should_skip_file,
 )
+
+
+def _dispatcher(*results):
+    """A subprocess.run side effect that returns each result in turn.
+
+    A ``side_effect`` LIST returns its elements; it does not call them.
+    So an element that has to act at call time -- a mock that writes
+    the file mdformat would have written -- has to be reached through
+    a dispatcher that calls it.
+    """
+    remaining = list(results)
+
+    def _run(cmd, *args, **kwargs):
+        result = remaining.pop(0)
+        # A Mock is callable, so a plain `callable` check would CALL
+        # the configured mock instead of returning it -- and a called
+        # mock returns its auto-created return_value, whose attributes
+        # are auto-created Mocks rather than the configured ones.
+        if isinstance(result, Mock):
+            return result
+        if callable(result):
+            return result(cmd, *args, **kwargs)
+        return result
+
+    return _run
+
+
+def _writing_format(target: Path, formatted: str):
+    """A subprocess.run side effect that formats the target file.
+
+    The wrapper decides whether to report a change by comparing the
+    file's bytes before and after the run. A mock that only returns a
+    return code therefore looks to the wrapper exactly like a run that
+    changed nothing -- which is a different behaviour, and a different
+    result.
+    """
+
+    def _run(cmd, *args, **kwargs):
+        target.write_text(formatted, encoding="utf-8")
+        return Mock(returncode=0, stdout="", stderr="")
+
+    return _run
 
 
 class TestShouldSkipFile:
@@ -136,6 +179,175 @@ class TestShouldSkipFile:
         plain = tmp_path / "plain.md"
         plain.write_text("---\nstatus: draft\n---\n\n# Body\n", encoding="utf-8")
         assert not should_skip_file(plain)
+
+
+class TestMultiDocumentYaml:
+    """A ``.md`` file that is really multi-document YAML must not be formatted.
+
+    The fleet has files that wear a ``.md`` extension but hold YAML:
+    Claude Code slash-command definitions are a stream of ``---``-separated
+    YAML documents. mdformat is a *markdown* formatter -- handed such a
+    file it reads ``Run ... \\n---`` as a setext heading and turns each
+    document separator into an ATX heading, so::
+
+        ---
+        description: Show jot inbox vitals
+        allowed-tools: []
+        ---
+
+    becomes ``## description: Show jot inbox vitals allowed-tools: []``.
+
+    That is not a formatting difference, it is a destroyed file. The
+    discriminator is the *count* of YAML blocks: a markdown document
+    with frontmatter has exactly one (its own opener), a multi-document
+    YAML file has many.
+    """
+
+    def test_multi_document_yaml_file_is_skipped(self, tmp_path):
+        """A slash-command style file is excluded from formatting."""
+        command = tmp_path / "command.md"
+        command.write_text(
+            "---\n"
+            "description: Show jot inbox vitals\n"
+            "allowed-tools: []\n"
+            "---\n"
+            "\n"
+            "Run `mahavishnu jot vitals` and display the output verbatim.\n"
+            "---\n"
+            "description: Create a new jot from text\n"
+            "allowed-tools: []\n"
+            "---\n"
+            "\n"
+            "Run `mahavishnu jot add {{text}}` and display the output verbatim.\n"
+        )
+        assert should_skip_file(command)
+
+    def test_single_frontmatter_document_is_not_skipped(self, tmp_path):
+        """One YAML block is frontmatter, not a YAML stream."""
+        plan = tmp_path / "plan.md"
+        plan.write_text("---\nstatus: draft\n---\n\n# Body\n")
+        assert not should_skip_file(plan)
+
+    def test_yaml_block_inside_a_fenced_code_block_does_not_count(self, tmp_path):
+        """A ``---`` inside a fence is sample content, not a separator.
+
+        This is the false-positive that a naive scan produces: the
+        fleet's templates show YAML frontmatter inside a ```yaml fence,
+        and counting those as document boundaries would exclude
+        ordinary markdown templates from formatting.
+        """
+        template = tmp_path / "TEMPLATE.md"
+        template.write_text(
+            "---\n"
+            "status: active\n"
+            "---\n"
+            "\n"
+            "# Template\n"
+            "\n"
+            "Example:\n"
+            "\n"
+            "```yaml\n"
+            "---\n"
+            "title: <Human-readable title>\n"
+            "audience: crackerjack maintainer\n"
+            "---\n"
+            "```\n"
+        )
+        assert not should_skip_file(template)
+
+    def test_thematic_break_after_a_paragraph_is_not_a_yaml_boundary(self, tmp_path):
+        """A ``---`` under prose is a setext heading, not a YAML block."""
+        doc = tmp_path / "doc.md"
+        doc.write_text("# Title\n\nSome prose.\n\n---\n\nMore prose.\n")
+        assert not should_skip_file(doc)
+
+    def test_multi_document_yaml_documents_finds_the_file(self, tmp_path):
+        """The excluded files are reported, not skipped quietly."""
+        command = tmp_path / "command.md"
+        command.write_text(
+            "---\n"
+            "description: One\n"
+            "allowed-tools: []\n"
+            "---\n"
+            "prose\n"
+            "---\n"
+            "description: Two\n"
+            "allowed-tools: []\n"
+            "---\n"
+        )
+        plan = tmp_path / "plan.md"
+        plan.write_text("---\nstatus: draft\n---\n\n# Body\n")
+
+        found = _multi_document_yaml_documents([command, plan])
+        assert found == [command]
+
+
+class TestGfmTableSafety:
+    """mdformat must not change what a document reads as.
+
+    mdformat's own safety net renders both sides of a comparison with
+    its own parser, which has NO GFM table support -- a table is just a
+    paragraph to it. So mdformat can merge a table's rows, or re-indent
+    a table out of the list item that holds it, and pass its own check.
+    The wrapper closes that gap by comparing the GFM rendering before
+    and after, and restoring anything that reads differently.
+    """
+
+    def test_rendered_html_sees_a_table(self):
+        """The comparison renderer must understand GFM tables."""
+        from crackerjack.tools.mdformat_wrapper import _rendered_html
+
+        html = _rendered_html("| a | b |\n|---|---|\n| 1 | 2 |\n")
+        assert "<table>" in html
+        assert "<td>1</td>" in html
+
+    def test_rendered_html_ignores_frontmatter(self):
+        """Frontmatter is not body text, and its round-trip is not a change.
+
+        The frontmatter plugin re-serialises YAML through a ruamel
+        round-trip, which changes the frontmatter's TEXT. That is not a
+        change to the document, so the comparison must not see it as one.
+        """
+        from crackerjack.tools.mdformat_wrapper import _rendered_html
+
+        before = "---\nstatus: null\n---\n\n# Body\n"
+        after = "---\nstatus:\n---\n\n# Body\n"
+        assert _rendered_html(before) == _rendered_html(after)
+
+    def test_merged_table_rows_change_the_rendering(self):
+        """A table whose rows merge reads differently -- and must be caught."""
+        from crackerjack.tools.mdformat_wrapper import _rendering_changes
+
+        table = (
+            "| Symptom | Cause | Fix |\n|---|---|---|\n| `a` | b | c |\n| d | e | f |\n"
+        )
+        merged = (
+            "| Symptom | Cause | Fix |\n|---|---|---|\n| `a` | b | c | | d | e | f |\n"
+        )
+        assert _rendering_changes(table, merged)
+
+    def test_reflowed_paragraph_does_not_change_the_rendering(self):
+        """Unwrapping a paragraph is formatting, not a change of meaning."""
+        from crackerjack.tools.mdformat_wrapper import _rendering_changes
+
+        before = "One paragraph that\nwraps across lines.\n"
+        after = "One paragraph that wraps across lines.\n"
+        assert not _rendering_changes(before, after)
+
+    def test_refused_file_is_found_in_the_error_message(self):
+        """mdformat names the file it refused; the path must be matched."""
+        from crackerjack.tools.mdformat_wrapper import _refused_file
+
+        target = Path("/tmp/doc.md")
+        stderr = 'Error: Could not format\n"/tmp/doc.md".\n\nFormatted Markdown renders'
+        assert _refused_file(stderr, [target]) == target
+
+    def test_refused_file_returns_none_for_other_errors(self):
+        """A failure that is not a file refusal must not be misread as one."""
+        from crackerjack.tools.mdformat_wrapper import _refused_file
+
+        stderr = "Error: something else went wrong\n"
+        assert _refused_file(stderr, [Path("/tmp/doc.md")]) is None
 
 
 class TestFrontmatterSafety:
@@ -439,16 +651,18 @@ class TestFrontmatterSafety:
         pass every other test in this file.
         """
         target = tmp_path / "plan.md"
-        target.write_text("---\nstatus: draft\n---\n\n# Body\n")
+        target.write_text("---\nstatus: draft\n---\n\n# Body  \n")
         mock_get_files.side_effect = lambda pattern: (
             [target] if pattern == "*.md" else []
         )
 
         mock_probe = Mock(stdout="1\n", stderr="", returncode=0)
         mock_check = Mock(returncode=1, stdout="", stderr="")
-        mock_format = Mock(returncode=0, stdout="", stderr="")
-        mock_diff = Mock(returncode=0, stdout="plan.md\n", stderr="")
-        mock_run.side_effect = [mock_probe, mock_check, mock_format, mock_diff]
+        mock_run.side_effect = _dispatcher(
+            mock_probe,
+            mock_check,
+            _writing_format(target, "---\nstatus: draft\n---\n\n# Body\n"),
+        )
 
         assert main() == 1
 
@@ -501,7 +715,11 @@ class TestMdformatMain:
     @patch("subprocess.run")
     def test_main_formats_files(self, mock_run, mock_get_files, tmp_path):
         """Test main formats files that need it."""
-        mock_get_files.return_value = [tmp_path / "README.md"]
+        target = tmp_path / "README.md"
+        target.write_text("# Body  \n")
+        mock_get_files.side_effect = lambda pattern: (
+            [target] if pattern == "*.md" else []
+        )
 
         # Mock check fails (needs formatting)
         mock_check = Mock()
@@ -509,17 +727,14 @@ class TestMdformatMain:
         mock_check.stdout = ""
         mock_check.stderr = ""
 
-        # Mock format succeeds
-        mock_format = Mock()
-        mock_format.returncode = 0
-        mock_format.stdout = "Formatted 1 file"
-        mock_format.stderr = ""
-
-        mock_run.side_effect = [mock_check, mock_format]
+        mock_run.side_effect = _dispatcher(
+            mock_check, _writing_format(target, "# Body\n")
+        )
 
         result = main()
 
         assert result == 1  # Returns 1 because files needed formatting
+        assert target.read_text() == "# Body\n"
 
     @patch("crackerjack.tools.mdformat_wrapper.get_git_tracked_files")
     def test_main_no_files(self, mock_get_files, capsys):
@@ -608,13 +823,18 @@ class TestMdformatMain:
         tmp_path,
         capsys,
     ):
-        """When mdformat auto-formats files, surface the diff on stderr.
+        """When mdformat auto-formats files, surface the change on stderr.
 
         The contract this pins: the silent-exit-1 path at the bottom of
-        ``main()`` must name the files that changed via ``git diff
-        --name-only`` so the next "1 issue" hook failure has substance.
-        Prior to this fix the wrapper returned 1 without naming anything,
-        which forced a manual ``git status`` dance every time.
+        ``main()`` must name the files that changed so the next "1 issue"
+        hook failure has substance. Prior to this fix the wrapper
+        returned 1 without naming anything, which forced a manual
+        ``git status`` dance every time.
+
+        The names are the files THIS run changed. An earlier version ran
+        ``git diff --name-only`` over them, which reports every file
+        that differs from HEAD -- including files another session had
+        edited and this run never touched.
 
         Each diagnostic line is prefixed with a success marker (``✓``) so
         that ``crackerjack.parsers.regex_parsers`` (regex parser) and
@@ -624,7 +844,10 @@ class TestMdformatMain:
         the Fast Hook Results panel.
         """
         target = tmp_path / "README.md"
-        mock_get_files.return_value = [target]
+        target.write_text("# Body  \n")
+        mock_get_files.side_effect = lambda pattern: (
+            [target] if pattern == "*.md" else []
+        )
 
         # check fails → needs_formatting
         mock_check = Mock()
@@ -632,18 +855,9 @@ class TestMdformatMain:
         mock_check.stdout = ""
         mock_check.stderr = ""
 
-        # format succeeds (silent auto-format path)
-        mock_format = Mock()
-        mock_format.returncode = 0
-        mock_format.stdout = ""
-        mock_format.stderr = ""
-
-        # git diff names the auto-formatted file
-        mock_diff = Mock()
-        mock_diff.returncode = 0
-        mock_diff.stdout = "README.md\n"
-
-        mock_run.side_effect = [mock_check, mock_format, mock_diff]
+        mock_run.side_effect = _dispatcher(
+            mock_check, _writing_format(target, "# Body\n")
+        )
 
         result = main()
         captured = capsys.readouterr()
@@ -654,7 +868,7 @@ class TestMdformatMain:
         # the diagnostic itself
         assert "✓ mdformat: PASSED" in captured.err
         assert "auto-formatted 1 file(s)" in captured.err
-        assert "✓   README.md" in captured.err
+        assert f"✓   {target}" in captured.err
         # The ``files were modified by this hook`` literal is the
         # magic phrase ``crackerjack/executors/hook_executor.py:802``
         # checks for on ``is_formatting=True`` hooks with exit-code 1.
@@ -664,58 +878,66 @@ class TestMdformatMain:
             "magic phrase missing — hook_executor will mark status=failed "
             "instead of passed for the silent auto-format path"
         )
-        # third subprocess call is the git diff invocation
-        assert mock_run.call_count == 3
-        git_invocation = mock_run.call_args_list[2]
-        assert git_invocation.args[0][0] == "git"
-        assert git_invocation.args[0][1] == "diff"
-        assert git_invocation.args[0][2] == "--name-only"
-        assert str(target) in git_invocation.args[0]
 
     @patch("crackerjack.tools.mdformat_wrapper.get_git_tracked_files")
     @patch("subprocess.run")
-    def test_main_auto_format_handles_git_failure(
+    def test_main_excludes_a_file_mdformat_refuses(
         self,
         mock_run,
         mock_get_files,
         tmp_path,
         capsys,
     ):
-        """If ``git diff`` fails (e.g., not a git repo), the hook still
-        returns 1 with whatever stderr mdformat produced. The diff
-        surface is best-effort; a missing git must NOT crash the hook.
+        """A refused file must not stop the rest of the batch.
+
+        mdformat aborts the whole invocation at the first file it
+        cannot format. Left alone, that leaves the tree half
+        formatted and the gate reporting the same failure on every
+        run, so it never converges. The wrapper drops the refused file
+        and re-runs, then reports it so the exclusion is visible.
         """
-        target = tmp_path / "README.md"
-        mock_get_files.return_value = [target]
+        refused = tmp_path / "refused.md"
+        refused.write_text("# Body\n")
+        formatted = tmp_path / "formatted.md"
+        formatted.write_text("# Body  \n")
+        # The two patterns are disjoint in production, so the mock
+        # returns the documents for one and nothing for the other.
+        mock_get_files.side_effect = lambda pattern: (
+            [refused, formatted] if pattern == "*.md" else []
+        )
 
-        mock_check = Mock()
-        mock_check.returncode = 1
-        mock_check.stderr = ""
+        mock_check = Mock(returncode=1, stdout="", stderr="")
 
-        mock_format = Mock()
-        mock_format.returncode = 0
-        mock_format.stderr = ""
+        def _run(cmd, *args, **kwargs):
+            # First format call: mdformat refuses the first file and
+            # aborts the batch.
+            if str(refused) in cmd:
+                return Mock(
+                    returncode=1,
+                    stdout="",
+                    stderr=(
+                        "Error: Could not format\n"
+                        f'"{refused}".\n\n'
+                        "Formatted Markdown renders to different HTML than "
+                        "input Markdown."
+                    ),
+                )
+            formatted.write_text("# Body\n", encoding="utf-8")
+            return Mock(returncode=0, stdout="", stderr="")
 
-        mock_diff = Mock()
-        mock_diff.returncode = 128  # git failure
-        mock_diff.stdout = "fatal: not a git repository"
-        mock_diff.stderr = "fatal: not a git repository"
-
-        mock_run.side_effect = [mock_check, mock_format, mock_diff]
+        mock_run.side_effect = _dispatcher(mock_check, _run, _run)
 
         result = main()
         captured = capsys.readouterr()
 
-        # Still exit 1, format stderr was printed, no exception escaped
         assert result == 1
-        assert "fatal: not a git repository" in captured.err
-        # Magic phrase must appear even on git-failure fallback so the
-        # hook_executor still routes status=passed on the silent
-        # auto-format path.
-        assert "files were modified by this hook" in captured.err, (
-            "magic phrase missing on git-failure fallback — "
-            "hook_executor will re-route to status=failed"
-        )
+        # The refused file is reported, not silently dropped.
+        assert "not formatted (mdformat refused)" in captured.err
+        assert str(refused) in captured.err
+        # The rest of the batch was still formatted.
+        assert formatted.read_text() == "# Body\n"
+        # The refused file was left alone.
+        assert refused.read_text() == "# Body\n"
 
     @patch("crackerjack.tools.mdformat_wrapper.get_git_tracked_files")
     @patch("subprocess.run")
@@ -735,21 +957,18 @@ class TestMdformatMain:
         reported issue even though mdformat auto-formatting succeeded.
         """
         target = tmp_path / "README.md"
-        mock_get_files.return_value = [target]
+        target.write_text("# Body  \n")
+        mock_get_files.side_effect = lambda pattern: (
+            [target] if pattern == "*.md" else []
+        )
 
         mock_check = Mock()
         mock_check.returncode = 1
         mock_check.stdout = ""
         mock_check.stderr = ""
-        mock_format = Mock()
-        mock_format.returncode = 0
-        mock_format.stdout = ""
-        mock_format.stderr = ""
-        mock_diff = Mock()
-        mock_diff.returncode = 0
-        mock_diff.stdout = "README.md\n"
-        mock_diff.stderr = ""
-        mock_run.side_effect = [mock_check, mock_format, mock_diff]
+        mock_run.side_effect = _dispatcher(
+            mock_check, _writing_format(target, "# Body\n")
+        )
 
         main()
         captured = capsys.readouterr()
@@ -789,21 +1008,18 @@ class TestMdformatMain:
         from crackerjack.executors.hook_executor import HookExecutor
 
         target = tmp_path / "README.md"
-        mock_get_files.return_value = [target]
+        target.write_text("# Body  \n")
+        mock_get_files.side_effect = lambda pattern: (
+            [target] if pattern == "*.md" else []
+        )
 
         mock_check = Mock()
         mock_check.returncode = 1
         mock_check.stdout = ""
         mock_check.stderr = ""
-        mock_format = Mock()
-        mock_format.returncode = 0
-        mock_format.stdout = ""
-        mock_format.stderr = ""
-        mock_diff = Mock()
-        mock_diff.returncode = 0
-        mock_diff.stdout = "README.md\n"
-        mock_diff.stderr = ""
-        mock_run.side_effect = [mock_check, mock_format, mock_diff]
+        mock_run.side_effect = _dispatcher(
+            mock_check, _writing_format(target, "# Body\n")
+        )
 
         # Capture wrapper stderr via StringIO swap so this test does
         # not depend on the ``capsys`` fixture (the wrapper's exits
