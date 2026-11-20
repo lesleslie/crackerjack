@@ -840,9 +840,8 @@ what the rollout actually did.
 
 ### Phase 2 — the fleet-wide formatting rollout
 
-Two repositories are done: crackerjack (`5bf0c8a9`) and mahavishnu
-(`823eacf7`). The other four are not, and one of them is waiting on
-another session's work (§6, "Still to do").
+All six repositories are done. The table at the end of this section has
+the per-repository figures.
 
 **crackerjack — 221 files.** 163 frontmatter documents checked, 0
 semantic differences, 0 frontmatter blocks vanished, 0 YAML parse
@@ -903,14 +902,57 @@ re-run from the restored state:
 
 #### Still to do
 
-oneiric, akosha, session-buddy and mcp-common. akosha and
-session-buddy carry another session's uncommitted work, so their
-rollouts wait for their owners to commit; oneiric and mcp-common are
-free to run now.
+Nothing. All six repositories are done.
 
-The rollout is run with crackerjack's own `mdformat` binary (which
-carries the front-matter plugin) against the target repository's
-tracked markdown, because the plugin arrives in the other
-repositories' venvs only with a crackerjack release the operator
-publishes. Nothing in the target repository is modified except its
-markdown, and no target venv is touched.
+| repository | commit | files | frontmatter checked | semantic differences | blocks vanished | parse errors | non-markdown |
+|---|---|---|---|---|---|---|---|
+| crackerjack | `5bf0c8a9` | 221 | 163 | 0 | 0 | 0 | 0 |
+| mahavishnu | `823eacf7` | 403 | 247 | 0 | 0 | 0 | 0 |
+| oneiric | `868596c` | 81 | 71 | 0 | 0 | 0 | 0 |
+| session-buddy | `b54db6f0` | 32 | 18 | 0 | 0 | 0 | 0 |
+| akosha | `bfa0267` | 32 | 22 | 0 | 0 | 0 | 0 |
+| mcp-common | `b5d16f3` | 8 | 2 | 0 | 0 | 0 | 0 |
+
+Every repository reports `ordered-list markers decreased: 0` except
+crackerjack's two and mahavishnu's one, which are the genuine holes of
+§2.7 — the accepted repair, named.
+
+#### What is deliberately not formatted
+
+Seven documents across the fleet are left as they were, and the hook
+says so by name on every run:
+
+| repository | document | why |
+|---|---|---|
+| mahavishnu | `docs/cookbook/workflows.md` | mdformat damages it (§2.9) |
+| mahavishnu | `docs/plans/2026-11-20-fleet-memory-retrieval-quality.md` | mdformat damages it (§2.9) |
+| mahavishnu | `docs/specs/2026-10-19-bodai-substrate-otel-v7.md` | mdformat damages it (§2.9) |
+| session-buddy | `docs/specs/2026-11-05-conversation-transcript-ingestion-design.md` | mdformat damages it (§2.9) |
+| mahavishnu | `mahavishnu/commands/jot.md` | a stream of YAML, not markdown (§2.9) |
+| oneiric | `docs/plans/2026-08-22-hybrid-embeddings-design.md` | another session's uncommitted work |
+| session-buddy | `docs/plans/2026-11-06-fleet-embedding-width-768.md` | another session's uncommitted work |
+
+The last two were snapshotted before their repository's rollout and
+restored byte-for-byte after it, so the other session's working tree is
+exactly what it was. The hook will report them on every run until their
+owner commits; that is the exclusion being visible, not a failure.
+
+Two further files are not formatted because Crackerjack's own
+`[tool.mdformat] exclude` list excludes them (`templates/*.md`,
+`CLAUDE*.md`). mdformat resolves that list from the file's own
+directory, so they are skipped wherever they are copied to.
+
+#### How the rollout was run
+
+With crackerjack's own `mdformat` binary (which carries the
+front-matter plugin) against the target repository's tracked markdown,
+because the plugin arrives in the other repositories' venvs only with a
+crackerjack release the operator publishes. Nothing in a target
+repository is modified except its markdown, and no target venv is
+touched.
+
+#### Convergence
+
+A second run of the hook in each repository reports no changes. The
+files listed above are reported by name; they are excluded and
+restored, not silently reformatted.
