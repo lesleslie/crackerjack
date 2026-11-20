@@ -81,9 +81,9 @@ Each condition is mechanically checkable.
    §2.7. The comparison is numeric because the zero-padded rendering of
    §2.4 changes `1.` to `01.`, which is numerically equal but
    textually smaller.)
-   **The one exception:** the two documents named in §2.7 have a
+   **The one exception:** the three documents named in §2.7 have a
    genuine hole in a list, and `--number` closes it by decreasing three
-   markers. That is the accepted repair of R4, and those two documents
+   markers. That is the accepted repair of R4, and those three documents
    are the only allowed exception.
 6. For each of the six repositories: the plan-index audit reports zero
    frontmatter'd files missing from `PLAN_INDEX.md`.
@@ -249,8 +249,8 @@ default-mode pass collapsed is repaired:
 
 Two consequences the fleet's own documents decide for us:
 
-- **A collapsed list is repaired, not preserved.** 5545 of the fleet's
-  7897 ordered lists carry the `1. 1. 1.` signature of an earlier
+- **A collapsed list is repaired, not preserved.** 3366 of the fleet's
+  4551 ordered lists carry the `1. 1. 1.` signature of an earlier
   default-mode format pass. `--number` turns them back into
   consecutive numbering. That is a content change to
   already-committed documents, in the direction of correctness, and it
@@ -259,7 +259,7 @@ Two consequences the fleet's own documents decide for us:
   rule is `pad = len(str(list_len + starting_number - 1))`, so the
   trigger is the largest marker in the list, not the number of items:
   `9. 10.` (two items) becomes `09. 10.`, and `1. … 9.` (nine items)
-  does not change at all. **171** lists in the fleet are affected.
+  does not change at all. **179** lists in the fleet are affected.
   CommonMark renders the list as `1.` through `13.` regardless — the
   leading zero is a source-text artefact, not a rendered one.
 
@@ -341,10 +341,19 @@ it:
 
 | shape | example | what `--number` does | count (fleet) |
 |---|---|---|---|
-| **collapsed** | `1. 1. 1.` | repairs to `1. 2. 3.` | 5545 |
-| **signature** | `4. 1. 1.` | repairs to `4. 5. 6.` | 53 |
-| **consecutive** | `1. 2. 3.` | unchanged | 2296 |
-| **genuine hole** | `1. 2. 4. 5.` | closes the hole: `1. 2. 3. 4.` | 3 |
+| **collapsed** | `1. 1. 1.` | repairs to `1. 2. 3.` | 3366 |
+| **signature** | `4. 1. 1.` | repairs to `4. 5. 6.` | 80 |
+| **consecutive** | `1. 2. 3.` | unchanged | 1101 |
+| **genuine hole** | `1. 2. 4. 5.` | closes the hole: `1. 2. 3. 4.` | 4 |
+
+The census that produced these numbers treats a list as continuing
+across a continuation line — an indented line that is not itself a
+marker — and ignores markers inside fenced code blocks. An earlier
+census did neither, and reported 5545/53/3/2296: it ended a list at
+every non-marker line, so a list that wrapped was never grouped and
+every gap inside it went unseen. The fence rule matters for the same
+reason it matters to the formatter: a `---` or a `1.` inside a fence is
+sample content, not a list.
 
 The first two shapes are damage from the earlier default-mode format
 pass, and `--number` undoes it. The **signature** shape is the one that
@@ -352,18 +361,23 @@ looks alarming and is not: the first item keeps its number, so a
 reference to "item 4" still lands on the same item.
 
 The genuine holes are the only lists where `--number` moves a number a
-reader might have been given. There are three, and one is a false
-positive:
+reader might have been given. There are four:
 
 | repository | document | markers | verdict |
 |---|---|---|---|
+| crackerjack | `crackerjack/mcp/agents/crackerjack-specialist.md` | `1. 2. 3. 4. 5. 7.` | item 6 was deleted at some point; no prose in the document names a list item by number |
 | crackerjack | `docs/plans/2026-09-07-bodai-shared-gitignore-snippet.md` | `1. 2. 4. 5. 6.` | item 3 was deleted at some point; no prose in the document names a list item by number |
 | mahavishnu | `docs/decisions/2026-10-15-unified-event-bus-wrapper.md` | `1. 3. 4. 5.` | item 2 was deleted; the only numbered references in the document are to "Phase 6.4", not to list items |
-| oneiric | `docs/implementation/PACKAGE7_SUMMARY.md` | `1. 5.` | **false positive** — a numbered sequence written inline inside a fenced code block, which mdformat does not touch |
+| mahavishnu | `docs/plans/2026-10-29-bifrost-bodai-cache-wiring.md` | `1. 2. 1.` | the third item is mis-numbered in the source — it should be `3.`; the only prose reference is to "step 1", which `--number` leaves alone |
 
-So two documents in the fleet have a hole in a list, and neither has
-prose that names a list item by number. Closing both holes is a fix,
+So three documents in the fleet have a hole in a list, and none of them
+has prose that names a list item by number. Closing the holes is a fix,
 not a loss.
+
+An earlier census also counted `oneiric/docs/implementation/PACKAGE7_SUMMARY.md`
+(`1. 5.`) as a hole. It is a false positive: the sequence is inside a
+fenced code block, which mdformat does not touch. The census now skips
+fenced content, so it no longer appears.
 
 ### 2.8 How the hook actually invokes the wrapper
 
@@ -394,6 +408,78 @@ Two consequences:
 The skip patterns that remain (`*PLAN.md`, `**/.archive/**`, …) are
 still bypassable in incremental mode. That is a pre-existing
 inconsistency, unchanged by this plan and not fixed by it.
+
+### 2.9 Three things the lift is not safe against
+
+The frontmatter skip was the only thing standing between mdformat and
+this fleet's documents, and removing it exposed three hazards that the
+plan did not anticipate. All three were found by running the rollout,
+not by reading mdformat's source, and all three corrupt a file rather
+than failing loudly. The wrapper now handles them (crackerjack
+`10341d2a`).
+
+**A `.md` file that is really a stream of YAML documents.**
+`mahavishnu/mahavishnu/commands/jot.md` holds Claude Code slash-command
+definitions — a run of `---`-separated YAML documents wearing a `.md`
+extension. mdformat is a *markdown* formatter: it read the prose line
+before each separator as a setext heading underline and turned every
+separator into an ATX heading, so
+
+```markdown
+---
+description: Show jot inbox vitals
+allowed-tools: []
+---
+```
+
+became `## description: Show jot inbox vitals allowed-tools: []`.
+Twenty separators became eighteen headings. The discriminator is the
+COUNT of YAML blocks, not their presence: a markdown document with
+frontmatter has exactly one (its own opener), a YAML stream has many.
+A `---` inside a fenced code block does not count — the fleet's
+templates show frontmatter inside a fence, and without the fence rule
+twelve ordinary documents would be excluded for no reason. Measured
+over the fleet's 1038 tracked documents: exactly one multi-document
+YAML file, and zero false positives.
+
+**A GFM table.** mdformat 1.0.0 has no table support. Its own safety
+net — `mdformat._util.is_md_equal` — renders both sides of a
+comparison with mdformat's parser, which sees a table as a paragraph.
+So the check cannot see damage to a table, because it cannot parse what
+changed. Three documents in mahavishnu were silently corrupted this
+way:
+
+| document | what mdformat did |
+|---|---|
+| `docs/cookbook/workflows.md` | merged three table rows into one paragraph line, dropping the row separators |
+| `docs/plans/2026-11-20-fleet-memory-retrieval-quality.md` | re-indented a table out of the list item that held it, so literal text became a real table |
+| `docs/specs/2026-10-19-bodai-substrate-otel-v7.md` | destroyed table rows |
+
+The trigger in the first case is instructive: the cell contains
+backslash-escaped backticks inside a code span, and CommonMark does not
+treat backslashes as escapes inside a code span — so the code span ran
+past the row boundary and swallowed the following rows' pipes as code
+content.
+
+The fix is to ask the question mdformat's check does not ask. Instead
+of "did the parse tree change?", the wrapper compares each file's GFM
+rendering before and after, using a table-aware renderer, and restores
+any file that reads differently. The comparison is exact rather than
+heuristic: on crackerjack's 287-file corpus zero files change their
+rendering, and the three documents above are the only ones it flags in
+mahavishnu.
+
+**mdformat aborts the whole batch at the first file it cannot
+format.** A document whose formatted output renders to different HTML
+than the input is refused, and the refusal stops every file after it
+in the same invocation. The tree is left half-formatted, and the
+formatter reports the same failure on every subsequent run, so the gate
+never converges — which is exactly what happened here: one file in
+mahavishnu (`docs/GETTING_STARTED.md`, whose emphasis is ambiguous)
+kept the whole 521-file batch from formatting. The batch is now run
+iteratively: the refused file is named in mdformat's own error
+message, dropped from the set, and the batch re-run. The refusal is
+reported, because an excluded document is one nobody notices.
 
 ## 3. Phases
 
@@ -461,8 +547,8 @@ inconsistency, unchanged by this plan and not fixed by it.
    deliberately said `1.` because a previous format pass collapsed it
    is a change to history. Phase 1's diff must be read for this, not
    skimmed. Measured: the collapsed shape dominates the fleet and is
-   unambiguously repair (§2.7), and exactly two documents fleet-wide
-   have a genuine hole, neither of which names a list item by number.
+   unambiguously repair (§2.7), and exactly three documents fleet-wide
+   have a genuine hole, none of which names a list item by number.
 
 #### Estimated scope
 
@@ -494,9 +580,16 @@ Per repository:
   from `PLAN_INDEX.md`.
 - Confirm `git diff --name-only` lists only `.md` and `.markdown`.
 - Confirm the hook's stderr names no excluded document. A byte-order
-  mark before a frontmatter fence, or a second front-matter extension in
-  the venv, both make the hook report something and both are conditions
-  to fix rather than to commit past.
+  mark before a frontmatter fence, a second front-matter extension in
+  the venv, a document that is a stream of YAML rather than markdown,
+  and a document whose GFM rendering mdformat would change all make
+  the hook report something, and all are conditions to fix rather than
+  to commit past. The last two are conditions the rollout *expects* to
+  meet: a document is excluded, restored to its original bytes, and
+  reported — it is not silently reformatted.
+- Confirm the hook's stderr names no document it *restored*. A restored
+  document is one the formatter would have damaged; it is left as it
+  was and reported (§2.9).
 - Commit.
 
 #### Integration Contract
@@ -542,6 +635,18 @@ Per repository:
    mdformat for the first time. The plugin's own README warns that
    incorrectly formed blocks may behave strangely. The semantic check
    catches the case where the result stops parsing.
+4. **A document mdformat would damage.** The frontmatter guard proves
+   the frontmatter survives; it says nothing about the body. A GFM
+   table is the case that bit: mdformat has no table support and its
+   own check cannot see the damage (§2.9). The wrapper now compares the
+   GFM rendering before and after and restores anything that reads
+   differently, so a damaged document is reported and left alone
+   rather than committed.
+5. **A document mdformat refuses.** mdformat aborts the whole batch at
+   the first refusal, so one unformattable file can stop a repository
+   from being formatted at all — and the gate never converges, because
+   the same refusal recurs on every run. The batch is now iterative
+   (§2.9) and the refusal is reported.
 
 #### Estimated scope
 
@@ -648,14 +753,14 @@ turned up during execution that the plan did not anticipate.)_
 
 1. **Failure Condition 5 was unsatisfiable as written.** It required
    "no hunk whose only change is an ordered-list marker", but
-   `--number` renders consecutive numbering, so it *repairs* the 5545
+   `--number` renders consecutive numbering, so it *repairs* the 3366
    collapsed lists fleet-wide and those repairs are marker-only hunks.
    The condition now says what its own parenthetical meant: no marker
    is decreased, compared numerically, with an explicit exception for
-   the two documents of §2.7.
+   the documents of §2.7.
 2. **`--number` zero-pads a list whose last marker reaches 10** (`1.` →
    `01.`). The trigger is the largest marker, not the item count.
-   **171** lists in the fleet are affected. CommonMark renders the list
+   **179** lists in the fleet are affected. CommonMark renders the list
    as `1.` through `13.` either way, so the leading zero is a
    source-text artefact and not a rendered one.
 3. **The `[N, 1, 1, …]` shape looks like a hazard and is not.** The
@@ -725,8 +830,87 @@ whose first line is `---`. The difference is
 not valid YAML and so is not counted by a parser-based scan. Both
 numbers are right about different things.
 
-**Phase 2 is not executed.** The wrapper now formats crackerjack's own
-frontmatter'd documents on its next run — 172 of them are newly in
-scope — and 287 files are in the wrapper's set. That churn, plus the
-regenerated plan index, is Phase 2's crackerjack commit, and it is
-deliberately not folded into Phase 1's commits.
+**Phase 2 was not executed as part of Phase 1.** The wrapper now
+formats crackerjack's own frontmatter'd documents on its next run —
+172 of them are newly in scope — and 287 files are in the wrapper's
+set. That churn, plus the regenerated plan index, is Phase 2's
+crackerjack commit, and it is deliberately not folded into Phase 1's
+commits. See §6, "Phase 2 — the fleet-wide formatting rollout", for
+what the rollout actually did.
+
+### Phase 2 — the fleet-wide formatting rollout
+
+Two repositories are done: crackerjack (`5bf0c8a9`) and mahavishnu
+(`823eacf7`). The other four are not, and one of them is waiting on
+another session's work (§6, "Still to do").
+
+**crackerjack — 221 files.** 163 frontmatter documents checked, 0
+semantic differences, 0 frontmatter blocks vanished, 0 YAML parse
+errors, 0 files changed outside markdown. The frontmatter round-trip's
+one rewrite — `superseded_by: null` → `superseded_by:` — appears 147
+times; both parse to None. Two ordered lists lose a marker, both the
+same shape: an item deleted at some point leaving a hole that
+`--number` closes.
+
+**mahavishnu — 403 files.** 247 frontmatter documents checked, 0
+semantic differences, 0 frontmatter blocks vanished, 0 YAML parse
+errors, 0 files changed outside markdown. The same
+`superseded_by: null` rewrite appears 163 times. One ordered list loses
+a marker: `docs/decisions/2026-10-15-unified-event-bus-wrapper.md`,
+whose markers run `1. 3. 4. 5.` — item 2 was deleted, and the only
+numbered references in the document are to "Phase 6.4", not to list
+items. The plan index was regenerated and reports "no change"; it is
+format-clean.
+
+**Three documents in mahavishnu were left unformatted on purpose**,
+because mdformat would have damaged them (§2.9). The wrapper restores
+them to their original bytes and reports them by name:
+
+- `docs/cookbook/workflows.md`
+- `docs/plans/2026-11-20-fleet-memory-retrieval-quality.md`
+- `docs/specs/2026-10-19-bodai-substrate-otel-v7.md`
+
+**One document is excluded** because it is not markdown:
+`mahavishnu/commands/jot.md`, a stream of YAML documents.
+
+**One line was edited by hand.** `docs/GETTING_STARTED.md` was
+unformattable — mdformat refuses a document whose formatted output
+renders to different HTML, and that line's emphasis is ambiguous
+(`**~~Workflow Diagrams~~ *(…)* **`). The emphasis was restructured to
+be unambiguous: `**~~Workflow Diagrams~~** ***(…)***`. It keeps both
+the bold title and the bold-italic removal note; only the nesting
+boundary moves. This is the only prose change in the repository's
+rollout.
+
+**The rollout converges.** A second run of the wrapper reports no
+changes and exits 0.
+
+#### The findings that changed the wrapper
+
+Running the rollout found three hazards the plan did not anticipate
+(§2.9). Each was fixed in crackerjack `10341d2a` and the rollout was
+re-run from the restored state:
+
+1. A `.md` file that is a stream of YAML documents was destroyed. The
+   skip rule now excludes it.
+2. Three documents with GFM tables were silently corrupted. The
+   wrapper now compares the GFM rendering before and after and
+   restores anything that reads differently.
+3. mdformat aborts the whole batch at the first file it refuses, so
+   one unformattable file stopped a 521-file repository from being
+   formatted at all — and the gate never converged, because the same
+   refusal recurred on every run. The batch is now iterative.
+
+#### Still to do
+
+oneiric, akosha, session-buddy and mcp-common. akosha and
+session-buddy carry another session's uncommitted work, so their
+rollouts wait for their owners to commit; oneiric and mcp-common are
+free to run now.
+
+The rollout is run with crackerjack's own `mdformat` binary (which
+carries the front-matter plugin) against the target repository's
+tracked markdown, because the plugin arrives in the other
+repositories' venvs only with a crackerjack release the operator
+publishes. Nothing in the target repository is modified except its
+markdown, and no target venv is touched.
