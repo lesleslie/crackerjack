@@ -140,8 +140,16 @@ class TestLifecyclePredicate:
 
         The extractor only reports a block when its regex matches, so an
         empty or otherwise unreadable block reads as "no frontmatter".
-        A leading fence is treated as a declaration, matching the
-        convention ``crackerjack.tools.mdformat_wrapper`` already uses.
+        A leading fence is treated as a declaration.
+
+        Note that this is NOT the same rule as
+        ``crackerjack.tools.mdformat_wrapper.should_skip_file``. The
+        formatter used to skip a leading ``---`` because mdformat core
+        destroyed frontmatter; the ``mdformat-frontmatter`` plugin
+        removed that need and the skip was lifted. This detector still
+        recognises the fence, because classifying a document by its
+        declared lifecycle is its job. The two answers are about
+        different questions and are not expected to agree.
         """
         _write(docs_root, IMPLEMENTATION_NAME, "---\nProse, not frontmatter.\n")
 
