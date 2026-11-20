@@ -74,8 +74,15 @@ def _build_mdformat_cmd(files: list[Path], argv: list[str] | None) -> list[str]:
     ``1.``, so a list written ``3. 4.`` becomes ``3. 1.``. In a decision
     record or a plan the number is often a reference rather than
     decoration -- an item numbered 4 becomes 1, and any prose pointing
-    at "item 4" points at nothing. With ``--number`` mdformat applies
-    consecutive numbering, which leaves the source numbers alone.
+    at "item 4" points at nothing.
+
+    With ``--number`` mdformat applies consecutive numbering: it keeps
+    the first marker of each list and numbers the rest from it. A
+    well-formed list is unchanged, a list that continues a count from a
+    sibling list is unchanged, and a list that an earlier default-mode
+    format pass collapsed to ``1. 1. 1.`` is repaired to ``1. 2. 3.``.
+    No marker is ever decreased, so a reference to "item N" still lands
+    on the same item.
 
     The ``--extensions`` flag is deliberately NOT passed. mdformat's CLI
     enables every installed parser extension by default, and naming one

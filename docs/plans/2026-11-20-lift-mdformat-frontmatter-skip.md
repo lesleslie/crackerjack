@@ -160,6 +160,16 @@ the same value.
 **This is the property that makes the churn safe: the frontmatter the
 tools read does not change, so nothing downstream of it can break.**
 
+One risk deserves its own measurement, because lifting the skip hands
+mdformat a document it has never seen before: a file whose first line
+is `---` but which is not a YAML block. Measured across all six
+repositories, **every** tracked `.md` and `.markdown` file whose first
+line is `---` also has a closing `---` fence — there is no lookalike
+document anywhere in the fleet. Where one did exist, the plugin
+degrades it safely: on a `---\n\n# heading` fixture it renders the
+`---` as an underscore horizontal rule and exits 0, which is what the
+`---` meant anyway (a thematic break).
+
 ### 2.4 The hazard that is NOT about frontmatter
 
 The bodies do change, and one of mdformat's normalizations rewrites
