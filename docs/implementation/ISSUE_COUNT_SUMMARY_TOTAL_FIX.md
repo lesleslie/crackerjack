@@ -3,7 +3,7 @@ status: complete
 role: historical
 date: 2026-07-17
 last_reviewed: 2026-07-17
-superseded_by: null
+superseded_by:
 blocks_on: []
 topic: lifecycle
 ---
@@ -40,10 +40,10 @@ for r in results:
 **Why This Failed**:
 
 1. Config errors have `issues_count=0` (correct)
-1. Condition `r.issues_count > 0` evaluates to False
-1. Falls through to `elif r.issues_found:`
-1. `issues_found` contains error detail lines (traceback)
-1. Example: 10 traceback lines → counted as "10 issues"
+2. Condition `r.issues_count > 0` evaluates to False
+3. Falls through to `elif r.issues_found:`
+4. `issues_found` contains error detail lines (traceback)
+5. Example: 10 traceback lines → counted as "10 issues"
 
 **The Math**:
 
@@ -183,9 +183,9 @@ Fast Hook Results:
 This is the **fourth and final fix** in the issue count display system:
 
 1. ✅ **Display Fallback Bug** (../implementation/FINAL_IMPLEMENTATION_SUMMARY.md): Fixed `len(issues_found)` fallback in Rich table display
-1. ✅ **Emoji Panel Width** (../implementation/FINAL_IMPLEMENTATION_SUMMARY.md): Changed from ⚠️ to "!" for terminal compatibility
-1. ✅ **Error Details Display** (../implementation/ERROR_DETAILS_DISPLAY_FIX.md): Added traceback to `details` field for better debugging
-1. ✅ **Summary Total Calculation** (THIS FIX): Fixed total issue count to exclude config errors
+2. ✅ **Emoji Panel Width** (../implementation/FINAL_IMPLEMENTATION_SUMMARY.md): Changed from ⚠️ to "!" for terminal compatibility
+3. ✅ **Error Details Display** (../implementation/ERROR_DETAILS_DISPLAY_FIX.md): Added traceback to `details` field for better debugging
+4. ✅ **Summary Total Calculation** (THIS FIX): Fixed total issue count to exclude config errors
 
 ## Benefits
 

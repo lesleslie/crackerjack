@@ -4,7 +4,7 @@ role: implementation
 topic: lifecycle
 date: 2026-11-15
 last_reviewed: 2026-11-16
-superseded_by: null
+superseded_by:
 blocks_on: []
 ---
 
@@ -37,7 +37,7 @@ sweeps have none, and a binary `.backup` cannot be read as UTF-8 at all.
 **Tech Stack:** Python 3.13+, pytest, PyYAML (already a dependency of
 `crackerjack.services.frontmatter`).
 
----
+______________________________________________________________________
 
 ## 1. Brief (intent-driven)
 
@@ -74,7 +74,7 @@ A governed document reaches the archive only when it declares
 7. `grep -c "2026-10-19-bodai-substrate-otel-v7-implementation.md"` over
    the archivable list produced against `~/Projects/mahavishnu` is `0`.
 
----
+______________________________________________________________________
 
 ## 2. Context
 
@@ -153,7 +153,7 @@ pre-gate categorizer:
 The gate changes the outcome for exactly two files in the fleet: the two
 OTel substrate plans that were lost three times.
 
----
+______________________________________________________________________
 
 ## 3. Phases
 
@@ -209,8 +209,7 @@ OTel substrate plans that were lost three times.
   the phase coordinator's task detail carry both, so the record says
   "held" rather than "essential". The API generator returns without
   writing when its scan finds nothing.
-- **Demonstrable by**: `pytest tests/test_doc_categorizer.py
-  tests/test_documentation_cleanup.py tests/unit/services/test_documentation_service.py -v`;
+- **Demonstrable by**: `pytest tests/test_doc_categorizer.py tests/test_documentation_cleanup.py tests/unit/services/test_documentation_service.py -v`;
   and
   `DocumentationCleanup(pkg_path=Path("~/Projects/mahavishnu"))._detect_archivable_files()`
   returning `[]`. Measured against this repo's tree on 2026-11-15, the
@@ -302,7 +301,7 @@ Roughly two thirds of the line count is tests and documentation. The
 source change itself is ~320 lines across four files; the size of the
 diff is the review surface, not the size of the change.
 
----
+______________________________________________________________________
 
 ## 4. Risks
 
@@ -313,7 +312,7 @@ diff is the review surface, not the size of the change.
   old behaviour until it picks up the release. mahavishnu installs
   crackerjack editable, so it picks this up immediately.
 
----
+______________________________________________________________________
 
 ## 5. References
 
@@ -324,7 +323,7 @@ diff is the review surface, not the size of the change.
 - `crackerjack/services/frontmatter.py:16` — `LIFECYCLE_VALUES`.
 - `oneiric.schemas.document-frontmatter-v1` — the shared vocabulary.
 
----
+______________________________________________________________________
 
 ## 6. Execution record
 
@@ -369,7 +368,9 @@ diff is the review surface, not the size of the change.
 
 - `pytest tests/test_doc_categorizer.py tests/test_documentation_cleanup.py`
   → 55 passed.
+
 - The 8 test modules that touch the changed modules → 175 passed.
+
 - The full crackerjack suite → 11636 passed, 128 skipped, 1 failed
   (`tests/unit/test_mermaid_renders.py::test_all_mermaid_blocks_parse`).
   The failure is environmental, not a regression: the validator needs
@@ -377,8 +378,10 @@ diff is the review surface, not the size of the change.
   a worktree. Re-run with `CRACKERJACK_JSDOM` pointed at the main
   checkout's install → **2 passed**. None of the markdown files this
   change touches contain a mermaid block.
+
 - `ruff check` clean on the changed files; `ruff format --check` clean;
   `ty check` clean on the four changed source files.
+
 - Fleet-wide archivable set, measured through
   `DocumentationCleanup._detect_archivable_files()` (the real cleanup
   entry point, not the categorizer alone):
@@ -480,6 +483,7 @@ Two more real findings, both now fixed:
     than removing it — and the anchored extractor missed the block too.
     The check now strips whitespace and BOM together, in any order and
     any number, and a test pins that exact case.
+
 11. *A bare string for `archivable_statuses` iterated characters.*
     `archivable_statuses="shipped"` would have produced a set of single
     letters and matched nothing. A bare string is now treated as one
@@ -506,44 +510,44 @@ Two more real findings, both now fixed:
 two asked for adjustments, and every item landed:
 
 12. *The markdown test was case-sensitive while the categorisation is
-    not.* ``categorize_file`` matches its patterns with
-    ``re.IGNORECASE``, so ``PLAN.MD`` is categorised the same as
-    ``plan.md`` — but the gate's ``suffix != ".md"`` test treated it as
+    not.* `categorize_file` matches its patterns with
+    `re.IGNORECASE`, so `PLAN.MD` is categorised the same as
+    `plan.md` — but the gate's `suffix != ".md"` test treated it as
     non-markdown and left it ungated. The comparison is now
     case-insensitive.
 13. *The structural pin only covered one module.* A new module that asked
     the categorizer for candidates, or composed an archive path itself,
     would have bypassed the gate with every test still green. The pin now
-    walks the whole package and asserts that ``get_archival_candidates``
-    and ``archive_target_path`` have exactly one caller each, and that
+    walks the whole package and asserts that `get_archival_candidates`
+    and `archive_target_path` have exactly one caller each, and that
     the legacy fallback has exactly one.
 14. *No end-to-end test that a governed document survives a real
     cleanup.* The unit tests exercised the detector; none ran the whole
     phase. There is now one that runs detect → back up → move and asserts
-    a ``status: complete`` plan is still on disk afterwards, and its
-    ``shipped`` counterpart is archived.
-15. *A non-string or empty ``status:`` had no test.* Now pinned: an
+    a `status: complete` plan is still on disk afterwards, and its
+    `shipped` counterpart is archived.
+15. *A non-string or empty `status:` had no test.* Now pinned: an
     empty, null, numeric, or list value all block archival.
 16. *The guidelines sent a completed plan to the wrong category.* The
-    code routes ``*_PLAN.md`` to ``implementation-plans/``, not
-    ``sprints-and-fixes/``.
+    code routes `*_PLAN.md` to `implementation-plans/`, not
+    `sprints-and-fixes/`.
 
 **What the sixth review round changed.** One reviewer passed; the other
 two asked for adjustments:
 
 17. *A backup of a document slipped past the gate.* The gate keyed on the
-    suffix, so ``foo.md.backup`` — which the categorizer's
-    ``test_artifacts`` pattern matches — was swept ungated, and it holds
+    suffix, so `foo.md.backup` — which the categorizer's
+    `test_artifacts` pattern matches — was swept ungated, and it holds
     a document's content. The gate now keys on the name, so a copy of a
     governed document is gated like the document.
 18. *The decision record and the code comment disagreed about gitignore.*
-    The categorizer's comment claimed a per-area ``!<area>/.archive/``
+    The categorizer's comment claimed a per-area `!<area>/.archive/`
     un-ignore rule keeps moved files *tracked*; the decision record
     claimed the opposite. The record was right and the comment was
-    stale: the fleet-wide ``**/.archive/`` catchall sits at the END of
+    stale: the fleet-wide `**/.archive/` catchall sits at the END of
     the shared gitignore block, so it wins over the earlier per-area
     negation (git takes the last matching pattern) — verified with
-    ``git check-ignore -v`` in both mahavishnu and crackerjack. The
+    `git check-ignore -v` in both mahavishnu and crackerjack. The
     comment now says so, because a reader who believed it would
     conclude the opposite about what an archived document does to the
     repository.
@@ -556,7 +560,7 @@ two asked for adjustments:
 for a documentation fix, which landed:
 
 20. *The guidelines still described the gate as suffix-based.* The code
-    keys on the name, so ``foo.md.backup`` is gated like the document it
+    keys on the name, so `foo.md.backup` is gated like the document it
     is a copy of, while the guidelines said only markdown was gated. The
     paragraph now states the name rule.
 
@@ -564,13 +568,13 @@ for a documentation fix, which landed:
 for two documentation fixes, both landed:
 
 21. *The guidelines' tree said a plan "without a `status:`" is swept by
-    name.* That reads as "frontmatter with no ``status:`` field", which
+    name.* That reads as "frontmatter with no `status:` field", which
     the code leaves in place — the fail-closed rule. The branch is
     reached only by a file with NO frontmatter at all, and it now says
     so.
 22. *The examples still used the old flat archive paths and a category
-    the code does not produce* (``completion-reports/``, which is
-    ``summaries/``). Updated.
+    the code does not produce* (`completion-reports/`, which is
+    `summaries/`). Updated.
 
 **What the ninth review round changed.** Two reviewers passed; one asked
 for a documentation fix. Every example the guidelines name was then checked
@@ -580,43 +584,45 @@ be partly wrong, and how two further contradictions surfaced that it had not
 reported.
 
 23. *The guidelines' examples contradicted the code's routing.* Five were
-    wrong: ``progress-indicator-analysis.md`` routes to
-    ``implementation-reports/`` (the ``progress-.*`` pattern precedes
-    ``analysis``), not ``analysis/``; ``PHASE_4_COMPLETION.md`` is
-    ``keep_in_root`` and is never archived, though the example showed it
-    under a ``.archive/summaries/`` path; ``TY_MIGRATION_PLAN.md`` routes to
-    ``implementation-plans/``, though it was listed under "Keep in Root";
-    ``MCP_GLOBAL_MIGRATION_GUIDE.md`` is ``keep_in_root``, though it was
+    wrong: `progress-indicator-analysis.md` routes to
+    `implementation-reports/` (the `progress-.*` pattern precedes
+    `analysis`), not `analysis/`; `PHASE_4_COMPLETION.md` is
+    `keep_in_root` and is never archived, though the example showed it
+    under a `.archive/summaries/` path; `TY_MIGRATION_PLAN.md` routes to
+    `implementation-plans/`, though it was listed under "Keep in Root";
+    `MCP_GLOBAL_MIGRATION_GUIDE.md` is `keep_in_root`, though it was
     listed under "Keep in docs/"; and three examples showed
-    ``summaries`` paths under ``sprints-and-fixes/`` and ``analysis/``
+    `summaries` paths under `sprints-and-fixes/` and `analysis/`
     headings. All now state the categorizer's real verdict.
-24. *The archive section's glob bullets over-promised.* ``*_FIX*.md`` reads
-    as covering ``*_FIX_ABC.md``, which the code does not match — its
-    pattern is ``_FIXE`` optionally followed by ``S``. ``ZUBAN_*.md`` and
-    ``AGENT_*.md`` match nothing the code classifies; the agent pattern
-    needs an underscore on both sides (``*_AGENT_*.md``). Rewritten to the
+
+24. *The archive section's glob bullets over-promised.* `*_FIX*.md` reads
+    as covering `*_FIX_ABC.md`, which the code does not match — its
+    pattern is `_FIXE` optionally followed by `S`. `ZUBAN_*.md` and
+    `AGENT_*.md` match nothing the code classifies; the agent pattern
+    needs an underscore on both sides (`*_AGENT_*.md`). Rewritten to the
     patterns the categorizer really uses.
+
 25. *The decision record's residual bullet was false.* It claimed a copy
-    whose name has no markdown extension (``plan.backup``) "is swept like
+    whose name has no markdown extension (`plan.backup`) "is swept like
     any other artifact". It is not: the categorizer's backup pattern is
-    ``r"\.backup$"``, and ``re.match`` anchors at the *start* of the name,
-    so it matches only a file literally named ``.backup``. ``plan.backup``
+    `r"\.backup$"`, and `re.match` anchors at the *start* of the name,
+    so it matches only a file literally named `.backup`. `plan.backup`
     matches no category at all — it is neither swept nor gated, simply not
-    classified. The bullet now says that, records the ``re.match``
+    classified. The bullet now says that, records the `re.match`
     anchoring as the reason, and notes that widening the pattern is a
     separate change with its own blast-radius measurement. The code
-    comment in ``_passes_lifecycle_gate`` was corrected to match.
+    comment in `_passes_lifecycle_gate` was corrected to match.
 
-    The same correction applies to the round-six finding 17: ``foo.md.backup``
+    The same correction applies to the round-six finding 17: `foo.md.backup`
     is not in fact swept — it matches no category either. The gate's
-    name-based ``.md`` test still covers it, and the decision record and the
+    name-based `.md` test still covers it, and the decision record and the
     code comment now describe it as the guard it is rather than as a live
     path.
 
-    The round's report also claimed ``comprehensive_hooks_audit.md`` reaches
-    no category. That one is wrong: ``categorize_file`` matches with
-    ``re.IGNORECASE``, so ``.*_AUDIT\.md`` does match ``_audit.md``, and
-    the file does route to ``audits/``. Checking the claim against the code
+    The round's report also claimed `comprehensive_hooks_audit.md` reaches
+    no category. That one is wrong: `categorize_file` matches with
+    `re.IGNORECASE`, so `.*_AUDIT\.md` does match `_audit.md`, and
+    the file does route to `audits/`. Checking the claim against the code
     is what caught it.
 
 **What the tenth review round changed.** Two reviewers ran a confirmation
@@ -632,46 +638,40 @@ difference.
     that replaced the fenced content with prose. Removed.
 27. *A residual bullet used a universal quantifier that was false.* It
     said "A backup file is neither swept nor gated", but
-    ``pyproject.toml.backup`` has its own pattern in ``temp_files`` and
+    `pyproject.toml.backup` has its own pattern in `temp_files` and
     *is* swept. Narrowed to the case that is actually true: a backup
-    whose name carries no ``.md``.
+    whose name carries no `.md`.
 28. *The claim that the name test was "a guard rather than a live path"
-    was false.* ``re.match`` anchors at the *start* of the name, so a
-    pattern that is not end-anchored matches a prefix: the ``analysis``
-    category's ``TEST_.*\.md`` classifies ``TEST_foo.md.backup`` as an
-    analysis document, and the ``*.backup`` glob proposes it as a
+    was false.* `re.match` anchors at the *start* of the name, so a
+    pattern that is not end-anchored matches a prefix: the `analysis`
+    category's `TEST_.*\.md` classifies `TEST_foo.md.backup` as an
+    analysis document, and the `*.backup` glob proposes it as a
     candidate. The name test is a **live** path — a suffix test would
     have swept that copy of a governed document ungated. The decision
     record and the code comment now say so, and two tests pin it: one
     that the copy is still classified, one that the gate gates it.
 29. *The guidelines test could silently pass.* It matched only column-0
-    ``-`` bullets and captured only the first backtick span, so a bullet
-    written in another shape was skipped and a ``name`` → ``path`` bullet
+    `-` bullets and captured only the first backtick span, so a bullet
+    written in another shape was skipped and a `name` → `path` bullet
     was misread as a keep-claim. Rewritten: list items are detected in
-    every shape markdown allows (``, ``*``, ``+``, ``1.``, ``1)``, at any
-    indentation); every backtick span in a bullet is extracted; a list
-    item with no span is an error rather than a skip; and a completeness
-    guard fails when a filename mentioned *anywhere* in the section — a
-    table row, a prose sentence — is not one the checker checked. Verified
-    red-green against five scenarios: a ``*`` bullet with a wrong
-    destination fails, a ``*`` bullet with a right destination passes, a
+    every shape markdown allows (`, `*`, `+`, `1.`, `1)`, at any indentation); every backtick span in a bullet is extracted; a list item with no span is an error rather than a skip; and a completeness guard fails when a filename mentioned *anywhere* in the section — a table row, a prose sentence — is not one the checker checked. Verified red-green against five scenarios: a `*`bullet with a wrong destination fails, a`\*\`\` bullet with a right destination passes, a
     table row naming an unchecked file fails, a two-span bullet with a
     wrong path fails, and a list item with no span fails.
 
 **Two findings recorded but not changed.** Both are pre-existing and
 outside the gate's blast radius:
 
-30. *``files_preserved`` does not report what the gate protected.* It
-    counts only the root files in the ``essential_files`` setting, so a
+30. *`files_preserved` does not report what the gate protected.* It
+    counts only the root files in the `essential_files` setting, so a
     cleanup that preserves two governed documents still reports them
     only in the "Files moved: 0" line — the gate's skips are dropped
     without a count or a log line. The field's meaning is asserted with
     exact strings in four existing tests, so changing it is a separate
     change rather than a quiet edit here.
-31. *``_validate_preconditions`` creates an unused directory.* The
-    ``"."`` entry in ``SCANNED_ARCHIVE_AREAS`` makes it create
-    ``pkg_path/.archive/``, which nothing writes to — the categorizer
-    routes a root file under the ``docs`` area instead. Pre-existing, and
+31. *`_validate_preconditions` creates an unused directory.* The
+    `"."` entry in `SCANNED_ARCHIVE_AREAS` makes it create
+    `pkg_path/.archive/`, which nothing writes to — the categorizer
+    routes a root file under the `docs` area instead. Pre-existing, and
     harmless.
 
 **What the eleventh review round changed.** The round's specialists
@@ -683,14 +683,14 @@ pin must not have:
 
 32. *A path-shaped claim was neither mentioned nor checked.* The helper
     that maps a span to a filename returned "not a filename" for any
-    span containing a ``/`` that was not an ``.archive/`` destination, so
-    ``docs/plans/foo.md`` was invisible to the checker. Every span is now
+    span containing a `/` that was not an `.archive/` destination, so
+    `docs/plans/foo.md` was invisible to the checker. Every span is now
     reduced to its basename before the extension check, so a path names a
     file exactly as a bare name does.
 33. *A bullet that named a destination skipped its other filenames.* The
-    destination branch ``continue``d, so the remaining filename spans in
+    destination branch `continue`d, so the remaining filename spans in
     the same bullet counted as "checked" in the completeness guard
-    without ever being compared to the categorizer — a ``name`` → ``path``
+    without ever being compared to the categorizer — a `name` → `path`
     bullet agreed with the code without having been checked against it.
     The claimed category is now extracted first, and every filename in
     the bullet is compared against it, so both halves are verified.
@@ -705,62 +705,62 @@ bullet whose source half agrees passes.
 rather than the code:
 
 34. *A pattern bullet contradicted the example right below it.* The
-    ``.archive/sprints-and-fixes/`` bullet said the fix pattern is
-    "``_FIXE`` optionally followed by ``S``" — which is one of the two
-    patterns the ``fixes`` category uses. The other is ``.*_fix\.md``,
-    and the bullet's own example, ``ERROR_DETAILS_DISPLAY_FIX.md``,
+    `.archive/sprints-and-fixes/` bullet said the fix pattern is
+    "`_FIXE` optionally followed by `S`" — which is one of the two
+    patterns the `fixes` category uses. The other is `.*_fix\.md`,
+    and the bullet's own example, `ERROR_DETAILS_DISPLAY_FIX.md`,
     matches **only** through that omitted one. The bullet now cites both
     patterns, and the section now says plainly that the patterns are
     illustrative and that
-    ``DocumentationCategorizer.CATEGORIES`` is the authority — the
+    `DocumentationCategorizer.CATEGORIES` is the authority — the
     examples are the part the test checks.
 
 **What the merge pipeline's ensemble review changed.** The pipeline's own
-three-agent ensemble returned ``needs_adjustment`` from all three
+three-agent ensemble returned `needs_adjustment` from all three
 reviewers, and it exited 1 — no merge landed, which is the fail-loud
 behaviour working. All three converged on two claim errors plus one
 stale artifact:
 
-35. *The guidelines' claim about ``scripts/docs_cleanup.py`` was false.*
+35. *The guidelines' claim about `scripts/docs_cleanup.py` was false.*
     It said the script "tells you where the tool would put things". It
-    does not: it registers ``--dry-run`` **twice**, so argparse rejects
+    does not: it registers `--dry-run` **twice**, so argparse rejects
     it before it reads a single file, and its forked category table still
-    emits the old flat ``docs/archive/<category>/`` routes rather than
+    emits the old flat `docs/archive/<category>/` routes rather than
     the per-area paths. Both defects predate this change — the script
     has never run. The paragraph now says to use the tool rather than
     the script, and the decision record records the script's state.
-    Making the script a faithful mirror of ``DocumentationCategorizer`` is
+    Making the script a faithful mirror of `DocumentationCategorizer` is
     a change to the script, and it has no tests of its own yet.
 36. *The decision record credited the plan index with the shared
     extractor.* It said "the validator and the plan index see the same
     frontmatter the gate does". True for the validator — it imports the
     shared extractor, which strips a BOM. False for the plan index:
-    ``crackerjack/tools/plan_index_sync.py`` carries its own
-    ``extract_frontmatter`` and its own anchored regex, and does not
+    `crackerjack/tools/plan_index_sync.py` carries its own
+    `extract_frontmatter` and its own anchored regex, and does not
     strip a BOM. The claim is narrowed to the validator, and the plan
     index's divergence is recorded as a residual.
 37. *The generated API docs omitted the new public method.* They had been
-    hand-edited for the rename, but ``lifecycle_permits_archival`` was
-    missing from both ``API_REFERENCE.md`` and ``SERVICES.md``. It is
+    hand-edited for the rename, but `lifecycle_permits_archival` was
+    missing from both `API_REFERENCE.md` and `SERVICES.md`. It is
     now in both, in the generator's own rendering — extracted to a
     scratch file and copied, so the text matches what the generator
     produces.
 
 **Why the API docs were hand-edited rather than regenerated** — the
 reviewers' finding exposed why. The generator cannot run from a
-worktree: ``documentation_service._find_source_files`` filtered hidden
+worktree: `documentation_service._find_source_files` filtered hidden
 directories by the *absolute* path's parts, and every file in a checkout
 under a dotted directory has a dotted component in its absolute path.
-This fleet's worktrees live under ``~/.local/state/``, so every file was
+This fleet's worktrees live under `~/.local/state/`, so every file was
 filtered out — the generator reported "Extracted documentation from 0
 files" and wrote a 23-line API reference over the committed 18,441-line
-one. That is the wipe an earlier round had to undo with ``git restore``;
+one. That is the wipe an earlier round had to undo with `git restore`;
 the cause was never diagnosed.
 
 38. *The hidden-directory filter now tests the path relative to the
     repository root.* Both call sites share one helper. Two tests pin it:
     a checkout under a dotted path still yields its files, and
-    ``.venv`` inside the repo is still skipped. With the fix the
+    `.venv` inside the repo is still skipped. With the fix the
     generator finds 1,125 files where it found 0.
 
     Regenerating wholesale is still the wrong move for this change: the
@@ -771,43 +771,47 @@ the cause was never diagnosed.
     unrelated drift.
 
 **What the confirmation round on that commit changed.** The parallel
-three-reviewer round came back with one ``needs_adjustment`` and two
-``pass`` — and the ``needs_adjustment`` was in my prose, again, plus one
+three-reviewer round came back with one `needs_adjustment` and two
+`pass` — and the `needs_adjustment` was in my prose, again, plus one
 real hole in a test:
 
 39. *The residual count was stale.* The section said "Three boundaries of
     the gate" while listing five bullets. It says five.
+
 40. *The plan-index residual's consequence was false.* It claimed "a
     BOM'd plan's index row can be built without its declared status". It
-    cannot: `_entry_from_file` returns ``None`` for a file whose
-    frontmatter does not parse, and ``render_plan_index`` skips it
-    (``if entry is None: continue``). A BOM'd file gets **no row at
+    cannot: `_entry_from_file` returns `None` for a file whose
+    frontmatter does not parse, and `render_plan_index` skips it
+    (`if entry is None: continue`). A BOM'd file gets **no row at
     all** — it is absent from the index, not indexed with a missing
     status. The residual now says that, and narrows the BOM-blindness
     to the legacy in-crackerjack path: with
-    ``documentation.use_shared_regenerator`` set, the plan index routes to
-    ``oneiric.plan_index.regenerate``, which uses the shared
+    `documentation.use_shared_regenerator` set, the plan index routes to
+    `oneiric.plan_index.regenerate`, which uses the shared
     BOM-stripping extractor.
 
     > **Superseded 2026-11-16.** The shared branch was removed and the
-    > ``use_shared_regenerator`` setting with it. The plan index has one
+    > `use_shared_regenerator` setting with it. The plan index has one
     > renderer now, so the BOM-blindness described above applies
     > unconditionally. See
     > `docs/decisions/2026-11-16-single-plan-index-renderer.md`.
+
 41. *The generator could still truncate a committed reference.* The
     hidden-directory fix removed the cause of the zero-file scan, but the
     failure mode — "regenerate" silently meaning "truncate" — outlived
-    it. The generator now refuses an empty scan and returns ``False``
+    it. The generator now refuses an empty scan and returns `False`
     without writing. Verified red-green: with the guard removed, the
     committed reference is overwritten and the test fails.
+
 42. *An existing test's mock had gone ineffective.* It mocked
-    ``_find_source_files``, but the code called ``_visible_source_files``
+    `_find_source_files`, but the code called `_visible_source_files`
     directly, so the mock did nothing. The generator now calls
-    ``_find_source_files()`` — the single seam, which delegates to
-    ``_visible_source_files()`` — so the mock works again. That test's
-    expectation changed from ``True`` to ``False``: refusing an empty
+    `_find_source_files()` — the single seam, which delegates to
+    `_visible_source_files()` — so the mock works again. That test's
+    expectation changed from `True` to `False`: refusing an empty
     scan is the point, and the old expectation encoded the behaviour
     that caused the wipe.
+
 43. *The guidelines test had a multi-destination hole.* A bullet naming
     two destinations compared every filename in it against only the
     **last** claimed category, so a wrong first destination passed. Each
@@ -815,14 +819,15 @@ real hole in a test:
     alongside destinations must match one of the categories the bullet
     claims. Verified red-green: a two-destination bullet whose first
     half is wrong now fails.
+
 44. *The new path tests asserted basenames.* A filter that looked only at
     the first path segment would have passed them. They now assert
-    relative paths (``crackerjack/services/thing.py``), so depth is
+    relative paths (`crackerjack/services/thing.py`), so depth is
     pinned too.
 
 **What the final review round changed.** The next three-reviewer round
-came back with one ``needs_adjustment`` and two ``pass``. The
-``needs_adjustment`` was the test — three silent-skip shapes in it — and
+came back with one `needs_adjustment` and two `pass`. The
+`needs_adjustment` was the test — three silent-skip shapes in it — and
 one more false example in the guidelines.
 
 45. *The basename-keyed claims dictionary dropped a destination.* The
@@ -831,15 +836,17 @@ one more false example in the guidelines.
     the last category; the first was never compared. That is exactly
     what the code comment said the change prevented. Each destination is
     now compared directly, on its own.
+
 46. *The extension allowlist made the completeness guard circular.*
-    ``_filename_of`` and ``_mentioned_filenames`` shared one hand-written
+    `_filename_of` and `_mentioned_filenames` shared one hand-written
     list, so a span outside it was invisible to both the checker and the
     guard that asks whether anything was left unchecked. There is no
     extension list any more: a span is a routing claim exactly when the
     categorizer classifies it, so the checker covers precisely the files
-    the sweep can touch — and a mention of a ``.yaml`` is not a routing
-    claim at all. The categorizer gained ``CANDIDATE_PATTERNS`` so the
+    the sweep can touch — and a mention of a `.yaml` is not a routing
+    claim at all. The categorizer gained `CANDIDATE_PATTERNS` so the
     globs have one home.
+
 47. *Destinations were collected from list items only.* A destination
     written in a table row or a prose sentence was never compared, and
     passed if its basename appeared in any bullet. Destinations are now
@@ -852,86 +859,88 @@ one more false example in the guidelines.
     first destination, a wrong destination in a table row, a routable
     file mentioned only in prose, a keep-heading bullet naming an
     archivable file, and a prose category claim.
+
 48. *The guidelines cited the wrong example for the name gate.* They
-    cited ``foo.md.backup`` — but that name matches no category and is
+    cited `foo.md.backup` — but that name matches no category and is
     never proposed for archival, as the decision record's own residual
-    says. The live example is ``TEST_foo.md.backup``, which the
-    ``analysis`` category's ``TEST_.*\.md`` pattern classifies by prefix
+    says. The live example is `TEST_foo.md.backup`, which the
+    `analysis` category's `TEST_.*\.md` pattern classifies by prefix
     match.
 
 One residual was checked and cleared rather than changed: a binary
-``*.md.backup`` enters the frontmatter-read path, and the reviewer
-wondered whether ``lifecycle_permits_archival`` swallows
-``UnicodeDecodeError``. It does — ``except (OSError, UnicodeDecodeError)``
-returns ``False`` — and a binary ``TEST_binary.md.backup`` was verified
+`*.md.backup` enters the frontmatter-read path, and the reviewer
+wondered whether `lifecycle_permits_archival` swallows
+`UnicodeDecodeError`. It does — `except (OSError, UnicodeDecodeError)`
+returns `False` — and a binary `TEST_binary.md.backup` was verified
 to stay put with a warning rather than abort the cleanup.
 
 **What the last review round changed.** One reviewer hit the dispatch
 timeout (a block under the fail-loud rule) and the other two returned
-``needs_adjustment``. Their findings:
+`needs_adjustment`. Their findings:
 
-49. *``analyze_all`` hardcoded the five globs.* That is exactly the
-    copy-drift ``CANDIDATE_PATTERNS`` was introduced to forbid, in the
+49. *`analyze_all` hardcoded the five globs.* That is exactly the
+    copy-drift `CANDIDATE_PATTERNS` was introduced to forbid, in the
     one place the constant was not wired in. It uses the constant now.
 50. *Two of the new checks could fail on a correct document.* A
     keep-file named in the same bullet as a destination was flagged
-    (its destination is ``None``, which is not the claimed category),
+    (its destination is `None`, which is not the claimed category),
     and a line naming two categories required the file to match *every*
     one. A keep-file alongside a destination is the keep half of the
     claim, and a file has to match *one* of the categories named on its
     line. Both verified in both directions: the false failures no longer
     fire, and a genuinely wrong claim is still caught.
 51. *The prose-category check only knew destination names.* It
-    recognised ``summaries`` but not the internal key
-    ``completion_reports``. Both are recognised now, and both map to the
+    recognised `summaries` but not the internal key
+    `completion_reports`. Both are recognised now, and both map to the
     destination they mean.
-52. *``_resolve_collision`` was uncovered.* The archive path's numeric
+52. *`_resolve_collision` was uncovered.* The archive path's numeric
     suffix had no test at all. There is one now, verified red-green:
     with collision resolution disabled, the existing destination would
     be overwritten and the test fails.
 53. *A question about the extractor's contract, answered with tests.*
-    The reviewer asked whether ``lifecycle_permits_archival`` assumes
-    ``parsed`` is a dict — ``parsed.get`` would raise ``AttributeError``
+    The reviewer asked whether `lifecycle_permits_archival` assumes
+    `parsed` is a dict — `parsed.get` would raise `AttributeError`
     on a scalar or list frontmatter and abort the whole cleanup. It
-    cannot: ``extract_frontmatter`` rejects a non-mapping before it
+    cannot: `extract_frontmatter` rejects a non-mapping before it
     returns ("Frontmatter is not a YAML mapping"), so the gate sees a
     parse error and fails closed. Two tests now pin that contract, and
     the scalar and list cases were both run to confirm.
 
 **A pre-existing defect recorded, not changed.** The cleanup's backup
-tar is flat: ``tar.add(file_path, arcname=file_path.name)`` stores each
-file under its basename, so ``rollback_cleanup`` restores a file to the
+tar is flat: `tar.add(file_path, arcname=file_path.name)` stores each
+file under its basename, so `rollback_cleanup` restores a file to the
 repository *root* rather than to the area it came from. It predates this
 change and is unchanged here, but it is the mechanism that would undo a
 sweep, so it is now a recorded residual.
 
 **What the last round changed.** One reviewer returned
-``needs_adjustment``; the other two dispatches hit the MCP idle timeout
+`needs_adjustment`; the other two dispatches hit the MCP idle timeout
 and count as blocks under the fail-loud rule.
 
-54. *The ``*.md`` glob was hardcoded in three places besides the
+54. *The `*.md` glob was hardcoded in three places besides the
     constant* — the categorizer's markdown scan, the cleanup service's
     legacy fallback, and its essential-file count. That is the
-    copy-drift ``CANDIDATE_PATTERNS`` was introduced to forbid, in the
+    copy-drift `CANDIDATE_PATTERNS` was introduced to forbid, in the
     places the constant was not wired in. The constant is now
-    self-describing (``MARKDOWN_PATTERN``, ``OTHER_CANDIDATE_PATTERNS``,
-    ``CANDIDATE_PATTERNS``) and every glob reads from it. Behaviour-
+    self-describing (`MARKDOWN_PATTERN`, `OTHER_CANDIDATE_PATTERNS`,
+    `CANDIDATE_PATTERNS`) and every glob reads from it. Behaviour-
     neutral: the legacy fallback still scans markdown only, which is
     what it always did.
+
 55. *The gate now checks the extractor's contract rather than trusting
-    it.* The reviewer asked — twice — whether ``parsed.get("status")``
+    it.* The reviewer asked — twice — whether `parsed.get("status")`
     assumes a mapping, and a scalar or list frontmatter would raise
-    ``AttributeError`` and abort the whole cleanup. The premise was
-    checked and is false: ``extract_frontmatter`` rejects a non-mapping
+    `AttributeError` and abort the whole cleanup. The premise was
+    checked and is false: `extract_frontmatter` rejects a non-mapping
     before it returns ("Frontmatter is not a YAML mapping"), and both
     cases were run to confirm they fail closed. But the gate reads
     arbitrary files, and one malformed document must not abort a whole
     cleanup, so the gate now checks for itself. The guard is pinned by a
     test that violates the extractor's contract — verified red-green:
-    with the guard removed, the test fails with an ``AttributeError``.
+    with the guard removed, the test fails with an `AttributeError`.
 
     (Writing the guard also caught an ordering bug in the guard itself:
-    placed before the ``parsed is None`` branch, it would have gated
+    placed before the `parsed is None` branch, it would have gated
     every *ungoverned* document — no frontmatter at all — instead of
     letting it through.)
 
@@ -940,10 +949,9 @@ for adjustments, and both findings were in prose that contradicted the
 document it sat in:
 
 56. *Core Principle 2 contradicted the shipped-only rule.* It said
-    "Completion reports and historical docs go to ``<area>/.archive/``"
-    — while the same document says a completion report at ``status:
-    complete`` stays put. It now says *closed* documents go there, and
-    that a document is closed at ``shipped``, not at ``complete``.
+    "Completion reports and historical docs go to `<area>/.archive/`"
+    — while the same document says a completion report at `status: complete` stays put. It now says *closed* documents go there, and
+    that a document is closed at `shipped`, not at `complete`.
 57. *The Maintenance checklist repeated the contradiction.* "Archive
     completed implementation plans" and "When to run cleanup: After major
     feature completion" both said *completed*, which is the status the
@@ -962,9 +970,9 @@ test's scope.
 
 59. *The keep-criterion drifted from the rule it sits next to.* Three
     places said a document "stays" if it is *active* or *not yet
-    completed*, while the rule keeps anything that is not ``shipped``. A
-    ``status: complete`` document stayed put but appeared in no list at
-    all. All three now say "until they are ``status: shipped``" and
+    completed*, while the rule keeps anything that is not `shipped`. A
+    `status: complete` document stayed put but appeared in no list at
+    all. All three now say "until they are `status: shipped`" and
     "Shipped implementation plans".
 60. *A routing claim about a file the categorizer no longer routes was
     skipped* — which is the exact drift a routing check exists to catch.

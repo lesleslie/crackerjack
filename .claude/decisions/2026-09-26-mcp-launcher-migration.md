@@ -4,7 +4,7 @@ role: implementation
 kind: migration-design
 date: 2026-09-26
 last_reviewed: 2026-09-26
-superseded_by: null
+superseded_by:
 topic: mcp-launcher-migration
 parent_plan: /Users/les/Projects/mahavishnu/docs/plans/2026-09-26-mcp-launcher-standardization.md
 cookbook_example: /Users/les/Projects/mcp-common/docs/mcp/launcher-cookbook.md#example-4-cj-crackerjack-no-auth-no-settings--closure-passes-auth_confignone
@@ -135,6 +135,7 @@ def _run_mcp_server(mcp_app, mcp_config, http_mode) -> None:
 ```
 
 **Why pre-build instead of recreating inside the closure:**
+
 - `create_mcp_server` is **async** (`async def`, line 126 of server_core.py).
 - The launcher's `build_server: Callable[..., Any]` is called **sync** from inside `launch()`'s async context.
 - The cookbook Example 4 (`/Users/les/Projects/mcp-common/docs/mcp/launcher-cookbook.md:467-507`) suggests `asyncio.get_event_loop().run_until_complete(...)` inside the closure, but **this pattern is BUGGY** when called from a running loop — `run_until_complete()` raises `RuntimeError: This event loop is already running.` (Python 3.10+).
@@ -150,6 +151,7 @@ The current `_run_mcp_server` falls back to `mcp_app.run()` (no HTTP). The launc
 - The `# Override FastMCP's hardcoded 2s graceful-shutdown timeout` comment — the launcher now owns this guarantee (REQ-007).
 
 **Stays as-is:**
+
 - STDIO branch (`mcp_app.run()`).
 - The `try / except` with `console.print` + `traceback.print_exc()` (the launcher's exceptions still propagate to this handler).
 - All of `main()`, `_initialize_project_and_config()`, `_setup_server_context()`, `_create_and_validate_server()`, `_show_server_startup_info()`, the `RuntimeHealthSnapshot` write, the PID file write.

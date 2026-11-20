@@ -4,7 +4,7 @@ role: canonical
 topic: architecture
 date: 2026-07-17
 last_reviewed: 2026-07-17
-superseded_by: null
+superseded_by:
 blocks_on: []
 ---
 
@@ -23,10 +23,10 @@ Crackerjack needed to integrate with AI agents (Claude, Qwen) for autonomous cod
 How should Crackerjack expose its capabilities to AI agents while maintaining:
 
 1. **Performance**: Minimal overhead during quality checks
-1. **Security**: Safe code execution with proper validation
-1. **Extensibility**: Easy addition of new tools and capabilities
-1. **Developer Experience**: Simple integration for AI agents
-1. **Separation of Concerns**: Clear boundary between CLI and MCP interfaces
+2. **Security**: Safe code execution with proper validation
+3. **Extensibility**: Easy addition of new tools and capabilities
+4. **Developer Experience**: Simple integration for AI agents
+5. **Separation of Concerns**: Clear boundary between CLI and MCP interfaces
 
 ### Key Requirements
 
@@ -338,20 +338,20 @@ async def run_quality_checks():
 ### Positive
 
 1. **Performance**: Direct Python API calls (no subprocess overhead) - 47% faster than pre-commit
-1. **Extensibility**: Adding new tools is trivial with `@mcp.tool()` decorator
-1. **Real-time Monitoring**: WebSocket enables live progress tracking
-1. **Type Safety**: FastMCP provides automatic type validation
-1. **Separation of Concerns**: MCP layer is isolated from core logic
-1. **Backward Compatible**: CLI commands remain unchanged
-1. **Security**: Localhost-only WebSocket prevents external access
+2. **Extensibility**: Adding new tools is trivial with `@mcp.tool()` decorator
+3. **Real-time Monitoring**: WebSocket enables live progress tracking
+4. **Type Safety**: FastMCP provides automatic type validation
+5. **Separation of Concerns**: MCP layer is isolated from core logic
+6. **Backward Compatible**: CLI commands remain unchanged
+7. **Security**: Localhost-only WebSocket prevents external access
 
 ### Negative
 
 1. **Complexity**: More moving parts (WebSocket server, job manager)
-1. **Dependency**: Requires FastMCP and websockets libraries
-1. **Testing Surface**: Need to test both stdio and WebSocket transports
-1. **Debugging**: WebSocket issues can be harder to debug than HTTP
-1. **Memory**: Job manager needs periodic cleanup to prevent memory leaks
+2. **Dependency**: Requires FastMCP and websockets libraries
+3. **Testing Surface**: Need to test both stdio and WebSocket transports
+4. **Debugging**: WebSocket issues can be harder to debug than HTTP
+5. **Memory**: Job manager needs periodic cleanup to prevent memory leaks
 
 ### Risks
 

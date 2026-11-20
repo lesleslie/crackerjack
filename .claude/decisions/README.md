@@ -3,12 +3,10 @@ status: active
 role: canonical
 date: 2026-07-20
 last_reviewed: 2026-07-20
-superseded_by: null
+superseded_by:
 blocks_on: []
 topic: lifecycle
 ---
-
-
 
 # Repo-local Decisions Index
 

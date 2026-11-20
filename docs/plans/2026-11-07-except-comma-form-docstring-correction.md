@@ -8,7 +8,7 @@ role: implementation
 topic: documentation
 date: 2026-11-07
 last_reviewed: 2026-11-07
-superseded_by: null
+superseded_by:
 blocks_on: []
 ---
 
@@ -39,7 +39,7 @@ Python 3.14's unparenthesized `except A, B:` clause.
 
 ## Evidence
 
-Python 3.14 added PEP 758 ("Allow except and except* expressions without
+Python 3.14 added PEP 758 ("Allow except and except\* expressions without
 parentheses"). Under it, `except A, B:` — no parentheses, no `as` — parses as the
 tuple expression `(A, B)` and is semantically identical to `except (A, B):`. It
 catches both listed types and binds no name. Before 3.14 the same text was a
@@ -67,9 +67,9 @@ alias binding to observe.
 
 | File | Current claim | Correction |
 |---|---|---|
-| `tests/adapters/type/test_pyright.py:333-338` | "In Python 3 this binds ``IndexError`` as the alias name. ValueError is caught, but IndexError is NOT." | The form catches both listed types and binds nothing. |
-| `tests/checks/test_release_audit.py:7-11` | "use ``except X, Y:`` (Python 2 syntax) which Python 3 parses as ``except X as Y:`` (a binding form). Those branches behave differently from intended" | The form is ``except (X, Y):``; the branches behave as intended. |
-| `tests/tools/test_ty_cleanup.py:18-20` | "Pre-existing Python-2 ``except UnicodeDecodeError, OSError:`` syntax" | Not Python-2; a valid 3.14 unparenthesized multi-catch (PEP 758). |
+| `tests/adapters/type/test_pyright.py:333-338` | "In Python 3 this binds `IndexError` as the alias name. ValueError is caught, but IndexError is NOT." | The form catches both listed types and binds nothing. |
+| `tests/checks/test_release_audit.py:7-11` | "use `except X, Y:` (Python 2 syntax) which Python 3 parses as `except X as Y:` (a binding form). Those branches behave differently from intended" | The form is `except (X, Y):`; the branches behave as intended. |
+| `tests/tools/test_ty_cleanup.py:18-20` | "Pre-existing Python-2 `except UnicodeDecodeError, OSError:` syntax" | Not Python-2; a valid 3.14 unparenthesized multi-catch (PEP 758). |
 
 ### Why the production code is correct as written
 
@@ -131,8 +131,7 @@ No production code changes. No assertion changes.
 - Triggered from: a maintainer reading `tests/adapters/type/test_pyright.py` or
   `tests/checks/test_release_audit.py` and acting on the docstring's claim.
 - Returns to / updates: nothing at runtime; the three docstrings only.
-- Demonstrable by: `pytest tests/adapters/type/test_pyright.py
-  tests/checks/test_release_audit.py tests/tools/test_ty_cleanup.py` passes, and
+- Demonstrable by: `pytest tests/adapters/type/test_pyright.py tests/checks/test_release_audit.py tests/tools/test_ty_cleanup.py` passes, and
   `git diff --stat` shows only the three test files.
 - Rollback signal: any test module on those three paths starts failing.
 - Observability added: none — documentation-only change.

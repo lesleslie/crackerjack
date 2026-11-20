@@ -8,7 +8,7 @@ role: implementation
 topic: dependency-management
 date: 2026-11-07
 last_reviewed: 2026-11-07
-superseded_by: null
+superseded_by:
 blocks_on: []
 ---
 
@@ -44,8 +44,7 @@ Widen crackerjack's ruff dependency from an exact pin to a bounded version range
 intent:
 
 > Ruff 0.16.0 expanded its default enabled rule set from 59 rules to 413 rules.
-> Crackerjack's working lock file now selects Ruff 0.16.0, and `ruff check
-> ./crackerjack` reports 1249 findings on the current working tree.
+> Crackerjack's working lock file now selects Ruff 0.16.0, and `ruff check ./crackerjack` reports 1249 findings on the current working tree.
 
 and:
 
@@ -99,8 +98,7 @@ reviewed.
 ## Note: `ruff format` is why the tree is full of `except A, B:`
 
 Not part of this task, but it bears on anyone who considers "restoring" parentheses
-on the 107 comma-form `except` clauses in `crackerjack/`: with `target-version =
-"py314"`, ruff's formatter rewrites `except (A, B):` to `except A, B:` (the PEP 758
+on the 107 comma-form `except` clauses in `crackerjack/`: with `target-version = "py314"`, ruff's formatter rewrites `except (A, B):` to `except A, B:` (the PEP 758
 unparenthesized form). Those clauses are ruff-canonical output rather than
 hand-mangled code, so a change that adds parentheses back is undone by the next
 `ruff format` run.

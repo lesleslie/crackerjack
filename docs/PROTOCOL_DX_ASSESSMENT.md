@@ -3,7 +3,7 @@ status: complete
 role: historical
 date: 2026-07-17
 last_reviewed: 2026-07-17
-superseded_by: null
+superseded_by:
 blocks_on: []
 topic: mcp-design
 ---
@@ -40,13 +40,13 @@ ______________________________________________________________________
    - Proper use of `@runtime_checkable` for runtime safety
    - Smart protocol inheritance hierarchy
 
-1. **Type Safety** (8/10)
+2. **Type Safety** (8/10)
 
    - 100% type annotation coverage (278/278 methods)
    - Modern Python 3.13+ patterns (`|` unions, protocols)
    - Excellent use of `TYPE_CHECKING` for circular imports
 
-1. **Consistency** (9/10)
+3. **Consistency** (9/10)
 
    - Uniform protocol structure
    - Clear naming conventions
@@ -61,13 +61,13 @@ ______________________________________________________________________
    - No usage examples or implementation guides
    - No onboarding documentation
 
-1. **Weak Type Constraints** (6/10)
+2. **Weak Type Constraints** (6/10)
 
    - 24% of methods use `t.Any` (55/227 methods)
    - Undermines type safety benefits
    - Reduces IDE autocomplete effectiveness
 
-1. **No Developer Guidance** (3/10)
+3. **No Developer Guidance** (3/10)
 
    - No protocol reference guide
    - No implementation patterns documented
@@ -241,12 +241,12 @@ def get_custom_metric(self, name: str) -> int | float | str | None: ...
 **Current Onboarding Journey**:
 
 1. ✅ Open `protocols.py` → See 61 protocols
-1. ❌ Read protocol → **No clue what it does**
-1. ❌ Look at method → **No docstring explaining purpose**
-1. ❌ Try to implement → **No guidance, no examples**
-1. ⚠️ Guess implementation based on method names
-1. ❌ Run type checker → **Still unsure if semantics correct**
-1. ❌ Discover edge case → **Not documented**
+2. ❌ Read protocol → **No clue what it does**
+3. ❌ Look at method → **No docstring explaining purpose**
+4. ❌ Try to implement → **No guidance, no examples**
+5. ⚠️ Guess implementation based on method names
+6. ❌ Run type checker → **Still unsure if semantics correct**
+7. ❌ Discover edge case → **Not documented**
 
 **Estimated Learning Curve**: 2-3 weeks for basic understanding
 
@@ -410,9 +410,9 @@ ______________________________________________________________________
 **Priority Order**:
 
 1. Core protocols (ServiceProtocol, TestManagerProtocol, QAAdapterProtocol, ConsoleInterface)
-1. Service protocols (20 protocols)
-1. QA protocols (5 protocols)
-1. Domain-specific protocols (35 protocols)
+2. Service protocols (20 protocols)
+3. QA protocols (5 protocols)
+4. Domain-specific protocols (35 protocols)
 
 **Effort**: 40-60 hours
 **Impact**: Self-documenting code
@@ -536,10 +536,10 @@ ______________________________________________________________________
 **Protocols**:
 
 1. ServiceProtocol
-1. TestManagerProtocol
-1. QAAdapterProtocol
-1. ConsoleInterface
-1. HookManager
+2. TestManagerProtocol
+3. QAAdapterProtocol
+4. ConsoleInterface
+5. HookManager
 
 **Tasks**:
 
@@ -623,10 +623,10 @@ ______________________________________________________________________
 ### Validation Methods
 
 1. **Developer Surveys**: Pre- and post-documentation
-1. **Onboarding Time**: Track new developer ramp-up
-1. **Bug Tracking**: Monitor protocol-related issues
-1. **Code Review Speed**: Measure review time
-1. **Question Frequency**: Track clarification requests
+2. **Onboarding Time**: Track new developer ramp-up
+3. **Bug Tracking**: Monitor protocol-related issues
+4. **Code Review Speed**: Measure review time
+5. **Question Frequency**: Track clarification requests
 
 ______________________________________________________________________
 
@@ -669,7 +669,7 @@ This assessment produced two comprehensive documentation files:
    - Documentation templates
    - Implementation roadmap
 
-1. **`docs/reference/PROTOCOL_QUICK_REFERENCE.md`**
+2. **`docs/reference/PROTOCOL_QUICK_REFERENCE.md`**
 
    - Quick start guide
    - Protocol overview
@@ -677,7 +677,7 @@ This assessment produced two comprehensive documentation files:
    - Best practices
    - Common pitfalls
 
-1. **`docs/PROTOCOL_DX_ASSESSMENT.md`** (this file)
+3. **`docs/PROTOCOL_DX_ASSESSMENT.md`** (this file)
 
    - Executive summary
    - Key findings
@@ -691,23 +691,23 @@ ______________________________________________________________________
 ### Immediate (This Week)
 
 1. **Review Assessment**: Read both documentation files
-1. **Prioritize Effort**: Identify high-impact protocols
-1. **Set Up Infrastructure**: Add docstring linting
-1. **Create Templates**: Standardize documentation format
+2. **Prioritize Effort**: Identify high-impact protocols
+3. **Set Up Infrastructure**: Add docstring linting
+4. **Create Templates**: Standardize documentation format
 
 ### Short-term (Next 2-3 Sprints)
 
 1. **Document Core Protocols**: Focus on 5 most-used protocols
-1. **Create Reference Guide**: Build protocol overview
-1. **Add Examples**: Show common usage patterns
-1. **Reduce `t.Any`**: Improve type safety
+2. **Create Reference Guide**: Build protocol overview
+3. **Add Examples**: Show common usage patterns
+4. **Reduce `t.Any`**: Improve type safety
 
 ### Long-term (Next Quarter)
 
 1. **Complete Documentation**: All 61 protocols documented
-1. **Comprehensive Guides**: Implementation, testing, migration
-1. **Visual Diagrams**: Protocol hierarchy graphics
-1. **Onboarding Kit**: New developer checklist
+2. **Comprehensive Guides**: Implementation, testing, migration
+3. **Visual Diagrams**: Protocol hierarchy graphics
+4. **Onboarding Kit**: New developer checklist
 
 ______________________________________________________________________
 

@@ -3,7 +3,7 @@ status: active
 role: canonical
 date: 2026-07-17
 last_reviewed: 2026-07-17
-superseded_by: null
+superseded_by:
 blocks_on: []
 topic: mcp-design
 ---
@@ -23,7 +23,7 @@ Successfully implemented a comprehensive admin shell for Crackerjack with sessio
    - Package initialization for shell module
    - Exports `CrackerjackShell`
 
-1. **`/Users/les/Projects/crackerjack/crackerjack/shell/adapter.py`** (468 lines)
+2. **`/Users/les/Projects/crackerjack/crackerjack/shell/adapter.py`** (468 lines)
 
    - `CrackerjackShell` class extending `oneiric.shell.AdminShell`
    - Quality management helpers (crack, test, lint, scan, format_code, typecheck)
@@ -31,18 +31,18 @@ Successfully implemented a comprehensive admin shell for Crackerjack with sessio
    - Rich console output with tables
    - Comprehensive error handling
 
-1. **`/Users/les/Projects/crackerjack/tests/unit/shell/__init__.py`**
+3. **`/Users/les/Projects/crackerjack/tests/unit/shell/__init__.py`**
 
    - Test package initialization
 
-1. **`/Users/les/Projects/crackerjack/tests/unit/shell/test_adapter.py`** (171 lines)
+4. **`/Users/les/Projects/crackerjack/tests/unit/shell/test_adapter.py`** (171 lines)
 
    - 10 unit tests (all passing)
    - 2 integration tests (marked with `@pytest.mark.integration`)
    - Mock-based testing for session tracking
    - Integration tests for actual tool execution
 
-1. **`/Users/les/Projects/crackerjack/docs/ADMIN_SHELL.md`**
+5. **`/Users/les/Projects/crackerjack/docs/ADMIN_SHELL.md`**
 
    - Comprehensive documentation
    - Usage examples
@@ -56,7 +56,7 @@ Successfully implemented a comprehensive admin shell for Crackerjack with sessio
    - Added `shell` command to CLI
    - Integrated with CrackerjackSettings
 
-1. **`/Users/les/Projects/crackerjack/pyproject.toml`**
+2. **`/Users/les/Projects/crackerjack/pyproject.toml`**
 
    - Added `ipython>=8.0.0` dependency
    - Updated creosote exclude list to include ipython
@@ -104,7 +104,7 @@ Full integration with Session-Buddy MCP:
    )
    ```
 
-1. **Session End** (via atexit hook):
+2. **Session End** (via atexit hook):
 
    ```python
    await session_tracker.emit_session_end(session_id="session_abc123", metadata={})
@@ -171,16 +171,16 @@ pytest tests/unit/shell/test_adapter.py::TestCrackerjackShell -v
 
 **Tests**:
 
-1. `test_initialization` - Shell initialization
-1. `test_component_name` - Component name is "crackerjack"
-1. `test_component_version` - Version retrieval
-1. `test_adapters_info` - Adapter information
-1. `test_banner` - Banner generation
-1. `test_namespace_helpers` - Helper functions in namespace
-1. `test_show_adapters` - Adapters display
-1. `test_session_start_emission` - Session start event
-1. `test_session_end_emission` - Session end event
-1. `test_close` - Shell cleanup
+01. `test_initialization` - Shell initialization
+02. `test_component_name` - Component name is "crackerjack"
+03. `test_component_version` - Version retrieval
+04. `test_adapters_info` - Adapter information
+05. `test_banner` - Banner generation
+06. `test_namespace_helpers` - Helper functions in namespace
+07. `test_show_adapters` - Adapters display
+08. `test_session_start_emission` - Session start event
+09. `test_session_end_emission` - Session end event
+10. `test_close` - Shell cleanup
 
 ### Integration Tests (2 tests, optional)
 
@@ -228,13 +228,13 @@ crackerjack.shell.CrackerjackShell (extends AdminShell)
    - `_notify_session_start_async()` emits event to Session-Buddy MCP
    - Session ID stored
 
-1. **Shell Usage**
+2. **Shell Usage**
 
    - User calls quality functions (crack, test, lint, etc.)
    - Functions execute subprocess commands (pytest, ruff, etc.)
    - Rich console displays formatted output
 
-1. **Shell Exit** (Ctrl+D or `exit()`)
+3. **Shell Exit** (Ctrl+D or `exit()`)
 
    - `atexit` handler triggers `_sync_session_end()`
    - Background thread emits session end event to Session-Buddy MCP
@@ -409,12 +409,12 @@ Potential improvements documented in `ADMIN_SHELL.md`:
 Successfully implemented a production-ready admin shell for Crackerjack with:
 
 1. **Full Oneiric AdminShell integration** - Extends base class properly
-1. **Quality management helpers** - All requested functions implemented
-1. **Session tracking** - Full Session-Buddy MCP integration
-1. **Rich console output** - Tables, colors, progress indicators
-1. **Comprehensive testing** - 10 passing unit tests
-1. **CLI integration** - `crackerjack shell` command
-1. **Documentation** - Complete user guide
+2. **Quality management helpers** - All requested functions implemented
+3. **Session tracking** - Full Session-Buddy MCP integration
+4. **Rich console output** - Tables, colors, progress indicators
+5. **Comprehensive testing** - 10 passing unit tests
+6. **CLI integration** - `crackerjack shell` command
+7. **Documentation** - Complete user guide
 
 **Status**: ✅ **COMPLETE AND PRODUCTION READY** <!-- legacy status — see YAML frontmatter -->
 

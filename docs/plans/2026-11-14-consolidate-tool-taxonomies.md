@@ -8,7 +8,7 @@ role: implementation
 topic: architecture
 date: 2026-11-14
 last_reviewed: 2026-11-14
-superseded_by: null
+superseded_by:
 blocks_on: []
 ---
 
@@ -54,32 +54,32 @@ not land at once.
 
 ### Failure Conditions (verifier-only)
 
-1. `crackerjack/adapters/` still holds a QA adapter module: none of
-   `_qa_adapter_base.py`, `_tool_adapter_base.py`, `factory.py`,
-   `health_mixin.py`, `format/ruff.py`, `refactor/refurb.py`,
-   `refactor/cohesion.py`, `refactor/creosote.py`, `sast/bandit.py`,
-   `sast/semgrep.py`, `sast/_base.py`, `type/pyrefly.py`,
-   `type/ty_adapter.py` exists.
-2. `crackerjack.adapters.base`, `crackerjack.adapters.registry.discover_adapters`,
-   `crackerjack.adapters.swift`, `crackerjack.adapters.kotlin`,
-   `crackerjack.adapters.web` and `crackerjack.adapters.ai.registry` still
-   import — **the language-adapter layer and the AI provider registry are
-   untouched**.
-3. `crackerjack.models.qa_results` or `crackerjack.models.qa_config` still
-   imports.
-4. `HookResult` still has a `qa_result` field.
-5. `grep -rn "qa_result" crackerjack/` returns nothing.
-6. `import crackerjack.mcp.server_core` succeeds and the four language tools
-   still resolve.
-7. `crackerjack run -f` still reports 18/18 fast hooks.
-8. `crackerjack run -v` reports the same comprehensive hook set as before.
-9. A hook whose output is JSON now yields findings where it previously
-   yielded none — checked against `check-jsonschema`, whose JSON findings
-   are currently discarded at `hook_executor.py:1244`.
+01. `crackerjack/adapters/` still holds a QA adapter module: none of
+    `_qa_adapter_base.py`, `_tool_adapter_base.py`, `factory.py`,
+    `health_mixin.py`, `format/ruff.py`, `refactor/refurb.py`,
+    `refactor/cohesion.py`, `refactor/creosote.py`, `sast/bandit.py`,
+    `sast/semgrep.py`, `sast/_base.py`, `type/pyrefly.py`,
+    `type/ty_adapter.py` exists.
+02. `crackerjack.adapters.base`, `crackerjack.adapters.registry.discover_adapters`,
+    `crackerjack.adapters.swift`, `crackerjack.adapters.kotlin`,
+    `crackerjack.adapters.web` and `crackerjack.adapters.ai.registry` still
+    import — **the language-adapter layer and the AI provider registry are
+    untouched**.
+03. `crackerjack.models.qa_results` or `crackerjack.models.qa_config` still
+    imports.
+04. `HookResult` still has a `qa_result` field.
+05. `grep -rn "qa_result" crackerjack/` returns nothing.
+06. `import crackerjack.mcp.server_core` succeeds and the four language tools
+    still resolve.
+07. `crackerjack run -f` still reports 18/18 fast hooks.
+08. `crackerjack run -v` reports the same comprehensive hook set as before.
+09. A hook whose output is JSON now yields findings where it previously
+    yielded none — checked against `check-jsonschema`, whose JSON findings
+    are currently discarded at `hook_executor.py:1244`.
 10. The full test suite shows no new failures against the pinned baseline
     (**20 failed / 12,583 passed / 127 skipped**).
 
----
+______________________________________________________________________
 
 ## Context
 
@@ -150,7 +150,7 @@ The recovery mechanism worth keeping is therefore not a second process: it is
 no extra process, and it fixes a hook that produces findings today and shows
 none.
 
----
+______________________________________________________________________
 
 ## Phase 1 — Delete the QA adapter layer
 
@@ -234,8 +234,7 @@ replacement, and it already exists.
   survives. **No change.**
 - `scripts/create_test_templates.py` — the eight tuple rows naming deleted
   adapter classes go, and `generate_adapter_test_template` (`:6-11`) goes with
-  them: it emits `from crackerjack.adapters.{adapter_name} import
-  {adapter_class}`, and all eight of those import paths are already wrong
+  them: it emits `from crackerjack.adapters.{adapter_name} import {adapter_class}`, and all eight of those import paths are already wrong
   (`{adapter_name}` is e.g. `ruff_adapter`, and no such module exists).
 - `docs/reference/ADAPTER_UUID_REGISTRY.md` — the registry of the 19 QA
   adapters' UUIDs. Every adapter it names is deleted, but the UUIDs are
@@ -349,7 +348,7 @@ deleted symbols), and fix the survivors.
 handlers edited, 1 CLI command deleted, 1 script edited, 2 docs regenerated,
 ~50 test files deleted or edited, ~14 files edited.
 
----
+______________________________________________________________________
 
 ## Follow-up — the hook catalog (NOT this plan)
 
@@ -377,7 +376,7 @@ The follow-up's shape was drafted and reviewed (see the *Review outcome* of
 the six-phase draft) and is recorded in git history at `967d78a7` and
 `836abe18`.
 
----
+______________________________________________________________________
 
 ## References
 
@@ -398,7 +397,7 @@ the six-phase draft) and is recorded in git history at `967d78a7` and
   the hook), `ab0b24dd` (benchmark adapter deleted), `46417595` (pyright and
   vulture adapters deleted), `7ad31a12` (pyscn clone scan consolidated).
 
----
+______________________________________________________________________
 
 ## Execution record
 

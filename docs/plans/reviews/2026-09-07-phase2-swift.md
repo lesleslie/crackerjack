@@ -32,8 +32,8 @@ Usage: swift build <options>
 
 - Either:
   1. **Switch to `xcodebuild test`** for iOS destination handling: `xcodebuild test -scheme <SchemeName> -destination 'generic/platform=iOS Simulator'`. Requires extracting the scheme name from `Package.swift` (default = package name) and requires Xcode installed. Loses pure-SwiftPM portability.
-  1. **Drop the `-destination` flag entirely** for `swift test`. For iOS-only packages, recommend users run `xcrun simctl` or `xcodebuild test` themselves. Add a SwiftPM hook `swift.test.xcodebuild` that uses xcodebuild when iOS is detected.
-  1. **Use `--sdk iphonesimulator`** instead of `-destination`: `swift test --sdk iphonesimulator` is a SwiftPM-accepted flag (verified) and selects the iOS Simulator SDK. Caveat: tests still need a host target and an explicit destination; many iOS packages require `xcodebuild test` to actually run tests.
+  2. **Drop the `-destination` flag entirely** for `swift test`. For iOS-only packages, recommend users run `xcrun simctl` or `xcodebuild test` themselves. Add a SwiftPM hook `swift.test.xcodebuild` that uses xcodebuild when iOS is detected.
+  3. **Use `--sdk iphonesimulator`** instead of `-destination`: `swift test --sdk iphonesimulator` is a SwiftPM-accepted flag (verified) and selects the iOS Simulator SDK. Caveat: tests still need a host target and an explicit destination; many iOS packages require `xcodebuild test` to actually run tests.
 
 The Phase 1 brief-vs-reality rule applies here. Verify against `swift test --help` (the plan even tells implementers to do this in Step 4.3 at line 747 — but Step 4.3 runs *after* writing the implementation, which is too late).
 
@@ -152,7 +152,7 @@ def _gh_release(tag_name: str) -> str:
 Two defects:
 
 1. **No `check=True`**: If `gh release create` fails (auth missing, repo not found, network), `subprocess.run` returns non-zero, but the function returns the fabricated fallback URL. Caller thinks release succeeded.
-1. **Fallback URL is fabricated**: `https://github.com/local/{project_root.name}/...` does not exist. The user is told a release exists at a URL that 404s.
+2. **Fallback URL is fabricated**: `https://github.com/local/{project_root.name}/...` does not exist. The user is told a release exists at a URL that 404s.
 
 `gh release create --generate-notes` is verified to exist (`gh release create --help` shows the flag). The output goes to stdout in JSON mode only; default mode prints the URL to stdout. But if stderr contains an error, stdout may be empty.
 
@@ -357,13 +357,13 @@ ______________________________________________________________________
 This review covered:
 
 1. **Task 1** (Foundation / entry-point registration): verified Python entry-point format (`module:ClassName`) is canonical; no Swift-specific concerns.
-1. **Task 2** (`parse_platforms`): verified the regex against 10 real Package.swift patterns; identified edge cases for visionOS / macCatalyst / malformed directives.
-1. **Task 3** (`GitTagVersionSource`): verified `git describe --tags --abbrev=0 --match "v*"` against pre-release tags (`v1.0.0-rc1` preserved with suffix), multi-tag repos (creation-order dependent), annotated vs lightweight (annotated preferred), detached HEAD vs branch checkout. Confirmed the plan's `tag[1:]` correctly strips only the leading `v`.
-1. **Task 4** (`swift_hooks`): **CRITICAL FINDING** — verified `swift test --help` and `swift build --help` on Swift 6.3.1 do NOT document `-destination`. Empirically confirmed `swift test -destination 'generic/platform=iOS Simulator'` fails with `error: Unknown option`. The plan's hooks will fail at runtime against real iOS packages.
-1. **Task 5** (`SwiftLifecycle`): identified rollback semantics bug (Finding #2 — `_reset(commit_sha)` resets TO the bump commit, not AWAY from it). Verified `services/git.py` has `commit()`, `push()`, `push_with_tags()`, `reset_hard()` but lacks `tag()` / `delete_tag()` methods.
-1. **Task 6** (`SwiftAdapter`): wiring is straightforward; no Swift-specific concerns beyond Findings #1 and #4.
-1. **Task 7** (MCP `language_tools`): identified monkeypatch seam (Finding #3), fabricated URL fallback (Finding #5), blocking event loop (Finding #6), auth env-var case sensitivity divergence (Finding #10), `PermissionError` envelope concerns (Finding #15).
-1. **Task 8** (Verification): `swift test --help` reality check is critical (covered in Finding #1). Real-swiftui-ipc-client smoke test is gated correctly.
+2. **Task 2** (`parse_platforms`): verified the regex against 10 real Package.swift patterns; identified edge cases for visionOS / macCatalyst / malformed directives.
+3. **Task 3** (`GitTagVersionSource`): verified `git describe --tags --abbrev=0 --match "v*"` against pre-release tags (`v1.0.0-rc1` preserved with suffix), multi-tag repos (creation-order dependent), annotated vs lightweight (annotated preferred), detached HEAD vs branch checkout. Confirmed the plan's `tag[1:]` correctly strips only the leading `v`.
+4. **Task 4** (`swift_hooks`): **CRITICAL FINDING** — verified `swift test --help` and `swift build --help` on Swift 6.3.1 do NOT document `-destination`. Empirically confirmed `swift test -destination 'generic/platform=iOS Simulator'` fails with `error: Unknown option`. The plan's hooks will fail at runtime against real iOS packages.
+5. **Task 5** (`SwiftLifecycle`): identified rollback semantics bug (Finding #2 — `_reset(commit_sha)` resets TO the bump commit, not AWAY from it). Verified `services/git.py` has `commit()`, `push()`, `push_with_tags()`, `reset_hard()` but lacks `tag()` / `delete_tag()` methods.
+6. **Task 6** (`SwiftAdapter`): wiring is straightforward; no Swift-specific concerns beyond Findings #1 and #4.
+7. **Task 7** (MCP `language_tools`): identified monkeypatch seam (Finding #3), fabricated URL fallback (Finding #5), blocking event loop (Finding #6), auth env-var case sensitivity divergence (Finding #10), `PermissionError` envelope concerns (Finding #15).
+8. **Task 8** (Verification): `swift test --help` reality check is critical (covered in Finding #1). Real-swiftui-ipc-client smoke test is gated correctly.
 
 **Not covered:**
 

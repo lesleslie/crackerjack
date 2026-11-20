@@ -484,16 +484,16 @@ async def run_fast_hooks(context):
 
 ## Best Practices
 
-1. **Use Cached Executor** - Enable caching for repeated executions (development workflow)
-1. **Enable Parallelization** - Run independent hooks in parallel when possible
-1. **Configure Timeouts** - Set appropriate timeouts for long-running hooks
-1. **Monitor Cache Performance** - Track cache hit rates and adjust TTL
-1. **Use LSP Executor** - Enable LSP for 10-20x faster type checking
-1. **Handle Lock Timeouts** - Configure lock timeouts to prevent deadlocks
-1. **Track Progress** - Use ProgressHookExecutor for long-running operations
-1. **Retry Formatting Only** - Only retry formatting hooks, not analysis hooks
-1. **Async for Workflows** - Use AsyncHookExecutor for workflow integration
-1. **Monitor Performance** - Track execution metrics and optimize slow hooks
+01. **Use Cached Executor** - Enable caching for repeated executions (development workflow)
+02. **Enable Parallelization** - Run independent hooks in parallel when possible
+03. **Configure Timeouts** - Set appropriate timeouts for long-running hooks
+04. **Monitor Cache Performance** - Track cache hit rates and adjust TTL
+05. **Use LSP Executor** - Enable LSP for 10-20x faster type checking
+06. **Handle Lock Timeouts** - Configure lock timeouts to prevent deadlocks
+07. **Track Progress** - Use ProgressHookExecutor for long-running operations
+08. **Retry Formatting Only** - Only retry formatting hooks, not analysis hooks
+09. **Async for Workflows** - Use AsyncHookExecutor for workflow integration
+10. **Monitor Performance** - Track execution metrics and optimize slow hooks
 
 ## Performance Considerations
 

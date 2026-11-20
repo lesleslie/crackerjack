@@ -94,18 +94,18 @@ ______________________________________________________________________
    cd /tmp/task1-clean-verify
    ```
 
-1. Run `crackerjack run -v` from the clean worktree. Expected:
+2. Run `crackerjack run -v` from the clean worktree. Expected:
 
    - Either clean pass (exit 0, "all hooks passed" output) — documents the success path
    - Or failures with smaller issue counts (e.g. ~100 baseline vs. ~1000 on dirty tree) — also documents informative output
 
-1. Capture exit code separately: `crackerjack run -v; echo "exit=$?"`
+3. Capture exit code separately: `crackerjack run -v; echo "exit=$?"`
 
-1. Capture output via `2>&1 | tee /tmp/task1-clean-output.txt`
+4. Capture output via `2>&1 | tee /tmp/task1-clean-output.txt`
 
-1. **Do NOT push the worktree** — its only purpose is verification. Remove with `git worktree remove /tmp/task1-clean-verify` after.
+5. **Do NOT push the worktree** — its only purpose is verification. Remove with `git worktree remove /tmp/task1-clean-verify` after.
 
-1. **Do NOT run `crackerjack run` on the main checkout** — that would re-introduce autofix dirty files.
+6. **Do NOT run `crackerjack run` on the main checkout** — that would re-introduce autofix dirty files.
 
 ### Path B: Wait for Task 24b
 
@@ -204,6 +204,6 @@ ______________________________________________________________________
 ## Open Questions for User
 
 1. **Path A vs Path B**: Do you want to proceed with the worktree verification now, or wait for Task 24b to clear the dirty state and verify on main directly?
-1. **Crash-mode test (criterion 4)**: Are you comfortable running `crackerjack run --skip-hooks --run-tests` (known-crash path per sibling plan)? It exits non-zero without producing useful output — that's exactly the data we need, but it does mean running a command we know will fail.
-1. **The 12 dirty files**: Should I attempt to identify which were caused by my pre-flight run vs. which were pre-existing? This would require `git stash` of the suspected-mine files only, then comparing — risky given the Task 24b file. Alternative: leave them all alone, let Task 24b resolve.
-1. **Push to origin**: After Task 1 PASS, the next action is Task 2 in a new worktree. No push needed until a real commit-worthy result lands. Confirm: hold off on `git push` until you say so?
+2. **Crash-mode test (criterion 4)**: Are you comfortable running `crackerjack run --skip-hooks --run-tests` (known-crash path per sibling plan)? It exits non-zero without producing useful output — that's exactly the data we need, but it does mean running a command we know will fail.
+3. **The 12 dirty files**: Should I attempt to identify which were caused by my pre-flight run vs. which were pre-existing? This would require `git stash` of the suspected-mine files only, then comparing — risky given the Task 24b file. Alternative: leave them all alone, let Task 24b resolve.
+4. **Push to origin**: After Task 1 PASS, the next action is Task 2 in a new worktree. No push needed until a real commit-worthy result lands. Confirm: hold off on `git push` until you say so?

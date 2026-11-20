@@ -5,7 +5,7 @@ kind: template
 title: "Plan Template — Integration-Contract Required"
 date: 2026-11-14
 last_reviewed: 2026-11-14
-superseded_by: null
+superseded_by:
 topic: process-discipline
 ---
 
@@ -55,32 +55,32 @@ python -m crackerjack.tools.plan_index_sync
 
 ### Goal
 
-<What user-observable change exists when this plan ships? How will we know
+\<What user-observable change exists when this plan ships? How will we know
 it succeeded — a concrete metric, signal, or artifact?>
 
 ### Constraints
 
 - <What this plan may not touch. Name other plans that own files here.>
-- <Version bumps and PyPI publishes are the operator's.>
-- <Push is the operator's.>
-- <One commit per phase, each independently revertible.>
+- \<Version bumps and PyPI publishes are the operator's.>
+- \<Push is the operator's.>
+- \<One commit per phase, each independently revertible.>
 
 ### Failure Conditions (verifier-only)
 
-<The conditions a verifier can mechanically check after each phase. Each must
+\<The conditions a verifier can mechanically check after each phase. Each must
 be checkable — a grep, a command, a file's existence or absence. A condition
 that cannot be checked is not a failure condition.>
 
 1. <checkable condition>
-1. <checkable condition>
+2. <checkable condition>
 
 ## 2. Context
 
-<What was discovered, with `file:line` citations. State what is live, what
+\<What was discovered, with `file:line` citations. State what is live, what
 is dead, and how each was established — do not assert reachability from a
 grep alone; name the mechanism.>
 
-<The taxonomy table, the consumer map, the inventory. If a claim is
+\<The taxonomy table, the consumer map, the inventory. If a claim is
 load-bearing, it gets a citation.>
 
 ## 3. Phases
@@ -89,43 +89,43 @@ One `## Phase N — <name>` per phase. Each carries the same five blocks.
 
 ### Scope
 
-<The files and symbols this phase touches. Name files explicitly; do not
+\<The files and symbols this phase touches. Name files explicitly; do not
 describe a package as "the X layer" unless every module in it has been
 inventoried and given a verdict.>
 
 ### Integration Contract
 
-- **Triggered from**: <the exact symbol, command path, MCP tool, or scheduler
+- **Triggered from**: \<the exact symbol, command path, MCP tool, or scheduler
   invocation that reaches the new code>
-- **Returns to / updates**: <the destination state, file, store, or artifact>
-- **Demonstrable by**: <one checkable proof — a command, a request, a log line,
+- **Returns to / updates**: \<the destination state, file, store, or artifact>
+- **Demonstrable by**: \<one checkable proof — a command, a request, a log line,
   a test name>
-- **Rollback signal**: <the log line, metric threshold, or failure that says
+- **Rollback signal**: \<the log line, metric threshold, or failure that says
   this landed wrong>
 - **Observability added**: <what a user can now see that they could not before>
 
 ### Resolved decisions
 
-<Numbered. Each entry states the decision and why. A decision that is still
+\<Numbered. Each entry states the decision and why. A decision that is still
 open does not belong in this block — either resolve it here, or name it in
 the phase's Scope as a blocking prerequisite.>
 
 ### Risks
 
-<Numbered. What could go wrong, and what happens if it does.>
+\<Numbered. What could go wrong, and what happens if it does.>
 
 ### Estimated scope
 
-<Modules, lines, and test files. A guess that is wrong by 2× is a bad guess.>
+\<Modules, lines, and test files. A guess that is wrong by 2× is a bad guess.>
 
 ## 4. Risks
 
-<Risks that span phases: ordering against other plans, public API removal,
+\<Risks that span phases: ordering against other plans, public API removal,
 behaviour changes with no rollback story.>
 
 ## 5. References
 
-- <Other plans, decision records, commits.>
+- \<Other plans, decision records, commits.>
 
 ## 6. Execution record
 

@@ -3,7 +3,7 @@ status: complete
 role: historical
 date: 2026-07-17
 last_reviewed: 2026-07-17
-superseded_by: null
+superseded_by:
 blocks_on: []
 topic: observability
 ---
@@ -203,13 +203,13 @@ After implementation:
    python -m crackerjack run --run-tests -c
    ```
 
-1. **Run performance benchmark:**
+2. **Run performance benchmark:**
 
    ```bash
    python scripts/benchmark_regex_precompilation.py
    ```
 
-1. **Verify no regressions:**
+3. **Verify no regressions:**
 
    - All tests pass
    - No new complexity issues

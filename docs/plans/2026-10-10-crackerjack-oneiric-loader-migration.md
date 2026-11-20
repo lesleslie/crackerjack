@@ -35,7 +35,7 @@ spec: docs/specs/2026-10-10-crackerjack-oneiric-loader-migration-design.md
 
 **Requirement IDs (from spec §4.5):** REQ-001, REQ-002, REQ-003, REQ-004, REQ-005, REQ-006, REQ-007.
 
----
+______________________________________________________________________
 
 ## File Structure
 
@@ -51,7 +51,7 @@ spec: docs/specs/2026-10-10-crackerjack-oneiric-loader-migration-design.md
 | `crackerjack/docs/audits/2026-09-09-crackerjack-docs-audit.md` | Modify | Resolve the env-var-prefix action item |
 | `crackerjack/docs/plans/PLAN_INDEX.md` | Modify | Add this plan + spec |
 
----
+______________________________________________________________________
 
 ## Phase 1: Schema-Validator Migration (Behavior Preservation)
 
@@ -74,7 +74,7 @@ spec: docs/specs/2026-10-10-crackerjack-oneiric-loader-migration-design.md
 - **Rollback signal**: `logger.warning("[tool.crackerjack.%s] block in pyproject.toml is not read by crackerjack. ...)` no longer appears in `crackerjack config validate` output when a real `[tool.crackerjack.jinja]` block is present (it should). Revert by reverting Task 1 + Task 2.
 - **Observability added**: Existing DEBUG-level log line `Loaded N configuration values for ...` at `loader.py:201` is retained. New WARNING line `crackerjack.settings.unknown_pyproject_subtable key=...` added at INFO so operators see it without `-v`.
 
----
+______________________________________________________________________
 
 ### Task 1: Move `*_timeout` reshape to a `model_validator(mode="before")`
 
@@ -87,6 +87,7 @@ spec: docs/specs/2026-10-10-crackerjack-oneiric-loader-migration-design.md
 **Interfaces:**
 
 - Consumes: raw input dict passed to `CrackerjackSettings(**data)` (any object whose `.endswith("_timeout")` keys are scalars).
+
 - Produces: returns the same dict with `*_timeout` scalars relocated into `data["adapter_timeouts"]` and removed from top level. Pydantic then constructs `CrackerjackSettings` from the reshaped dict.
 
 - [ ] **Step 1: Write the failing test**
@@ -224,7 +225,7 @@ git add crackerjack/config/validators.py crackerjack/config/settings.py tests/co
 git commit -m "feat(config): promote *-timeout reshape to model_validator (REQ-004)"
 ```
 
----
+______________________________________________________________________
 
 ### Task 2: Move `[tool.crackerjack.X]` validation to a `model_validator(mode="after")`
 
@@ -237,6 +238,7 @@ git commit -m "feat(config): promote *-timeout reshape to model_validator (REQ-0
 **Interfaces:**
 
 - Consumes: a constructed `CrackerjackSettings` instance (`mode="after"`), plus an optional `pyproject_path: Path | None`.
+
 - Produces: WARNING log lines for any sub-table whose value is a dict and whose key is not in `_KNOWN_PYPROJECT_SUBTABLES`. No mutation.
 
 - [ ] **Step 1: Write the failing test**
@@ -401,7 +403,7 @@ git add crackerjack/config/validators.py crackerjack/config/settings.py tests/co
 git commit -m "feat(config): promote unknown-subtable validator to model_validator (REQ-003)"
 ```
 
----
+______________________________________________________________________
 
 ## Phase 2: Oneiric Loader Wiring (The Swap)
 
@@ -424,7 +426,7 @@ git commit -m "feat(config): promote unknown-subtable validator to model_validat
 - **Rollback signal**: `logger.exception("crackerjack.config.oneiric_loader_failed_falling_back")` lines in `crackerjack config validate` output (post-Phase-2 fallback path); or a sharp rise in unit-test failures touching settings resolution. Revert via `git revert` of the Phase 2 commit.
 - **Observability added**: structured DEBUG log line `crackerjack.config.resolution path=oneiric project_name=crackerjack fields=<count>` on every loader call; WARNING line `crackerjack.config.env_alias_collision env=... key=...` if a `CRACKERJACK_*` env var collides with a Oneiric backward-compat alias (analogous to Mahavishnu's `LOG_LEVEL -> logging.level` issue at `oneiric/core/config.py:702`).
 
----
+______________________________________________________________________
 
 ### Task 3: Add `crackerjack_env_overlay` helper
 
@@ -436,6 +438,7 @@ git commit -m "feat(config): promote unknown-subtable validator to model_validat
 **Interfaces:**
 
 - Consumes: `os.environ`, a target `CrackerjackSettings` class (or its `model_fields`).
+
 - Produces: a `dict[str, Any]` overlay with `CRACKERJACK_*` env vars converted to nested-dict form via `__` delimiter, mirroring Mahavishnu's `_mahavishnu_env_overlay` at `mahavishnu/core/config.py:3209`.
 
 - [ ] **Step 1: Write the failing test**
@@ -538,7 +541,7 @@ git add crackerjack/config/loader.py tests/config/test_loader.py
 git commit -m "feat(config): add CRACKERJACK_* env-var overlay helper (REQ-006)"
 ```
 
----
+______________________________________________________________________
 
 ### Task 4: Replace `load_settings` body with Oneiric call
 
@@ -550,7 +553,8 @@ git commit -m "feat(config): add CRACKERJACK_* env-var overlay helper (REQ-006)"
 **Interfaces:**
 
 - Consumes: `settings_class` (Pydantic BaseModel subclass) only. The `settings_dir` parameter that the pre-migration loader accepted is **dropped** per Bodai pre-1.0 policy (`~/.claude/.../feedback-no-backwards-compat-pre-1.0.md`). The factory anchors `project_root=Path.cwd()` and delegates to Oneiric. All 18 known call sites already invoke `load_settings(CrackerjackSettings)` without arguments.
-- Produces: instance of `settings_class` constructed from Oneiric's resolved dict + extras-filter + ecosystem synthesis + CRACKERJACK_* env overlay.
+
+- Produces: instance of `settings_class` constructed from Oneiric's resolved dict + extras-filter + ecosystem synthesis + CRACKERJACK\_\* env overlay.
 
 - [ ] **Step 1: Add the new test that asserts the Oneiric path resolution**
 
@@ -759,9 +763,9 @@ git add crackerjack/config/loader.py tests/config/test_loader.py
 git commit -m "feat(config): route load_settings through oneiric.core.config (REQ-001, REQ-005, REQ-006)"
 ```
 
----
+______________________________________________________________________
 
-### Task 5: Override `env_prefix` on the Oneiric-backed settings to use CRACKERJACK_*
+### Task 5: Override `env_prefix` on the Oneiric-backed settings to use CRACKERJACK\_\*
 
 **Files:**
 
@@ -770,6 +774,7 @@ git commit -m "feat(config): route load_settings through oneiric.core.config (RE
 **Interfaces:**
 
 - Consumes: existing `OneiricMCPConfig` base class.
+
 - Produces: a per-MCP-config override layer that reads `CRACKERJACK_*` env vars via pydantic-settings' nested delimiter.
 
 - [ ] **Step 1: Write the failing test**
@@ -793,7 +798,7 @@ def test_env_prefix_is_crackerjack(monkeypatch) -> None:
     assert settings is not None
 ```
 
-If `log_level` isn't declared on CrackerjackSettings, swap the test to assert one of the *declared* CRACKERJACK_* env vars reaches the model (e.g. `CRACKERJACK_ENABLE_ORCHESTRATION` -> `settings.enable_orchestration`):
+If `log_level` isn't declared on CrackerjackSettings, swap the test to assert one of the *declared* CRACKERJACK\_\* env vars reaches the model (e.g. `CRACKERJACK_ENABLE_ORCHESTRATION` -> `settings.enable_orchestration`):
 
 ```python
 def test_env_prefix_crackerjack_enable_orchestration(monkeypatch) -> None:
@@ -834,6 +839,7 @@ Then re-parent the 37 settings classes onto `_CrackerjackMCPConfig`. This is the
 - [ ] **Step 4: If not feasible (Oneiric's `extra="allow"` and the rename conflict), document the no-op decision**
 
 Add to `crackerjack/docs/decisions/`:
+
 ```markdown
 # Env-var prefix decision
 
@@ -864,7 +870,7 @@ git add crackerjack/docs/decisions/<created-decision-file>.md
 git commit -m "feat(config): route CRACKERJACK_* env vars through Oneiric (REQ-006)"
 ```
 
----
+______________________________________________________________________
 
 ## Phase 3: Test Rewrite Through Public Surface
 
@@ -886,13 +892,14 @@ git commit -m "feat(config): route CRACKERJACK_* env vars through Oneiric (REQ-0
 - **Rollback signal**: regression in any of `tests/unit/{shell,managers,cli/handlers,executors}/...` test that previously passed; resolve by re-checking the public surface tests.
 - **Observability added**: a single structured log line per test run via `pytest --log-cli-level=DEBUG` exposes the new resolution path (`crackerjack.config.resolution path=oneiric ...`).
 
----
+______________________________________________________________________
 
 ### Task 6: Rewrite `tests/config/test_loader.py` to test through the public surface
 
 **Files:**
 
 - Modify: `tests/config/test_loader.py` (replace the entire file body with the version below)
+
 - Reference: `crackerjack/config/loader.py` (private helpers deleted in Task 4)
 
 - [ ] **Step 1: Read the existing `tests/config/test_loader.py` to enumerate behaviors that must survive**
@@ -1072,7 +1079,7 @@ git add tests/config/test_loader.py
 git commit -m "test(config): rewrite loader tests through public surface (REQ-002, REQ-007)"
 ```
 
----
+______________________________________________________________________
 
 ## Phase 4: Docs + Plan Index + Audit Resolution
 
@@ -1095,15 +1102,18 @@ git commit -m "test(config): rewrite loader tests through public surface (REQ-00
 - **Rollback signal**: N/A — docs-only phase; revert by reverting the commit.
 - **Observability added**: docs cross-link enables operators to find the loader's documented behavior in one place.
 
----
+______________________________________________________________________
 
 ### Task 7: Update docs and plan indices
 
 **Files:**
 
 - Modify: `crackerjack/docs/architecture/MEMORY_ARCHITECTURE.md:1277` and `:1346`
+
 - Modify: `crackerjack/docs/audits/2026-09-09-crackerjack-docs-audit.md:139`
+
 - Modify: `crackerjack/docs/plans/PLAN_INDEX.md` (insert new entry)
+
 - Modify (optional): `mahavishnu/docs/plans/PLAN_INDEX.md` (cross-repo pointer)
 
 - [ ] **Step 1: Read the current MEMORY_ARCHITECTURE context around §1277**
@@ -1169,7 +1179,7 @@ cd /Users/les/Projects/crackerjack
 git commit -m "docs(config): describe Oneiric resolver + resolve audit item (Phase 4)"
 ```
 
----
+______________________________________________________________________
 
 ## Self-Review (per writing-plans skill)
 
@@ -1208,7 +1218,7 @@ No type drift between tasks.
 
 After the four phases ship, run `python scripts/audit_orphans.py` from the crackerjack repo root and confirm the new exports (`crack_env_overlay`, `apply_ecosystem_publish_synthesis` from settings) appear in the orphan audit's whitelist. Update `crackerjack/.claude/decisions/feature-tracking/` (or equivalent) with a `{built, wired, adopted}` entry for the Oneiric loader.
 
----
+______________________________________________________________________
 
 ## Execution Handoff
 
@@ -1221,7 +1231,7 @@ Two execution options:
 
 Which approach? Either is fine; for a wired-up loader swap with 5-file blast radius, inline execution is the lighter-weight path.
 
----
+______________________________________________________________________
 
 ## Notes
 

@@ -3,7 +3,7 @@ status: complete
 role: historical
 date: 2026-07-17
 last_reviewed: 2026-07-17
-superseded_by: null
+superseded_by:
 blocks_on: []
 topic: lifecycle
 ---
@@ -234,7 +234,7 @@ ______________________________________________________________________
    - **Priority**: CRITICAL
    - **Effort**: 4 hours
 
-1. **`lsp_client.py`** (556 lines)
+2. **`lsp_client.py`** (556 lines)
 
    - LSP server pool for Zuban type checking
    - **Risk**: Connection leaks, process crashes, resource exhaustion
@@ -242,7 +242,7 @@ ______________________________________________________________________
    - **Priority**: CRITICAL
    - **Effort**: 4 hours
 
-1. **`vector_store.py`** (541 lines)
+3. **`vector_store.py`** (541 lines)
 
    - Semantic search and code intelligence
    - **Risk**: Database corruption, search failures, data loss
@@ -250,7 +250,7 @@ ______________________________________________________________________
    - **Priority**: HIGH
    - **Effort**: 3 hours
 
-1. **`status_authentication.py`** (482 lines)
+4. **`status_authentication.py`** (482 lines)
 
    - Status API authentication
    - **Risk**: Unauthorized access, authentication bypass
@@ -343,10 +343,10 @@ ______________________________________________________________________
 **Files > 400 lines**:
 
 1. **`git.py`** (412 lines) - Extract git command builders
-1. **`input_validator.py`** (729 lines) - Split into validator modules
-1. **`predictive_analytics.py`** (475 lines) - Separate predictors
-1. **`memory_optimizer.py`** (416 lines) - Extract classes to files
-1. **\`intelligent_commit.py**\*\* - Large, needs refactoring
+2. **`input_validator.py`** (729 lines) - Split into validator modules
+3. **`predictive_analytics.py`** (475 lines) - Separate predictors
+4. **`memory_optimizer.py`** (416 lines) - Extract classes to files
+5. **\`intelligent_commit.py**\*\* - Large, needs refactoring
 
 ### ⚠️ MEDIUM: Dead Code & TODOs
 
@@ -516,23 +516,23 @@ ______________________________________________________________________
 ### Immediate Actions (This Week)
 
 1. Delete duplicate AnomalyDetector and PatternDetector files
-1. Add tests for metrics.py, lsp_client.py, vector_store.py
-1. Fix direct subprocess.Popen in server_manager.py
-1. Fix 36 failing git tests
+2. Add tests for metrics.py, lsp_client.py, vector_store.py
+3. Fix direct subprocess.Popen in server_manager.py
+4. Fix 36 failing git tests
 
 ### Short-Term (Next Sprint)
 
 5. Replace generic exception handling with specific types
-1. Refactor large files (input_validator.py, git.py)
-1. Consolidate pattern utilities
-1. Extract magic numbers to constants
+6. Refactor large files (input_validator.py, git.py)
+7. Consolidate pattern utilities
+8. Extract magic numbers to constants
 
 ### Long-Term (Next Quarter)
 
-9. Achieve 80% test coverage target
-1. Add docstrings to all public APIs
-1. Implement or file TODO items
-1. Refactor global singleton to DI
+09. Achieve 80% test coverage target
+10. Add docstrings to all public APIs
+11. Implement or file TODO items
+12. Refactor global singleton to DI
 
 ______________________________________________________________________
 

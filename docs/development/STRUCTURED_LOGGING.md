@@ -3,7 +3,7 @@ status: active
 role: canonical
 date: 2026-07-17
 last_reviewed: 2026-07-17
-superseded_by: null
+superseded_by:
 blocks_on: []
 topic: architecture
 ---
@@ -113,9 +113,9 @@ The structured logs output to stderr follow this format:
 
 1. **For AI Agent Integration**: Use `--ai-fix` and `--ai-debug` flags together for maximum visibility into the AI decision-making process.
 
-1. **For Troubleshooting**: Enable `--ai-debug` to get detailed structured logs about the workflow execution.
+2. **For Troubleshooting**: Enable `--ai-debug` to get detailed structured logs about the workflow execution.
 
-1. **For Monitoring**: The JSON output to stderr can be easily consumed by monitoring and analysis tools.
+3. **For Monitoring**: The JSON output to stderr can be easily consumed by monitoring and analysis tools.
 
 ## Advanced Configuration
 

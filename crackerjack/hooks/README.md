@@ -21,7 +21,7 @@ Crackerjack uses a two-stage hook execution model for optimal performance:
    - Basic static analysis
    - **Retry Policy**: Automatically retry once if failed
 
-1. **Comprehensive Hooks** (~30s) - Thorough analysis without retry
+2. **Comprehensive Hooks** (~30s) - Thorough analysis without retry
 
    - Type checking (ty)
    - Security scanning (Bandit)
@@ -405,16 +405,16 @@ Hooks are executed by specialized executors (see [Executors](../executors/README
 
 ## Best Practices
 
-1. **Use Two-Stage Model** - Separate fast and comprehensive hooks for optimal workflow
-1. **Enable LSP** - Use LSP integration for 10-20x faster type checking
-1. **Retry Formatters** - Enable auto-retry for formatting hooks only
-1. **Collect All Issues** - Don't fail fast in comprehensive stage
-1. **Parallel Execution** - Enable parallel execution for independent hooks
-1. **Set Appropriate Timeouts** - Configure per-hook timeouts based on codebase size
-1. **Use Incremental Execution** - Target only modified files when possible
-1. **Security Levels** - Assign appropriate security levels for prioritization
-1. **Cache Results** - Use CachedHookExecutor for repeated runs
-1. **Monitor Performance** - Track hook execution times and optimize slow hooks
+01. **Use Two-Stage Model** - Separate fast and comprehensive hooks for optimal workflow
+02. **Enable LSP** - Use LSP integration for 10-20x faster type checking
+03. **Retry Formatters** - Enable auto-retry for formatting hooks only
+04. **Collect All Issues** - Don't fail fast in comprehensive stage
+05. **Parallel Execution** - Enable parallel execution for independent hooks
+06. **Set Appropriate Timeouts** - Configure per-hook timeouts based on codebase size
+07. **Use Incremental Execution** - Target only modified files when possible
+08. **Security Levels** - Assign appropriate security levels for prioritization
+09. **Cache Results** - Use CachedHookExecutor for repeated runs
+10. **Monitor Performance** - Track hook execution times and optimize slow hooks
 
 ## Performance Optimization
 

@@ -8,7 +8,7 @@ role: implementation
 topic: architecture
 date: 2026-10-11
 last_reviewed: 2026-11-14
-superseded_by: null
+superseded_by:
 blocks_on: []
 ---
 
@@ -39,15 +39,15 @@ blocks_on: []
 
 ### Failure Conditions (verifier-only)
 
-1. `crackerjack/adapters/lsp/` directory does not exist after the change.
-2. `git grep -nE "zuban|skylos" -- ':!*.bak' ':!*.archive' ':!CHANGELOG.md'` returns zero matches in `crackerjack/` source (CHANGELOG historical entries excluded; same for archive and bak files).
-3. `uv run python -c "import crackerjack.adapters.lsp"` raises `ModuleNotFoundError`.
-4. `crackerjack/adapters/lsp/_base.py`, `_client.py`, `_manager.py`, `__init__.py`, `skylos.py`, `zuban.py` are all deleted.
-5. `crackerjack/config/settings.py` has no `enable_zuban`, `zuban_lsp*`, `zuban_timeout`, `skylos_timeout` fields; no `ZubanLSPSettings` class.
-6. `crackerjack/config/hooks.py` has no zuban or skylos `Hook` entries; no `enable_zuban` gating logic.
-7. `crackerjack/config/tool_commands.py` has no `_build_skylos_command` and no `_preferred_binary_command("zuban", ...)` call.
-8. `crackerjack/executors/tool_proxy.py` has no `_create_zuban_adapter` or `_create_skylos_adapter` methods.
-9. `pyproject.toml` no longer declares `zuban>=0.10.0`.
+01. `crackerjack/adapters/lsp/` directory does not exist after the change.
+02. `git grep -nE "zuban|skylos" -- ':!*.bak' ':!*.archive' ':!CHANGELOG.md'` returns zero matches in `crackerjack/` source (CHANGELOG historical entries excluded; same for archive and bak files).
+03. `uv run python -c "import crackerjack.adapters.lsp"` raises `ModuleNotFoundError`.
+04. `crackerjack/adapters/lsp/_base.py`, `_client.py`, `_manager.py`, `__init__.py`, `skylos.py`, `zuban.py` are all deleted.
+05. `crackerjack/config/settings.py` has no `enable_zuban`, `zuban_lsp*`, `zuban_timeout`, `skylos_timeout` fields; no `ZubanLSPSettings` class.
+06. `crackerjack/config/hooks.py` has no zuban or skylos `Hook` entries; no `enable_zuban` gating logic.
+07. `crackerjack/config/tool_commands.py` has no `_build_skylos_command` and no `_preferred_binary_command("zuban", ...)` call.
+08. `crackerjack/executors/tool_proxy.py` has no `_create_zuban_adapter` or `_create_skylos_adapter` methods.
+09. `pyproject.toml` no longer declares `zuban>=0.10.0`.
 10. `settings/crackerjack.yaml` and `.crackerjack.example.yaml` have no `zuban_*` or `skylos_*` keys.
 11. `pytest tests/` exits 0 (after test cleanup).
 12. `crackerjack run` exits 0 on `crackerjack/` itself (the canonical self-test).
@@ -78,6 +78,7 @@ crackerjack/adapters/lsp/
 ### Settings surface (verified)
 
 `crackerjack/config/settings.py`:
+
 - Line 27: `enable_zuban: bool = False`
 - Line 232: `zuban_lsp_timeout: float = 120.0`
 - Line 233: `skylos_timeout: int = 900`
@@ -87,6 +88,7 @@ crackerjack/adapters/lsp/
 - Line 512: `zuban_lsp: ZubanLSPSettings = ZubanLSPSettings()`
 
 `crackerjack/config/hooks.py`:
+
 - Line 273: comment "Primary type checker (replaced zuban). Active by default"
 - Line 293: `name="zuban"` Hook entry
 - Line 300: "Legacy type checker (opt-in via enable_zuban flag)"
@@ -96,24 +98,29 @@ crackerjack/adapters/lsp/
 - Line 493: comment "Primary ty type checking (default-on, replaced zuban)"
 
 `crackerjack/config/tool_commands.py`:
+
 - Line 65-72: `_build_skylos_command(package_name: str) -> list[str]`
 - Line 151-153: `"skylos": _build_skylos_command(...)` and `"zuban": _preferred_binary_command("zuban", ...)`
 
 `pyproject.toml`:
+
 - Line 81: `"zuban>=0.10.0"` (in `[project].dependencies` or similar — verify exact section)
 - Line 134: comment "pyrefly and ty are alternatives to zuban; install one to try them"
 - Line 439-454: `zuban_lsp_*` and `zuban_timeout` settings (test defaults — verify section)
 
 `settings/crackerjack.yaml`:
+
 - Line 197-201: `zuban_enabled`, `zuban_auto_start`, `zuban_port`, `zuban_mode`, `zuban_timeout`
 - Line 246-249: `zuban_lsp_timeout`, `skylos_timeout`, `zuban_timeout`
 
 `.crackerjack.example.yaml`:
+
 - Line 44: `- skylos` in some list
 
 ### Test surface (verified by grep, ~30+ files)
 
 **Pure deletion (no edits needed):**
+
 - `tests/unit/adapters/test_zuban_adapter.py`
 - `tests/unit/adapters/test_skylos_adapter.py`
 - `tests/adapters/test_zuban_adapter.py`
@@ -125,6 +132,7 @@ crackerjack/adapters/lsp/
 - `tests/test_lsp_aware_hook_executor.py` (verify it's zuban/skylos-only)
 
 **Edit to remove zuban/skylos references (names, mocks, sys.modules keys):**
+
 - `tests/executors/test_tool_proxy.py` (heavy `crackerjack.adapters.lsp.{zuban,skylos,_base}` mocking at lines 752, 766, 767, 807, 808, 820, 844, 845)
 - `tests/test_integration_new_hooks.py`
 - `tests/test_qa_tool_adapters.py`
@@ -167,6 +175,7 @@ crackerjack/adapters/lsp/
 ### Type-checker tool classification
 
 `_tool_adapter_base.py:566`:
+
 ```python
 if any(
     x in tool_lower
@@ -184,12 +193,14 @@ Six phases, ordered lowest-level-first so the test suite breaks loudly the momen
 ### Phase 1 — Drop the runtime dep + settings fields
 
 **Files:**
+
 - `pyproject.toml` — remove `"zuban>=0.10.0"` from the deps section; update the comment on line 134
 - `crackerjack/config/settings.py` — drop `enable_zuban`, `zuban_lsp_timeout`, `skylos_timeout`, `zuban_timeout`, the `ZubanLSPSettings` class, and the `"skylos": "fast-worker"` mapping
 - `settings/crackerjack.yaml` — drop the `zuban_*` and `skylos_*` keys
 - `.crackerjack.example.yaml` — drop the `- skylos` entry
 
 **Integration Contract:**
+
 - Triggered from: this plan (manual edit, no external trigger)
 - Returns to / updates: `pyproject.toml`, `crackerjack/config/settings.py`, `settings/crackerjack.yaml`, `.crackerjack.example.yaml`
 - Demonstrable by: `git grep -nE "zuban|skylos" -- pyproject.toml crackerjack/config/settings.py settings/ .crackerjack.example.yaml` returns zero matches (excluding the `zuban_timeout` line and any "zuban" mention inside `ZubanLSPSettings` that survived the deletion)
@@ -199,10 +210,12 @@ Six phases, ordered lowest-level-first so the test suite breaks loudly the momen
 ### Phase 2 — Drop the hook + CLI command surface
 
 **Files:**
+
 - `crackerjack/config/hooks.py` — drop the zuban `Hook` entry (line 293) and the skylos `Hook` entry (line 347); drop the `if getattr(settings.hooks, "enable_zuban", False):` block (lines 469-477); drop the "replaced zuban" comments where they reference zuban specifically (keep the "ty is the default" intent)
 - `crackerjack/config/tool_commands.py` — drop `_build_skylos_command` and the `"skylos"` / `"zuban"` entries in the command map
 
 **Integration Contract:**
+
 - Triggered from: Phase 1 complete
 - Returns to / updates: `crackerjack/config/hooks.py`, `crackerjack/config/tool_commands.py`
 - Demonstrable by: `git grep -nE "zuban|skylos" -- crackerjack/config/hooks.py crackerjack/config/tool_commands.py` returns zero matches; `crackerjack hooks --list` shows the remaining hooks intact; `crackerjack run --help` still parses
@@ -212,11 +225,13 @@ Six phases, ordered lowest-level-first so the test suite breaks loudly the momen
 ### Phase 3 — Drop the tool-proxy factories and the LSP package
 
 **Files:**
+
 - `crackerjack/executors/tool_proxy.py` — drop `_create_zuban_adapter()` (lines 299-310) and `_create_skylos_adapter()` (lines 312-323) and any caller references (verified zero callers in the prior assessment, but re-grep to be safe)
 - `crackerjack/adapters/lsp/` — delete the entire directory: `zuban.py`, `skylos.py`, `_client.py`, `_manager.py`, `_base.py`, `__init__.py`, and the directory itself
 - `crackerjack/executors/hook_executor.py` — verify no `LSKYLOS_LSP` / `LSP_AWARE_HOOK` references survive the package deletion (the prior assessment flagged this file but didn't read it; confirm during execution)
 
 **Integration Contract:**
+
 - Triggered from: Phase 2 complete
 - Returns to / updates: `crackerjack/executors/tool_proxy.py`, deletes `crackerjack/adapters/lsp/` entirely
 - Demonstrable by: `crackerjack/adapters/lsp/` does not exist; `uv run python -c "import crackerjack.adapters.lsp"` raises `ModuleNotFoundError`; `git grep -nE "adapters\.lsp" -- crackerjack/` returns zero matches
@@ -226,15 +241,18 @@ Six phases, ordered lowest-level-first so the test suite breaks loudly the momen
 ### Phase 4 — Test cleanup
 
 **Delete:**
+
 - All 8-9 dedicated test files listed in "Test surface / Pure deletion" above
 - `tests/test_lsp_aware_hook_executor.py` if confirmed zuban/skylos-only (otherwise just edit)
 
 **Edit to remove references:**
+
 - All 30+ files in "Test surface / Edit" list
 - Specifically: in `tests/executors/test_tool_proxy.py`, remove the `patch.dict("sys.modules", {"crackerjack.adapters.lsp.zuban": ...})` and the `monkeypatch.setitem(_sys.modules, ...)` calls
 - In `_tool_adapter_base.py:566`, remove `"zuban"` from the type-checker name set (keep `"type", "pyright", "mypy", "pyrefly", "ty"`)
 
 **Integration Contract:**
+
 - Triggered from: Phase 3 complete
 - Returns to / updates: `tests/**`, `crackerjack/adapters/_tool_adapter_base.py`
 - Demonstrable by: `pytest tests/` exits 0; `git grep -nE "zuban|skylos" -- tests/` returns zero matches
@@ -244,11 +262,13 @@ Six phases, ordered lowest-level-first so the test suite breaks loudly the momen
 ### Phase 5 — Docs cleanup
 
 **Files:**
+
 - `README.md` — remove zuban/skylos from any "supported tools" or "type checkers" lists
 - `CHANGELOG.md` — leave historical entries intact; add a new entry under the unreleased section noting "Removed: zuban and skylos LSP adapters; `crackerjack/adapters/lsp/` package deleted"
 - Any other top-level docs that mention zuban/skylos as currently-supported tools (audit via `git grep -l zuban -- docs/`)
 
 **Integration Contract:**
+
 - Triggered from: Phase 4 complete
 - Returns to / updates: `README.md`, `CHANGELOG.md`, possibly other top-level docs
 - Demonstrable by: `git grep -nE "zuban|skylos" -- README.md CHANGELOG.md` returns only historical/changelog references (acceptable); `docs/` returns no currently-active references
@@ -263,6 +283,7 @@ Six phases, ordered lowest-level-first so the test suite breaks loudly the momen
 - `git grep -nE "zuban|skylos" -- ':!*.bak' ':!*.archive' ':!CHANGELOG.md' ':!*.git' ':!node_modules'` → only matches in CHANGELOG.md (historical) and any `uv.lock` (dep lockfile will get regenerated by `uv sync`)
 
 **Integration Contract:**
+
 - Triggered from: Phase 5 complete
 - Returns to / updates: nothing (validation only)
 - Demonstrable by: all of the above checks pass

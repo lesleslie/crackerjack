@@ -2287,7 +2287,7 @@ ______________________________________________________________________
 
 - **CRITICAL:** Fixed `--ai-fix` flag completely broken due to two separate bugs:
   1. Parameter passing bug in `_setup_debug_and_verbose_flags()` - was hardcoding `ai_fix=False` instead of preserving user's flag value
-  1. Workflow routing bug in three orchestrator functions - weren't checking `options.ai_agent` before routing to AI workflow
+  2. Workflow routing bug in three orchestrator functions - weren't checking `options.ai_agent` before routing to AI workflow
 - Added comprehensive unit tests for parameter passing fix (4 tests, all passing)
 - Verified complete data flow: `--ai-fix` → parameter preservation → `options.ai_agent` property → workflow routing
 - All three workflow paths now correctly delegate to AI agent when `--ai-fix` is enabled:
@@ -3118,10 +3118,10 @@ For detailed commit history, use: `git log --oneline --since="2025-08-01"`
 When updating this changelog:
 
 1. Follow [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) format
-1. Group changes under Added, Changed, Deprecated, Removed, Fixed, Security
-1. Include version numbers and dates for all releases
-1. Link to relevant issues and pull requests when applicable
-1. Focus on user-facing changes rather than internal refactoring details
+2. Group changes under Added, Changed, Deprecated, Removed, Fixed, Security
+3. Include version numbers and dates for all releases
+4. Link to relevant issues and pull requests when applicable
+5. Focus on user-facing changes rather than internal refactoring details
 
 ## Version Links
 

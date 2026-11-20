@@ -79,8 +79,7 @@ though sync also writes a `.gitignore.bak.<timestamp>` backup).
   with a `chore:` commit they didn't write breaks `git blame` hygiene.
   Let operator decide whether to commit, amend-into-bump, or stash.
 - **Auto-push** — same reasoning.
-- **Auto-fix tracked-but-should-be-untracked files** — `git rm
-  --cached` is a destructive operation that requires human judgment.
+- **Auto-fix tracked-but-should-be-untracked files** — `git rm --cached` is a destructive operation that requires human judgment.
 
 ## Verification
 

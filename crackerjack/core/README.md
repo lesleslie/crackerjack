@@ -346,12 +346,12 @@ timeout = settings.workflow_timeout
 ## Best Practices
 
 1. **Use Protocol-Based DI**: Always inject dependencies via protocols
-1. **Coordinate, Don't Implement**: Coordinators orchestrate, services implement
-1. **Track Performance**: Use `PerformanceMonitor` for execution metrics
-1. **Manage Lifecycle**: Register resources for automatic cleanup
-1. **Handle Timeouts**: Use `TimeoutManager` for consistent timeout handling
-1. **Log Structured Data**: Use structured logging with context
-1. **Fail Gracefully**: Coordinators should handle errors and report clearly
+2. **Coordinate, Don't Implement**: Coordinators orchestrate, services implement
+3. **Track Performance**: Use `PerformanceMonitor` for execution metrics
+4. **Manage Lifecycle**: Register resources for automatic cleanup
+5. **Handle Timeouts**: Use `TimeoutManager` for consistent timeout handling
+6. **Log Structured Data**: Use structured logging with context
+7. **Fail Gracefully**: Coordinators should handle errors and report clearly
 
 ## Compliance Status
 

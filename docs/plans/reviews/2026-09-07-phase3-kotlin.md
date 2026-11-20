@@ -184,7 +184,7 @@ The Phase 2 Swift equivalent had a similar concern (`Package.swift` only, no man
 
    Then either remove `version = "0.1.0"` from `build.gradle.kts` (recommended — exercises Tier 1 file-probe) or keep both and document that Tier 1 wins.
 
-1. **Document in the plan that `gradle.properties` is required for Kotlin bump.** Add a check: if `gradle.properties` is missing AND `build.gradle.kts` has no literal `version`, fail with a clear message pointing the user to add `version=X.Y.Z` to `gradle.properties`. The current `FileNotFoundError` message is correct but un-actionable ("file not found" doesn't tell the operator what to do).
+2. **Document in the plan that `gradle.properties` is required for Kotlin bump.** Add a check: if `gradle.properties` is missing AND `build.gradle.kts` has no literal `version`, fail with a clear message pointing the user to add `version=X.Y.Z` to `gradle.properties`. The current `FileNotFoundError` message is correct but un-actionable ("file not found" doesn't tell the operator what to do).
 
 Recommend (1) for fixture + (2) for production behavior.
 
@@ -253,7 +253,7 @@ This is technically a spec defect (spec line 306 has the same order), but the pl
 
 1. **Reorder probes** to `version`, `projectVersion`, `pluginVersion` (most-specific first). `version=` is the dominant convention; the other two are escape hatches for non-standard project templates.
 
-1. **Document the Android risk explicitly** in `GradlePropertiesVersionSource.read()` docstring and let users opt out via `[tool.crackerjack.kotlin] plugin_version_is_project_version = false` (default).
+2. **Document the Android risk explicitly** in `GradlePropertiesVersionSource.read()` docstring and let users opt out via `[tool.crackerjack.kotlin] plugin_version_is_project_version = false` (default).
 
 The Phase 2 Swift lens caught 16 findings; a spec defect that the plan implements blindly is exactly what that reviewer process is for.
 
@@ -505,8 +505,8 @@ The **MEDIUM findings** (#6–#11) are polish items that should land before Phas
 **Recommendation:**
 
 1. **Fix Findings #1, #4, #5 in the plan before execution.** These are 30 LOC each and prevent silent production failures.
-1. **Fix Finding #3 (libs.versions.toml) in the plan.** Modern Kotlin projects default to version catalogs; this is a 15-LOC addition.
-1. **File Findings #6 (probe order), #7 (KMP) as spec defects requiring amendment.** Phase 2 Swift reviewer caught similar issues; Phase 3 should not regress.
-1. **Findings #8–#16 are LOW; can ship as Phase 3.5 follow-ups.**
+2. **Fix Finding #3 (libs.versions.toml) in the plan.** Modern Kotlin projects default to version catalogs; this is a 15-LOC addition.
+3. **File Findings #6 (probe order), #7 (KMP) as spec defects requiring amendment.** Phase 2 Swift reviewer caught similar issues; Phase 3 should not regress.
+4. **Findings #8–#16 are LOW; can ship as Phase 3.5 follow-ups.**
 
 Plan is otherwise approve-with-notes. The Kotlin/Gradle CLI reality check (BLOCKER B1 equivalent from Phase 2) passes — no false flag names, no invalid Gradle CLI flags, no invented task names.

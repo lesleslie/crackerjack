@@ -3,7 +3,7 @@ status: complete
 role: historical
 date: 2026-07-17
 last_reviewed: 2026-07-17
-superseded_by: null
+superseded_by:
 blocks_on: []
 topic: lifecycle
 ---
@@ -50,7 +50,7 @@ Details for failing hooks:
    - macOS has a limit on command line argument length (~262,144 bytes)
    - Passing 26,254 file paths as arguments exceeded this limit
 
-1. **Missing Standard Excludes**:
+2. **Missing Standard Excludes**:
 
    - `_get_target_files()` used `root.rglob("*.py")` to collect all Python files
    - Applied explicit `exclude_patterns` from config
@@ -64,7 +64,7 @@ Details for failing hooks:
      - `dist`, `build`, `*.egg-info` (build artifacts)
      - `tests` (test directories)
 
-1. **Why Crackerjack Worked**:
+3. **Why Crackerjack Worked**:
 
    - Crackerjack has explicit `exclude_patterns` in its hook configurations
    - These patterns happened to exclude most problematic directories
@@ -175,13 +175,13 @@ async def _get_target_files(
    - Checked via `any(excluded in path.parts for excluded in standard_excludes)`
    - Applied BEFORE checking config patterns
 
-1. **Conditional Tests Exclusion** (lines 359-363):
+2. **Conditional Tests Exclusion** (lines 359-363):
 
    - Tests directory excluded **only for comprehensive hooks**
    - Fast hooks (formatters, linters) still check test files
    - Uses `cfg.is_comprehensive_stage` to determine hook type
 
-1. **Early Return** (line 368-370):
+3. **Early Return** (line 368-370):
 
    - Skip files immediately if they contain excluded directory components
    - Prevents wasting time on explicit pattern matching
@@ -360,10 +360,10 @@ Existing unit tests continue to pass:
 This is the **fifth and final fix** in the issue count display and file handling system:
 
 1. ✅ **Display Fallback Bug** (../implementation/FINAL_IMPLEMENTATION_SUMMARY.md): Fixed `len(issues_found)` fallback in Rich table display
-1. ✅ **Emoji Panel Width** (../implementation/FINAL_IMPLEMENTATION_SUMMARY.md): Changed from ⚠️ to "!" for terminal compatibility
-1. ✅ **Error Details Display** (../implementation/ERROR_DETAILS_DISPLAY_FIX.md): Added traceback to `details` field for better debugging
-1. ✅ **Summary Total Calculation** (../implementation/ISSUE_COUNT_SUMMARY_TOTAL_FIX.md): Fixed total issue count to exclude config errors
-1. ✅ **Argument List Too Long** (THIS FIX): Added standard excludes to prevent system limit errors
+2. ✅ **Emoji Panel Width** (../implementation/FINAL_IMPLEMENTATION_SUMMARY.md): Changed from ⚠️ to "!" for terminal compatibility
+3. ✅ **Error Details Display** (../implementation/ERROR_DETAILS_DISPLAY_FIX.md): Added traceback to `details` field for better debugging
+4. ✅ **Summary Total Calculation** (../implementation/ISSUE_COUNT_SUMMARY_TOTAL_FIX.md): Fixed total issue count to exclude config errors
+5. ✅ **Argument List Too Long** (THIS FIX): Added standard excludes to prevent system limit errors
 
 ## Summary
 

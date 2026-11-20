@@ -292,7 +292,7 @@ classes.
 | Risk | Likelihood | Mitigation |
 |---|---|---|
 | Oneiric unavailable during import (test envs without the dep) | Low | Mirror Mahavishnu's `try/except ... logger.exception(...); fall back to defaults + env-var-only` pattern at `mahavishnu/core/config.py:3192-3199` |
-| Backward-compat alias swallows CRACKERJACK_* env vars (Mahavishnu hit `LOG_LEVEL → logging.level` at `oneiric/core/config.py:702`) | Medium | Audit `oneiric.core.config` backward-compat aliases before merging; explicitly apply CRACKERJACK_* overlay AFTER Oneiric parsing per §5.2 |
+| Backward-compat alias swallows CRACKERJACK\_\* env vars (Mahavishnu hit `LOG_LEVEL → logging.level` at `oneiric/core/config.py:702`) | Medium | Audit `oneiric.core.config` backward-compat aliases before merging; explicitly apply CRACKERJACK\_\* overlay AFTER Oneiric parsing per §5.2 |
 | Private-symbol tests break (13 imports in `tests/config/test_loader.py:7-21`) | High | Rewrite to test through public surface (`load_settings`) and model validators; preserve count of behavior-coverage tests |
 | `__test__ = False` flag on `TestSettings` survives | Low | Verify in plan's first task |
 | Settings classes use `extra="allow"` shape that Oneiric's extras-filter strips | Medium | Audit each of the 37 settings classes for declared top-level vs nested fields; reject any field declared in `CrackerjackSettings` that isn't delivered by Oneiric |
@@ -301,6 +301,7 @@ classes.
 ## 9. Decision Rule (cut-off)
 
 The migration is "done enough" when:
+
 - All call sites compile and run on `load_settings` (resolution parity),
 - Tests in `tests/config/test_loader.py` are rewritten to test through the public surface with behavior parity (or strictly more coverage),
 - The 4 bespoke behaviors fire (env overlay, ecosystem synthesis, timeout reshape, sub-table validator),

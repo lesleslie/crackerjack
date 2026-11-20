@@ -20,7 +20,7 @@ ______________________________________________________________________
 The audit found evidence of **two large refactors that the docs never picked up**:
 
 1. **The 2026-08-06 AI-fix subsystem removal** — 12-agent AI-fix chain was deleted; `AI_AGENT=1` semantics changed; `crackerjack.agents.*` reduced to `base.py`; skill-tracking pipeline truncated to channel-restricted calls. ~9 historical remediation/audit docs still describe the deleted surface in detail.
-1. **The 2026-09-04 stub-activation** — Many previously-stubbed adapters and CLI subcommands began real registration. Web adapter is the cleanest Phase 4 example; Swift/Kotlin are already done. None of this is documented in any user-facing doc except `CHANGELOG.md`.
+2. **The 2026-09-04 stub-activation** — Many previously-stubbed adapters and CLI subcommands began real registration. Web adapter is the cleanest Phase 4 example; Swift/Kotlin are already done. None of this is documented in any user-facing doc except `CHANGELOG.md`.
 
 Frontmatter rot is a *separate* infrastructure issue that predates both refactors and silently disables every doc-validation gate in the project.
 

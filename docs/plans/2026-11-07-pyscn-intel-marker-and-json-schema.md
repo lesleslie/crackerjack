@@ -8,7 +8,7 @@ role: implementation
 topic: dependency-management
 date: 2026-11-07
 last_reviewed: 2026-11-07
-superseded_by: null
+superseded_by:
 blocks_on: []
 ---
 
@@ -179,8 +179,7 @@ of `ParsingError`) marks that case, and the hook executor returns it as an
 issue so the gate fails and names the cause.
 
 Failing on every parse error would have been the blunt version, and it would
-have regressed the text path: `tests/test_hook_executor.py::
-test_pyscn_dispatched_through_reporting_tools` exists because the failure
+have regressed the text path: `tests/test_hook_executor.py:: test_pyscn_dispatched_through_reporting_tools` exists because the failure
 panel once showed 18 lines of cobra help text instead of 1 real finding, and
 that path is still worth protecting.
 

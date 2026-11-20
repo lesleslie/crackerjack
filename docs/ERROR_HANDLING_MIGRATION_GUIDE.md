@@ -3,7 +3,7 @@ status: complete
 role: historical
 date: 2026-07-17
 last_reviewed: 2026-07-17
-superseded_by: null
+superseded_by:
 blocks_on: []
 topic: error-handling
 ---
@@ -42,10 +42,10 @@ except Exception as e:
 **Key Requirements**:
 
 1. Use `log_exception()` or `logger.exception()` for full stack trace
-1. Include meaningful context (what, where, why)
-1. Never use console.print only (lost in headless mode)
-1. Re-raise or return appropriate error value
-1. Preserve original exception with `from e` if converting
+2. Include meaningful context (what, where, why)
+3. Never use console.print only (lost in headless mode)
+4. Re-raise or return appropriate error value
+5. Preserve original exception with `from e` if converting
 
 ______________________________________________________________________
 
@@ -340,16 +340,16 @@ ______________________________________________________________________
 ### Immediate Benefits
 
 1. **Debuggability**: Full context and stack traces for troubleshooting
-1. **Observability**: Persistent logs in headless CI/CD environments
-1. **Consistency**: Predictable error handling patterns across codebase
-1. **Maintainability**: Easier onboarding for new developers
+2. **Observability**: Persistent logs in headless CI/CD environments
+3. **Consistency**: Predictable error handling patterns across codebase
+4. **Maintainability**: Easier onboarding for new developers
 
 ### Long-Term Benefits
 
 1. **Reduced Debugging Time**: Rich context reduces investigation time
-1. **Better Error Analytics**: Structured logs enable error aggregation
-1. **Improved Reliability**: No silent failures, all errors logged
-1. **Production Readiness**: Professional-grade error handling
+2. **Better Error Analytics**: Structured logs enable error aggregation
+3. **Improved Reliability**: No silent failures, all errors logged
+4. **Production Readiness**: Professional-grade error handling
 
 ______________________________________________________________________
 
@@ -454,19 +454,19 @@ ______________________________________________________________________
    - Silent failures cost
    - Real-world incident examples
 
-1. **The Standard Pattern** (15 min)
+2. **The Standard Pattern** (15 min)
 
    - Core requirements
    - Code examples
    - Anti-patterns to avoid
 
-1. **Hands-On Migration** (25 min)
+3. **Hands-On Migration** (25 min)
 
    - Select 3 files from Phase 1
    - Apply pattern as group
    - Code review and discussion
 
-1. **Q&A** (10 min)
+4. **Q&A** (10 min)
 
 ______________________________________________________________________
 
@@ -479,9 +479,9 @@ The error handling pattern migration is a **systematic quality improvement** tha
 **Next Steps**:
 
 1. Get team approval on migration strategy
-1. Schedule Phase 1 migration sprint
-1. Create pull request template for error handling changes
-1. Begin with high-priority services
+2. Schedule Phase 1 migration sprint
+3. Create pull request template for error handling changes
+4. Begin with high-priority services
 
 ______________________________________________________________________
 

@@ -3,7 +3,7 @@ status: active
 role: canonical
 date: 2026-07-17
 last_reviewed: 2026-07-17
-superseded_by: null
+superseded_by:
 blocks_on: []
 topic: architecture
 ---
@@ -953,9 +953,9 @@ ______________________________________________________________________
 ### Recommended Integration Architecture
 
 1. **Skills System**: Track skill invocations with existing `SkillMetricsTracker` (✅ complete)
-1. **Oneiric Workflows**: Emit events via `WorkflowEventTracker` (⭐ new)
-1. **Correlation**: Join via `SkillsWorkflowCorrelator` by session_id (⭐ new)
-1. **Storage**: Separate JSON files, correlated on-demand (privacy-first)
+2. **Oneiric Workflows**: Emit events via `WorkflowEventTracker` (⭐ new)
+3. **Correlation**: Join via `SkillsWorkflowCorrelator` by session_id (⭐ new)
+4. **Storage**: Separate JSON files, correlated on-demand (privacy-first)
 
 ### Key Principles
 
@@ -968,9 +968,9 @@ ______________________________________________________________________
 ### Implementation Priority
 
 1. **Phase 1**: Skill metrics tracking (✅ complete)
-1. **Phase 2**: Oneiric workflow event tracking (⭐ implement next)
-1. **Phase 3**: Correlation service (⭐ implement next)
-1. **Phase 4**: SessionCoordinator integration (⭐ final step)
+2. **Phase 2**: Oneiric workflow event tracking (⭐ implement next)
+3. **Phase 3**: Correlation service (⭐ implement next)
+4. **Phase 4**: SessionCoordinator integration (⭐ final step)
 
 ### Files to Create/Modify
 
@@ -993,10 +993,10 @@ ______________________________________________________________________
 ## Next Steps
 
 1. **Review this architecture** and confirm alignment with your goals
-1. **Implement Phase 2** (workflow event tracking) in `oneiric_workflow.py`
-1. **Implement Phase 3** (correlation service) in `skills/correlation.py`
-1. **Integrate Phase 4** in `SessionCoordinator` for end-to-end tracking
-1. **Test correlation** with sample skill invocations and workflow runs
-1. **Generate reports** to validate data quality and insights
+2. **Implement Phase 2** (workflow event tracking) in `oneiric_workflow.py`
+3. **Implement Phase 3** (correlation service) in `skills/correlation.py`
+4. **Integrate Phase 4** in `SessionCoordinator` for end-to-end tracking
+5. **Test correlation** with sample skill invocations and workflow runs
+6. **Generate reports** to validate data quality and insights
 
 This architecture maintains clean separation between interactive skills and automated workflows while enabling powerful cross-system analytics through session-based correlation.

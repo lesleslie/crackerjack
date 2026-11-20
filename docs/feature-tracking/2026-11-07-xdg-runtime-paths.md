@@ -4,7 +4,7 @@ role: lifecycle
 topic: testing-infrastructure
 date: 2026-11-07
 last_reviewed: 2026-11-07
-superseded_by: null
+superseded_by:
 blocks_on: []
 ---
 
@@ -93,8 +93,7 @@ use, and a migration counter would have to exist first.
 
 - **Log:** a `logger.info` per successful migration (file or directory
   name, no absolute path) and a `logger.warning` per failure.
-- **Query:** the resolved paths are visible through `crackerjack
-  run-state show`, which prints the worktree, and through the
+- **Query:** the resolved paths are visible through `crackerjack run-state show`, which prints the worktree, and through the
   `storage_path=` line the MCP server prints at startup.
 - **Gap:** no counter for how many migrations have run, or how often a
   migration failed. That is what has to exist before this feature can be

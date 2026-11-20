@@ -215,19 +215,19 @@ else:
    - Tests must pass
    - No uncommitted changes
 
-1. **Version Bump**
+2. **Version Bump**
 
    - Update `pyproject.toml`
    - Update `__version__.py`
    - Generate changelog entry
 
-1. **Git Operations**
+3. **Git Operations**
 
    - Commit version bump
    - Create git tag (v1.0.1)
    - Push to remote
 
-1. **Build & Publish**
+4. **Build & Publish**
 
    - Build package with UV
    - Publish to PyPI
@@ -269,16 +269,16 @@ test_timeout: 300
 
 ## Best Practices
 
-1. **Use DI**: Always get managers via `depends.get(ManagerClass)`
-1. **Initialize Async**: Call `await manager.init()` before use
-1. **Handle Results**: Check all hook results, don't assume success
-1. **Retry Formatting**: Let format hooks retry once (they fix cascade issues)
-1. **Validate Before Publish**: Always run quality + tests before publishing
-1. **Secure Tokens**: Use keyring, never commit tokens
-1. **Tag Releases**: Always create git tags for versions
-1. **Monitor Progress**: Use progress callbacks for long operations
-1. **Batch Failures**: Collect all failures before fixing (don't stop on first)
-1. **Use Real-time Output**: Async managers provide better UX
+01. **Use DI**: Always get managers via `depends.get(ManagerClass)`
+02. **Initialize Async**: Call `await manager.init()` before use
+03. **Handle Results**: Check all hook results, don't assume success
+04. **Retry Formatting**: Let format hooks retry once (they fix cascade issues)
+05. **Validate Before Publish**: Always run quality + tests before publishing
+06. **Secure Tokens**: Use keyring, never commit tokens
+07. **Tag Releases**: Always create git tags for versions
+08. **Monitor Progress**: Use progress callbacks for long operations
+09. **Batch Failures**: Collect all failures before fixing (don't stop on first)
+10. **Use Real-time Output**: Async managers provide better UX
 
 ## Anti-Patterns to Avoid
 

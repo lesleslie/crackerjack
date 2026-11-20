@@ -274,11 +274,11 @@ Typical MCP server performance:
 ## Best Practices
 
 1. **Use Job IDs**: Always track jobs by their UUIDs
-1. **Monitor Progress**: Use `crackerjack_get_job_progress` tool for job status
-1. **Handle Errors**: Check job status and error messages
-1. **Cache Patterns**: Let error caching learn common issues
-1. **Session Management**: Use checkpoints for resumability
-1. **Rate Limits**: Respect rate limits in automation
+2. **Monitor Progress**: Use `crackerjack_get_job_progress` tool for job status
+3. **Handle Errors**: Check job status and error messages
+4. **Cache Patterns**: Let error caching learn common issues
+5. **Session Management**: Use checkpoints for resumability
+6. **Rate Limits**: Respect rate limits in automation
 
 ## Troubleshooting
 

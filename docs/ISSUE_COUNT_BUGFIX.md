@@ -3,7 +3,7 @@ status: complete
 role: historical
 date: 2026-07-17
 last_reviewed: 2026-07-17
-superseded_by: null
+superseded_by:
 blocks_on: []
 topic: lifecycle
 ---
@@ -31,7 +31,7 @@ Two layers were using **different issue counting logic**:
        return [line.strip() for line in error_output.split("\n") if line.strip()]
    ```
 
-1. **AI Fixing Layer** (`crackerjack/core/autofix_coordinator.py:939-955`)
+2. **AI Fixing Layer** (`crackerjack/core/autofix_coordinator.py:939-955`)
 
    ```python
    # Filtered out notes, help, summaries, headers
@@ -60,17 +60,17 @@ Created a **shared utility module** that both layers use for consistent issue de
    - `count_issues_from_output()` - Count issues using shared filter
    - `extract_issue_lines()` - Extract issue lines using shared filter
 
-1. **Updated** `crackerjack/executors/hook_executor.py`
+2. **Updated** `crackerjack/executors/hook_executor.py`
 
    - Line 17: Added import of `extract_issue_lines`
    - Line 630: Changed from simple line split to `extract_issue_lines(error_output, tool_name=hook.name)`
 
-1. **Updated** `crackerjack/core/autofix_coordinator.py`
+3. **Updated** `crackerjack/core/autofix_coordinator.py`
 
    - Line 20: Added import of `should_count_as_issue`
    - Lines 940-952: Refactored `_should_parse_line()` to delegate to shared utility
 
-1. **Created** `tests/unit/utils/test_issue_detection.py`
+4. **Created** `tests/unit/utils/test_issue_detection.py`
 
    - 20 comprehensive tests covering all filtering scenarios
    - Integration tests verifying consistency between layers
@@ -80,15 +80,15 @@ Created a **shared utility module** that both layers use for consistent issue de
 The shared utility filters out:
 
 1. **Empty lines** - Whitespace only
-1. **Comment lines** - Lines starting with `#`
-1. **Notes and help** - Lines containing `: note:`, `: help:`, `note: `, `help: `
-1. **Summary lines** - Lines starting with:
+2. **Comment lines** - Lines starting with `#`
+3. **Notes and help** - Lines containing `: note:`, `: help:`, `note: `, `help: `
+4. **Summary lines** - Lines starting with:
    - `Found`, `Checked`, `N errors found`, `errors in`
    - `Success`, `Summary`, `Total`
-1. **Separator lines** - Lines starting with or containing only:
+5. **Separator lines** - Lines starting with or containing only:
    - `===`, `---`, `Errors:`
    - Box drawing characters: `┌`, `└`, `├`, `┼`, `┤`, `┃`
-1. **Header lines** - Exact matches:
+6. **Header lines** - Exact matches:
    - `Path`, `File`, `Function`
    - `File | Function | Complexity`, `Path | Function | Complexity`
    - `File | Line | Issue`, `Function | Complexity`

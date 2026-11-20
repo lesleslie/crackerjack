@@ -22,9 +22,9 @@ ______________________________________________________________________
 **Risk:**
 
 1. **Drift between test strings and real `Package.swift` semantics.** E.g., the regex `_PLATFORM_PATTERN = re.compile(r"\.([A-Za-z]+)\s*\(")` was verified against a 5-line fixture, not against real swiftui-ipc-client's `Package.swift`. Real files have comments, multi-line platform lists, versioned `.v16` suffixes that the regex may handle by accident.
-1. **No test for visionOS / macCatalyst / multi-platform with 3+ platforms.** Only 3 platform cases tested (macOS-only, iOS-only, macOS+iOS). The spec lists visionOS support implicitly (Swift 5.9+ supports it).
-1. **iOS detection edge case:** The plan tests "iOS-only" via `.iOS(.v16)` alone, but real iOS-only packages often have additional conditional platforms (`#if os(...)`) and `Package.swift` product/target structures.
-1. **`_PLATFORM_PATTERN` has a name-clash risk:** it matches `.v13)` as a substring of `.macOS(.v13)` because `v13` starts with `v`. Actually no — the regex captures `[A-Za-z]+` and looks at the `\s*(` after. `.v13)` would not match because there's no `\s*(` immediately after `v13` — there's `)`. So this case is OK, but `.v13,` would match — i.e., the platform block regex would erroneously include `.v13` as a platform because `_PLATFORMS_BLOCK` captures everything inside `[...]`. Let me re-check:
+2. **No test for visionOS / macCatalyst / multi-platform with 3+ platforms.** Only 3 platform cases tested (macOS-only, iOS-only, macOS+iOS). The spec lists visionOS support implicitly (Swift 5.9+ supports it).
+3. **iOS detection edge case:** The plan tests "iOS-only" via `.iOS(.v16)` alone, but real iOS-only packages often have additional conditional platforms (`#if os(...)`) and `Package.swift` product/target structures.
+4. **`_PLATFORM_PATTERN` has a name-clash risk:** it matches `.v13)` as a substring of `.macOS(.v13)` because `v13` starts with `v`. Actually no — the regex captures `[A-Za-z]+` and looks at the `\s*(` after. `.v13)` would not match because there's no `\s*(` immediately after `v13` — there's `)`. So this case is OK, but `.v13,` would match — i.e., the platform block regex would erroneously include `.v13` as a platform because `_PLATFORMS_BLOCK` captures everything inside `[...]`. Let me re-check:
    - `_PLATFORMS_BLOCK = re.compile(r"platforms\s*:\s*\[([^\]]*)\]", re.DOTALL)` — captures `[^\]]*` between `[` and `]`. This works only if there are no nested `[ ]` (which is fine for platforms).
    - `_PLATFORM_PATTERN = re.compile(r"\.([A-Za-z]+)\s*\(")` — applied to the block. For `.macOS(.v13), .iOS(.v16)`, captures `macOS` and `iOS`. But for `.macOS(.v13)` only, it captures `macOS` (because `\.macOS(` matches). However for `.macOS(.v13, .v14)` (range expression), it would also capture `macOS`. Edge case OK.
    - But for `#if os(macOS)` strings inside the platforms block (Swift 6.0 conditional), the regex would erroneously match `macOS` as a platform.
@@ -112,7 +112,7 @@ The test asserts both `mock_delete.assert_called_once_with("v1.1.0")` and `mock_
 **Risk:** The order matters in some failure scenarios. Specifically:
 
 1. If `_reset` fails, the tag is still there → orphan tag → next run would see a tag pointing to a commit that no longer exists in some configurations.
-1. If `_delete_tag` fails, the reset still proceeds → cleaner state.
+2. If `_delete_tag` fails, the reset still proceeds → cleaner state.
 
 Actually, the current order (delete tag → reset commit) is correct because:
 
@@ -218,19 +218,19 @@ ______________________________________________________________________
 
 ### What's NOT covered (gaps)
 
-1. **Real SwiftPM fixtures** — only inline strings (HIGH-1, HIGH-2)
-1. **visionOS / macCatalyst** — only macOS + iOS tested (HIGH-1)
-1. **`platforms: []` empty list** — defaults to macOS but untested (HIGH-1)
-1. **`#if os(...)` conditional platforms** — untested (HIGH-1)
-1. **`swift-format` preference via `monkeypatch.setattr(shutil, "which", ...)`** — assertion is too loose (MEDIUM-1)
-1. **Built-in `swift format` `.swift-format` config reading** — claim unverified against actual CLI (MEDIUM-2)
-1. **`_gh_release` failure rollback** — only `_push` failure tested (MEDIUM-3)
-1. **Rollback order** — no explicit order assertion (MEDIUM-3)
-1. **`detect_languages` MCP tool returns adapter names when `Package.swift` present** — only tested with empty dir (LOW)
-1. **`SwiftLifecycle` with `release=True`** — no test that verifies `release_url` propagates correctly through the rollback path (LOW)
-1. **`discover_adapters()` pytest-level test** — only manual CLI smoke (LOW-3)
-1. **Auth posture with only `MAHAVISHNU_AUTH_ENABLED=true` (no JWT secret)** — `_require_auth` should reject this combo (per spec: both required) (LOW)
-1. **`swift_run_hooks` with `hook_names` filter** — `hook_names` parameter is in the implementation but not tested (LOW)
+01. **Real SwiftPM fixtures** — only inline strings (HIGH-1, HIGH-2)
+02. **visionOS / macCatalyst** — only macOS + iOS tested (HIGH-1)
+03. **`platforms: []` empty list** — defaults to macOS but untested (HIGH-1)
+04. **`#if os(...)` conditional platforms** — untested (HIGH-1)
+05. **`swift-format` preference via `monkeypatch.setattr(shutil, "which", ...)`** — assertion is too loose (MEDIUM-1)
+06. **Built-in `swift format` `.swift-format` config reading** — claim unverified against actual CLI (MEDIUM-2)
+07. **`_gh_release` failure rollback** — only `_push` failure tested (MEDIUM-3)
+08. **Rollback order** — no explicit order assertion (MEDIUM-3)
+09. **`detect_languages` MCP tool returns adapter names when `Package.swift` present** — only tested with empty dir (LOW)
+10. **`SwiftLifecycle` with `release=True`** — no test that verifies `release_url` propagates correctly through the rollback path (LOW)
+11. **`discover_adapters()` pytest-level test** — only manual CLI smoke (LOW-3)
+12. **Auth posture with only `MAHAVISHNU_AUTH_ENABLED=true` (no JWT secret)** — `_require_auth` should reject this combo (per spec: both required) (LOW)
+13. **`swift_run_hooks` with `hook_names` filter** — `hook_names` parameter is in the implementation but not tested (LOW)
 
 ### Pytest markers / gating
 
@@ -254,16 +254,16 @@ The plan correctly includes Task 4.3 (Verify Swift CLI assumptions). This is goo
 
 ### Suggested additional tests (priority order)
 
-1. **(HIGH)** Add `tests/fixtures/swift-lib/Package.swift` and `tests/fixtures/swift-ios-app/Package.swift` real fixtures; refactor 1-2 platforms tests to use them.
-1. **(HIGH)** Add `@pytest.mark.real_repo_smoke` to Task 8.5 smoke.
-1. **(HIGH)** Add visionOS + empty-platforms + `#if os(...)` test cases to `test_platforms.py`.
-1. **(MEDIUM)** Split `test_swift_format_hook_prefers_third_party_swift_format` into two tests using `monkeypatch.setattr(shutil, "which", ...)`.
-1. **(MEDIUM)** Add `_gh_release` rollback test.
-1. **(MEDIUM)** Add rollback order assertion (delete_tag before reset).
-1. **(LOW)** Remove `git init` from `test_swift_adapter_skips_projects_without_package_swift`.
-1. **(LOW)** Add `test_discover_adapters_includes_swift`.
-1. **(LOW)** Add `swift_run_hooks` with `hook_names` filter test.
-1. **(LOW)** Add auth posture test for `MAHAVISHNU_AUTH_ENABLED=true` + missing JWT secret.
+01. **(HIGH)** Add `tests/fixtures/swift-lib/Package.swift` and `tests/fixtures/swift-ios-app/Package.swift` real fixtures; refactor 1-2 platforms tests to use them.
+02. **(HIGH)** Add `@pytest.mark.real_repo_smoke` to Task 8.5 smoke.
+03. **(HIGH)** Add visionOS + empty-platforms + `#if os(...)` test cases to `test_platforms.py`.
+04. **(MEDIUM)** Split `test_swift_format_hook_prefers_third_party_swift_format` into two tests using `monkeypatch.setattr(shutil, "which", ...)`.
+05. **(MEDIUM)** Add `_gh_release` rollback test.
+06. **(MEDIUM)** Add rollback order assertion (delete_tag before reset).
+07. **(LOW)** Remove `git init` from `test_swift_adapter_skips_projects_without_package_swift`.
+08. **(LOW)** Add `test_discover_adapters_includes_swift`.
+09. **(LOW)** Add `swift_run_hooks` with `hook_names` filter test.
+10. **(LOW)** Add auth posture test for `MAHAVISHNU_AUTH_ENABLED=true` + missing JWT secret.
 
 ### Summary
 

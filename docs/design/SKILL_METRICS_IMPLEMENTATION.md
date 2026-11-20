@@ -3,7 +3,7 @@ status: active
 role: canonical
 date: 2026-07-17
 last_reviewed: 2026-07-17
-superseded_by: null
+superseded_by:
 blocks_on: []
 topic: architecture
 ---
@@ -901,12 +901,12 @@ ______________________________________________________________________
 **Complete Implementation Includes**:
 
 1. **Core Database Class**: `SkillMetricsStore` with full CRUD operations
-1. **Transaction Management**: Context managers for safe transactions
-1. **Automatic Migrations**: Schema versioning and upgrade support
-1. **Concurrent Access**: Per-skill locking for thread safety
-1. **Performance Optimizations**: WAL mode, connection pooling, indexes
-1. **Error Handling**: Rollback on failures, retry logic
-1. **Testing**: Comprehensive pytest test suite
+2. **Transaction Management**: Context managers for safe transactions
+3. **Automatic Migrations**: Schema versioning and upgrade support
+4. **Concurrent Access**: Per-skill locking for thread safety
+5. **Performance Optimizations**: WAL mode, connection pooling, indexes
+6. **Error Handling**: Rollback on failures, retry logic
+7. **Testing**: Comprehensive pytest test suite
 
 **Key Features**:
 
@@ -928,7 +928,7 @@ ______________________________________________________________________
 **Next Steps**:
 
 1. Implement migration runner
-1. Create dual-write/dual-read wrappers
-1. Add monitoring and alerting
-1. Document backup/restore procedures
-1. Deploy to production with gradual rollout
+2. Create dual-write/dual-read wrappers
+3. Add monitoring and alerting
+4. Document backup/restore procedures
+5. Deploy to production with gradual rollout

@@ -3,7 +3,7 @@ status: complete
 role: historical
 date: 2026-07-17
 last_reviewed: 2026-07-17
-superseded_by: null
+superseded_by:
 blocks_on: []
 topic: lifecycle
 ---
@@ -460,7 +460,7 @@ done
 **Actions:**
 
 1. Add complexipy.json to .gitignore (it's output, not config)
-1. Add `[tool.complexipy]` to pyproject.toml
+2. Add `[tool.complexipy]` to pyproject.toml
 
 ```toml
 # Standard complexipy config
@@ -522,7 +522,7 @@ Keep `.semgrep.yml` for custom rules specific to the project.
    .ruff_cache/
    ```
 
-1. Remove from git if tracked:
+2. Remove from git if tracked:
 
    ```bash
    git rm --cached complexipy.json coverage.json
@@ -537,42 +537,42 @@ ______________________________________________________________________
 **Target:** crackerjack (already analyzed)
 
 1. Eliminate mypy.ini
-1. Simplify pyproject.toml
-1. Test thoroughly
-1. Document lessons learned
+2. Simplify pyproject.toml
+3. Test thoroughly
+4. Document lessons learned
 
 ### Phase 2: legacy (Week 2)
 
 **Target:** legacy (critical dependency for other projects)
 
 1. Apply mypy.ini consolidation
-1. Test with all dependent projects
-1. Update any shared documentation
+2. Test with all dependent projects
+3. Update any shared documentation
 
 ### Phase 3: MCP Projects (Week 3)
 
 **Targets:** session-mgmt-mcp
 
 1. Most complex consolidation (4+ files)
-1. Apply all patterns learned
-1. Create reusable templates
+2. Apply all patterns learned
+3. Create reusable templates
 
 ### Phase 4: Web Frameworks (Week 4)
 
 **Targets:** fastblocks, starlette-async-jinja, jinja2-async-environment
 
 1. Batch apply mypy consolidation
-1. Standardize across all web frameworks
-1. Create shared config templates
+2. Standardize across all web frameworks
+3. Create shared config templates
 
 ### Phase 5: Standardization (Week 5)
 
 **All projects:**
 
 1. Create `CONTRIBUTING.md` with config standards
-1. Add pre-commit hook to prevent mypy.ini creation
-1. Document in each project's CLAUDE.md
-1. Create GitHub repo template with standard configs
+2. Add pre-commit hook to prevent mypy.ini creation
+3. Document in each project's CLAUDE.md
+4. Create GitHub repo template with standard configs
 
 ______________________________________________________________________
 
@@ -803,12 +803,12 @@ ______________________________________________________________________
 ## Next Steps 🚀
 
 1. **Review this audit** with the team
-1. **Approve consolidation plan**
-1. **Start with crackerjack** (Phase 1 - already in progress)
-1. **Roll out to legacy** (Phase 2 - affects all other projects)
-1. **Batch migrate remaining projects** (Phases 3-4)
-1. **Create shared templates** (Phase 5)
-1. **Add CI validation** to prevent regression
+2. **Approve consolidation plan**
+3. **Start with crackerjack** (Phase 1 - already in progress)
+4. **Roll out to legacy** (Phase 2 - affects all other projects)
+5. **Batch migrate remaining projects** (Phases 3-4)
+6. **Create shared templates** (Phase 5)
+7. **Add CI validation** to prevent regression
 
 **Timeline:** 5 weeks
 **Effort:** ~1-2 days per week

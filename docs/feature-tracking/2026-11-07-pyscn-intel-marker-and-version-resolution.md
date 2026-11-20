@@ -4,7 +4,7 @@ role: lifecycle
 topic: dependency-management
 date: 2026-11-07
 last_reviewed: 2026-11-07
-superseded_by: null
+superseded_by:
 blocks_on: []
 ---
 
@@ -27,8 +27,7 @@ pyscn JSON and regex parsers, and the clone CLI
 - **The `pyscn==1.5.0` pin was load-bearing on Intel and a global tax
   everywhere else.** PyPI's highest macOS Intel wheel is
   `pyscn-1.5.0-py3-none-macosx_10_9_x86_64.whl`; every release from 1.5.1
-  ships `macosx_11_0_arm64` only, and no sdist is published, so `pip install
-  pyscn` cannot be satisfied on an Intel Mac at all. The Homebrew formula
+  ships `macosx_11_0_arm64` only, and no sdist is published, so `pip install pyscn` cannot be satisfied on an Intel Mac at all. The Homebrew formula
   declares no bottles and compiles the Go CLI from source, so it carries no
   architecture constraint.
 - **`shutil.which` returns only the first match, so the Homebrew build was

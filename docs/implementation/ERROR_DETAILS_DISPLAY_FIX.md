@@ -3,7 +3,7 @@ status: complete
 role: historical
 date: 2026-07-17
 last_reviewed: 2026-07-17
-superseded_by: null
+superseded_by:
 blocks_on: []
 topic: lifecycle
 ---
@@ -26,12 +26,12 @@ When tools failed with exceptions (like complexipy's RuntimeError), the error de
    - Exception handler creates QAResult with `message` field set
    - **BUT** `details` field was not being set
 
-1. **QAResult Structure** (`models/qa_results.py:60-67`)
+2. **QAResult Structure** (`models/qa_results.py:60-67`)
 
    - Has both `message` (summary) and `details` (full output) fields
    - `_create_result()` wasn't accepting/setting `details` parameter
 
-1. **Display Logic** (`hook_orchestrator.py:917`)
+3. **Display Logic** (`hook_orchestrator.py:917`)
 
    - `_extract_error_details()` checks `if qa_result.details:`
    - Empty string evaluates to False, skips using the error message
@@ -224,9 +224,9 @@ This fix addresses the user's report:
 Now complexipy (and all other tools) will show:
 
 1. **What failed**: The actual RuntimeError message
-1. **Why it failed**: Settings require async initialization
-1. **Where it failed**: Full traceback showing line 109 in complexipy.py
-1. **How to fix**: Error message suggests using `await Settings.create_async()`
+2. **Why it failed**: Settings require async initialization
+3. **Where it failed**: Full traceback showing line 109 in complexipy.py
+4. **How to fix**: Error message suggests using `await Settings.create_async()`
 
 ## Files Modified
 

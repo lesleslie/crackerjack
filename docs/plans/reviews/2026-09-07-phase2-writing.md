@@ -27,8 +27,8 @@ cd /Users/les/Projects/swiftui-ipc-client
 Line 1818 begins with `.venv 2>/dev/null;` — that is, a literal invocation of a command named `.venv`. There is no such command on macOS or Linux. Zsh will print `(eval):1818: command not found: .venv` (or similar) and then proceed. A new contributor will not understand what the line was meant to do (presumably source the venv, or guard against the venv not existing). The reader has three plausible guesses, none of them right:
 
 1. Source the venv (`source .venv/bin/activate`).
-1. Guard against a missing venv (`[ -d .venv ] || true`).
-1. Print a warning about a missing venv (`echo ".venv missing" 2>/dev/null`).
+2. Guard against a missing venv (`[ -d .venv ] || true`).
+3. Print a warning about a missing venv (`echo ".venv missing" 2>/dev/null`).
 
 None match. The intent was almost certainly `[ -d .venv ] || echo ".venv missing" 2>/dev/null` or similar — but the typo was not caught.
 
@@ -56,8 +56,8 @@ ______________________________________________________________________
 The plan instructs the implementer to "verify with `grep -n "def.*tag\|def.*reset" crackerjack/services/git.py`" — but does not commit to either:
 
 1. The file `crackerjack/services/git.py` exists.
-1. It exposes `tag`, `delete_tag`, `reset` methods.
-1. The fallback path (direct `subprocess.run`) is acceptable.
+2. It exposes `tag`, `delete_tag`, `reset` methods.
+3. The fallback path (direct `subprocess.run`) is acceptable.
 
 The implementation block then shows ALL SIX methods as `raise NotImplementedError("Phase 2: delegate to services/git.py")` stubs. The unit tests use `mock.patch.object(lifecycle, "_commit", ...)` to bypass the stubs. So the **tests will pass even if neither `services/git.py` is touched nor `subprocess.run` is wired in**.
 
@@ -71,7 +71,7 @@ Two complementary changes:
 
 1. **In Task 5.3, replace the `NotImplementedError` stubs with real `subprocess.run` implementations** (mirroring what Task 7.4 does for `_run_swift_lifecycle`). The Phase 1 "Pattern B" lesson is about *testability of the seam* — the seam should still be overridable for tests, but the *default implementation* should work end-to-end.
 
-1. **Add an integration test** that runs the lifecycle against a real git repo (not just mocked `_commit`/`_tag`/etc.). Something like:
+2. **Add an integration test** that runs the lifecycle against a real git repo (not just mocked `_commit`/`_tag`/etc.). Something like:
 
 ```python
 def test_swift_lifecycle_end_to_end_creates_tag(tmp_path):
@@ -191,7 +191,7 @@ The fallback URL `https://github.com/local/...` is fabricated. If `gh release cr
 Either:
 
 1. Raise `RuntimeError` when `gh release create` returns no URL: `if not result.stdout.strip(): raise RuntimeError("gh release create produced no URL")`. Match the spec's "best-effort rollback" — failure should fail loud.
-1. Use `result.stderr` to surface the actual error.
+2. Use `result.stderr` to surface the actual error.
 
 Either way, drop the fake fallback URL. The spec's error-handling table says "Fail with clear message" — a placeholder URL is not a clear message.
 
@@ -268,7 +268,7 @@ A new contributor looking for "where do I document that Swift hooks run sequenti
 Either:
 
 1. Add a one-line note in Task 4 ("Hook ordering: per Phase 1's `Hook` protocol, hooks run sequentially in registration order. No Phase 2 change."), or
-1. Drop the row from the Self-Review table.
+2. Drop the row from the Self-Review table.
 
 The plan is doing Phase 2 work; leaving a coverage-table row that points at Phase 1 documentation is acceptable *if* the cross-reference is explicit. Currently it's not.
 
@@ -311,8 +311,8 @@ ______________________________________________________________________
 The plan says Phase 1's Pattern B lesson is "split methods for testability." But Task 7.4 implements the seam in a way that is *harder* to test:
 
 1. The closures are defined inside `_run_swift_lifecycle`, not at module level. They are not directly importable for test mocks.
-1. The `lifecycle._commit = _commit  # type: ignore[method-assign]` is monkey-patching the instance, which is a code smell (and the `# type: ignore[method-assign]` admits it).
-1. The test `test_swift_bump_version_runs_with_auth` mocks `_run_swift_lifecycle` entirely, bypassing the closures. This means the closures are never exercised in tests.
+2. The `lifecycle._commit = _commit  # type: ignore[method-assign]` is monkey-patching the instance, which is a code smell (and the `# type: ignore[method-assign]` admits it).
+3. The test `test_swift_bump_version_runs_with_auth` mocks `_run_swift_lifecycle` entirely, bypassing the closures. This means the closures are never exercised in tests.
 
 **Risk:**
 
@@ -324,7 +324,7 @@ Either:
 
 1. Move the `_commit` / `_tag` / `_push` / `_delete_tag` / `_reset` / `_gh_release` implementations into `SwiftLifecycle` itself (replacing the `NotImplementedError` stubs in Task 5.3 — see HIGH-2). Then `_run_swift_lifecycle` simply instantiates `SwiftLifecycle(version_source, project_root)` and calls `run()`. No monkey-patching.
 
-1. Or: keep Task 5.3's stubs as-is (the Pattern B seam), and have `_run_swift_lifecycle` *subclass* `SwiftLifecycle` with overrides. The seam is then a class definition, not a closure.
+2. Or: keep Task 5.3's stubs as-is (the Pattern B seam), and have `_run_swift_lifecycle` *subclass* `SwiftLifecycle` with overrides. The seam is then a class definition, not a closure.
 
 Either approach is cleaner than monkey-patching.
 
@@ -386,8 +386,8 @@ ______________________________________________________________________
 "Document findings in the report" is vague. A new contributor can:
 
 1. Skip the verification if they don't have a Swift toolchain (the spec says it's optional).
-1. Run the verification, find a discrepancy, and "adjust accordingly" — but the plan gives no criteria for "accordingly."
-1. Find that `swift test -destination` exists but has a different name (`--destination` vs `-destination`).
+2. Run the verification, find a discrepancy, and "adjust accordingly" — but the plan gives no criteria for "accordingly."
+3. Find that `swift test -destination` exists but has a different name (`--destination` vs `-destination`).
 
 Without an explicit "if Swift CLI is unavailable, the task is still considered complete because unit tests mock subprocess" clause, the implementer is left to guess what counts as done.
 
@@ -531,51 +531,51 @@ ______________________________________________________________________
 
 ### What the plan does well
 
-1. **Test-first structure is consistent.** Every task has explicit "write failing tests → run → implement → run → commit" steps. New contributors can follow the rhythm.
-1. **Files / Interfaces / Steps structure is consistent across all 8 tasks.** A new contributor can scan the Files list at the top of each task to know what's coming.
-1. **Spec-vs-requirement coverage is explicit in Self-Review.** The 15-row coverage table is comprehensive enough that a reviewer can spot gaps.
-1. **Phase 1 lessons are referenced** (Pattern B, module:ClassName, auth posture, no Package.swift mutation), even if inlining is incomplete (see MEDIUM-1).
-1. **Test count math is internally consistent** (5+5+8+7+4 = 29 in Task 6.4, 5 in Task 7.8, 34 total in Task 8.2 — all match).
-1. **Code blocks are mostly syntactically correct** — only Task 8.5 has a broken shell command.
-1. **Tech Stack section names the libraries** (Python 3.14, FastMCP 4.x, typer, hatchling, gh) — though expansion is incomplete.
-1. **Critical callouts are present** — Task 5's "**Implementer note (CRITICAL)**" marker for the `services/git.py` integration seam is visible.
-1. **Commit messages are detailed and traceable** — each ends with "Spec dd9d9c05 (Rev 2)" so future `git log --grep` searches work.
-1. **Acceptance criteria are listed** in Self-Review (5 bullets covering tests, regressions, CLI surface, MCP tools, auth posture).
+01. **Test-first structure is consistent.** Every task has explicit "write failing tests → run → implement → run → commit" steps. New contributors can follow the rhythm.
+02. **Files / Interfaces / Steps structure is consistent across all 8 tasks.** A new contributor can scan the Files list at the top of each task to know what's coming.
+03. **Spec-vs-requirement coverage is explicit in Self-Review.** The 15-row coverage table is comprehensive enough that a reviewer can spot gaps.
+04. **Phase 1 lessons are referenced** (Pattern B, module:ClassName, auth posture, no Package.swift mutation), even if inlining is incomplete (see MEDIUM-1).
+05. **Test count math is internally consistent** (5+5+8+7+4 = 29 in Task 6.4, 5 in Task 7.8, 34 total in Task 8.2 — all match).
+06. **Code blocks are mostly syntactically correct** — only Task 8.5 has a broken shell command.
+07. **Tech Stack section names the libraries** (Python 3.14, FastMCP 4.x, typer, hatchling, gh) — though expansion is incomplete.
+08. **Critical callouts are present** — Task 5's "**Implementer note (CRITICAL)**" marker for the `services/git.py` integration seam is visible.
+09. **Commit messages are detailed and traceable** — each ends with "Spec dd9d9c05 (Rev 2)" so future `git log --grep` searches work.
+10. **Acceptance criteria are listed** in Self-Review (5 bullets covering tests, regressions, CLI surface, MCP tools, auth posture).
 
 ### What the plan does less well
 
-1. **Task 5's NotImplementedError stubs** (HIGH-2) — the implementation passes tests but crashes at runtime.
-1. **Task 7.4's `_gh_release` fallback URL** (HIGH-5) — returns a fabricated `https://github.com/local/...` URL when `gh` produces no stdout.
-1. **Task 8.5's broken shell command** (HIGH-1) — `.venv 2>/dev/null;` is not valid bash.
-1. **Task 7.4's `_require_auth` spec drift** (HIGH-4) — uses `.lower() != "true"` instead of `!= "true"`.
-1. **Task 1.3's contradictory expected output** (HIGH-3) — claims both entries will print but admits Swift fails until Task 6.
-1. **Phase 1 lessons referenced by short-hand** (MEDIUM-1) — "Pattern B" / "out-of-brief fix from Phase 1 Task 6" / "Phase 1 ledger ruling #1" are unexplained.
-1. **Plan header is stale** (LOW-1) — "Phase 1 is next" when Phase 1 has shipped.
-1. **Test contract assertions are too loose** — `test_swift_format_hook_prefers_third_party_swift_format` accepts either swift-format or swift as the first arg (testing lens MEDIUM-1). Plan doesn't fix this.
-1. **No "Out of scope" or "Risks" sections** — scattered across Self-Review and Tasks (LOW-3, LOW-4).
-1. **Acronyms not expanded** — SwiftPM, FastMCP, hatchling (MEDIUM-8).
-1. **Spec-vs-plan coverage table is incomplete** (MEDIUM-6) — missing rows for `gh release create` "sufficient" half, mcp-common pre-Phase-2 gate, PyCharm parity API.
-1. **Plan references `_tool_manager._tools`** (MEDIUM-4) — private FastMCP API.
-1. **Plan body uses monkey-patching** (MEDIUM-5) — `lifecycle._commit = _commit  # type: ignore[method-assign]` contradicts the Pattern B lesson.
-1. **Acceptance for Swift CLI verification is vague** (MEDIUM-7) — "Document findings in the report" lacks a clear done-criterion.
+01. **Task 5's NotImplementedError stubs** (HIGH-2) — the implementation passes tests but crashes at runtime.
+02. **Task 7.4's `_gh_release` fallback URL** (HIGH-5) — returns a fabricated `https://github.com/local/...` URL when `gh` produces no stdout.
+03. **Task 8.5's broken shell command** (HIGH-1) — `.venv 2>/dev/null;` is not valid bash.
+04. **Task 7.4's `_require_auth` spec drift** (HIGH-4) — uses `.lower() != "true"` instead of `!= "true"`.
+05. **Task 1.3's contradictory expected output** (HIGH-3) — claims both entries will print but admits Swift fails until Task 6.
+06. **Phase 1 lessons referenced by short-hand** (MEDIUM-1) — "Pattern B" / "out-of-brief fix from Phase 1 Task 6" / "Phase 1 ledger ruling #1" are unexplained.
+07. **Plan header is stale** (LOW-1) — "Phase 1 is next" when Phase 1 has shipped.
+08. **Test contract assertions are too loose** — `test_swift_format_hook_prefers_third_party_swift_format` accepts either swift-format or swift as the first arg (testing lens MEDIUM-1). Plan doesn't fix this.
+09. **No "Out of scope" or "Risks" sections** — scattered across Self-Review and Tasks (LOW-3, LOW-4).
+10. **Acronyms not expanded** — SwiftPM, FastMCP, hatchling (MEDIUM-8).
+11. **Spec-vs-plan coverage table is incomplete** (MEDIUM-6) — missing rows for `gh release create` "sufficient" half, mcp-common pre-Phase-2 gate, PyCharm parity API.
+12. **Plan references `_tool_manager._tools`** (MEDIUM-4) — private FastMCP API.
+13. **Plan body uses monkey-patching** (MEDIUM-5) — `lifecycle._commit = _commit  # type: ignore[method-assign]` contradicts the Pattern B lesson.
+14. **Acceptance for Swift CLI verification is vague** (MEDIUM-7) — "Document findings in the report" lacks a clear done-criterion.
 
 ### Reviewer recommendations (priority order)
 
-1. **(HIGH)** Replace Task 5.3's NotImplementedError stubs with real subprocess.run implementations (HIGH-2).
-1. **(HIGH)** Fix Task 8.5's broken `.venv 2>/dev/null` line (HIGH-1).
-1. **(HIGH)** Replace Task 7.4's fake `_gh_release` fallback URL with a runtime error (HIGH-5).
-1. **(HIGH)** Match Task 7.4's `_require_auth` to the spec's exact `!= "true"` check (HIGH-4).
-1. **(HIGH)** Restate Task 1.3's expected output to reflect the actual state at end of Task 1 (HIGH-3).
-1. **(MEDIUM)** Inline the Phase 1 lessons (Pattern B, module:ClassName fix) so the plan is self-contained (MEDIUM-1).
-1. **(MEDIUM)** Add a `_require_auth` test for non-canonical values (`True`, `TRUE`).
-1. **(MEDIUM)** Replace `lifecycle._commit = _commit  # type: ignore[method-assign]` with either subclassing or moving the implementation to SwiftLifecycle itself (MEDIUM-5).
-1. **(MEDIUM)** Add an explicit "Phase 1 is shipped; Phase 2 implements the Swift adapter" header (LOW-1).
-1. **(MEDIUM)** Expand Tech Stack acronyms (FastMCP, SwiftPM, hatchling) (MEDIUM-8).
-1. **(MEDIUM)** Add three rows to the Spec coverage table for `gh release create` "sufficient" half, mcp-common pre-Phase-2 gate, PyCharm parity API (MEDIUM-6).
-1. **(MEDIUM)** Add a one-line note in Task 7.2 about FastMCP private API dependence (MEDIUM-4).
-1. **(LOW)** Drop the `git init` call from `test_swift_adapter_skips_projects_without_package_swift` (LOW-2).
-1. **(LOW)** Add an "Out of scope" section near the top of the plan (LOW-3).
-1. **(LOW)** Add a "Risks specific to this plan" section (LOW-4).
+01. **(HIGH)** Replace Task 5.3's NotImplementedError stubs with real subprocess.run implementations (HIGH-2).
+02. **(HIGH)** Fix Task 8.5's broken `.venv 2>/dev/null` line (HIGH-1).
+03. **(HIGH)** Replace Task 7.4's fake `_gh_release` fallback URL with a runtime error (HIGH-5).
+04. **(HIGH)** Match Task 7.4's `_require_auth` to the spec's exact `!= "true"` check (HIGH-4).
+05. **(HIGH)** Restate Task 1.3's expected output to reflect the actual state at end of Task 1 (HIGH-3).
+06. **(MEDIUM)** Inline the Phase 1 lessons (Pattern B, module:ClassName fix) so the plan is self-contained (MEDIUM-1).
+07. **(MEDIUM)** Add a `_require_auth` test for non-canonical values (`True`, `TRUE`).
+08. **(MEDIUM)** Replace `lifecycle._commit = _commit  # type: ignore[method-assign]` with either subclassing or moving the implementation to SwiftLifecycle itself (MEDIUM-5).
+09. **(MEDIUM)** Add an explicit "Phase 1 is shipped; Phase 2 implements the Swift adapter" header (LOW-1).
+10. **(MEDIUM)** Expand Tech Stack acronyms (FastMCP, SwiftPM, hatchling) (MEDIUM-8).
+11. **(MEDIUM)** Add three rows to the Spec coverage table for `gh release create` "sufficient" half, mcp-common pre-Phase-2 gate, PyCharm parity API (MEDIUM-6).
+12. **(MEDIUM)** Add a one-line note in Task 7.2 about FastMCP private API dependence (MEDIUM-4).
+13. **(LOW)** Drop the `git init` call from `test_swift_adapter_skips_projects_without_package_swift` (LOW-2).
+14. **(LOW)** Add an "Out of scope" section near the top of the plan (LOW-3).
+15. **(LOW)** Add a "Risks specific to this plan" section (LOW-4).
 
 ### Summary
 

@@ -33,10 +33,10 @@ python -m scripts.migrate_skills_to_sessionbuddy --dry-run
 **What it does:**
 
 1. Validates JSON structure
-1. Backs up existing database (auto-creates `.pre-migration.backup`)
-1. Migrates invocations and skills to the session-buddy skills store
-1. Validates migrated data
-1. Provides rollback capability on failure
+2. Backs up existing database (auto-creates `.pre-migration.backup`)
+3. Migrates invocations and skills to the session-buddy skills store
+4. Validates migrated data
+5. Provides rollback capability on failure
 
 **Default paths:**
 
@@ -71,9 +71,9 @@ python -m scripts.rollback_skills_migration \
 **What it does:**
 
 1. Finds most recent backup file (`.pre-migration.backup*`)
-1. Prompts for confirmation
-1. Replaces current database with backup
-1. Logs rollback result
+2. Prompts for confirmation
+3. Replaces current database with backup
+4. Logs rollback result
 
 **Safety:**
 
@@ -126,7 +126,7 @@ ______________________________________________________________________
 
    Review what will be migrated without making changes.
 
-1. **Perform Migration**
+2. **Perform Migration**
 
    ```bash
    python -m scripts.migrate_skills_to_sessionbuddy
@@ -134,7 +134,7 @@ ______________________________________________________________________
 
    Creates backup automatically, migrates data.
 
-1. **Validate Migration**
+3. **Validate Migration**
 
    ```bash
    python -m scripts.validate_skills_migration
@@ -142,7 +142,7 @@ ______________________________________________________________________
 
    Confirm all data migrated correctly.
 
-1. **Rollback (if needed)**
+4. **Rollback (if needed)**
 
    ```bash
    python -m scripts.rollback_skills_migration

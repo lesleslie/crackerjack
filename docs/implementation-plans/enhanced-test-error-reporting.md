@@ -3,7 +3,7 @@ status: complete
 role: historical
 date: 2026-07-17
 last_reviewed: 2026-07-17
-superseded_by: null
+superseded_by:
 blocks_on: []
 topic: lifecycle
 ---
@@ -341,26 +341,26 @@ def _handle_test_failure(
    EOF
    ```
 
-1. **Run with verbose mode:**
+2. **Run with verbose mode:**
 
    ```bash
    python -m crackerjack run -s -t -v
    ```
 
-1. **Verify output shows:**
+3. **Verify output shows:**
 
    - ✅ Colored panels for failures
    - ✅ Syntax-highlighted tracebacks
    - ✅ Yellow summary panel
    - ✅ Clear section separation
 
-1. **Test with AI debug mode:**
+4. **Test with AI debug mode:**
 
    ```bash
    python -m crackerjack run -s -t --ai-debug
    ```
 
-1. **Verify `-vvv` output shows:**
+5. **Verify `-vvv` output shows:**
 
    - ✅ Full local variables
    - ✅ All test internals
@@ -879,13 +879,13 @@ def _render_formatted_output(self, output: str, options: OptionsProtocol) -> Non
        outer()
    ```
 
-1. **Run with verbose mode:**
+2. **Run with verbose mode:**
 
    ```bash
    python -m crackerjack run -s -t -v
    ```
 
-1. **Verify output shows:**
+3. **Verify output shows:**
 
    - ✅ Failures grouped by file
    - ✅ Rich tables with test details
@@ -893,7 +893,7 @@ def _render_formatted_output(self, output: str, options: OptionsProtocol) -> Non
    - ✅ Captured stdout/stderr
    - ✅ Clear visual hierarchy
 
-1. **Test parser edge cases:**
+4. **Test parser edge cases:**
 
    ```bash
    # Parametrized tests

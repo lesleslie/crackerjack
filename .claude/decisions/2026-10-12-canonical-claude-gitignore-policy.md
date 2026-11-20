@@ -21,6 +21,7 @@ Fleet audit (2026-10-12, see companion reports) found three divergent
 - **mahavishnu**: no blanket; targeted ignores for known runtime artifacts only
 
 Symptoms of the divergence:
+
 - New tracked subdirs under `.claude/` required a gitignore edit in
   oneiric/mcp-common/mahavishnu; akosha/session-buddy/crackerjack worked
   but only because the allowlist happened to be comprehensive

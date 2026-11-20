@@ -3,7 +3,7 @@ status: active
 role: canonical
 date: 2026-07-17
 last_reviewed: 2026-07-17
-superseded_by: null
+superseded_by:
 blocks_on: []
 topic: mcp-design
 ---
@@ -94,32 +94,32 @@ This document outlines the comprehensive security measures implemented to protec
    - JSON payload validation with size/depth limits
    - Configurable validation rules and decorators
 
-1. **ValidationRateLimiter** (`/services/validation_rate_limiter.py`)
+2. **ValidationRateLimiter** (`/services/validation_rate_limiter.py`)
 
    - Advanced rate limiting with sliding windows
    - Client-based tracking and progressive blocking
    - Tiered limits by validation type severity
    - Automatic cleanup of expired data
 
-1. **SecurePathValidator** (`/services/secure_path_utils.py`)
+3. **SecurePathValidator** (`/services/secure_path_utils.py`)
 
    - Central path validation and sanitization
    - Configurable security limits and restrictions
    - Path traversal attack prevention
 
-1. **AtomicFileOperations** (`/services/secure_path_utils.py`)
+4. **AtomicFileOperations** (`/services/secure_path_utils.py`)
 
    - Race-condition-free file operations
    - Atomic backup and write operations
    - Proper cleanup on failures
 
-1. **SecurityLogger** (`/services/security_logger.py`)
+5. **SecurityLogger** (`/services/security_logger.py`)
 
    - Structured security event logging
    - Multiple severity levels (LOW, MEDIUM, HIGH, CRITICAL)
    - Comprehensive audit trail with injection attempt tracking
 
-1. **Enhanced FileProcessor** (`/code_cleaner.py`)
+6. **Enhanced FileProcessor** (`/code_cleaner.py`)
 
    - Integrates security validation into all file operations
    - Uses atomic operations for safety
@@ -431,11 +431,11 @@ Security events are logged with appropriate severity levels:
 If security issues are discovered:
 
 1. **Report**: Create issue with "security" label
-1. **Assessment**: Evaluate severity using CVSS framework
-1. **Containment**: Implement temporary mitigations
-1. **Resolution**: Develop and test security fix
-1. **Verification**: Run security test suite
-1. **Documentation**: Update security documentation
+2. **Assessment**: Evaluate severity using CVSS framework
+3. **Containment**: Implement temporary mitigations
+4. **Resolution**: Develop and test security fix
+5. **Verification**: Run security test suite
+6. **Documentation**: Update security documentation
 
 ## Security Updates
 

@@ -3,7 +3,7 @@ status: active
 role: canonical
 date: 2026-07-17
 last_reviewed: 2026-07-17
-superseded_by: null
+superseded_by:
 blocks_on: []
 topic: mcp-design
 ---
@@ -273,9 +273,9 @@ is_valid, feedback = await coordinator.validate_fix(
 ## Performance Tips
 
 1. **Use Caching**: FileContextReader caches reads automatically
-1. **Parallel Validation**: ValidationCoordinator runs 3 validators at once
-1. **Early Returns**: Fail fast on diff size violations
-1. **Lazy Test Running**: Only run tests on final validation, not intermediate
+2. **Parallel Validation**: ValidationCoordinator runs 3 validators at once
+3. **Early Returns**: Fail fast on diff size violations
+4. **Lazy Test Running**: Only run tests on final validation, not intermediate
 
 ## Migration Guide
 
@@ -322,5 +322,5 @@ class MyAgent(ProactiveAgent):
 For issues or questions:
 
 1. Check test files for usage examples
-1. Review MVP_AI_FIX_QUALITY_SUMMARY.md for architecture details
-1. Run specific test to debug: `pytest tests/agents/test_file_context.py::TestFileContextReader::test_read_file_basic -v`
+2. Review MVP_AI_FIX_QUALITY_SUMMARY.md for architecture details
+3. Run specific test to debug: `pytest tests/agents/test_file_context.py::TestFileContextReader::test_read_file_basic -v`

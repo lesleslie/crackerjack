@@ -3,7 +3,7 @@ status: complete
 role: historical
 date: 2026-07-17
 last_reviewed: 2026-07-17
-superseded_by: null
+superseded_by:
 blocks_on: []
 topic: lifecycle
 ---
@@ -108,8 +108,8 @@ ______________________________________________________________________
 **Missing Integration Tests**:
 
 1. SessionCoordinator cleanup logic
-1. PhaseCoordinator phase transitions
-1. Error handling in async workflows
+2. PhaseCoordinator phase transitions
+3. Error handling in async workflows
 
 ______________________________________________________________________
 

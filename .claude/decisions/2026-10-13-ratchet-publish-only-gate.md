@@ -120,8 +120,7 @@ off. The old field is genuinely dead, not just hidden by a getter.
   full-release workflow is `--strip-code -t -p <ver> --commit`, which
   includes `-p <ver>` — so `publish` is always set in practice, and
   full-release will pick up the auto-enable. If that ever changes, the
-  one-line follow-up is `or getattr(options, "full_release", None) is not
-  None` in the `main_handlers.py` auto-enable block.
+  one-line follow-up is `or getattr(options, "full_release", None) is not None` in the `main_handlers.py` auto-enable block.
 - The `phase_coordinator.py:run_coverage_ratchet_phase` is now a
   data-dependent phase that assumes `coverage.json` exists. A
   defensive `if not coverage.json.exists(): return True` in the runner

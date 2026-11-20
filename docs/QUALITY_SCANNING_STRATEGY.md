@@ -3,7 +3,7 @@ status: active
 role: canonical
 date: 2026-07-17
 last_reviewed: 2026-07-17
-superseded_by: null
+superseded_by:
 blocks_on: []
 topic: mcp-design
 ---
@@ -15,8 +15,8 @@ topic: mcp-design
 We need to optimize slow quality hooks (refurb, complexipy, skylos) that take 10+ minutes per scan. Three complementary approaches are available:
 
 1. **Incremental Scanning**: Scan only changed files (10-20x faster)
-1. **Mahavishnu Pools**: Parallel tool execution (2.5-3x faster)
-1. **Combined Approach**: Incremental + Pools (30-60x faster for typical commits)
+2. **Mahavishnu Pools**: Parallel tool execution (2.5-3x faster)
+3. **Combined Approach**: Incremental + Pools (30-60x faster for typical commits)
 
 **Recommendation**: Implement **Combined Approach** in phases for maximum impact with manageable risk.
 
@@ -324,8 +324,8 @@ ______________________________________________________________________
 ### Quick Wins (1-2 hours, 5-10x speedup)
 
 1. ✅ Switch daily complexity to ruff
-1. ✅ Use vulture for daily dead code detection
-1. ✅ Keep skylos, refurb, complexipy for publish only
+2. ✅ Use vulture for daily dead code detection
+3. ✅ Keep skylos, refurb, complexipy for publish only
 
 **Impact**: Most workflows see 5-10x speedup immediately
 **Risk**: None (tool configuration only)
@@ -333,8 +333,8 @@ ______________________________________________________________________
 ### High Impact (3-4 hours, 10-20x speedup)
 
 4. ✅ Implement git-diff incremental scanning
-1. ✅ Add weekly full scan safety net
-1. ✅ Update hook configuration
+5. ✅ Add weekly full scan safety net
+6. ✅ Update hook configuration
 
 **Impact**: Typical commits 10-20x faster
 **Risk**: Low (proven git-diff approach)
@@ -342,8 +342,8 @@ ______________________________________________________________________
 ### Maximum Impact (7-11 hours total, 30-60x speedup)
 
 7. ✅ Integrate mahavishnu pools (Phase 1)
-1. ✅ Combine incremental + pools (Phase 2)
-1. ✅ Add monitoring and optimization (Phase 3)
+8. ✅ Combine incremental + pools (Phase 2)
+9. ✅ Add monitoring and optimization (Phase 3)
 
 **Impact**: All workflows 30-60x faster for typical commits
 **Risk**: Medium (but mitigated by phased approach)
@@ -433,13 +433,13 @@ ______________________________________________________________________
 ## Open Questions for Consultants
 
 1. **Tool Strategy**: Do you agree refurb is valuable for Python 3.13+ codebases?
-1. **Incremental Approach**: Git-diff (simple) vs marker-based (accurate)?
-1. **Full Scan Frequency**: Weekly, bi-weekly, or monthly?
-1. **Pool Workers**: How many workers? (4, 8, 16?)
-1. **Mahavishnu Availability**: Running in all environments? (local, CI, docker)
-1. **Fallback Strategy**: What if mahavishna is unavailable?
-1. **Metrics**: What should we track? (scan times, cache hit rates, tool failures?)
-1. **Team Workflow**: How often do you publish? (affects full scan frequency)
+2. **Incremental Approach**: Git-diff (simple) vs marker-based (accurate)?
+3. **Full Scan Frequency**: Weekly, bi-weekly, or monthly?
+4. **Pool Workers**: How many workers? (4, 8, 16?)
+5. **Mahavishnu Availability**: Running in all environments? (local, CI, docker)
+6. **Fallback Strategy**: What if mahavishna is unavailable?
+7. **Metrics**: What should we track? (scan times, cache hit rates, tool failures?)
+8. **Team Workflow**: How often do you publish? (affects full scan frequency)
 
 ______________________________________________________________________
 
@@ -479,10 +479,10 @@ ______________________________________________________________________
 ## Next Steps
 
 1. **🔍 Review This Document**: Share with team and consultants
-1. **💬 Discuss Strategy**: Answer open questions, prioritize approach
-1. **🚀 Choose Path**: Select option(s) based on constraints
-1. **📋 Implementation**: Follow phased migration path
-1. **📊 Measure Success**: Track metrics and optimize
+2. **💬 Discuss Strategy**: Answer open questions, prioritize approach
+3. **🚀 Choose Path**: Select option(s) based on constraints
+4. **📋 Implementation**: Follow phased migration path
+5. **📊 Measure Success**: Track metrics and optimize
 
 ______________________________________________________________________
 

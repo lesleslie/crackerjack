@@ -54,7 +54,7 @@ repository in the fleet.
    virtualenv, and `uv run` — which the gate uses to launch itself —
    puts that virtualenv's `bin` first on `PATH`.
 
-1. **The call sites resolve the binary explicitly** through
+2. **The call sites resolve the binary explicitly** through
    `crackerjack/tools/_ty_binary.resolve_ty_binary()`: the `ty` beside
    the running interpreter (`Path(sys.executable).parent / "ty"`) first,
    then `PATH`, then the bare name so a missing binary raises
@@ -86,13 +86,13 @@ repository in the fleet.
    The `PATH` fallback is the gate's pre-existing behaviour, and `uv run` already puts the project's `.venv/bin` first on `PATH`, so the
    interpreter candidate narrows the search rather than widening it.
 
-1. **`ty` has a `uv` `exclude-newer` carve-out.** The repo's 7-day
+3. **`ty` has a `uv` `exclude-newer` carve-out.** The repo's 7-day
    cooldown would otherwise strand the fleet on a stale ty for up to a
    week after each release — and a type checker that is a week behind is
    not a security posture, it is a broken signal. The cooldown still
    applies to every other package.
 
-1. **`ty` is in the creosote exclusion list.** It is a Rust binary
+4. **`ty` is in the creosote exclusion list.** It is a Rust binary
    invoked as an external CLI, never imported by name, so creosote
    cannot see it in use. The exclusion only holds while no first-party
    module path contains `ty` as a path element — creosote matches a

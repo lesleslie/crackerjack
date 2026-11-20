@@ -8,7 +8,7 @@ role: implementation
 topic: architecture
 date: 2026-11-14
 last_reviewed: 2026-11-14
-superseded_by: null
+superseded_by:
 blocks_on: []
 ---
 
@@ -84,7 +84,7 @@ inventory too.
 9. `crackerjack run -v -f` (fast hooks) passes; the release audit passes;
    `uv lock --check` passes.
 
----
+______________________________________________________________________
 
 ## Context
 
@@ -354,8 +354,7 @@ the fourth is recorded here so the work is not lost.
    (`DefaultAdapterFactory.create_settings()` builds the adapter-specific
    settings class with the timeout override applied); and the adapter's
    structured issues are now *used* — they become the fallback for a failed
-   hook that produced nothing parseable, in place of `"hook exited with code
-   N but reported no parseable issues"`, flattened to the same
+   hook that produced nothing parseable, in place of `"hook exited with code N but reported no parseable issues"`, flattened to the same
    `<path>:<line> - <code>: <message>` shape the per-hook parsers produce.
 
    `HookResult.qa_result` (`crackerjack/models/task.py:56`) is still written
@@ -364,6 +363,7 @@ the fourth is recorded here so the work is not lost.
    added. The path now uses the adapter's issues, but the field itself is
    still unconsumed; whether it should exist is a design question, not a
    defect.
+
 2. **A `MODULE_ID` UUID collision — FIXED 2026-11-14 (`ab0b24dd`).** The dead
    `adapters/benchmark/adapter.py:31` and the **live**
    `adapters/ai/unified.py:16` both declared
@@ -373,6 +373,7 @@ the fourth is recorded here so the work is not lost.
    benchmark adapter had zero production importers, so it was deleted
    along with its test file, and the collision went with it. The generated
    API docs were regenerated rather than hand-edited.
+
 3. **Six live documents describe the git-analytics MCP server as running —
    FIXED 2026-11-14 (`34f42fb0`).** The claims were in
    `docs/MCP_TOOLS_SPECIFICATION.md:61-62,252,313`,
@@ -385,7 +386,8 @@ the fourth is recorded here so the work is not lost.
    say so. `MEMORY_ARCHITECTURE.md:54` also documented
    `crackerjack/memory/git_metrics_storage.py`, a module that no longer exists;
    that is corrected too.
----
+
+______________________________________________________________________
 
 ## Phase 1 — Stop shipping tests inside the package
 
@@ -458,7 +460,7 @@ so in a wheel install it silently skips.
 
 3 files moved, 1 `pyproject.toml` edit, ~851 lines relocated.
 
----
+______________________________________________________________________
 
 ## Phase 2 — Delete the plugin system and the websocket server
 
@@ -476,8 +478,7 @@ subcommand, no MCP tool, no settings entry, and no entry point.
 
 Its only non-test consumer, `examples/custom_hook_plugin.py:5-11`, imports
 `CustomHookDefinition` and `HookStage` from `crackerjack.plugins` — which
-does not export them. Verified: `ImportError: cannot import name
-'CustomHookDefinition' from 'crackerjack.plugins'`. The one showcase of the
+does not export them. Verified: `ImportError: cannot import name 'CustomHookDefinition' from 'crackerjack.plugins'`. The one showcase of the
 system cannot even import.
 
 **`crackerjack/websocket/` — 4 modules, 551 lines.**
@@ -531,7 +532,7 @@ places, read by none. The MCP server's WebSocket transport comes from
 
 10 modules, 1,657 lines, 1 example, 3 lint-exclude edits.
 
----
+______________________________________________________________________
 
 ## Phase 3 — Delete the unused QA adapters
 
@@ -570,8 +571,7 @@ user-supplied files, never `crackerjack/adapters/**`.
   (records the deleted modules' UUIDs), the per-package READMEs under
   `crackerjack/adapters/*/README.md`.
 - **Demonstrable by**: `create_adapter("Ruff")` still returns a `RuffAdapter`;
-  `create_adapter("complexipy")` still raises `ValueError: Unknown adapter:
-  complexipy`; the MCP server still starts and its `language_tools` still
+  `create_adapter("complexipy")` still raises `ValueError: Unknown adapter: complexipy`; the MCP server still starts and its `language_tools` still
   resolve the four language adapters.
 - **Rollback signal**: `adapters/factory.py:140-147` no longer resolves.
 - **Observability added**: none needed.
@@ -611,7 +611,7 @@ user-supplied files, never `crackerjack/adapters/**`.
 
 23 modules, 4,495 lines, 28 test-file references, 1 script edit.
 
----
+______________________________________________________________________
 
 ## Phase 4 — Delete the mechanical dead core
 
@@ -698,7 +698,7 @@ with no importer:
 
 38 modules, 8,340 lines, ~40 test files.
 
----
+______________________________________________________________________
 
 ## Phase 5 — Delete the dead service modules
 
@@ -744,8 +744,7 @@ live production importers.
   the `git_metrics_storage.py` reference to a module that no longer exists);
   `docs/plans/2026-08-06-crackerjack-ruff-fix-policy.md` and its spec (the
   `SafeCodeModifier` routing requirement).
-- **Demonstrable by**: `from crackerjack.services.regex_patterns import
-  SAFE_PATTERNS` still works and still holds ≥180 patterns;
+- **Demonstrable by**: `from crackerjack.services.regex_patterns import SAFE_PATTERNS` still works and still holds ≥180 patterns;
   `import crackerjack.services.refurb_fixer` raises `ModuleNotFoundError`;
   `scripts/validate_imports.py` exits 0.
 - **Rollback signal**: an `ImportError` at CLI or MCP startup, or
@@ -809,7 +808,7 @@ live production importers.
 
 41 modules, 9,519 lines, ~45 test files, 2 script edits, 5 doc edits.
 
----
+______________________________________________________________________
 
 ## Phase 6 — Resolve the `crackerjack/mahavishnu/` fork
 
@@ -862,16 +861,19 @@ since evolved past them; the crackerjack copies have not been touched since
    `sys.path` shim shadows the real `mahavishnu` package for the rest of the
    pytest session. Both are hazards independent of which fork option is
    chosen.
+
 2. **The three forks are deleted with their tests**, rather than re-forked.
    Re-forking means rewriting three test files against upstream's current
    dataclass/`record_activation`/`record_progress_snapshot` APIs — feature
    work with a clear owner, not cleanup. The crackerjack forks have had no
    production caller since they were written.
+
    - `tests/unit/test_adapter_observability.py` (19 tests) goes, and with it
      the `sys.path` shim.
    - `tests/unit/test_progress_snapshots.py` (289 lines) goes.
    - `tests/unit/mahavishnu/tenancy/test_tenant_context_packs.py` (205 lines)
      goes, and `tests/unit/mahavishnu/` with it.
+
 3. **`git_analytics.py` is relocated to `crackerjack/mcp/tools/git_analytics.py`
    and its eight tools are wired into `crackerjack/mcp/tools/profiles.py`.**
    This is the operator's answer to *Decisions that were open when this plan
@@ -889,11 +891,13 @@ since evolved past them; the crackerjack copies have not been touched since
    separately), or the eight tools are **not** registered and the surface
    is dropped. Registering eight tools that raise is the one outcome this
    phase must not produce.
+
 4. **The two dependencies `git_analytics.py` needs move with it**:
    `crackerjack/integration/mahavishnu_integration.py` (156 lines) and
    `crackerjack/memory/git_metrics_collector.py` (120 lines) are its only
    consumers' only consumers. Since `git_analytics.py` becomes live, both
    become live, and they leave the dead set.
+
 5. **The six stale documents are corrected** — done on 2026-11-14, ahead of
    the relocation, because the claims were wrong *now* and not only after
    the move. They now say the module is not callable and that its analytics
@@ -936,7 +940,7 @@ since evolved past them; the crackerjack copies have not been touched since
 10 modules, 3,716 lines, 3 test files (~513 lines), 1 module relocated
 (3,275 lines), 4 doc edits, 1 lint-exclude edit, 1 MCP registration.
 
----
+______________________________________________________________________
 
 ## Phase 7 — Documentation, changelog, ratchet, validation
 
@@ -990,8 +994,7 @@ Everything the deletions leave behind.
    was updated). Re-measure, then write both via
    `CoverageRatchetService.mirror_to_pyproject(coverage)`.
 
-4. **The plan index.** `crackerjack.tools.plan_index_sync --repo-root . --out
-   docs/plans/PLAN_INDEX.md` — and the *phase* variant of the tool, not
+4. **The plan index.** `crackerjack.tools.plan_index_sync --repo-root . --out docs/plans/PLAN_INDEX.md` — and the *phase* variant of the tool, not
    `scripts/regenerate_plan_index.py`, which produces a different format.
 
 ### Integration Contract
@@ -1026,7 +1029,7 @@ Everything the deletions leave behind.
 
 23 doc files, 1 CHANGELOG entry, 1 ratchet update, 1 plan-index regeneration.
 
----
+______________________________________________________________________
 
 ## Risks
 
@@ -1067,7 +1070,7 @@ Everything the deletions leave behind.
    test code.** That is the point, but it is a visible packaging change for
    anyone pinning a wheel hash.
 
----
+______________________________________________________________________
 
 ## References
 
@@ -1098,7 +1101,7 @@ Everything the deletions leave behind.
 - `crackerjack/services/coverage_ratchet.py` — `mirror_to_pyproject()` writes
   both coverage-floor mirror sites
 
----
+______________________________________________________________________
 
 ## Execution record
 

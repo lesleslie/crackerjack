@@ -4,7 +4,7 @@ role: implementation
 topic: lifecycle
 date: 2026-07-17
 last_reviewed: 2026-07-17
-superseded_by: null
+superseded_by:
 blocks_on: []
 ---
 
@@ -36,8 +36,8 @@ The pattern is already in place for `per_issue_timeout` (lines 1644-1652). We mi
 ## Goals
 
 1. Make the regen timeout operator-tunable without code changes.
-1. Pick a default that matches the operator's mental model (the 90s observed in error logs).
-1. Add a regression test that catches accidental reintroduction of the hardcoded literal.
+2. Pick a default that matches the operator's mental model (the 90s observed in error logs).
+3. Add a regression test that catches accidental reintroduction of the hardcoded literal.
 
 ## Non-goals
 
@@ -100,9 +100,9 @@ New file: `tests/unit/core/test_autofix_coordinator_regen_timeout.py`
 Tests:
 
 1. **Default returns 90**: with no env var set, `_get_regen_timeout()` returns 90.
-1. **Env var override**: with `CRACKERJACK_AI_FIX_REGEN_TIMEOUT=180`, returns 180.
-1. **Malformed env value**: with `CRACKERJACK_AI_FIX_REGEN_TIMEOUT=not-a-number`, returns 90 (falls back to default).
-1. **Negative value**: with `CRACKERJACK_AI_FIX_REGEN_TIMEOUT=-5`, returns the value as-is (no special handling — same as `per_issue_timeout`).
+2. **Env var override**: with `CRACKERJACK_AI_FIX_REGEN_TIMEOUT=180`, returns 180.
+3. **Malformed env value**: with `CRACKERJACK_AI_FIX_REGEN_TIMEOUT=not-a-number`, returns 90 (falls back to default).
+4. **Negative value**: with `CRACKERJACK_AI_FIX_REGEN_TIMEOUT=-5`, returns the value as-is (no special handling — same as `per_issue_timeout`).
 
 Test pattern: `monkeypatch.setenv("CRACKERJACK_AI_FIX_REGEN_TIMEOUT", "180")` then call the static method directly.
 

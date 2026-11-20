@@ -4,7 +4,7 @@ role: implementation
 topic: lifecycle
 date: 2026-07-17
 last_reviewed: 2026-07-17
-superseded_by: null
+superseded_by:
 blocks_on: []
 ---
 
@@ -419,7 +419,7 @@ ______________________________________________________________________
 
 1. **PlanResult location.** Read `crackerjack/ai_fix/fix_runner.py:234-241`. Confirm `PlanResult` is the dataclass returned at the autofix failure site. If the actual return type at `crackerjack/core/autofix_coordinator.py:2929-2955` is a parallel type, add `error_details` to that type instead.
 
-1. **Prompt construction site.** Search `crackerjack/agents/fixer_coordinator.py` for the function that builds the regenerator prompt. Likely candidates:
+2. **Prompt construction site.** Search `crackerjack/agents/fixer_coordinator.py` for the function that builds the regenerator prompt. Likely candidates:
 
    - A function named `_build_*_prompt`, `_format_*_prompt`, or `_construct_*_prompt`
    - Inline string concatenation inside the no-progress regeneration call site
@@ -427,7 +427,7 @@ ______________________________________________________________________
 
    If the search returns nothing obvious, read the no-progress detector sites at `crackerjack/core/autofix_coordinator.py:1157-1197` and `:2588-2630` and trace where they call into the fixer regenerator.
 
-1. **Existing tests with prompt-text assertions.** Read `tests/unit/agents/test_fixer_coordinator.py` and grep for `assert.*prompt` or similar. If existing tests assert exact prompt text, those will need updating (per spec Section 7.2 rule: update, don't weaken).
+3. **Existing tests with prompt-text assertions.** Read `tests/unit/agents/test_fixer_coordinator.py` and grep for `assert.*prompt` or similar. If existing tests assert exact prompt text, those will need updating (per spec Section 7.2 rule: update, don't weaken).
 
 - [x] **Step 1: Read the discovery sites**
 

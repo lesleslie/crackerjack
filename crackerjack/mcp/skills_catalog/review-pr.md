@@ -25,13 +25,12 @@ Use this Skill when:
 
 1. Subscribes to the Akosha pattern
    `ecosystem.event.received{source="git-monitor"}`.
-2. On each matching event, extracts the structured ``pr_url`` from
-   ``payload.data`` (NOT a sanitized string).
+2. On each matching event, extracts the structured `pr_url` from
+   `payload.data` (NOT a sanitized string).
 3. Enqueues the PR URL in the sqlmodel-backed durable queue.
 4. Fetches the diff via `crackerjack.skills.github_client.fetch_pr_diff`.
 5. Dispatches a code-review prompt to Mahavishnu's
-   `pool-route-execute execute --idempotency-source
-   crackerjack.review_pr`.
+   `pool-route-execute execute --idempotency-source crackerjack.review_pr`.
 6. Posts the review back as a PR comment via
    `crackerjack.skills.comment_poster.post_pr_comment`.
 7. Increments four metrics:

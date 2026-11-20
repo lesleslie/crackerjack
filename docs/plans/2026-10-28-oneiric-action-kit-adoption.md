@@ -8,7 +8,7 @@ role: implementation
 topic: action-kit-adoption
 date: 2026-10-28
 last_reviewed: 2026-10-28
-superseded_by: null
+superseded_by:
 blocks_on: []
 ---
 
@@ -169,6 +169,7 @@ in a public repository, with no reader.
 ### Integration Contract
 
 **Integration Contract:**
+
 - **Triggered from:** nothing — the module has no importers, which is the
   premise of the phase.
 - **Returns to / updates:** nothing. No import path changes.
@@ -219,6 +220,7 @@ surfaces agree.
 ### Integration Contract
 
 **Integration Contract:**
+
 - **Triggered from:** a contributor reading the catalog to decide whether a
   kit is production-ready.
 - **Returns to / updates:** `oneiric/docs/action-kits.md` — the
@@ -280,6 +282,7 @@ enforcement gate — the comment is the whole mechanism.
 ### Integration Contract
 
 **Integration Contract:**
+
 - **Triggered from:** `crackerjack/mcp/tools/monitoring_tools.py:15`, which
   imports from `status_authentication`.
 - **Returns to / updates:** `status_authentication.py` internals; the

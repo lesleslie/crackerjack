@@ -3,7 +3,7 @@ status: active
 role: canonical
 date: 2026-07-17
 last_reviewed: 2026-07-17
-superseded_by: null
+superseded_by:
 blocks_on: []
 topic: mcp-design
 ---
@@ -17,9 +17,9 @@ This document describes all configuration options available in crackerjack.
 Crackerjack loads configuration from multiple sources in order of priority:
 
 1. **Environment variables** (highest priority)
-1. `settings/local.yaml` (gitignored, for local development)
-1. `settings/crackerjack.yaml` (committed to git, base configuration)
-1. Default values in code (lowest priority)
+2. `settings/local.yaml` (gitignored, for local development)
+3. `settings/crackerjack.yaml` (committed to git, base configuration)
+4. Default values in code (lowest priority)
 
 ## AI Settings
 
@@ -344,9 +344,9 @@ ai:
 **Solutions**:
 
 1. Check file location: Must be in `settings/` directory
-1. Check YAML syntax: Use a YAML validator
-1. Check priority: Environment variables override config files
-1. Enable verbose mode: `python -m crackerjack run --verbose`
+2. Check YAML syntax: Use a YAML validator
+3. Check priority: Environment variables override config files
+4. Enable verbose mode: `python -m crackerjack run --verbose`
 
 ### Provider Not Working
 
@@ -355,9 +355,9 @@ ai:
 **Solutions**:
 
 1. Verify API key is set: `echo $QWEN_API_KEY` or `echo $ANTHROPIC_API_KEY`
-1. Check provider is valid: Must be "claude" or "qwen"
-1. Test connection: Run with `--verbose` flag
-1. Check documentation: `Qwen Provider` (archived 2026-10-14)
+2. Check provider is valid: Must be "claude" or "qwen"
+3. Test connection: Run with `--verbose` flag
+4. Check documentation: `Qwen Provider` (archived 2026-10-14)
 
 ### Tests Not Running in Parallel
 
@@ -366,9 +366,9 @@ ai:
 **Solutions**:
 
 1. Verify pytest-xdist is installed: `uv pip list | grep pytest`
-1. Check `test_workers` setting: Should be 0 (auto) or > 1
-1. Check for shared state: Some tests may not be parallel-safe
-1. Force parallel: `--test-workers 4`
+2. Check `test_workers` setting: Should be 0 (auto) or > 1
+3. Check for shared state: Some tests may not be parallel-safe
+4. Force parallel: `--test-workers 4`
 
 ## Related Documentation
 

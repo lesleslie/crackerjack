@@ -4,7 +4,7 @@ role: canonical
 topic: architecture
 date: 2026-07-17
 last_reviewed: 2026-07-17
-superseded_by: null
+superseded_by:
 blocks_on: []
 ---
 
@@ -30,8 +30,7 @@ Mccabe and complexipy now agree on 25. pyscn remains at 15 — that's deliberate
 Decision).
 
 **Where the pyscn threshold is enforced.** It is not a CLI flag on the pyscn
-command any more. `crackerjack/config/tool_commands.py` runs `pyscn analyze
---select complexity,deadcode --json --min-complexity 5` with **no** complexity
+command any more. `crackerjack/config/tool_commands.py` runs `pyscn analyze --select complexity,deadcode --json --min-complexity 5` with **no** complexity
 ceiling, and `.pyscn.toml` sets `max_complexity = 0` (no limit). The ceiling is
 applied by `crackerjack/parsers/json_parsers.py` (`PyscnJSONParser`), which counts
 functions whose `metrics.complexity` exceeds `PYSCN_MAX_COMPLEXITY`. That constant
@@ -79,11 +78,11 @@ complexity but is defensible because:
 1. crackerjack's own agents (ArchitectAgent, PlanningAgent) are AST/transform
    engines that *legitimately* run hot in some helpers (e.g.
    `LibcstSurgeon::_apply_extract_method` is complexity 29 by necessity).
-1. The complexity scanners live in the **comprehensive stage** (≈10 min total
+2. The complexity scanners live in the **comprehensive stage** (≈10 min total
    budget), not in pre-commit. False positives on borderline functions waste
    developer attention; the strict ceiling is enforced by `pyscn` at 15 in CI
    for the most common patterns (clone detection).
-1. The crackerjack-runner reports `cognitive` complexity (complexipy measures
+3. The crackerjack-runner reports `cognitive` complexity (complexipy measures
    this, not raw cyclomatic) — cognitive numbers run higher than cyclomatic for
    the same code, so a 25 cognitive ceiling ≈ 18-20 cyclomatic.
 

@@ -29,7 +29,7 @@ Two facts from the 2026-10-31 decision combine to produce it.
    name. A runtime dependency is what makes the pin transitive, so every
    repo that installs crackerjack receives the pinned build.
 
-1. **`ty` is in `[tool.creosote].exclude-deps`.** The exclusion is what
+2. **`ty` is in `[tool.creosote].exclude-deps`.** The exclusion is what
    stops creosote reporting the distribution as an unused dependency.
 
 Creosote decides whether a dependency is imported by looking for its name

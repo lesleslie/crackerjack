@@ -98,8 +98,7 @@ section. Pick the level by repo maturity:
 
 When `crackerjack_run` fails, walk the failure in this order:
 
-1. **`ruff` (fast_hooks)** — fixes are auto-applied via `--fix
-   --unsafe-fixes`. Re-run after a ruff failure.
+1. **`ruff` (fast_hooks)** — fixes are auto-applied via `--fix --unsafe-fixes`. Re-run after a ruff failure.
 2. **`mypy`** — strict mode. Most failures are missing type hints on
    public APIs or `Optional[X]` instead of `X | None`. Fix per-file
    then re-run.
@@ -110,7 +109,7 @@ When `crackerjack_run` fails, walk the failure in this order:
    (`subprocess` with shell=True).
 5. **`complexipy`** — branch / return / statement complexity. Refactor
    long functions before re-running.
-7. **`pytest`** — coverage gate at 89.02%. Add tests for uncovered
+6. **`pytest`** — coverage gate at 89.02%. Add tests for uncovered
    branches; never lower the gate.
 
 When the same tool fails twice with the same error, call

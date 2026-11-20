@@ -3,7 +3,7 @@ status: complete
 role: historical
 date: 2026-07-17
 last_reviewed: 2026-11-14
-superseded_by: null
+superseded_by:
 blocks_on: []
 topic: architecture
 ---
@@ -50,10 +50,10 @@ issues_display = str(
 ### Why This Was Wrong
 
 1. **Config errors** → `issues_count = 0` (correct calculation)
-1. **Fallback triggered** → `issues_count == 0` evaluates to False
-1. **Falls back to** → `len(issues_found)`
-1. **But `issues_found`** contains fallback message: `["Hook X failed with no detailed output..."]`
-1. **Result** → `len(issues_found) = 1` → Shows "1 issue" ❌
+2. **Fallback triggered** → `issues_count == 0` evaluates to False
+3. **Falls back to** → `len(issues_found)`
+4. **But `issues_found`** contains fallback message: `["Hook X failed with no detailed output..."]`
+5. **Result** → `len(issues_found) = 1` → Shows "1 issue" ❌
 
 ### The Execution Flow (Config Error Example)
 
@@ -105,7 +105,7 @@ else:
 **The REAL problem**: The `is_config_error` check happens BEFORE the fallback, so it should work. But the user's output shows it's NOT working. This means either:
 
 1. `is_config_error` is NOT being set to True for config errors, OR
-1. The code path being executed is different from what I'm looking at
+2. The code path being executed is different from what I'm looking at
 
 ______________________________________________________________________
 
@@ -145,13 +145,13 @@ The real adapters might be returning:
 This would explain why all hooks show "1 issue":
 
 1. Adapters return `qa_result.issues_found = 0` (no issues)
-1. `_extract_error_details()` adds fallback: `issues = ["Hook X failed..."]`
-1. `_calculate_total_issues()` checks:
+2. `_extract_error_details()` adds fallback: `issues = ["Hook X failed..."]`
+3. `_calculate_total_issues()` checks:
    - `qa_result.issues_found = 0`
    - `qa_result.status != ERROR` (it's FAILURE or doesn't exist)
    - Falls through to `max(0, 1) = 1` (old buggy code path)
-1. `is_config_error = False` (because status != ERROR)
-1. Display shows `issues_count = 1` or `len(issues_found) = 1`
+4. `is_config_error = False` (because status != ERROR)
+5. Display shows `issues_count = 1` or `len(issues_found) = 1`
 
 **But wait** - I already fixed `_calculate_total_issues()` to return 0 for config errors! Let me re-check...
 
@@ -176,9 +176,9 @@ issues_display = str(result.issues_count if hasattr(result, "issues_count") else
 ### Why This Fix Works
 
 1. `issues_count` is the authoritative count (calculated by `_calculate_total_issues()`)
-1. `issues_found` is a display list that may contain fallback messages
-1. **Never** use `len(issues_found)` as a fallback count
-1. If `issues_count` is missing, default to 0 (safest)
+2. `issues_found` is a display list that may contain fallback messages
+3. **Never** use `len(issues_found)` as a fallback count
+4. If `issues_count` is missing, default to 0 (safest)
 
 This fix ensures:
 
@@ -284,9 +284,9 @@ ______________________________________________________________________
 The symbol display implementation was correct in theory but broken by a flawed fallback:
 
 1. ✅ **Data Model**: `is_config_error` field added correctly
-1. ✅ **Calculation**: `_calculate_total_issues()` fixed to return 0 for ERROR status
-1. ✅ **Symbol Logic**: Check for `is_config_error` and show ⚠️
-1. ❌ **Display Fallback**: Was counting display messages as issues
-1. ✅ **FIX APPLIED**: Remove fallback, trust `issues_count`
+2. ✅ **Calculation**: `_calculate_total_issues()` fixed to return 0 for ERROR status
+3. ✅ **Symbol Logic**: Check for `is_config_error` and show ⚠️
+4. ❌ **Display Fallback**: Was counting display messages as issues
+5. ✅ **FIX APPLIED**: Remove fallback, trust `issues_count`
 
 All 9 tests passing ✅

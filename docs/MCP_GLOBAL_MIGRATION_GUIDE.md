@@ -3,7 +3,7 @@ status: complete
 role: historical
 date: 2026-07-17
 last_reviewed: 2026-07-17
-superseded_by: null
+superseded_by:
 blocks_on: []
 topic: mcp-design
 ---
@@ -211,9 +211,9 @@ mv /Users/les/Projects/session-buddy/.mcp.json \
 ### Step 4: Restart Claude Code
 
 1. **Quit Claude Code** completely (Cmd+Q)
-1. **Relaunch** Claude Code
-1. **Verify**: Open Claude Code settings → MCP Servers
-1. **Confirm**: All 19 servers appear in the list
+2. **Relaunch** Claude Code
+3. **Verify**: Open Claude Code settings → MCP Servers
+4. **Confirm**: All 19 servers appear in the list
 
 ### Step 5: Test Server Connectivity
 
@@ -282,7 +282,7 @@ Settings → MCP Servers → ✅ sentry
 **If a project needs a unique server** not in the global config:
 
 1. **Add to global config** first (preferred)
-1. **Create project override** only if necessary:
+2. **Create project override** only if necessary:
 
 ```json
 // /Users/les/Projects/special-project/.mcp.json
@@ -316,9 +316,9 @@ ______________________________________________________________________
    # Should return "parse error:..." if invalid
    ```
 
-1. **Restart Claude Code** (required after config changes)
+2. **Restart Claude Code** (required after config changes)
 
-1. **Check for typos** in server names or commands
+3. **Check for typos** in server names or commands
 
 ### Issue: HTTP Server Not Connecting
 
@@ -334,7 +334,7 @@ ______________________________________________________________________
    lsof -i :3032  # Check excalidraw
    ```
 
-1. **Start server manually** (if needed):
+2. **Start server manually** (if needed):
 
    ```bash
    # session-buddy
@@ -346,7 +346,7 @@ ______________________________________________________________________
    .venv/bin/uvicorn crackerjack.mcp.server_core:http_app --host 127.0.0.1 --port 8676
    ```
 
-1. **Check server logs**:
+3. **Check server logs**:
 
    ```bash
    tail -f /tmp/mcp-session-buddy.log
@@ -366,13 +366,13 @@ ______________________________________________________________________
    uvx logfire-mcp@latest --help
    ```
 
-1. **Check network connection** (for首次 downloads):
+2. **Check network connection** (for首次 downloads):
 
    ```bash
    npm ping  # Should succeed
    ```
 
-1. **Test manually**:
+3. **Test manually**:
 
    ```bash
    npx -y @upstash/context7-mcp@1.0.20
@@ -391,13 +391,13 @@ ______________________________________________________________________
    lsof -i :3033  # What's using mermaid port?
    ```
 
-1. **Kill conflicting process**:
+2. **Kill conflicting process**:
 
    ```bash
    kill -9 <PID>
    ```
 
-1. **Update port in global config** (if needed):
+3. **Update port in global config** (if needed):
 
    ```json
    "mermaid": {
@@ -471,21 +471,21 @@ ______________________________________________________________________
 ### Immediate (Day 1)
 
 1. ✅ Global config created (`~/.claude/.mcp.json`)
-1. ⏳ Disable auto-start script in `~/.claude/settings.json`
-1. ⏳ Restart Claude Code and verify servers appear in UI
-1. ⏳ Test high-priority servers (context7, session-buddy, crackerjack)
+2. ⏳ Disable auto-start script in `~/.claude/settings.json`
+3. ⏳ Restart Claude Code and verify servers appear in UI
+4. ⏳ Test high-priority servers (context7, session-buddy, crackerjack)
 
 ### Week 1
 
 1. ⏳ Remove project-level `.mcp.json` files
-1. ⏳ Document server usage patterns (which servers for which tasks)
-1. ⏳ Create quick-reference card for common server combinations
+2. ⏳ Document server usage patterns (which servers for which tasks)
+3. ⏳ Create quick-reference card for common server combinations
 
 ### Week 2-4
 
 1. ⏳ Monitor server stability and performance
-1. ⏳ Add new servers to global config as needed
-1. ⏳ Optimize server enable/disable patterns based on actual usage
+2. ⏳ Add new servers to global config as needed
+3. ⏳ Optimize server enable/disable patterns based on actual usage
 
 ______________________________________________________________________
 

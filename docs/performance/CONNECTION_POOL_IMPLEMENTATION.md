@@ -3,7 +3,7 @@ status: active
 role: canonical
 date: 2026-07-17
 last_reviewed: 2026-07-17
-superseded_by: null
+superseded_by:
 blocks_on: []
 topic: observability
 ---
@@ -22,20 +22,20 @@ topic: observability
    - Context: `_perform_health_check()` method
    - Pattern: `async with aiohttp.ClientSession() as session`
 
-1. **crackerjack/mcp/service_watchdog.py** (line 63)
+2. **crackerjack/mcp/service_watchdog.py** (line 63)
 
    - Creates session once in `start()` method
    - Context: Service lifecycle management
    - Pattern: `self.session = aiohttp.ClientSession(timeout=...)`
    - Note: Already has instance variable, better than others
 
-1. **crackerjack/adapters/ai/registry.py** (line 334)
+3. **crackerjack/adapters/ai/registry.py** (line 334)
 
    - Creates session inline for Ollama availability check
    - Context: `_check_provider_availability()` method
    - Pattern: `async with aiohttp.ClientSession() as session`
 
-1. **crackerjack/services/version_checker.py** (line 139)
+4. **crackerjack/services/version_checker.py** (line 139)
 
    - Creates session inline for PyPI API calls
    - Context: `_fetch_latest_version()` method with retry decorator
@@ -100,9 +100,9 @@ http_connection_pool:
 **Priority Order**:
 
 1. **version_checker.py** - High frequency (called often during checks)
-1. **ai/registry.py** - Medium frequency (AI provider selection)
-1. **mcp/service_watchdog.py** - Low frequency (already has instance variable)
-1. **core/service_watchdog.py** - Low frequency (health checks only)
+2. **ai/registry.py** - Medium frequency (AI provider selection)
+3. **mcp/service_watchdog.py** - Low frequency (already has instance variable)
+4. **core/service_watchdog.py** - Low frequency (health checks only)
 
 **Pattern for Each Migration**:
 
@@ -165,9 +165,9 @@ async def cleanup_connection_pool():
 **Measurement Plan**:
 
 1. Baseline: Measure current HTTP operation times
-1. After implementation: Measure new times
-1. Compare: Calculate improvement percentage
-1. Document: Add results to performance report
+2. After implementation: Measure new times
+3. Compare: Calculate improvement percentage
+4. Document: Add results to performance report
 
 ### Testing Strategy
 
@@ -212,25 +212,25 @@ async def cleanup_connection_pool():
 ### Success Criteria
 
 1. All 4 files updated to use connection pool
-1. Quality checks pass (ruff, pytest, mypy)
-1. Performance improvement measured (target: 15%+)
-1. No connection leaks in tests
-1. Documentation complete
+2. Quality checks pass (ruff, pytest, mypy)
+3. Performance improvement measured (target: 15%+)
+4. No connection leaks in tests
+5. Documentation complete
 
 ### Rollback Plan
 
 If issues arise:
 
 1. Revert individual file changes
-1. Disable connection pool via configuration
-1. Fall back to direct `aiohttp.ClientSession` creation
-1. Document issues for future resolution
+2. Disable connection pool via configuration
+3. Fall back to direct `aiohttp.ClientSession` creation
+4. Document issues for future resolution
 
 ### Next Steps
 
 1. Implement connection pool manager
-1. Add configuration
-1. Migrate files one by one (starting with version_checker)
-1. Test thoroughly
-1. Measure performance
-1. Document results
+2. Add configuration
+3. Migrate files one by one (starting with version_checker)
+4. Test thoroughly
+5. Measure performance
+6. Document results

@@ -24,13 +24,13 @@ ______________________________________________________________________
 ## Table of Contents
 
 1. [Storage Inventory](#1-storage-inventory)
-1. [MCP Write Surface](#2-mcp-write-surface)
-1. [MCP Read Surface](#3-mcp-read-surface)
-1. [Cross-Component Visibility](#4-cross-component-visibility)
-1. [Integration Contract](#5-integration-contract)
-1. [Sample Queries](#6-sample-queries)
-1. [Diagrams](#7-diagrams)
-1. [Operational Notes](#8-operational-notes)
+2. [MCP Write Surface](#2-mcp-write-surface)
+3. [MCP Read Surface](#3-mcp-read-surface)
+4. [Cross-Component Visibility](#4-cross-component-visibility)
+5. [Integration Contract](#5-integration-contract)
+6. [Sample Queries](#6-sample-queries)
+7. [Diagrams](#7-diagrams)
+8. [Operational Notes](#8-operational-notes)
 
 ______________________________________________________________________
 
@@ -1050,8 +1050,8 @@ above; the sixth is the quality gate flow (`execute_crackerjack`
 plan lands.
 
 1. **Schema map** (Section 1) — `erDiagram` of all surviving on-disk stores and the failure-flow join through `issue_fingerprint` into Session-Buddy reflections. `GitMetricsDB` and `AdapterLearningDB` are the authoritative write targets; `StateManagerJson` and `ErrorCacheJson` are derived (JSON, in-process); `OneiricDBSqlite` is Oneiric-managed.
-1. **Read groups by access pattern** (Section 3) — `flowchart` of how Mahavishnu's hot path (every dispatch), dashboards (monitoring), code intelligence (search), self-improvement (skill coverage), and admin (utility) tools read from the schema.
-1. **Self-improvement loop** (Section 2) — `sequenceDiagram` of `PhaseCoordinator → FailureRecorder → FailureMetricsRepository → Session-Buddy → ImprovementGenerator → ImprovementOverseer → SelfPatcher`, with the `MIN_FAILURES_BEFORE_IMPROVEMENT=3` and `MAX_IMPROVEMENTS_PER_DAY=5` guards called out.
+2. **Read groups by access pattern** (Section 3) — `flowchart` of how Mahavishnu's hot path (every dispatch), dashboards (monitoring), code intelligence (search), self-improvement (skill coverage), and admin (utility) tools read from the schema.
+3. **Self-improvement loop** (Section 2) — `sequenceDiagram` of `PhaseCoordinator → FailureRecorder → FailureMetricsRepository → Session-Buddy → ImprovementGenerator → ImprovementOverseer → SelfPatcher`, with the `MIN_FAILURES_BEFORE_IMPROVEMENT=3` and `MAX_IMPROVEMENTS_PER_DAY=5` guards called out.
 
 ### Quality gate flow (`execute_crackerjack` → `crackerjack_run`)
 

@@ -3,7 +3,7 @@ status: active
 role: canonical
 date: 2026-07-17
 last_reviewed: 2026-07-17
-superseded_by: null
+superseded_by:
 blocks_on: []
 topic: architecture
 ---
@@ -50,9 +50,9 @@ This directory contains visual documentation for the Crackerjack project, design
 ### By Priority (Impact on Understanding)
 
 1. **Start Here**: `oneiric-workflow-dag.png` - Understand the complete execution flow
-1. **Architecture**: ~~`layered-architecture.png`~~ (removed 2026-08-16) - See `docs/architecture/MEMORY_ARCHITECTURE.md` instead
-1. **AI System**: `ai-agent-orchestration.png` - Understand how AI fixing works (pending regeneration)
-1. **Quality**: `quality-hooks.png` - Understand the two-phase quality system
+2. **Architecture**: ~~`layered-architecture.png`~~ (removed 2026-08-16) - See `docs/architecture/MEMORY_ARCHITECTURE.md` instead
+3. **AI System**: `ai-agent-orchestration.png` - Understand how AI fixing works (pending regeneration)
+4. **Quality**: `quality-hooks.png` - Understand the two-phase quality system
 
 ### By Audience
 
@@ -84,10 +84,10 @@ These diagrams were generated using the **Mermaid MCP server** with the followin
 To regenerate or modify diagrams:
 
 1. Use the Mermaid MCP server via Claude Code
-1. Modify the Mermaid syntax as needed
-1. Save output to this directory with descriptive filename
-1. Update this README with any new diagrams
-1. Embed in appropriate documentation files
+2. Modify the Mermaid syntax as needed
+3. Save output to this directory with descriptive filename
+4. Update this README with any new diagrams
+5. Embed in appropriate documentation files
 
 ## Mermaid Source
 

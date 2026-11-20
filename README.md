@@ -268,10 +268,10 @@ AI-assisted code quality enforcement that can automatically fix many issue types
 #### How AI Agent Auto-Fixing Works
 
 1. **Run All Checks**: Fast hooks, comprehensive hooks, full test suite
-1. **Analyze Failures**: AI parses error messages and identifies likely root causes
-1. **AI Fixes**: AI reads source code and makes targeted modifications
-1. **Repeat**: Continue until checks pass or the iteration limit is reached (up to 8 iterations)
-1. **Review Results**: Validate the generated changes before commit
+2. **Analyze Failures**: AI parses error messages and identifies likely root causes
+3. **AI Fixes**: AI reads source code and makes targeted modifications
+4. **Repeat**: Continue until checks pass or the iteration limit is reached (up to 8 iterations)
+5. **Review Results**: Validate the generated changes before commit
 
 #### Comprehensive Coverage
 
@@ -356,7 +356,7 @@ Auto-fix requires:
    export ANTHROPIC_API_KEY=sk-ant-...
    ```
 
-1. **Configuration file**: `settings/adapters.yml`
+2. **Configuration file**: `settings/adapters.yml`
 
    ```yaml
    ai: claude
@@ -738,8 +738,8 @@ python scripts/rollback_skills_migration.py --force
 **Three-stage quality enforcement with code cleaning:**
 
 1. **Fast Hooks** (~5 seconds): Essential formatting and security checks
-1. **Code Cleaning Stage** (between fast and comprehensive): AI-assisted cleanup before the comprehensive hook run
-1. **Comprehensive Hooks** (~30 seconds): Complete static analysis on cleaned code
+2. **Code Cleaning Stage** (between fast and comprehensive): AI-assisted cleanup before the comprehensive hook run
+3. **Comprehensive Hooks** (~30 seconds): Complete static analysis on cleaned code
 
 **Optimal Execution Order**:
 
@@ -1130,11 +1130,11 @@ external package cannot brick crackerjack.
 ### Legacy architecture benefits
 
 1. **Type Safety:** Runtime-checkable protocols ensure correctness
-1. **Testability:** Easy mocking with `depends.get()`
-1. **Maintainability:** Clear separation between adapters and orchestration
-1. **Observability:** Structured logging with context fields
-1. **Security:** Input validation, timeout protection, origin validation
-1. **Performance:** 47% faster overall execution with caching
+2. **Testability:** Easy mocking with `depends.get()`
+3. **Maintainability:** Clear separation between adapters and orchestration
+4. **Observability:** Structured logging with context fields
+5. **Security:** Input validation, timeout protection, origin validation
+6. **Performance:** 47% faster overall execution with caching
 
 ### Documentation
 
@@ -1310,8 +1310,8 @@ The Web adapter also ships `crackerjack.adapters.web.jinja_formatter`,
 which canonicalizes `.html`, `.j2`, and `.jinja` files in Tier 1 only:
 
 1. Trailing newline at EOF.
-1. No trailing whitespace per line.
-1. Preserve `{%-` / `-%}` / `{{-` / `-}}` whitespace markers.
+2. No trailing whitespace per line.
+3. Preserve `{%-` / `-%}` / `{{-` / `-}}` whitespace markers.
 
 Tier 2 normalization is deferred. Per-project delimiter overrides live
 under `[tool.crackerjack.jinja]` in `pyproject.toml` (six keys:
@@ -1354,14 +1354,14 @@ Model Context Protocol (MCP) enables AI agents to interact directly with Cracker
    uv sync --group dev
    ```
 
-1. **Start the MCP server:**
+2. **Start the MCP server:**
 
    ```bash
    # Start MCP server
    python -m crackerjack start
    ```
 
-1. **Configure your MCP client (e.g., Claude Desktop):**
+3. **Configure your MCP client (e.g., Claude Desktop):**
 
    Add to your MCP configuration file (`mcp.json`):
 
@@ -1970,9 +1970,9 @@ python -m crackerjack start --verbose
 ## Contributing
 
 1. Fork and clone the repository
-1. Run `uv sync --group dev` to install dependencies
-1. Ensure `python -m crackerjack run` passes all checks
-1. Submit pull request
+2. Run `uv sync --group dev` to install dependencies
+3. Ensure `python -m crackerjack run` passes all checks
+4. Submit pull request
 
 **Requirements:** Python 3.13+, UV package manager, all quality checks must pass
 

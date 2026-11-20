@@ -25,9 +25,9 @@ ______________________________________________________________________
 **Attack chain.**
 
 1. Attacker controls a directory `templates/` anywhere under a validated `project_root` (or — per Phase 3 F-2 — a path outside the allowlist when `MAHAVISHNU_PROJECT_ROOTS` is unset, since the validator is inverted).
-1. Attacker places `templates/secret → /Users/les/.ssh/id_rsa` (symlink).
-1. Attacker calls `format_jinja_templates(projects=["templates"])`.
-1. `rglob("*")` yields `templates/secret`; `is_file()` returns `True` (target exists); `path.suffix` is empty — wait, this is wrong. `Path("templates/secret").suffix` is `""` because the symlink has no `.html`/`.j2`/`.jinja` suffix. So this exact chain doesn't work.
+2. Attacker places `templates/secret → /Users/les/.ssh/id_rsa` (symlink).
+3. Attacker calls `format_jinja_templates(projects=["templates"])`.
+4. `rglob("*")` yields `templates/secret`; `is_file()` returns `True` (target exists); `path.suffix` is empty — wait, this is wrong. `Path("templates/secret").suffix` is `""` because the symlink has no `.html`/`.j2`/`.jinja` suffix. So this exact chain doesn't work.
 
 **Refined attack chain.** Attacker creates `templates/innocent.html → /etc/something` (the suffix is on the symlink name itself). The `.suffix` check passes; `read_text()` reads through the symlink target. The file content is then lexed, formatted, and **written back through the symlink** — overwriting `/etc/something` with the formatted version. If `/etc/something` is `/etc/nginx/nginx.conf` or any other config file the crackerjack process has write access to, the file is overwritten with Jinja-template-shaped content.
 
@@ -36,9 +36,9 @@ ______________________________________________________________________
 **How to fix.**
 
 1. In `format_jinja_templates`, after the `is_file()` check, add `if path.is_symlink(): continue` (or raise `ValueError("symlink not allowed")` per the threat model).
-1. Better: use `path.resolve(strict=True)` and assert `resolved.is_relative_to(project_root.resolve())`. Skip (or raise) when not relative.
-1. Add a test asserting `format_jinja_templates` raises (or skips) when a symlink in `templates/` points outside `templates/`.
-1. Add a test asserting the resolved path of every written file is a descendant of the resolved `project_dir`.
+2. Better: use `path.resolve(strict=True)` and assert `resolved.is_relative_to(project_root.resolve())`. Skip (or raise) when not relative.
+3. Add a test asserting `format_jinja_templates` raises (or skips) when a symlink in `templates/` points outside `templates/`.
+4. Add a test asserting the resolved path of every written file is a descendant of the resolved `project_dir`.
 
 ______________________________________________________________________
 
@@ -53,8 +53,8 @@ ______________________________________________________________________
 **How to fix.**
 
 1. Re-read `crackerjack/mcp/tools/_project_root_validator.py` (or wherever the helper lives; plan doesn't cite the exact path). Flip the empty-allowlist branch to deny (`if not allowlist: raise PermissionError("MAHAVISHNU_PROJECT_ROOTS not configured; refusing all project paths")`).
-1. Add the regression test Phase 3 review F-2 recommended: `_validate_project_root("/tmp/foo")` raises when env var unset.
-1. Update Plan line 36 to accurately reflect the post-fix state, OR add a "carry-over fix" Task 0 that addresses both Phase 2 final-review IMPORTANT-1 and Phase 3 review F-2 before Phase 4 ships.
+2. Add the regression test Phase 3 review F-2 recommended: `_validate_project_root("/tmp/foo")` raises when env var unset.
+3. Update Plan line 36 to accurately reflect the post-fix state, OR add a "carry-over fix" Task 0 that addresses both Phase 2 final-review IMPORTANT-1 and Phase 3 review F-2 before Phase 4 ships.
 
 ______________________________________________________________________
 
@@ -69,9 +69,9 @@ ______________________________________________________________________
 **How to fix.**
 
 1. Add a JWT decode call inside `_require_auth_config`: `jwt.decode(token, secret, algorithms=["HS256"], audience=..., options={"require": ["exp"]})`. Token must come from the request, not env vars; reject missing/invalid/expired tokens with `PermissionError`.
-1. Add a test: a token signed with a different secret raises `PermissionError`.
-1. Bind the validated `sub` claim into log lines and (eventually) into formatter metadata.
-1. Until JWT validation lands, the helper name `_require_auth_config` is honest (it checks config) but does not satisfy the spec's "auth posture" intent. Update Plan line 36 to clarify.
+2. Add a test: a token signed with a different secret raises `PermissionError`.
+3. Bind the validated `sub` claim into log lines and (eventually) into formatter metadata.
+4. Until JWT validation lands, the helper name `_require_auth_config` is honest (it checks config) but does not satisfy the spec's "auth posture" intent. Update Plan line 36 to clarify.
 
 ______________________________________________________________________
 
@@ -97,9 +97,9 @@ Additionally, even if the `;` token were correctly chained (it isn't), passing i
 **How to fix.**
 
 1. **Split the hook.** Make `web.eslint_tsc` two separate `Hook` entries (`web.eslint` and `web.tsc`) in the `Hooks` tuple. The runner iterates and runs each independently. Each has a proper argv list.
-1. OR: encode as a shell script wrapper that the runner invokes. But that requires `shell=True`, which violates the global constraint.
-1. Add a test asserting `web.tsc` (or `web.eslint_tsc`) actually invokes `tsc` — currently the test asserts only that `"tsc"` appears as a substring of `cli_command`, which passes for a broken hook.
-1. Drop the `;` token construction from the plan entirely.
+2. OR: encode as a shell script wrapper that the runner invokes. But that requires `shell=True`, which violates the global constraint.
+3. Add a test asserting `web.tsc` (or `web.eslint_tsc`) actually invokes `tsc` — currently the test asserts only that `"tsc"` appears as a substring of `cli_command`, which passes for a broken hook.
+4. Drop the `;` token construction from the plan entirely.
 
 ______________________________________________________________________
 
@@ -116,8 +116,8 @@ For `npx`, the additional concern: `npx --no-install stylelint '**/*.css'` — `
 **How to fix.**
 
 1. Document the per-tool glob-expansion contract in the hook docstring: "stylelint expands the glob internally; do not rely on shell expansion."
-1. Add an integration test asserting the hook actually lints a multi-file fixture, not just a single literal `**/*.css` file.
-1. Alternative: drop the glob and let the tool default to its project-root scan (most linters auto-discover). Less precise, but more portable.
+2. Add an integration test asserting the hook actually lints a multi-file fixture, not just a single literal `**/*.css` file.
+3. Alternative: drop the glob and let the tool default to its project-root scan (most linters auto-discover). Less precise, but more portable.
 
 ______________________________________________________________________
 
@@ -136,8 +136,8 @@ In `js_ts_fallback` (line 461-482): no regex — manual char loop. Safe.
 **How to fix.**
 
 1. Add an adversarial test: `html_fallback` on `content = "<" * 1_000_000` should complete in \<1 second.
-1. Bound the regex: replace `[^>]*?` with `[^>]{0,1000}?` (cap at 1000 chars per attempt). Or use a non-backtracking approach: split content on `<` and process linearly.
-1. Alternative: drop the regex entirely and use a hand-rolled state machine (same as `js_ts_fallback`). Slightly more code, no regex surface.
+2. Bound the regex: replace `[^>]*?` with `[^>]{0,1000}?` (cap at 1000 chars per attempt). Or use a non-backtracking approach: split content on `<` and process linearly.
+3. Alternative: drop the regex entirely and use a hand-rolled state machine (same as `js_ts_fallback`). Slightly more code, no regex surface.
 
 ______________________________________________________________________
 
@@ -152,8 +152,8 @@ ______________________________________________________________________
 **How to fix.**
 
 1. Sanitize the error message: `error = type(exc).__name__` only, or a short canned message ("file read failed").
-1. Log the full exception via `logger.exception(...)` (per Global Constraint line 28), and return only the safe summary to the caller.
-1. Test that `str(exc)` is NOT present in the tool's return value when an `OSError` is raised.
+2. Log the full exception via `logger.exception(...)` (per Global Constraint line 28), and return only the safe summary to the caller.
+3. Test that `str(exc)` is NOT present in the tool's return value when an `OSError` is raised.
 
 ______________________________________________________________________
 
@@ -170,8 +170,8 @@ More importantly: when `package.json` pins the version (the `_has_pinned_version
 **How to fix.**
 
 1. Document explicitly: "Supply chain safety depends on the user maintaining a lockfile (`package-lock.json`, `pnpm-lock.yaml`, or `yarn.lock`). crackerjack does NOT enforce this."
-1. Optional: add a pre-flight check that a lockfile exists when the project has a `package.json`. Warn (not fail) if missing.
-1. The pinned-version branch (`_has_pinned_version`) should resolve the binary from `node_modules/.bin/` rather than relying on global `PATH`. Add `(project_root / "node_modules" / ".bin" / "stylelint")` as a `shutil.which`-equivalent lookup.
+2. Optional: add a pre-flight check that a lockfile exists when the project has a `package.json`. Warn (not fail) if missing.
+3. The pinned-version branch (`_has_pinned_version`) should resolve the binary from `node_modules/.bin/` rather than relying on global `PATH`. Add `(project_root / "node_modules" / ".bin" / "stylelint")` as a `shutil.which`-equivalent lookup.
 
 ______________________________________________________________________
 
@@ -186,8 +186,8 @@ ______________________________________________________________________
 **How to fix.**
 
 1. Stream-parse with `ijson` (third-party dep) or use `json.JSONDecoder().raw_decode()` after a small buffer read.
-1. Cap the read: `pkg.read_text()[:1_000_000]` with a truncation warning if exceeded.
-1. Add a test: a 50MB `package.json` does not cause OOM.
+2. Cap the read: `pkg.read_text()[:1_000_000]` with a truncation warning if exceeded.
+3. Add a test: a 50MB `package.json` does not cause OOM.
 
 ______________________________________________________________________
 
@@ -202,7 +202,7 @@ ______________________________________________________________________
 **How to fix.**
 
 1. Same as F-9: cap the read size, warn on truncation.
-1. Document: `tomllib` is the safest option; no code-execution risk.
+2. Document: `tomllib` is the safest option; no code-execution risk.
 
 ______________________________________________________________________
 
@@ -217,8 +217,8 @@ ______________________________________________________________________
 **How to fix.**
 
 1. Add a `_validate_delimiters(delims)` helper that asserts no empty strings, no overlapping delimiters, and all 6 keys present.
-1. If/when delimiters become an MCP argument, gate them through the validator.
-1. Add a test: `format_template(src, delimiters={"block_start": ""})` raises `ValueError` (or returns `source` with a warning logged).
+2. If/when delimiters become an MCP argument, gate them through the validator.
+3. Add a test: `format_template(src, delimiters={"block_start": ""})` raises `ValueError` (or returns `source` with a warning logged).
 
 ______________________________________________________________________
 
@@ -310,6 +310,6 @@ The 3 LOW findings are quality-of-implementation concerns. F-12 through F-15 con
 The recommended pre-implementation carry-over (Phase 0 or early Phase 4):
 
 1. Flip `_validate_project_root` to deny when `MAHAVISHNU_PROJECT_ROOTS` is unset. (Resolves F-2.)
-1. Add JWT decode to `_require_auth_config`. (Resolves F-3.)
-1. Split the `eslint_tsc` hook in the plan into two separate hooks before implementation. (Resolves F-4.)
-1. Add the symlink guard to `format_jinja_templates` at implementation time. (Resolves F-1.)
+2. Add JWT decode to `_require_auth_config`. (Resolves F-3.)
+3. Split the `eslint_tsc` hook in the plan into two separate hooks before implementation. (Resolves F-4.)
+4. Add the symlink guard to `format_jinja_templates` at implementation time. (Resolves F-1.)

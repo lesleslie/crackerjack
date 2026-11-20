@@ -33,8 +33,8 @@ The plan's 8 tests:
 **Risk:**
 
 1. **Zero `test_<hook>_uses_cli_when_present` tests.** A regression where the runner short-circuits to fallback regardless of `shutil.which` would pass every test. The structural assertions check `cli_command` shape but never invoke the runner with `shutil.which` mocked to return a CLI path.
-1. **The single fallback test is structurally weak.** It calls `for hook in hooks: result = mock_run.return_value; assert result == []` — this loops but doesn't distinguish hooks, doesn't pin that the right `hook.fallback` was invoked, and doesn't check that the right hook fired in the right order.
-1. **Spec Testing F3 is mandatory for hybrid hooks** — the spec uses the word "mandatory" twice. The plan has 1 of 6 required tests.
+2. **The single fallback test is structurally weak.** It calls `for hook in hooks: result = mock_run.return_value; assert result == []` — this loops but doesn't distinguish hooks, doesn't pin that the right `hook.fallback` was invoked, and doesn't check that the right hook fired in the right order.
+3. **Spec Testing F3 is mandatory for hybrid hooks** — the spec uses the word "mandatory" twice. The plan has 1 of 6 required tests.
 
 **Recommendation:**
 Add 6 tests to `test_hooks.py` (one pair per hook + a "no-fallback → WebHookError" test):
@@ -105,9 +105,9 @@ def test_round_trip_invariant() -> None:
 **Risk:**
 
 1. **The committed fixture files are decorative.** Per spec Testing F9, the round-trip invariant must be asserted "for every fixture" using "golden-master expected output" — not just round-trip on inline strings.
-1. **The custom-delimiters fixture is the load-bearing case** for Jinja F2 (all 6 delimiter kwargs). Task 4 only tests custom delimiters with inline strings (`test_format_uses_custom_delimiters`); the fixture file goes unused.
-1. **The whitespace fixture is the load-bearing case** for Jinja F1 (`{%-`/`-%}` preservation). Task 4 only tests whitespace markers inline (`test_format_preserves_whitespace_control_markers`); the fixture file goes unused.
-1. **Phase 4 deliverable per spec line 420**: the shared `jinja-test-fixtures/` Bodai sibling package uses these exact fixtures. If Phase 4 doesn't have pytest-level golden-master tests, the shared package has no upstream contract to verify against.
+2. **The custom-delimiters fixture is the load-bearing case** for Jinja F2 (all 6 delimiter kwargs). Task 4 only tests custom delimiters with inline strings (`test_format_uses_custom_delimiters`); the fixture file goes unused.
+3. **The whitespace fixture is the load-bearing case** for Jinja F1 (`{%-`/`-%}` preservation). Task 4 only tests whitespace markers inline (`test_format_preserves_whitespace_control_markers`); the fixture file goes unused.
+4. **Phase 4 deliverable per spec line 420**: the shared `jinja-test-fixtures/` Bodai sibling package uses these exact fixtures. If Phase 4 doesn't have pytest-level golden-master tests, the shared package has no upstream contract to verify against.
 
 **Note:** The round-trip invariant test (line 759-764) uses inline source — that's correct as a smoke check, but doesn't satisfy "golden-master expected output for every fixture." The difference matters: round-trip alone catches `format(format(x)) == format(x)` regressions; golden-master catches regressions where the canonical form itself changes (e.g., a future maintainer "improves" Tier 1 normalization and shifts the output).
 
@@ -176,15 +176,15 @@ print(WebAdapter().detect(__import__('pathlib').Path('tests/fixtures/web-vanilla
 This verifies **detect + registry wiring** only. It does NOT:
 
 1. Run `npx stylelint "tests/fixtures/web-vanilla/src/style.css"` to confirm stylelint is actually installed and finds the `.stylelintrc.json`.
-1. Run `npx eslint "tests/fixtures/web-vanilla/src/app.ts"` to confirm eslint + typescript-eslint parser work together.
-1. Run `npx tsc --noEmit -p tests/fixtures/web-vanilla/` to confirm TypeScript compiles the fixture.
-1. Run `npx html-validate "tests/fixtures/web-vanilla/src/index.html"` to confirm html-validate is installed.
+2. Run `npx eslint "tests/fixtures/web-vanilla/src/app.ts"` to confirm eslint + typescript-eslint parser work together.
+3. Run `npx tsc --noEmit -p tests/fixtures/web-vanilla/` to confirm TypeScript compiles the fixture.
+4. Run `npx html-validate "tests/fixtures/web-vanilla/src/index.html"` to confirm html-validate is installed.
 
 **Risk:**
 
 1. **Fixture validity is unverified.** If `npx stylelint` fails on the committed `.stylelintrc.json` (e.g., a schema change in stylelint 16.x makes `{"rules": {}}` invalid), the fixture is broken but CI passes because no test invokes stylelint.
-1. **Pin-version drift.** The `package.json` pins `"stylelint": "^15.0.0"` and `"typescript": "^5.0.0"`. By the time Phase 4 ships, stylelint 16/17 may have become standard and `^15` install may fail on Node 22. There's no signal in CI.
-1. **Phase 3 HIGH-4 precedent**: the same gap surfaced in the Kotlin fixture review — a decorative fixture passes the test suite without proving end-to-end validity.
+2. **Pin-version drift.** The `package.json` pins `"stylelint": "^15.0.0"` and `"typescript": "^5.0.0"`. By the time Phase 4 ships, stylelint 16/17 may have become standard and `^15` install may fail on Node 22. There's no signal in CI.
+3. **Phase 3 HIGH-4 precedent**: the same gap surfaced in the Kotlin fixture review — a decorative fixture passes the test suite without proving end-to-end validity.
 
 **Recommendation:**
 Add a Task 7 step that runs each CLI against the fixture, gated on availability:
@@ -264,8 +264,8 @@ async def test_check_web_lint_returns_three_hook_names(tmp_path: Path) -> None:
 **Risk:**
 
 1. **Idiom mismatch** — the rest of the test suite (e.g., Task 3 tests) uses `monkeypatch` as a pytest fixture. Future maintainers will copy-paste this pattern and break isolation if they forget `finally`. The pytest fixture is automatically scoped to the test.
-1. **Async + `pytest.MonkeyPatch()` interaction** — `pytest.MonkeyPatch()` does work in async tests, but the pytest fixture is the canonical idiom for async code.
-1. **Exception safety** — if `asyncio.run(_register())` succeeds and the assertion fails, `finally: monkeypatch.undo()` runs correctly. But if `asyncio.run(_register())` raises BEFORE setting up state, the env vars from prior tests leak.
+2. **Async + `pytest.MonkeyPatch()` interaction** — `pytest.MonkeyPatch()` does work in async tests, but the pytest fixture is the canonical idiom for async code.
+3. **Exception safety** — if `asyncio.run(_register())` succeeds and the assertion fails, `finally: monkeypatch.undo()` runs correctly. But if `asyncio.run(_register())` raises BEFORE setting up state, the env vars from prior tests leak.
 
 **Recommendation:**
 Convert all 4 tests to use the `monkeypatch` fixture:
@@ -344,7 +344,7 @@ def test_capabilities_exposes_jinja_formatter_factory(tmp_path: Path) -> None:
 **Risk:**
 
 1. **False confidence.** A reviewer reading "8 passed" thinks the formatter is tested. It isn't.
-1. **Phase 3 MEDIUM-3 precedent** — the review called out similar degenerate tests in earlier phases.
+2. **Phase 3 MEDIUM-3 precedent** — the review called out similar degenerate tests in earlier phases.
 
 **Recommendation:**
 Either:
@@ -444,7 +444,7 @@ cmd = _npx_command("eslint", ".", "--ext", ".ts,.tsx,.js,.jsx") + (";", "tsc", "
 **Risk:**
 
 1. The hook structural test passes (`assert "eslint" in cmd_str; assert "tsc" in cmd_str`), but the hook will FAIL at runtime.
-1. This is a wiring bug masquerading as a hybrid hook.
+2. This is a wiring bug masquerading as a hybrid hook.
 
 **Recommendation:**
 Fix the `_eslt_hook` to encode the two-step invocation differently. Options:
@@ -513,22 +513,22 @@ ______________________________________________________________________
 
 ### What's NOT covered (gaps)
 
-1. **(HIGH)** `test_<hook>_uses_cli_when_present` × 3 — only structural assertions on `cli_command`, no runtime exercise (HIGH-1)
-1. **(HIGH)** `test_<hook>_falls_back_to_python_when_cli_missing` × 3 — only 1 combined fallback test, no per-hook (HIGH-1)
-1. **(HIGH)** `test_<hook>_raises_webhook_error_when_no_fallback` — no error-branch test (HIGH-1)
-1. **(HIGH)** Golden-master expected-output tests for `basic.html`, `custom_delimiters.html`, `whitespace.html` fixtures (HIGH-2)
-1. **(HIGH)** Real-CLI smoke tests against fixture (HIGH-3)
-1. **(MEDIUM)** `pytest --cov` step in Task 7 (MEDIUM-2)
-1. **(MEDIUM)** `test_discover_adapters_includes_web` pytest-level integration test (MEDIUM-4)
-1. **(MEDIUM)** Strengthen or delete `test_capabilities_exposes_jinja_formatter_factory` (MEDIUM-3)
-1. **(MEDIUM)** Convert `pytest.MonkeyPatch()` direct instantiation to `monkeypatch` fixture (MEDIUM-1)
-1. **(LOW)** `_tool_manager._tools` carry-forward acknowledgement (LOW-1)
-1. **(LOW)** `@pytest.mark.real_web_smoke` marker in `pyproject.toml` (LOW-2)
-1. **(LOW)** `_eslt_hook` `;`-separator wiring fix (LOW-3, more design than testing)
-1. **(LOW)** Pytest markers per project CLAUDE.md convention (LOW-4)
-1. **(CONTEXT)** `tests/fixtures/web-only/` (CSS/HTML only, no Python) — spec Testing F8 lists this; Phase 4 creates only `web-vanilla/`. The plan defers this as out of scope, which is consistent with the spec's "deliver in phases" intent.
-1. **(CONTEXT)** `tests/fixtures/mixed/` (fastblocks-like, Python + Web) — same as above.
-1. **(CONTEXT)** `tests/fixtures/real-repo-weekly-smoke/` — weekly smoke target; not Phase 4 scope.
+01. **(HIGH)** `test_<hook>_uses_cli_when_present` × 3 — only structural assertions on `cli_command`, no runtime exercise (HIGH-1)
+02. **(HIGH)** `test_<hook>_falls_back_to_python_when_cli_missing` × 3 — only 1 combined fallback test, no per-hook (HIGH-1)
+03. **(HIGH)** `test_<hook>_raises_webhook_error_when_no_fallback` — no error-branch test (HIGH-1)
+04. **(HIGH)** Golden-master expected-output tests for `basic.html`, `custom_delimiters.html`, `whitespace.html` fixtures (HIGH-2)
+05. **(HIGH)** Real-CLI smoke tests against fixture (HIGH-3)
+06. **(MEDIUM)** `pytest --cov` step in Task 7 (MEDIUM-2)
+07. **(MEDIUM)** `test_discover_adapters_includes_web` pytest-level integration test (MEDIUM-4)
+08. **(MEDIUM)** Strengthen or delete `test_capabilities_exposes_jinja_formatter_factory` (MEDIUM-3)
+09. **(MEDIUM)** Convert `pytest.MonkeyPatch()` direct instantiation to `monkeypatch` fixture (MEDIUM-1)
+10. **(LOW)** `_tool_manager._tools` carry-forward acknowledgement (LOW-1)
+11. **(LOW)** `@pytest.mark.real_web_smoke` marker in `pyproject.toml` (LOW-2)
+12. **(LOW)** `_eslt_hook` `;`-separator wiring fix (LOW-3, more design than testing)
+13. **(LOW)** Pytest markers per project CLAUDE.md convention (LOW-4)
+14. **(CONTEXT)** `tests/fixtures/web-only/` (CSS/HTML only, no Python) — spec Testing F8 lists this; Phase 4 creates only `web-vanilla/`. The plan defers this as out of scope, which is consistent with the spec's "deliver in phases" intent.
+15. **(CONTEXT)** `tests/fixtures/mixed/` (fastblocks-like, Python + Web) — same as above.
+16. **(CONTEXT)** `tests/fixtures/real-repo-weekly-smoke/` — weekly smoke target; not Phase 4 scope.
 
 ### Pytest markers / gating
 
@@ -543,16 +543,16 @@ ______________________________________________________________________
 
 ## Suggested additional tests (priority order)
 
-1. **(HIGH)** Add 6 hybrid two-path tests to Task 3 (3 "uses CLI when present" + 3 "falls back when CLI missing").
-1. **(HIGH)** Add `test_hook_without_fallback_raises_webhook_error` to Task 3.
-1. **(HIGH)** Add `test_format_fixture_against_expected` parameterized test to Task 4; create `*.expected.html` siblings in Task 7.
-1. **(HIGH)** Add 3 `real_web_smoke` fixture-validation tests in Task 7.
-1. **(HIGH)** Fix `_eslt_hook` `;`-separator design and add an integration test that asserts BOTH eslint and tsc were called.
-1. **(MEDIUM)** Convert Task 6 `pytest.MonkeyPatch()` instantiation to `monkeypatch` fixture.
-1. **(MEDIUM)** Add `pytest --cov` step to Task 7.
-1. **(MEDIUM)** Add `test_discover_adapters_includes_web` pytest test.
-1. **(MEDIUM)** Strengthen or delete `test_capabilities_exposes_jinja_formatter_factory`.
-1. **(LOW)** Add `@pytest.mark.real_web_smoke` to `pyproject.toml`.
+01. **(HIGH)** Add 6 hybrid two-path tests to Task 3 (3 "uses CLI when present" + 3 "falls back when CLI missing").
+02. **(HIGH)** Add `test_hook_without_fallback_raises_webhook_error` to Task 3.
+03. **(HIGH)** Add `test_format_fixture_against_expected` parameterized test to Task 4; create `*.expected.html` siblings in Task 7.
+04. **(HIGH)** Add 3 `real_web_smoke` fixture-validation tests in Task 7.
+05. **(HIGH)** Fix `_eslt_hook` `;`-separator design and add an integration test that asserts BOTH eslint and tsc were called.
+06. **(MEDIUM)** Convert Task 6 `pytest.MonkeyPatch()` instantiation to `monkeypatch` fixture.
+07. **(MEDIUM)** Add `pytest --cov` step to Task 7.
+08. **(MEDIUM)** Add `test_discover_adapters_includes_web` pytest test.
+09. **(MEDIUM)** Strengthen or delete `test_capabilities_exposes_jinja_formatter_factory`.
+10. **(LOW)** Add `@pytest.mark.real_web_smoke` to `pyproject.toml`.
 
 ______________________________________________________________________
 
@@ -571,8 +571,8 @@ ______________________________________________________________________
 **HIGH-severity gaps are concentrated in:**
 
 1. Task 3 hybrid two-path test plan incomplete (6 of 6 mandated tests missing)
-1. Task 4 has no golden-master expected-output tests
-1. Task 7 fixture is decorative (no real-CLI smoke)
+2. Task 4 has no golden-master expected-output tests
+3. Task 7 fixture is decorative (no real-CLI smoke)
 
 **Recommended action before Task 7 closes:** Address HIGH-1, HIGH-2, HIGH-3. The MEDIUM items can be filed as Phase 4 follow-ups if not blocking. LOW-3 (`_eslt_hook` design bug) should be addressed during Task 3 implementation, not after.
 

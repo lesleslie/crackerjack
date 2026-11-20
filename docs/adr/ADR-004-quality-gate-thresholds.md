@@ -4,7 +4,7 @@ role: canonical
 topic: architecture
 date: 2026-07-17
 last_reviewed: 2026-07-17
-superseded_by: null
+superseded_by:
 blocks_on: []
 ---
 
@@ -19,20 +19,20 @@ blocks_on: []
 Crackerjack runs multiple quality checks (type checking, security scanning, complexity analysis, etc.) and needed a way to enforce quality standards consistently across different project contexts. A flexible threshold system was required to:
 
 1. **Prevent merging code below quality standards**
-1. **Support gradual improvement** (allow temporary exceptions)
-1. **Handle different project contexts** (library vs application vs scripts)
-1. **Provide clear feedback** to developers about what needs fixing
-1. **Integrate with CI/CD pipelines**
+2. **Support gradual improvement** (allow temporary exceptions)
+3. **Handle different project contexts** (library vs application vs scripts)
+4. **Provide clear feedback** to developers about what needs fixing
+5. **Integrate with CI/CD pipelines**
 
 ### Problem Statement
 
 How should Crackerjack enforce quality standards while being:
 
 1. **Strict enough** to prevent low-quality code from merging
-1. **Flexible enough** to handle different project contexts
-1. **Supportive of gradual improvement** (not all code can be fixed immediately)
-1. **Clear** about what standards are enforced and why
-1. **Configurable** without requiring code changes
+2. **Flexible enough** to handle different project contexts
+3. **Supportive of gradual improvement** (not all code can be fixed immediately)
+4. **Clear** about what standards are enforced and why
+5. **Configurable** without requiring code changes
 
 ### Key Requirements
 
@@ -797,18 +797,18 @@ jobs:
 ### Positive
 
 1. **Context-Aware**: Different tiers for different project types
-1. **Gradual Improvement**: Ratchet system prevents regression while allowing improvement
-1. **Clear Expectations**: Bronze → Silver → Gold progression is intuitive
-1. **Flexible**: Can exempt specific files with tracking
-1. **CI/CD Ready**: Clear pass/fail with actionable feedback
-1. **Motivational**: Milestones encourage improvement (50% → 80% → 95%)
+2. **Gradual Improvement**: Ratchet system prevents regression while allowing improvement
+3. **Clear Expectations**: Bronze → Silver → Gold progression is intuitive
+4. **Flexible**: Can exempt specific files with tracking
+5. **CI/CD Ready**: Clear pass/fail with actionable feedback
+6. **Motivational**: Milestones encourage improvement (50% → 80% → 95%)
 
 ### Negative
 
 1. **Complexity**: More complex than simple pass/fail
-1. **Configuration**: Need to set initial tier and target tier
-1. **Exemption Tracking**: Requires discipline to review and expire exemptions
-1. **Baseline Management**: Need to commit baseline to version control
+2. **Configuration**: Need to set initial tier and target tier
+3. **Exemption Tracking**: Requires discipline to review and expire exemptions
+4. **Baseline Management**: Need to commit baseline to version control
 
 ### Risks
 

@@ -342,16 +342,16 @@ result = await SecureSubprocess.run_command(
 
 ## Best Practices
 
-1. **Use DI**: Always use dependency injection via `@depends.inject`
-1. **Import Protocols**: Import from `models/protocols.py`, not concrete classes
-1. **Validate Input**: Use input_validator for all external input
-1. **Secure Paths**: Use SecurePathValidator for path operations
-1. **Centralize Patterns**: Use regex_patterns.py instead of raw regex
-1. **Handle Errors**: Use structured error handling with specific exceptions
-1. **Log Security Events**: Use security_logger for security-relevant operations
-1. **Cache Appropriately**: Use cache service for expensive operations
-1. **Async When Needed**: Use async/await for I/O-bound operations
-1. **Test Thoroughly**: Add tests for all new services
+01. **Use DI**: Always use dependency injection via `@depends.inject`
+02. **Import Protocols**: Import from `models/protocols.py`, not concrete classes
+03. **Validate Input**: Use input_validator for all external input
+04. **Secure Paths**: Use SecurePathValidator for path operations
+05. **Centralize Patterns**: Use regex_patterns.py instead of raw regex
+06. **Handle Errors**: Use structured error handling with specific exceptions
+07. **Log Security Events**: Use security_logger for security-relevant operations
+08. **Cache Appropriately**: Use cache service for expensive operations
+09. **Async When Needed**: Use async/await for I/O-bound operations
+10. **Test Thoroughly**: Add tests for all new services
 
 ## Related
 

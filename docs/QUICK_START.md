@@ -3,7 +3,7 @@ status: active
 role: canonical
 date: 2026-07-17
 last_reviewed: 2026-07-17
-superseded_by: null
+superseded_by:
 blocks_on: []
 topic: lifecycle
 ---
@@ -158,11 +158,11 @@ python -m crackerjack run --ai-fix --run-tests
 **What It Does**:
 
 1. Runs all quality checks
-1. Collects all failures
-1. AI analyzes each issue
-1. Applies targeted fixes
-1. Re-runs checks
-1. Repeats until all pass (max 8 iterations)
+2. Collects all failures
+3. AI analyzes each issue
+4. Applies targeted fixes
+5. Re-runs checks
+6. Repeats until all pass (max 8 iterations)
 
 **Expected Output**:
 

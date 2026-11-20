@@ -3,7 +3,7 @@ status: archived
 role: historical
 date: 2026-07-17
 last_reviewed: 2026-09-09
-superseded_by: null
+superseded_by:
 blocks_on: []
 topic: mcp-design
 ---
@@ -25,9 +25,9 @@ The Oneiric migration replaces dependency injection and custom WebSocket monitor
 **Key Changes:**
 
 1. **CLI Structure:** Options → Commands (e.g., `--start-mcp-server` → `start`)
-1. **Health Checks:** New `--probe` flag for live monitoring
-1. **WebSocket Removed:** All WebSocket server options deleted
-1. **Multi-Instance Support:** New `--instance-id` flag
+2. **Health Checks:** New `--probe` flag for live monitoring
+3. **WebSocket Removed:** All WebSocket server options deleted
+4. **Multi-Instance Support:** New `--instance-id` flag
 
 ______________________________________________________________________
 

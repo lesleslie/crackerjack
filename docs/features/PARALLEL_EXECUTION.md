@@ -3,7 +3,7 @@ status: active
 role: canonical
 date: 2026-07-17
 last_reviewed: 2026-07-17
-superseded_by: null
+superseded_by:
 blocks_on: []
 topic: lifecycle
 ---
@@ -61,15 +61,15 @@ enable_parallel_phases: true
 ### ✅ Recommended Scenarios
 
 1. **Full CI/CD Pipelines**: When running both tests and comprehensive hooks
-1. **Large Test Suites**: Tests take >30 seconds
-1. **Development Iteration**: Frequent quality checks during development
-1. **Multi-Core Systems**: Machines with 4+ CPU cores
+2. **Large Test Suites**: Tests take >30 seconds
+3. **Development Iteration**: Frequent quality checks during development
+4. **Multi-Core Systems**: Machines with 4+ CPU cores
 
 ### ❌ Not Recommended
 
 1. **Resource-Constrained Systems**: Machines with \<2 CPU cores
-1. **Debugging Flaky Tests**: When isolating test failures
-1. **Single-Phase Workflows**: Running only tests OR only hooks
+2. **Debugging Flaky Tests**: When isolating test failures
+3. **Single-Phase Workflows**: Running only tests OR only hooks
 
 ## Technical Details
 
@@ -140,9 +140,9 @@ if step in ("tests", "comprehensive_hooks"):
 ### Priority Order
 
 1. CLI flag (highest)
-1. `settings/local.yaml`
-1. `settings/crackerjack.yaml`
-1. Default value (`False`)
+2. `settings/local.yaml`
+3. `settings/crackerjack.yaml`
+4. Default value (`False`)
 
 ## Backward Compatibility
 
@@ -259,9 +259,9 @@ python -m crackerjack run -t -c --parallel-phases
 Potential future improvements:
 
 1. **Adaptive Parallelization**: Automatically detect if tasks can run in parallel
-1. **Resource-Aware Scheduling**: Adjust parallelism based on available CPU/memory
-1. **Fine-Grained Phases**: Parallelize additional independent phases
-1. **Performance Metrics**: Track and report actual speedup percentages
+2. **Resource-Aware Scheduling**: Adjust parallelism based on available CPU/memory
+3. **Fine-Grained Phases**: Parallelize additional independent phases
+4. **Performance Metrics**: Track and report actual speedup percentages
 
 ## References
 

@@ -8,7 +8,7 @@ role: implementation
 topic: testing-infrastructure
 date: 2026-11-06
 last_reviewed: 2026-11-07
-superseded_by: null
+superseded_by:
 blocks_on: []
 ---
 
@@ -45,18 +45,18 @@ baseline must self-describe its freshness).
 1. **Python floor is 3.14.** The selection path must stay pure-python. Any
    compiled dependency that ships no cp314/cp315 wheel is disqualifying —
    this is exactly what disqualified `snob-lib` (107 wheels, max tag `cp313`).
-1. **testmon and branch coverage must never share a pytest run.** testmon
+2. **testmon and branch coverage must never share a pytest run.** testmon
    raises `TestmonException` when pytest-cov runs in branch mode
    (`testmon/testmon_core.py:513-553`). Branch coverage is *on* in every
    Bodai repo — all three fleet pyproject templates carry `branch = true`
    — so the conflict is resolved by the gate, which switches coverage
    collection off for the incremental run. See correction 7.
-1. **Coverage collection must stay on, via pytest-cov.** testmon's
+3. **Coverage collection must stay on, via pytest-cov.** testmon's
    `_get_nocollect_reasons` returns `[]` (collection active) when the
    `cov_plugin` is present, because testmon reuses pytest-cov's coverage
    instance. Do not switch to a bare `coverage.py` invocation — that path
    disables testmon collection.
-1. **Crackerjack-owned data lives under `data_dir(app="crackerjack")`.**
+4. **Crackerjack-owned data lives under `data_dir(app="crackerjack")`.**
    `data_dir(app="session-buddy")` is reserved for files session-buddy owns.
    A path that *is* XDG-resolved must be resolved when it is used, not
    captured at import time — a module-level constant freezes one
@@ -64,16 +64,16 @@ baseline must self-describe its freshness).
    writes into the developer's real data directory. (See Post-implementation
    correction 6.) The three paths that never used XDG at all are recorded
    as not-yet-implemented in the decision doc's Status section.
-1. **No runtime `pip install` / `uv pip install` in library code.**
-1. **pytest exit code 5 ("no tests collected") is a failure**, in an
+5. **No runtime `pip install` / `uv pip install` in library code.**
+6. **pytest exit code 5 ("no tests collected") is a failure**, in an
    incremental run as much as in a full one. (See Post-implementation
    correction 1: under testmon, the exit code that reaches the caller
    discriminates "everything was deselected" (0) from "pytest collected
    nothing" (5), and the empty *result set* is the signal that says the
    change affects no test.)
-1. **Recording run state must never fail a test run.** The store is a side
+7. **Recording run state must never fail a test run.** The store is a side
    effect; a store error logs a warning and is swallowed.
-1. Pre-1.0 — direct commit to local `main`, no PR. No push without explicit
+8. Pre-1.0 — direct commit to local `main`, no PR. No push without explicit
    operator approval.
 
 ## Post-implementation corrections
@@ -241,21 +241,21 @@ Each is pinned by a test named in the owning task.
    set*, not the exit code — testmon rewrites the exit code 5 that an
    empty selection would produce, so a 5 reaching the caller means pytest
    collected nothing at all, which is a failure.)
-1. **Branch coverage enabled.** testmon raises `TestmonException` in
+2. **Branch coverage enabled.** testmon raises `TestmonException` in
    branch mode and the whole test phase dies with an opaque error.
    Expected: the incremental run neutralises it, so the phase still runs.
    → Task 1.6, `test_the_incremental_run_disables_coverage_collection`
    and `test_the_full_run_keeps_coverage_collection`.
-1. **First run after install.** `.testmondata` does not exist yet, so testmon
+3. **First run after install.** `.testmondata` does not exist yet, so testmon
    must run the *full* suite and write the data file. A reasonable person
    expects a complete first run, not an empty one.
    → Task 1.6, `test_first_run_without_testmondata_runs_full_suite`.
-1. **Two worktrees, one repo.** `.testmondata` is per-checkout. A change made
+4. **Two worktrees, one repo.** `.testmondata` is per-checkout. A change made
    in worktree A must not cause worktree B to skip tests it never touched.
    Expected: each checkout keeps its own dependency data, and the shared
    store distinguishes runs by worktree path.
    → Task 2.2, `test_runs_from_different_worktrees_are_distinct`.
-1. **Stale store rows.** The store accumulates rows across commits. A query
+5. **Stale store rows.** The store accumulates rows across commits. A query
    for "status at commit X" must not return rows from commit Y. Expected:
    commit SHA is part of the key, and a query for a commit with no recorded
    run returns an explicit "no recorded run" rather than an empty result
@@ -717,11 +717,11 @@ makes the answer a query.
 1. **Crackerjack writes the results itself**, on every run, regardless of who
    invoked it. Crackerjack owns its data: `data_dir(app="crackerjack")`, per
    `docs/decisions/2026-11-06-cj-xdg-namespace-and-state-paths.md`.
-1. **The store gains `commit_sha` and `worktree`**, so a run is addressable by
+2. **The store gains `commit_sha` and `worktree`**, so a run is addressable by
    `(repo, commit_sha, worktree)`.
-1. **Per-test results come from pytest's JSON report**, not from a regex over
+3. **Per-test results come from pytest's JSON report**, not from a regex over
    terminal output. The regex is the bug that produced 0 rows.
-1. **Session-buddy stops being written by crackerjack** (the XDG collision),
+4. **Session-buddy stops being written by crackerjack** (the XDG collision),
    and reads crackerjack's store instead.
 
 **New module:** `crackerjack/services/testing/run_state_store.py`
@@ -1105,18 +1105,18 @@ ______________________________________________________________________
    is a **search** substrate, not a keyed status table — embedding every test
    span to answer "is commit abc123 green" would be the wrong trade.
    Revisit as a Phase 3 if flaky-test diagnosis becomes the priority.
-1. **`pytest-split` / `pytest-shard`.** Worth a follow-up: testmon's
+2. **`pytest-split` / `pytest-shard`.** Worth a follow-up: testmon's
    `.testmondata` already accumulates `avg_durations` per test, which is the
    same artifact `pytest-split` needs for duration-balanced shards — the two
    compose. Sharding is a CI concern, not a local-worktree one.
-1. **`diff-cover`.** Independent and cheap:
+3. **`diff-cover`.** Independent and cheap:
    `diff-cover coverage.xml --compare-branch=origin/main --fail-under=X`
    answers patch coverage against a base branch with no separate baseline
    run. Separate small change.
-1. **Rolling this out to mahavishnu, session-buddy, and mcp-common.** This
+4. **Rolling this out to mahavishnu, session-buddy, and mcp-common.** This
    plan is crackerjack-first by decision. The store's schema and the
    `run-state` CLI are the reusable artifacts.
-1. **The stale snob references in mahavishnu** —
+5. **The stale snob references in mahavishnu** —
    `BODAI_UPGRADE_WATCH.md:51` and
    `docs/adr/016-phase-4-streaming-tar-evolution.md:46,129,138` describe a
    fastblocks blocker that no longer exists: fastblocks has zero snob
@@ -1136,12 +1136,12 @@ worked. They belong in a separate plan in the session-buddy repo,
    and expects coverage/timing groups pytest's default reporter does not
    print. The replacement should consume pytest's JSON report instead of
    scraping terminal output — the same source Phase 2 uses.
-1. **Stop the test suite writing into the live database.** Fixtures are
+2. **Stop the test suite writing into the live database.** Fixtures are
    creating rows in `~/.local/share/session-buddy/crackerjack_integration.db`
    with `working_directory` values like `/nonexistent/path/to/project`. The
    integration's `db_path` must be overridable and the fixtures must point
    at `tmp_path`.
-1. **Read crackerjack's new store.** Add a reader for
+3. **Read crackerjack's new store.** Add a reader for
    `~/.local/share/crackerjack/run_state.db` so session-buddy's
    `crackerjack_history` and `analyze_crackerjack_test_patterns` tools report
    real per-test history instead of counting `"success"` occurrences in

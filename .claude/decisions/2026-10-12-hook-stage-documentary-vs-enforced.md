@@ -10,8 +10,7 @@ topic: hook-architecture
 
 ## Context
 
-`crackerjack/config/hooks.py:30-67` (the `HookDefinition` dataclass) carries a `stage:
-HookStage` field, but the docstring at line 32-51 explicitly notes:
+`crackerjack/config/hooks.py:30-67` (the `HookDefinition` dataclass) carries a `stage: HookStage` field, but the docstring at line 32-51 explicitly notes:
 
 > drift between list and field is a silent inconsistency
 

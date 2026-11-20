@@ -3,7 +3,7 @@ status: active
 role: canonical
 date: 2026-07-17
 last_reviewed: 2026-07-17
-superseded_by: null
+superseded_by:
 blocks_on: []
 topic: architecture
 ---
@@ -17,10 +17,10 @@ Crackerjack is a quality control and CI/CD automation platform designed to enfor
 ## Core Principles
 
 1. **Quality-First**: Enforce standards before code reaches production
-1. **Developer Experience**: Fast, intuitive, and non-intrusive
-1. **Extensibility**: Easy to add custom checks and quality gates
-1. **Integration**: Works with existing tools and CI/CD platforms
-1. **AI-Assisted**: Optional AI-powered auto-fix capabilities
+2. **Developer Experience**: Fast, intuitive, and non-intrusive
+3. **Extensibility**: Easy to add custom checks and quality gates
+4. **Integration**: Works with existing tools and CI/CD platforms
+5. **AI-Assisted**: Optional AI-powered auto-fix capabilities
 
 ## System Architecture
 
@@ -136,10 +136,10 @@ Hierarchical configuration management:
 **Configuration Layers** (highest to lowest priority):
 
 1. Command-line arguments
-1. Environment variables (`CRACKERJACK_*`)
-1. User config (`~/.crackerjack/config.toml`)
-1. Project config (`crackerjack.toml`)
-1. Default values
+2. Environment variables (`CRACKERJACK_*`)
+3. User config (`~/.crackerjack/config.toml`)
+4. Project config (`crackerjack.toml`)
+5. Default values
 
 **Key Features**:
 

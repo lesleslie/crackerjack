@@ -5,7 +5,7 @@ role: implementation
 topic: architecture
 date: 2026-08-06
 last_reviewed: 2026-08-06
-superseded_by: null
+superseded_by:
 blocks_on: []
 authors: brainstormsession
 related:

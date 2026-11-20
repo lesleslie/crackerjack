@@ -3,7 +3,7 @@ status: active
 role: canonical
 date: 2026-07-17
 last_reviewed: 2026-07-17
-superseded_by: null
+superseded_by:
 blocks_on: []
 topic: lifecycle
 ---
@@ -805,9 +805,9 @@ ______________________________________________________________________
 ### Optimization Tips
 
 1. **Use direct backend** for maximum performance
-1. **Batch recommendations** - Get multiple at once instead of one-by-one
-1. **Cache recommendations** - Same query returns same results for 1 hour
-1. **Use auto backend** - Lets system choose optimal backend
+2. **Batch recommendations** - Get multiple at once instead of one-by-one
+3. **Cache recommendations** - Same query returns same results for 1 hour
+4. **Use auto backend** - Lets system choose optimal backend
 
 ### Scaling
 

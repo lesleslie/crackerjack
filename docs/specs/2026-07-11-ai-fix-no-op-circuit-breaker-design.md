@@ -4,7 +4,7 @@ role: implementation
 topic: lifecycle
 date: 2026-07-17
 last_reviewed: 2026-07-17
-superseded_by: null
+superseded_by:
 blocks_on: []
 ---
 
@@ -35,8 +35,8 @@ Two other files show the same pattern post-timeout (`autofix_coordinator.py`, `t
 ## Goals
 
 1. Stop the retry loop early when 2 consecutive plan signatures match — the third attempt has zero chance of producing a different outcome.
-1. Surface the "stuck" condition with a distinct reason so the AI-fix log distinguishes "no-op" from "stuck: planner producing identical plans".
-1. Keep existing single-attempt success behavior unchanged (don't break the happy path).
+2. Surface the "stuck" condition with a distinct reason so the AI-fix log distinguishes "no-op" from "stuck: planner producing identical plans".
+3. Keep existing single-attempt success behavior unchanged (don't break the happy path).
 
 ## Non-goals
 
@@ -87,12 +87,12 @@ Place this method adjacent to `_get_regen_timeout` (cluster-3 fix landed at line
 In `crackerjack/core/autofix_coordinator.py:4329` (the `for attempt in range(3):` loop), add:
 
 1. Before the loop: `_previous_signature: str | None = None`.
-1. After `success, plan_results, feedback = await asyncio.wait_for(...)` returns successfully (no timeout/OSError):
+2. After `success, plan_results, feedback = await asyncio.wait_for(...)` returns successfully (no timeout/OSError):
    - If `not success` AND `any("no-op fix:" in ri for ri in (result.remaining_issues or []) for result in plan_results if result)`:
      - Compute `_current_signature = self._plan_signature(plan)`.
      - If `_current_signature == _previous_signature`, **break out of the loop** with a new failure reason `"stuck: planner producing identical plans"`.
      - Else: `_previous_signature = _current_signature`.
-1. If `_previous_signature is None` (no no-op ever seen), the loop continues normally.
+3. If `_previous_signature is None` (no no-op ever seen), the loop continues normally.
 
 The break-out path:
 
@@ -111,10 +111,10 @@ New file: `tests/unit/core/test_autofix_no_op_circuit_breaker.py`
 Tests:
 
 1. **`test_plan_signature_is_stable_for_identical_plans`** — two `FixPlan` instances with the same content produce the same signature.
-1. **`test_plan_signature_differs_for_distinct_plans`** — different `file_path`, `issue_type`, or `changes` produce different signatures.
-1. **`test_plan_signature_ignores_rationale`** — two plans differing only in `rationale` produce the same signature (rationale is free-form).
-1. **`test_circuit_breaker_skips_after_two_no_op_results`** — call the retry loop with a stub that always produces a no-op result; verify only 2 attempts are made (not 3) and the returned reason is `"stuck: planner producing identical plans"`.
-1. **`test_circuit_breaker_does_not_trigger_for_different_failures`** — first attempt no-op, second attempt timeout (different signature won't match, but the test is for non-no-op failures); verify the loop continues.
+2. **`test_plan_signature_differs_for_distinct_plans`** — different `file_path`, `issue_type`, or `changes` produce different signatures.
+3. **`test_plan_signature_ignores_rationale`** — two plans differing only in `rationale` produce the same signature (rationale is free-form).
+4. **`test_circuit_breaker_skips_after_two_no_op_results`** — call the retry loop with a stub that always produces a no-op result; verify only 2 attempts are made (not 3) and the returned reason is `"stuck: planner producing identical plans"`.
+5. **`test_circuit_breaker_does_not_trigger_for_different_failures`** — first attempt no-op, second attempt timeout (different signature won't match, but the test is for non-no-op failures); verify the loop continues.
 
 For test 4: use `unittest.mock.AsyncMock` to stub `_execute_plan_with_validation` to return `(False, [<FixResult with no-op remaining_issues>], "no-op")`. Test verifies: loop returns after 2 calls, final FixResult has the "stuck" reason.
 

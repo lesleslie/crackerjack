@@ -63,10 +63,10 @@ Per-repo state (all 7 Bodai repos):
 **Invariants:**
 
 1. `.coverage-ratchet.json` is the only source of truth for the floor.
-1. `pyproject.toml` `--cov-fail-under` is a mirror, kept in sync by the Crackerjack test stage.
-1. No 80% default. Initial floor = current coverage at `init` time.
-1. The ratchet ticks up only when coverage rises. It never moves down automatically.
-1. Direct commits to main per `bodai-pre-1.0-merge-policy.md`. No PRs.
+2. `pyproject.toml` `--cov-fail-under` is a mirror, kept in sync by the Crackerjack test stage.
+3. No 80% default. Initial floor = current coverage at `init` time.
+4. The ratchet ticks up only when coverage rises. It never moves down automatically.
+5. Direct commits to main per `bodai-pre-1.0-merge-policy.md`. No PRs.
 
 ## Data flow
 

@@ -3,7 +3,7 @@ status: complete
 role: historical
 date: 2026-07-17
 last_reviewed: 2026-07-17
-superseded_by: null
+superseded_by:
 blocks_on: []
 topic: mcp-design
 ---
@@ -13,9 +13,9 @@ topic: mcp-design
 ## Performance Goals
 
 1. **No significant slowdown** in total workflow time
-1. **Benchmark everything** before/after implementation
-1. **Optimize hot paths** where parsing happens repeatedly
-1. **Prove with data** that performance is acceptable
+2. **Benchmark everything** before/after implementation
+3. **Optimize hot paths** where parsing happens repeatedly
+4. **Prove with data** that performance is acceptable
 
 ## Expected Performance Characteristics
 
@@ -358,9 +358,9 @@ data = msgpack.unpackb(packed_data)
 ### When to Optimize
 
 1. **Measure first** - Don't optimize without benchmarks
-1. **Focus on bottlenecks** - Optimize the slowest 20%
-1. **Consider total time** - 10x faster parsing is useless if it saves only 10ms on a 90s run
-1. **Trade correctness for speed** - Never skip validation for performance
+2. **Focus on bottlenecks** - Optimize the slowest 20%
+3. **Consider total time** - 10x faster parsing is useless if it saves only 10ms on a 90s run
+4. **Trade correctness for speed** - Never skip validation for performance
 
 ### Performance Budget
 

@@ -69,10 +69,10 @@ Crackerjack uses a **single source of truth** architecture for QA results, elimi
 ## Key Benefits
 
 1. **Zero Data Loss**: 100% issue preservation (61/61 vs. previous 44/61)
-1. **Single Parsing**: Tools run once, results used directly
-1. **Superior File Handling**: QA adapters handle file-based tools correctly
-1. **Graceful Degradation**: Falls back to raw parsing if QAResult unavailable
-1. **Better Error Handling**: Specific exceptions with full tracebacks
+2. **Single Parsing**: Tools run once, results used directly
+3. **Superior File Handling**: QA adapters handle file-based tools correctly
+4. **Graceful Degradation**: Falls back to raw parsing if QAResult unavailable
+5. **Better Error Handling**: Specific exceptions with full tracebacks
 
 ## ToolIssue Format
 
@@ -111,14 +111,14 @@ QA adapters populate `parsed_issues` with ToolIssue dictionaries:
    - `bandit` → IssueType.SECURITY
    - etc.
 
-1. **Content-based fallback** (message analysis):
+2. **Content-based fallback** (message analysis):
 
    - Contains "test" → IssueType.TEST_FAILURE
    - Contains "complex" → IssueType.COMPLEXITY
    - Contains "security" → IssueType.SECURITY
    - etc.
 
-1. **Default**: IssueType.FORMATTING
+3. **Default**: IssueType.FORMATTING
 
 ### Validation
 
@@ -310,7 +310,7 @@ As of the implementation date, the following tools support QAResult integration:
 Currently, tools may run twice:
 
 1. Once during HookExecutor (for fast feedback)
-1. Once during QA Adapter (for parsed_issues)
+2. Once during QA Adapter (for parsed_issues)
 
 **Optimization**: Cache QAResult from HookExecutor and reuse in AI-fix.
 

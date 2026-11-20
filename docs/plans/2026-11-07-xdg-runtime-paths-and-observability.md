@@ -8,7 +8,7 @@ role: implementation
 topic: testing-infrastructure
 date: 2026-11-07
 last_reviewed: 2026-11-07
-superseded_by: null
+superseded_by:
 blocks_on: []
 ---
 
@@ -41,19 +41,19 @@ than a durable row.
 
 1. **Python floor is 3.14.** `requires-python = ">=3.14"`, ruff
    `target-version = "py314"`.
-1. **A path that resolves must resolve when it is used**, not captured
+2. **A path that resolves must resolve when it is used**, not captured
    at import time. A module-level constant freezes one resolution
    before the test session's `XDG_*` redirect can reach it, and the
    suite writes into the developer's real directory instead.
-1. **A migration never destroys data.** Moving is one-way only when the
+3. **A migration never destroys data.** Moving is one-way only when the
    target does not already exist; a target that exists is left alone,
    and a failed move leaves the legacy copy in place.
-1. **No migration runs at import time.** Migrations happen where the
+4. **No migration runs at import time.** Migrations happen where the
    path is opened, so importing a module never touches the filesystem.
-1. **Every path a message interpolates goes through
+5. **Every path a message interpolates goes through
    `crackerjack.utils.path_redaction`.**
-1. **No `assert` in production code**; no `print()` in library code.
-1. Pre-1.0 — direct commit to local `main`, no PR. **No push without
+6. **No `assert` in production code**; no `print()` in library code.
+7. Pre-1.0 — direct commit to local `main`, no PR. **No push without
    explicit operator approval** (this plan's Task 8 is that approval).
 
 ## Review Focus
@@ -62,26 +62,28 @@ Five failure modes the design implies but no happy-path test exercises.
 
 1. **The target already exists.** A migration must not overwrite a live
    database with a stale legacy copy.
-1. **The move fails** (permissions, a locked file, a full disk). The
+2. **The move fails** (permissions, a locked file, a full disk). The
    legacy copy must survive and the run must continue.
-1. **The legacy path is a symlink**, or points outside the expected
+3. **The legacy path is a symlink**, or points outside the expected
    tree. Following it blindly can move something the user did not mean.
-1. **Two projects share one state directory.** The run history is
+4. **Two projects share one state directory.** The run history is
    user-scoped after the move; a run id from one project must not be
    restored as if it belonged to another.
-1. **The selection mode is unknown.** A run recorded before the column
+5. **The selection mode is unknown.** A run recorded before the column
    existed, or by a caller that passes a mode the CLI does not know,
    must not crash the aggregate query.
 
----
+______________________________________________________________________
 
 ## Task 1 — A shared legacy-path migration helper
 
 **Files:**
+
 - Create: `crackerjack/utils/legacy_paths.py`
 - Test: `tests/unit/utils/test_legacy_paths.py`
 
 **Interfaces:**
+
 - Produces: `migrate_legacy_file(legacy: Path, target: Path) -> bool` and
   `migrate_legacy_dir(legacy: Path, target: Path) -> bool`. Both return
   `True` when something moved.
@@ -156,6 +158,7 @@ git commit --only crackerjack/utils/legacy_paths.py tests/unit/utils/test_legacy
 ```
 
 **Integration Contract:**
+
 - **Triggered from:** wherever a runtime path is opened (Task 2-4).
 - **Returns to / updates:** nothing; a migration is a side effect that
   never fails the caller.
@@ -165,18 +168,21 @@ git commit --only crackerjack/utils/legacy_paths.py tests/unit/utils/test_legacy
 - **Observability added:** a `logger.info` per successful move (run id
   and file names, no absolute paths) and a `logger.warning` per failure.
 
----
+______________________________________________________________________
 
 ## Task 2 — The async task store and the health integration database
 
 **Files:**
+
 - Modify: `crackerjack/config/settings.py:466-474` (`AsyncTaskSettings`)
 - Modify: `crackerjack/mcp/server_core.py:166-183` (store construction)
 - Modify: `crackerjack/cli/handlers/health.py:20` (integration DB path)
 - Test: `tests/unit/utils/test_legacy_paths.py`, `tests/mcp/…` (new)
 
 **Interfaces:**
+
 - Consumes: `migrate_legacy_file` from Task 1.
+
 - Produces: `AsyncTaskSettings.storage_path` defaults to
   `data_dir("crackerjack") / "async_tasks.db"`.
 
@@ -203,8 +209,7 @@ Expected: FAIL — the default is still `~/.crackerjack/state/`.
 
 Change the default to `data_dir("crackerjack") / "async_tasks.db"`. In
 `server_core.py`, before constructing the store, call
-`migrate_legacy_file(Path.home() / ".crackerjack" / "state" /
-"async_tasks.db", settings.async_task.storage_path)`.
+`migrate_legacy_file(Path.home() / ".crackerjack" / "state" / "async_tasks.db", settings.async_task.storage_path)`.
 
 In `health.py`, the integration database resolves under
 `data_dir("crackerjack")`; migrate the legacy
@@ -220,6 +225,7 @@ git commit --only crackerjack/config/settings.py crackerjack/mcp/server_core.py 
 ```
 
 **Integration Contract:**
+
 - **Triggered from:** MCP server startup (async tasks); every health
   check (integration database).
 - **Returns to / updates:** nothing.
@@ -229,11 +235,12 @@ git commit --only crackerjack/config/settings.py crackerjack/mcp/server_core.py 
   settings path back to the legacy location to keep using it.
 - **Observability added:** a `logger.info` per migration.
 
----
+______________________________________________________________________
 
 ## Task 3 — The AI-fix run history moves to `$XDG_STATE_HOME`
 
 **Files:**
+
 - Modify: `crackerjack/core/ai_fix_sinks.py:110,131-137,149-157,253-275`
 - Modify: `crackerjack/core/autofix_coordinator.py:123`
 - Modify: `crackerjack/cli/replay.py:96-108`
@@ -241,7 +248,9 @@ git commit --only crackerjack/config/settings.py crackerjack/mcp/server_core.py 
   `tests/unit/cli/test_pr0_replay.py`
 
 **Interfaces:**
+
 - Consumes: `migrate_legacy_dir` from Task 1.
+
 - Produces: `runs_root(base_dir: Path | None) -> Path` in
   `crackerjack/core/ai_fix_sinks.py`.
 
@@ -287,8 +296,8 @@ git commit --only crackerjack/core/ai_fix_sinks.py crackerjack/core/autofix_coor
 ```
 
 **Integration Contract:**
-- **Triggered from:** every AI-fix event bus construction; `crackerjack
-  replay`.
+
+- **Triggered from:** every AI-fix event bus construction; `crackerjack replay`.
 - **Returns to / updates:** nothing.
 - **Demonstrable by:** `crackerjack replay <run_id>` finds a run that
   `git clean -fd` can no longer destroy.
@@ -296,16 +305,19 @@ git commit --only crackerjack/core/ai_fix_sinks.py crackerjack/core/autofix_coor
   reads a project-local run directory.
 - **Observability added:** a `logger.info` per migrated run directory.
 
----
+______________________________________________________________________
 
 ## Task 4 — The log directory moves to `$XDG_STATE_HOME`
 
 **Files:**
+
 - Modify: `crackerjack/services/log_manager.py:26-51`
 - Test: `tests/unit/services/test_log_manager.py` (new or existing)
 
 **Interfaces:**
+
 - Consumes: `migrate_legacy_dir` from Task 1.
+
 - Produces: `LogManager.log_dir` resolves to
   `$XDG_STATE_HOME/crackerjack/logs`.
 
@@ -340,6 +352,7 @@ git commit --only crackerjack/services/log_manager.py tests/... -m "feat(xdg): m
 ```
 
 **Integration Contract:**
+
 - **Triggered from:** `LogManager.__init__`, which every logging setup
   constructs.
 - **Returns to / updates:** nothing.
@@ -349,11 +362,12 @@ git commit --only crackerjack/services/log_manager.py tests/... -m "feat(xdg): m
   falls back to the project-local directory.
 - **Observability added:** a `logger.info` per migrated log directory.
 
----
+______________________________________________________________________
 
 ## Task 5 — The selection mode becomes answerable
 
 **Files:**
+
 - Modify: `crackerjack/services/testing/run_state_store.py` (aggregate
   query)
 - Modify: `crackerjack/cli/run_state_cli.py` (`show` prints the mode;
@@ -362,9 +376,10 @@ git commit --only crackerjack/services/log_manager.py tests/... -m "feat(xdg): m
   `tests/cli/test_run_state_cli.py`
 
 **Interfaces:**
+
 - Produces: `RunStateStore.summarize(repo: str | None = None) -> dict[str, object]`
-  returning `{"runs": int, "incremental": int, "full": int, "failed": int,
-  "passed": int}`.
+  returning `{"runs": int, "incremental": int, "full": int, "failed": int, "passed": int}`.
+
 - Produces: `crackerjack run-state stats`.
 
 - [ ] **Step 1: Write the failing tests**
@@ -397,6 +412,7 @@ git commit --only crackerjack/services/testing/run_state_store.py crackerjack/cl
 ```
 
 **Integration Contract:**
+
 - **Triggered from:** `crackerjack run-state show` and
   `crackerjack run-state stats`.
 - **Returns to / updates:** nothing.
@@ -406,13 +422,16 @@ git commit --only crackerjack/services/testing/run_state_store.py crackerjack/cl
 - **Observability added:** the store's existing `selection_mode` column
   becomes queryable.
 
----
+______________________________________________________________________
 
 ## Task 6 — The records say what is true
 
 **Files:**
+
 - Modify: `docs/decisions/2026-11-06-cj-xdg-namespace-and-state-paths.md`
+
 - Modify: `docs/feature-tracking/2026-11-06-test-selection-and-run-state.md`
+
 - Modify: `docs/plans/PLAN_INDEX.md` (regenerated)
 
 - [ ] **Step 1: Write the failing test**
@@ -434,15 +453,17 @@ table updated.
 
 - [ ] **Step 5: Commit**
 
----
+______________________________________________________________________
 
 ## Task 7 — Mahavishnu's stale snob references
 
 **Files (in `/Users/les/Projects/mahavishnu`):**
+
 - Modify: `BODAI_UPGRADE_WATCH.md:51`
 - Modify: `docs/adr/016-phase-4-streaming-tar-evolution.md:46,129,138`
 
 **Interfaces:**
+
 - Consumes: nothing from this repo.
 
 - [ ] **Step 1: Establish the facts**
@@ -464,7 +485,7 @@ Commit only those two files. **Do not run the quality gate over that
 tree** - another session is actively working in it, and the gate scans
 the whole tree and autofixes Python files that are not this change's.
 
----
+______________________________________________________________________
 
 ## Task 8 — Push
 

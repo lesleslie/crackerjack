@@ -8,7 +8,7 @@ role: implementation
 topic: gitignore-conformance
 date: 2026-09-07
 last_reviewed: 2026-09-07
-superseded_by: null
+superseded_by:
 blocks_on: []
 ---
 
@@ -32,9 +32,9 @@ Bodai fleet repos have a canonical `.gitignore` snippet that crackerjack CI enfo
 
 1. `crackerjack run` against `/Users/les/Projects/akosha` (and each of the other fleet repos) exits 0 with the canonical snippet present in the repo's `.gitignore`.
 2. Removing the canonical snippet block from any one fleet repo's `.gitignore` causes `crackerjack run` to exit 1 with a clear error naming the missing block.
-4. Running `crackerjack gitignore-sync` against a fleet repo preserves every pattern in the repo's existing `.gitignore` that is not in the canonical snippet.
-5. Running the new check against `/Users/les/Projects/<some-non-bodai-repo>` (any project outside the Bodai registry) does not modify the repo and exits 0.
-6. The template file is referenced by exactly one source file in crackerjack (no duplicate copies).
+3. Running `crackerjack gitignore-sync` against a fleet repo preserves every pattern in the repo's existing `.gitignore` that is not in the canonical snippet.
+4. Running the new check against `/Users/les/Projects/<some-non-bodai-repo>` (any project outside the Bodai registry) does not modify the repo and exits 0.
+5. The template file is referenced by exactly one source file in crackerjack (no duplicate copies).
 
 ## Context
 

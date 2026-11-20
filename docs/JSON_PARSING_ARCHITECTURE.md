@@ -3,7 +3,7 @@ status: active
 role: canonical
 date: 2026-07-17
 last_reviewed: 2026-07-17
-superseded_by: null
+superseded_by:
 blocks_on: []
 topic: mcp-design
 ---
@@ -40,10 +40,10 @@ pattern = re.compile(r"^(.+?):(\d+):(\d+):?\s*([A-Z]\d+)\s+(.+)$")
 **Problems:**
 
 1. Silent failures when regex doesn't match
-1. No validation that parsed count matches tool's reported count
-1. Brittle contract with tool output format
-1. Different regex patterns for each tool
-1. Hard to maintain and debug
+2. No validation that parsed count matches tool's reported count
+3. Brittle contract with tool output format
+4. Different regex patterns for each tool
+5. Hard to maintain and debug
 
 ### Tools and JSON Support
 
@@ -67,10 +67,10 @@ ______________________________________________________________________
 ### Design Principles
 
 1. **Parse, Don't Validate:** JSON provides structured data, not text to validate
-1. **Fail Loudly:** Missing required fields → explicit error, not silent drop
-1. **Validate Counts:** Compare parsed issue count with tool's reported count
-1. **Graceful Fallback:** Regex for tools without JSON support
-1. **Unified Interface:** All parsers return `list[Issue]`
+2. **Fail Loudly:** Missing required fields → explicit error, not silent drop
+3. **Validate Counts:** Compare parsed issue count with tool's reported count
+4. **Graceful Fallback:** Regex for tools without JSON support
+5. **Unified Interface:** All parsers return `list[Issue]`
 
 ### Architecture Overview
 
@@ -841,9 +841,9 @@ ______________________________________________________________________
 ### Optimization Strategies
 
 1. **Reuse JSON parsers** (don't recreate per issue)
-1. **Cache parsed schemas** if using JSON schema validation
-1. **Batch parsing** for tools with multiple files
-1. **Lazy validation** in development, strict in CI
+2. **Cache parsed schemas** if using JSON schema validation
+3. **Batch parsing** for tools with multiple files
+4. **Lazy validation** in development, strict in CI
 
 ______________________________________________________________________
 
@@ -1053,16 +1053,16 @@ ______________________________________________________________________
 ### Immediate Benefits
 
 1. **Fixes Current Bug:** Ruff [\*] marker issue eliminated
-1. **No Silent Failures:** Validation catches parsing errors immediately
-1. **Easier Debugging:** JSON is human-readable and structured
-1. **Better Error Messages:** Know exactly which field is missing
+2. **No Silent Failures:** Validation catches parsing errors immediately
+3. **Easier Debugging:** JSON is human-readable and structured
+4. **Better Error Messages:** Know exactly which field is missing
 
 ### Long-term Benefits
 
 1. **Maintainability:** Tool updates don't break parsing
-1. **Reliability:** Stable schemas backed by tool APIs
-1. **Extensibility:** Easy to add new tools
-1. **Testability:** JSON samples are easy to mock
+2. **Reliability:** Stable schemas backed by tool APIs
+3. **Extensibility:** Easy to add new tools
+4. **Testability:** JSON samples are easy to mock
 
 ### Developer Experience
 
@@ -1105,17 +1105,17 @@ ______________________________________________________________________
    - Status: Keep regex parsers
    - Alternative: Find replacement tools with JSON support?
 
-1. **Custom tool wrappers** (zuban, skylos):
+2. **Custom tool wrappers** (zuban, skylos):
 
    - Can we modify them to output JSON?
    - Or add JSON serialization layer?
 
-1. **Error recovery**:
+3. **Error recovery**:
 
    - When parsing fails, should we abort or continue with partial results?
    - Proposal: Configurable `strict_mode` (default: abort in CI, continue in dev)
 
-1. **Backward compatibility**:
+4. **Backward compatibility**:
 
    - How long to maintain regex parsers?
    - Proposal: Keep for 2 major versions, deprecate with warnings
@@ -1148,10 +1148,10 @@ ______________________________________________________________________
 ## Next Steps
 
 1. **Review this proposal** with team
-1. **Create implementation plan** with task breakdown
-1. **Set up feature flags** for gradual rollout
-1. **Start Phase 1** (Foundation)
-1. **Weekly syncs** to track progress
+2. **Create implementation plan** with task breakdown
+3. **Set up feature flags** for gradual rollout
+4. **Start Phase 1** (Foundation)
+5. **Weekly syncs** to track progress
 
 ______________________________________________________________________
 

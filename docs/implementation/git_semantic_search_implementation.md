@@ -3,7 +3,7 @@ status: complete
 role: historical
 date: 2026-07-17
 last_reviewed: 2026-07-17
-superseded_by: null
+superseded_by:
 blocks_on: []
 topic: lifecycle
 ---
@@ -24,13 +24,13 @@ Add semantic search MCP tools for git workflows in `crackerjack/integration/`. T
    - Bridges GitMetricsCollector with AkoshaMCP for semantic indexing
    - Provides search, pattern detection, and practice recommendations
 
-1. **MCP Tools** (`crackerjack/mcp/tools/git_semantic_tools.py`)
+2. **MCP Tools** (`crackerjack/mcp/tools/git_semantic_tools.py`)
 
    - `search_git_history`: Natural language search over commits
    - `find_workflow_patterns`: Detect recurring workflow patterns
    - `recommend_git_practices`: AI-powered practice recommendations
 
-1. **Integration with Existing Systems**
+3. **Integration with Existing Systems**
 
    - Uses `GitMetricsCollector` for raw git data
    - Uses `AkoshaGitIntegration` for vector storage and search
@@ -138,24 +138,24 @@ class PracticeRecommendation:
    - PracticeRecommendation dataclass
    - Semantic enrichment functions
 
-1. **Implement Core Functions**
+2. **Implement Core Functions**
 
    - `search_git_history()`: Index and search commits
    - `find_workflow_patterns()`: Pattern detection using clustering
    - `recommend_git_practices()`: Rule-based + semantic analysis
 
-1. **Create MCP Tools** (git_semantic_tools.py)
+3. **Create MCP Tools** (git_semantic_tools.py)
 
    - Register three tools following semantic_tools.py pattern
    - Input validation using `get_input_validator()`
    - Error handling and JSON responses
 
-1. **Update MCP Server Registration**
+4. **Update MCP Server Registration**
 
    - Add `register_git_semantic_tools()` to tools/__init__.py
    - Call from server_core.py
 
-1. **Testing**
+5. **Testing**
 
    - Unit tests for pattern detection
    - Integration tests with AkoshaMCP
@@ -180,16 +180,16 @@ def enrich_commit_for_search(commit: CommitData) -> str:
 ### Pattern Detection Algorithm
 
 1. Cluster commits by semantic similarity
-1. Identify clusters meeting frequency threshold
-1. Extract common semantic themes
-1. Generate pattern descriptions
+2. Identify clusters meeting frequency threshold
+3. Extract common semantic themes
+4. Generate pattern descriptions
 
 ### Practice Recommendation Logic
 
 1. Analyze metrics (velocity, conflict rate, compliance)
-1. Identify areas deviating from best practices
-1. Search for similar solved problems in history
-1. Generate contextual recommendations
+2. Identify areas deviating from best practices
+3. Search for similar solved problems in history
+4. Generate contextual recommendations
 
 ## Integration Points
 
@@ -213,28 +213,28 @@ semantic_git:
 ## Benefits
 
 1. **Natural Language Discovery**: Find commits by intent, not just keywords
-1. **Pattern Recognition**: Automatically detect recurring workflows
-1. **Practice Improvement**: Data-driven recommendations
-1. **Integration**: Works with existing crackerjack infrastructure
-1. **Privacy**: All processing local, no external services
+2. **Pattern Recognition**: Automatically detect recurring workflows
+3. **Practice Improvement**: Data-driven recommendations
+4. **Integration**: Works with existing crackerjack infrastructure
+5. **Privacy**: All processing local, no external services
 
 ## Files to Create
 
 1. `/Users/les/Projects/crackerjack/crackerjack/integration/git_semantic_search.py`
-1. `/Users/les/Projects/crackerjack/crackerjack/mcp/tools/git_semantic_tools.py`
+2. `/Users/les/Projects/crackerjack/crackerjack/mcp/tools/git_semantic_tools.py`
 
 ## Files to Modify
 
 1. `/Users/les/Projects/crackerjack/crackerjack/integration/__init__.py` - Add exports
-1. `/Users/les/Projects/crackerjack/crackerjack/mcp/tools/__init__.py` - Add registration
-1. `/Users/les/Projects/crackerjack/crackerjack/mcp/server_core.py` - Register tools
+2. `/Users/les/Projects/crackerjack/crackerjack/mcp/tools/__init__.py` - Add registration
+3. `/Users/les/Projects/crackerjack/crackerjack/mcp/server_core.py` - Register tools
 
 ## Testing Strategy
 
 1. **Unit Tests**: Pattern detection logic
-1. **Integration Tests**: AkoshaMCP integration
-1. **MCP Tests**: Tool invocation via MCP client
-1. **Manual Tests**: Natural language queries
+2. **Integration Tests**: AkoshaMCP integration
+3. **MCP Tests**: Tool invocation via MCP client
+4. **Manual Tests**: Natural language queries
 
 ## Dependencies
 

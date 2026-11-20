@@ -3,7 +3,7 @@ status: complete
 role: historical
 date: 2026-07-17
 last_reviewed: 2026-07-17
-superseded_by: null
+superseded_by:
 blocks_on: []
 topic: architecture
 ---
@@ -23,12 +23,12 @@ Successfully eliminated all generic `util.py` and `utils.py` files from the crac
    - Purpose: Package version retrieval
    - Rename reason: "version" is more descriptive than "utils"
 
-1. **`/crackerjack/decorators/utils.py`** → Kept `/crackerjack/decorators/helpers.py`
+2. **`/crackerjack/decorators/utils.py`** → Kept `/crackerjack/decorators/helpers.py`
 
    - Purpose: Helper functions for decorators
    - Rename reason: "helpers" accurately describes decorator helper functions
 
-1. **`/crackerjack/services/patterns/utils.py`** → Kept `/crackerjack/services/patterns/operations.py`
+3. **`/crackerjack/services/patterns/utils.py`** → Kept `/crackerjack/services/patterns/operations.py`
 
    - Purpose: Pattern operations and transformations
    - Rename reason: "operations" describes what the functions do (apply, update, detect)
@@ -67,20 +67,20 @@ find crackerjack -name "util.py" -o -name "utils.py"
    - Specific to Rich console utilities
    - Descriptive and scoped
 
-1. **`utility_tools.py`** (mcp/tools/)
+2. **`utility_tools.py`** (mcp/tools/)
 
    - Descriptive: "utility tools" not just "utils"
    - Context-specific (MCP tools)
    - Clear purpose
 
-1. **`utilities.py`** (services/patterns/)
+3. **`utilities.py`** (services/patterns/)
 
    - Domain-specific (patterns module)
    - Contains utility pattern definitions
    - Follows pattern module naming convention
    - Not a top-level generic file
 
-1. **`_calculate_utilization_percent()`** (services/ai/advanced_optimizer.py)
+4. **`_calculate_utilization_percent()`** (services/ai/advanced_optimizer.py)
 
    - Method name describing resource utilization
    - Not a generic utility function
@@ -93,17 +93,17 @@ find crackerjack -name "util.py" -o -name "utils.py"
    - File names immediately convey purpose
    - No ambiguity about what "utils" contains
 
-1. **Better Maintainability**
+2. **Better Maintainability**
 
    - Descriptive names reduce cognitive load
    - Easier for new developers to understand codebase
 
-1. **Consistent Naming Conventions**
+3. **Consistent Naming Conventions**
 
    - Follows Python best practices
    - Avoids anti-pattern of generic "utils" modules
 
-1. **Zero Breaking Changes**
+4. **Zero Breaking Changes**
 
    - All imports already referenced correct files
    - Properly named versions existed with improved functionality
@@ -146,16 +146,16 @@ crackerjack/services/patterns/
 ## Lessons Learned
 
 1. **Properly named files already existed** - This was a cleanup task, not a rename task
-1. **Import analysis is critical** - Verified no imports referenced old files before deletion
-1. **Context matters** - Not all "util" names are bad (e.g., `_rich_utils.py` is acceptable)
-1. **Zero-risk refactoring** - Files were already deprecated by better-named versions
+2. **Import analysis is critical** - Verified no imports referenced old files before deletion
+3. **Context matters** - Not all "util" names are bad (e.g., `_rich_utils.py` is acceptable)
+4. **Zero-risk refactoring** - Files were already deprecated by better-named versions
 
 ## Recommendations
 
 1. **Maintain descriptive naming** - Future modules should use specific, descriptive names
-1. **Avoid generic "utils"** - Use names like "helpers", "operations", "version", etc.
-1. **Private module convention** - Use underscore prefix for internal utilities (e.g., `_rich_utils.py`)
-1. **Domain-specific acceptable** - "utilities" is acceptable within a specific domain context
+2. **Avoid generic "utils"** - Use names like "helpers", "operations", "version", etc.
+3. **Private module convention** - Use underscore prefix for internal utilities (e.g., `_rich_utils.py`)
+4. **Domain-specific acceptable** - "utilities" is acceptable within a specific domain context
 
 ## Completion Checklist
 
@@ -173,8 +173,8 @@ crackerjack/services/patterns/
 ### Deleted (3 files)
 
 1. `/Users/les/Projects/crackerjack/crackerjack/cli/utils.py`
-1. `/Users/les/Projects/crackerjack/crackerjack/decorators/utils.py`
-1. `/Users/les/Projects/crackerjack/crackerjack/services/patterns/utils.py`
+2. `/Users/les/Projects/crackerjack/crackerjack/decorators/utils.py`
+3. `/Users/les/Projects/crackerjack/crackerjack/services/patterns/utils.py`
 
 ### Created (1 file)
 
@@ -183,8 +183,8 @@ crackerjack/services/patterns/
 ### Unchanged (Properly Named Files)
 
 1. `/Users/les/Projects/crackerjack/crackerjack/cli/version.py` ✅
-1. `/Users/les/Projects/crackerjack/crackerjack/decorators/helpers.py` ✅
-1. `/Users/les/Projects/crackerjack/crackerjack/services/patterns/operations.py` ✅
+2. `/Users/les/Projects/crackerjack/crackerjack/decorators/helpers.py` ✅
+3. `/Users/les/Projects/crackerjack/crackerjack/services/patterns/operations.py` ✅
 
 ## Next Steps
 

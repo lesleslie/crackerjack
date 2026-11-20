@@ -4,7 +4,7 @@ role: canonical
 topic: architecture
 date: 2026-07-17
 last_reviewed: 2026-07-17
-superseded_by: null
+superseded_by:
 blocks_on: []
 ---
 
@@ -23,10 +23,10 @@ Crackerjack processes diverse codebases with varying configurations, file struct
 How can we ensure Crackerjack's core logic is correct across:
 
 1. **Diverse Inputs**: Different file structures, configurations, error patterns
-1. **Edge Cases**: Empty lists, single elements, duplicates, unicode, etc.
-1. **Invariants**: Properties that must always hold true (e.g., cache keys must be unique)
-1. **Stateful Interactions**: Cache lifecycle, job state transitions
-1. **Performance**: Scaling behavior with large inputs
+2. **Edge Cases**: Empty lists, single elements, duplicates, unicode, etc.
+3. **Invariants**: Properties that must always hold true (e.g., cache keys must be unique)
+4. **Stateful Interactions**: Cache lifecycle, job state transitions
+5. **Performance**: Scaling behavior with large inputs
 
 ### Key Requirements
 
@@ -540,18 +540,18 @@ def test_agent_selection_is_linear(num_agents):
 ### Positive
 
 1. **Bug Detection**: Found 8 edge cases that example-based tests missed
-1. **Confidence**: Tests encode invariants explicitly (self-documenting)
-1. **Regression Prevention**: Catches future edge cases automatically
-1. **Reduced Test Code**: 1 property test replaces 10-20 example tests
-1. **Stateful Testing**: Can test complex state machines (cache, jobs)
-1. **Shrinking**: Automatically minimizes failing cases for easy debugging
+2. **Confidence**: Tests encode invariants explicitly (self-documenting)
+3. **Regression Prevention**: Catches future edge cases automatically
+4. **Reduced Test Code**: 1 property test replaces 10-20 example tests
+5. **Stateful Testing**: Can test complex state machines (cache, jobs)
+6. **Shrinking**: Automatically minimizes failing cases for easy debugging
 
 ### Negative
 
 1. **Slower**: Property tests run 100 examples (vs 1 for example-based)
-1. **Learning Curve**: Requires training to write good properties
-1. **Debugging**: Can be harder to debug random failures (mitigated by shrinking)
-1. **Flakiness**: Can find rare heisenbugs (actually a benefit, but feels like flakiness)
+2. **Learning Curve**: Requires training to write good properties
+3. **Debugging**: Can be harder to debug random failures (mitigated by shrinking)
+4. **Flakiness**: Can find rare heisenbugs (actually a benefit, but feels like flakiness)
 
 ### Risks
 
@@ -597,10 +597,10 @@ def test_agent_selection_is_linear(num_agents):
 ### Writing Good Properties
 
 1. **Specify Invariants, Not Examples**: Test what MUST be true, not specific cases
-1. **Use Appropriate Strategies**: `st.lists()`, `st.text()`, `st.integers()`, etc.
-1. **Limit Input Size**: Use `max_size` to avoid performance issues
-1. **Test Edge Cases**: Empty lists, None values, unicode, large inputs
-1. **Make Tests Deterministic**: Use `derandomize = true`
+2. **Use Appropriate Strategies**: `st.lists()`, `st.text()`, `st.integers()`, etc.
+3. **Limit Input Size**: Use `max_size` to avoid performance issues
+4. **Test Edge Cases**: Empty lists, None values, unicode, large inputs
+5. **Make Tests Deterministic**: Use `derandomize = true`
 
 ### Example: Bad vs Good Property
 

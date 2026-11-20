@@ -3,7 +3,7 @@ status: complete
 role: historical
 date: 2026-07-17
 last_reviewed: 2026-07-17
-superseded_by: null
+superseded_by:
 blocks_on: []
 topic: lifecycle
 ---
@@ -479,9 +479,9 @@ ______________________________________________________________________
 **Impact**: 80% of workflows see 90% time reduction
 
 1. Implement `IncrementalScanner` with git-diff
-1. Update refurb, complexipy, skylos hooks to use it
-1. Add configuration option to enable/disable
-1. Test on typical commits
+2. Update refurb, complexipy, skylos hooks to use it
+3. Add configuration option to enable/disable
+4. Test on typical commits
 
 ### Phase 2: Enhanced Tracking (Option 2 - Markers)
 
@@ -489,9 +489,9 @@ ______________________________________________________________________
 **Impact**: More accurate, handles edge cases
 
 1. Implement `MarkerScanner` with SQLite
-1. Add migration from git-diff to markers
-1. Implement cleanup for deleted files
-1. Add admin commands for marker management
+2. Add migration from git-diff to markers
+3. Implement cleanup for deleted files
+4. Add admin commands for marker management
 
 ### Phase 3: Pool Integration (Option 4 - Mahavishnu)
 
@@ -499,9 +499,9 @@ ______________________________________________________________________
 **Impact**: Maximum performance, best for large repos
 
 1. Integrate with mahavishnu pool manager
-1. Implement worker pool for tool execution
-1. Add pool monitoring and debugging tools
-1. Benchmark and optimize pool size
+2. Implement worker pool for tool execution
+3. Add pool monitoring and debugging tools
+4. Benchmark and optimize pool size
 
 ### Phase 4: Publish Workflow (Full Scans)
 
@@ -509,9 +509,9 @@ ______________________________________________________________________
 **Impact**: Ensures quality for releases
 
 1. Keep full scans for publish workflow
-1. Add pre-publish validation gate
-1. Generate comprehensive reports
-1. Archive scan results
+2. Add pre-publish validation gate
+3. Generate comprehensive reports
+4. Archive scan results
 
 ______________________________________________________________________
 
@@ -616,23 +616,23 @@ ______________________________________________________________________
 ## Open Questions for Consultants
 
 1. **Git-Diff vs Markers**: Which approach is more reliable for your workflow?
-1. **Full Scan Frequency**: How often should we force full scans? (Weekly? Bi-weekly?)
-1. **Pool Integration**: Is mahavishnu available in all environments (CI, local, docker)?
-1. **Tool Alternatives**: Are ruff/vulture acceptable substitutes for daily workflows?
-1. **Publish Gate**: Should publish workflow fail if incremental scan was used (not full)?
-1. **Cache Invalidation**: How do we handle branch switching, rebasing, cherry-picking?
-1. **Monitoring**: What metrics should we track? (scan times, cache hit rates, etc.)
-1. **Rollback**: If incremental scanning misses issues, how do we recover?
+2. **Full Scan Frequency**: How often should we force full scans? (Weekly? Bi-weekly?)
+3. **Pool Integration**: Is mahavishnu available in all environments (CI, local, docker)?
+4. **Tool Alternatives**: Are ruff/vulture acceptable substitutes for daily workflows?
+5. **Publish Gate**: Should publish workflow fail if incremental scan was used (not full)?
+6. **Cache Invalidation**: How do we handle branch switching, rebasing, cherry-picking?
+7. **Monitoring**: What metrics should we track? (scan times, cache hit rates, etc.)
+8. **Rollback**: If incremental scanning misses issues, how do we recover?
 
 ______________________________________________________________________
 
 ## Next Steps
 
 1. **Review options** with team and consultants
-1. **Choose approach** (recommend: Phase 1 → Phase 2 → Phase 4)
-1. **Implement incrementally** (git-diff first, measure, then enhance)
-1. **Integrate mahavishnu** when available for pool-based scanning
-1. **Monitor and tune** based on actual usage patterns
+2. **Choose approach** (recommend: Phase 1 → Phase 2 → Phase 4)
+3. **Implement incrementally** (git-diff first, measure, then enhance)
+4. **Integrate mahavishnu** when available for pool-based scanning
+5. **Monitor and tune** based on actual usage patterns
 
 ______________________________________________________________________
 

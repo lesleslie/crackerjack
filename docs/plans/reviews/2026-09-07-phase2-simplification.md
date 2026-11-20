@@ -105,7 +105,7 @@ The tests assert `info.platforms == ("macos",)` etc., so the tuple is part of th
 **Simplification options:**
 
 1. Drop `platforms` from the dataclass; return `tuple[bool, tuple[str, ...]]` is uglier, so prefer just `requires_ios_destination: bool`.
-1. Keep the tuple, drop the tests that assert on it (only assert `requires_ios_destination`).
+2. Keep the tuple, drop the tests that assert on it (only assert `requires_ios_destination`).
 
 Option 2 preserves debuggability (operators can inspect `info.platforms` if the dataclass is logged) without bloating the test surface. But the dataclass has only two fields and the tuple is one line — the savings are marginal.
 
@@ -145,7 +145,7 @@ ______________________________________________________________________
 The magic numbers 1800 (30min) and 300 (5min) appear twice each. Two options:
 
 1. Hoist to module constants: `_SWIFT_LONG_TIMEOUT = 1800`, `_SWIFT_SHORT_TIMEOUT = 300`.
-1. Use `Hook` defaults if available.
+2. Use `Hook` defaults if available.
 
 Phase 1 may already define these as `Hook` defaults; if so, drop the literal entirely.
 
@@ -208,16 +208,16 @@ ______________________________________________________________________
 I reviewed the full Phase 2 plan (~1918 lines / 8 tasks / 8 commits) against the six focus areas:
 
 1. **Over-engineering** — covered. The most significant instance is F1 (Pattern B seam reused for production wiring via monkey-patching). `_bump` is not over-engineered (F3); `PlatformInfo` is mildly over-engineered (F4).
-1. **YAGNI** — covered. `swift_run_hooks` `hook_names` param (F2), `release: bool = False` default (F8), and MCP tool registration helper (F11) are the candidates; only F2 and F8 warrant action.
-1. **Specific simplifications** — covered. Test helper extraction (F5), timeout constants (F7), local import (F6/F12).
-1. **Hidden complexity** — covered. The 6-method Pattern B seam is the central example (F1); the three repeated test helpers are a smaller instance (F5).
-1. **YAGNI vs. Spec Pressure** — covered. F8 surfaces an ambiguous spec phrase ("necessary but not sufficient") that the plan doesn't resolve.
-1. **Phase 1/2 duplication** — covered. F5 (test helpers), F1 (Pattern B seam inherited from Phase 1). A shared template would help future phases but isn't worth retrofitting into Phase 2.
+2. **YAGNI** — covered. `swift_run_hooks` `hook_names` param (F2), `release: bool = False` default (F8), and MCP tool registration helper (F11) are the candidates; only F2 and F8 warrant action.
+3. **Specific simplifications** — covered. Test helper extraction (F5), timeout constants (F7), local import (F6/F12).
+4. **Hidden complexity** — covered. The 6-method Pattern B seam is the central example (F1); the three repeated test helpers are a smaller instance (F5).
+5. **YAGNI vs. Spec Pressure** — covered. F8 surfaces an ambiguous spec phrase ("necessary but not sufficient") that the plan doesn't resolve.
+6. **Phase 1/2 duplication** — covered. F5 (test helpers), F1 (Pattern B seam inherited from Phase 1). A shared template would help future phases but isn't worth retrofitting into Phase 2.
 
 **Top 3 actions for the plan author:**
 
 1. **F1**: Replace the monkey-patch seam with constructor-injected `git_service`. Eliminates 6 type-ignores, one local helper, and one Phase 3 refactor.
-1. **F2**: Decide what `swift_run_hooks` actually does. Rename to `swift_list_hooks` and drop `hook_names`, OR actually execute hooks. The current half-tool will confuse MCP consumers.
-1. **F8**: Either default `release=True` (per the test's usage pattern) or drop the parameter entirely. Spec ambiguity should be resolved before shipping.
+2. **F2**: Decide what `swift_run_hooks` actually does. Rename to `swift_list_hooks` and drop `hook_names`, OR actually execute hooks. The current half-tool will confuse MCP consumers.
+3. **F8**: Either default `release=True` (per the test's usage pattern) or drop the parameter entirely. Spec ambiguity should be resolved before shipping.
 
 REVIEW_COMPLETE

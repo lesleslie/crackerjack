@@ -27,9 +27,9 @@ ______________________________________________________________________
 **How to fix.**
 
 1. Add a JWT validation path: `jwt.decode(token, secret, algorithms=["HS256"], audience=..., options={"require": ["exp"]})`. Token must come from a request header or argument; reject missing/invalid/expired tokens with `PermissionError`.
-1. Add a test that proves a token signed with a different secret raises `PermissionError`.
-1. Bind the validated `sub` claim into the commit/tag message.
-1. Until JWT validation lands, the `_require_auth_config` rename is honest but does not satisfy the spec's "auth posture" intent.
+2. Add a test that proves a token signed with a different secret raises `PermissionError`.
+3. Bind the validated `sub` claim into the commit/tag message.
+4. Until JWT validation lands, the `_require_auth_config` rename is honest but does not satisfy the spec's "auth posture" intent.
 
 ______________________________________________________________________
 
@@ -44,8 +44,8 @@ ______________________________________________________________________
 **How to fix.**
 
 1. Re-read Phase 2's `_validate_project_root` and flip the `MAHAVISHNU_PROJECT_ROOTS` empty-state to deny (`if not allowlist: raise PermissionError`).
-1. Add a regression test: `_validate_project_root("/tmp/foo")` raises when env var unset.
-1. Phase 3 plan line 46 should explicitly call out the fix, not just say "inherits."
+2. Add a regression test: `_validate_project_root("/tmp/foo")` raises when env var unset.
+3. Phase 3 plan line 46 should explicitly call out the fix, not just say "inherits."
 
 ______________________________________________________________________
 
@@ -63,8 +63,8 @@ ______________________________________________________________________
 **How to fix.**
 
 1. Choose the intended semantics. Recommend: `if options.dry_run: skip write, return result with skipped_steps`.
-1. Update the instruction in Task 5 Step 3 line 826 to: *"after computing new_version, if `options.dry_run`: return `LifecycleResult(new_version=..., skipped_steps=("dry_run",))`. Otherwise, call `self._version_source.write(new_version)`."*
-1. Strengthen the test (line 760-766) with `assert (tmp_path / "gradle.properties").read_text() == "version=1.2.3\n"` so a regression where write happens pre-check fails the test.
+2. Update the instruction in Task 5 Step 3 line 826 to: *"after computing new_version, if `options.dry_run`: return `LifecycleResult(new_version=..., skipped_steps=("dry_run",))`. Otherwise, call `self._version_source.write(new_version)`."*
+3. Strengthen the test (line 760-766) with `assert (tmp_path / "gradle.properties").read_text() == "version=1.2.3\n"` so a regression where write happens pre-check fails the test.
 
 ______________________________________________________________________
 
@@ -79,8 +79,8 @@ ______________________________________________________________________
 **How to fix.**
 
 1. Either include the Phase 2 `_tag` source in Task 4 Step 3 explicitly, OR add an explicit Step 3.5 in Task 4 that asserts the regex (`re.fullmatch(r"v\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?", tag_name)`) lives inside the `tag()` callable.
-1. Add a test asserting `_tag("v1;rm -rf /", "msg")` raises `ValueError`.
-1. Add the same assertion to the `KotlinLifecycle` level (defense in depth: tag built from `f"v{new_version}"` should also be validated after composition).
+2. Add a test asserting `_tag("v1;rm -rf /", "msg")` raises `ValueError`.
+3. Add the same assertion to the `KotlinLifecycle` level (defense in depth: tag built from `f"v{new_version}"` should also be validated after composition).
 
 ______________________________________________________________________
 
@@ -95,7 +95,7 @@ ______________________________________________________________________
 **How to fix.**
 
 1. In Task 7 Step 3, add `if not KotlinAdapter().detect(root): raise ValueError(...)` immediately after `_validate_project_root` in `kotlin_bump_version`, mirroring `kotlin_list_hooks`.
-1. Add a test asserting `kotlin_bump_version(level="minor", project_root="/tmp/python-project")` raises `ValueError` with "No build.gradle" message.
+2. Add a test asserting `kotlin_bump_version(level="minor", project_root="/tmp/python-project")` raises `ValueError` with "No build.gradle" message.
 
 ______________________________________________________________________
 
@@ -106,15 +106,15 @@ ______________________________________________________________________
 **What's wrong.**
 
 1. `has_task` does `result = subprocess.run(...)` and immediately regex-searches `result.stdout` without checking `result.returncode`. If `./gradlew` is missing (FileNotFoundError → `subprocess.SubprocessError` propagates) or the build script has a syntax error (returncode != 0, stdout may be empty or partial), the regex doesn't match, `has_task` returns False, and any consumer interprets "task absent" when the truth is "couldn't determine."
-1. `_build_hooks` constructs `probe = GradleTaskProbe(project_root)` but never calls `probe.has_task(...)`. The comment (line 473-476) acknowledges this: *"the hook still emits; CLI invocation will skip-with-warning at execution time."* But "CLI invocation" here means the downstream hook runner, which Phase 3 does not modify. So `GradleTaskProbe` is dead code in this plan.
+2. `_build_hooks` constructs `probe = GradleTaskProbe(project_root)` but never calls `probe.has_task(...)`. The comment (line 473-476) acknowledges this: *"the hook still emits; CLI invocation will skip-with-warning at execution time."* But "CLI invocation" here means the downstream hook runner, which Phase 3 does not modify. So `GradleTaskProbe` is dead code in this plan.
 
 **Why it matters.** Spec Kotlin F2 says "skip-with-warning if task absent" — this requires a probe call SOMEWHERE. The plan has the class but never wires it. Tests pass because tests don't check the wiring (tests only check that the probe's `has_task` method works in isolation). Result: `kotlin.ktlint` runs against a Kotlin project without `ktlintCheck` defined → cryptic Gradle failure instead of skip-with-warning.
 
 **How to fix.**
 
 1. In `has_task`, add `if result.returncode != 0: raise GradleProbeError(result.stderr)` so consumers can distinguish "task absent" from "couldn't probe."
-1. In `_build_hooks`, actually call `probe.has_task(task_name)` and either skip the hook or include a `skip_reason` field on `Hook` (would need API change — Phase 2 final review found Phase 2 ignored similar issues).
-1. Minimum viable: drop `GradleTaskProbe` from Phase 3 (move to Phase 3.5 follow-up) and document the hook runner does the probing at execution time.
+2. In `_build_hooks`, actually call `probe.has_task(task_name)` and either skip the hook or include a `skip_reason` field on `Hook` (would need API change — Phase 2 final review found Phase 2 ignored similar issues).
+3. Minimum viable: drop `GradleTaskProbe` from Phase 3 (move to Phase 3.5 follow-up) and document the hook runner does the probing at execution time.
 
 ______________________________________________________________________
 
@@ -129,8 +129,8 @@ ______________________________________________________________________
 **How to fix.**
 
 1. Add `if not (project_root / "gradlew").exists(): raise RuntimeError("gradlew not found; run `gradle wrapper` to generate")` in `_build_hooks` or in a new `_ensure_gradlew(project_root)` helper.
-1. Add an explicit test asserting the error is raised when gradlew is absent.
-1. Update the existing tests to either match this behavior or drop the `shutil.which` mock that doesn't do anything.
+2. Add an explicit test asserting the error is raised when gradlew is absent.
+3. Update the existing tests to either match this behavior or drop the `shutil.which` mock that doesn't do anything.
 
 ______________________________________________________________________
 
@@ -145,9 +145,9 @@ ______________________________________________________________________
 **How to fix.**
 
 1. Resolve the binary absolutely: `gradlew = (project_root / "gradlew").resolve(strict=True)`.
-1. Verify the resolved path starts with `project_root.resolve(strict=True)` (reject symlink escapes).
-1. Verify executable bit is set.
-1. OR: require `gradlew` on PATH via `shutil.which("gradle")` (system-installed Gradle) and document the wrapper requirement.
+2. Verify the resolved path starts with `project_root.resolve(strict=True)` (reject symlink escapes).
+3. Verify executable bit is set.
+4. OR: require `gradlew` on PATH via `shutil.which("gradle")` (system-installed Gradle) and document the wrapper requirement.
 
 ______________________________________________________________________
 
@@ -168,8 +168,8 @@ The `commit(message)` function (per Phase 2 pattern, lines from the Swift file p
 **How to fix.**
 
 1. In `commit()`, use `git add -A -- <paths>` with an explicit allowlist (project source) rather than `git add .`.
-1. OR: pre-flight check that `.gitignore` exists and contains at least `.gradle/`, `build/`, `local.properties`; refuse to commit if missing.
-1. Document the convention in `KotlinAdapter.capabilities()` docstring.
+2. OR: pre-flight check that `.gitignore` exists and contains at least `.gradle/`, `build/`, `local.properties`; refuse to commit if missing.
+3. Document the convention in `KotlinAdapter.capabilities()` docstring.
 
 ______________________________________________________________________
 

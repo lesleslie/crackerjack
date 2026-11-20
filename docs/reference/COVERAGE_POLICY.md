@@ -3,7 +3,7 @@ status: active
 role: canonical
 date: 2026-07-17
 last_reviewed: 2026-07-17
-superseded_by: null
+superseded_by:
 blocks_on: []
 topic: mcp-design
 ---
@@ -36,9 +36,9 @@ topic: mcp-design
 ### How It Works
 
 1. **Baseline Protection**: Coverage cannot drop below 19.6% (current baseline)
-1. **Tolerance Window**: ±2% fluctuation allowed for test infrastructure changes
-1. **Milestone Progression**: Advance through milestones toward 100%
-1. **Ratchet Effect**: Each milestone becomes the new minimum
+2. **Tolerance Window**: ±2% fluctuation allowed for test infrastructure changes
+3. **Milestone Progression**: Advance through milestones toward 100%
+4. **Ratchet Effect**: Each milestone becomes the new minimum
 
 ### Milestones
 
@@ -188,9 +188,9 @@ However, any drop must be:
 If coverage drops below baseline:
 
 1. Identify why (refactoring, removed tests, infrastructure)
-1. Add focused tests to recover coverage
-1. If baseline is truly too high, discuss with team
-1. Never commit code that drops coverage without plan to recover
+2. Add focused tests to recover coverage
+3. If baseline is truly too high, discuss with team
+4. Never commit code that drops coverage without plan to recover
 
 ## References
 

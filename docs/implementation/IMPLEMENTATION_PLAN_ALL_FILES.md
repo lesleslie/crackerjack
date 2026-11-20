@@ -3,7 +3,7 @@ status: complete
 role: historical
 date: 2026-07-17
 last_reviewed: 2026-07-17
-superseded_by: null
+superseded_by:
 blocks_on: []
 topic: lifecycle
 ---
@@ -15,8 +15,8 @@ topic: lifecycle
 Three critical issues identified:
 
 1. **legacy mode placeholder**: Uses hardcoded `passed` results with 0.0s duration and empty file lists
-1. **Legacy mode uses --all-files**: Forces hooks to check entire codebase, not just changed files
-1. **Executor doesn't pass files**: Calls `get_command()` instead of `build_command(files)` with changed files
+2. **Legacy mode uses --all-files**: Forces hooks to check entire codebase, not just changed files
+3. **Executor doesn't pass files**: Calls `get_command()` instead of `build_command(files)` with changed files
 
 **Current Behavior**:
 
@@ -117,10 +117,10 @@ result = HookResult(
 ## Implementation Order
 
 1. **Add CLI option** (`options.py`, `__main__.py`)
-1. **Fix legacy mode file passing** (`hook_executor.py`, `hooks.py`)
-1. **Add progress bar investigation** (check why `show_progress` is disabled)
-1. **Test with real file changes**
-1. **Document new flag** (update `CLAUDE.md`)
+2. **Fix legacy mode file passing** (`hook_executor.py`, `hooks.py`)
+3. **Add progress bar investigation** (check why `show_progress` is disabled)
+4. **Test with real file changes**
+5. **Document new flag** (update `CLAUDE.md`)
 
 ## Testing Strategy
 
@@ -156,12 +156,12 @@ python -m crackerjack run --all-files
 ## Files to Modify
 
 1. `crackerjack/cli/options.py` - Add `all_files` field
-1. `crackerjack/__main__.py` - Add CLI option
-1. `crackerjack/cli/handlers.py` - Pass flag to executors
-1. `crackerjack/executors/hook_executor.py` - Add file passing logic
-1. `crackerjack/managers/hook_manager.py` - Pass flag through
-1. `crackerjack/config/hooks.py` - Conditional --all-files
-1. `CLAUDE.md` - Document new flag
+2. `crackerjack/__main__.py` - Add CLI option
+3. `crackerjack/cli/handlers.py` - Pass flag to executors
+4. `crackerjack/executors/hook_executor.py` - Add file passing logic
+5. `crackerjack/managers/hook_manager.py` - Pass flag through
+6. `crackerjack/config/hooks.py` - Conditional --all-files
+7. `CLAUDE.md` - Document new flag
 
 ## Architectural Notes
 

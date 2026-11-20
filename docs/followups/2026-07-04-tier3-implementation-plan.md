@@ -4,7 +4,7 @@ role: implementation
 topic: lifecycle
 date: 2026-07-17
 last_reviewed: 2026-07-17
-superseded_by: null
+superseded_by:
 blocks_on: []
 ---
 
@@ -62,7 +62,7 @@ ______________________________________________________________________
 
    where `AutoFixContext` carries `(iteration, issues, previous_issues, previous_fixes_applied, previous_files_modified, previous_hook_statuses, stage, coordinator_set)`.
 
-1. Pull the shared shell into `_run_iteration_loop_dispatch(ctx, step_fn)`:
+2. Pull the shared shell into `_run_iteration_loop_dispatch(ctx, step_fn)`:
 
    ```python
    async def _run_iteration_loop_dispatch(
@@ -74,13 +74,13 @@ ______________________________________________________________________
        ...
    ```
 
-1. V1 path: `step_fn = self._v1_iteration_step` (calls `_run_ai_fix_iteration`, returns `(success, fixes_applied, files_modified)`).
+3. V1 path: `step_fn = self._v1_iteration_step` (calls `_run_ai_fix_iteration`, returns `(success, fixes_applied, files_modified)`).
 
-1. V2 path: `step_fn = self._v2_iteration_step` (calls `_create_fix_plans` + `_execute_plans_with_validation`).
+4. V2 path: `step_fn = self._v2_iteration_step` (calls `_create_fix_plans` + `_execute_plans_with_validation`).
 
-1. The wrapper `_run_v1_fix_iteration_with_cleanup` (sync) becomes an `asyncio.run(...)` adapter or stays sync if it just bridges.
+5. The wrapper `_run_v1_fix_iteration_with_cleanup` (sync) becomes an `asyncio.run(...)` adapter or stays sync if it just bridges.
 
-1. Drop the duplicated `try/except` + `progress_manager.end_iteration()` / `_event_bus.emit(RunFinished)` blocks — pull them into a `_finalize_iteration_loop(...)` helper.
+6. Drop the duplicated `try/except` + `progress_manager.end_iteration()` / `_event_bus.emit(RunFinished)` blocks — pull them into a `_finalize_iteration_loop(...)` helper.
 
 **Test impact**:
 
@@ -119,11 +119,11 @@ ______________________________________________________________________
        def delta(self) -> int: ...
    ```
 
-1. In `_apply_ai_agent_fixes_v2`, instantiate once: `tracker = _FileChangeTracker(self.pkg_path)`; `tracker.capture()` before preflight.
+2. In `_apply_ai_agent_fixes_v2`, instantiate once: `tracker = _FileChangeTracker(self.pkg_path)`; `tracker.capture()` before preflight.
 
-1. Pass `tracker` into `PreflightFixer.run(tracker=tracker)`; replace per-step `_snapshot_mtimes` with `tracker.snapshot()`.
+3. Pass `tracker` into `PreflightFixer.run(tracker=tracker)`; replace per-step `_snapshot_mtimes` with `tracker.snapshot()`.
 
-1. Before each subsequent ruff/refurb pass:
+4. Before each subsequent ruff/refurb pass:
 
    ```python
    if tracker.delta() == 0 and not _config.force_prepass:
@@ -132,7 +132,7 @@ ______________________________________________________________________
    tracker.capture()  # reset baseline
    ```
 
-1. Add `PreflightConfig.force_prepass: bool = False` for opt-in override (CI / first iteration).
+5. Add `PreflightConfig.force_prepass: bool = False` for opt-in override (CI / first iteration).
 
 **Test impact**:
 
@@ -206,7 +206,7 @@ ______________________________________________________________________
        return f"{tool}:{file_hash}"
    ```
 
-1. Per-tool cache `self._stdout_hash_cache: dict[str, str] = {}`. In `_execute_check_commands`:
+2. Per-tool cache `self._stdout_hash_cache: dict[str, str] = {}`. In `_execute_check_commands`:
 
    ```python
    sig = self._check_command_output_signature(
@@ -217,9 +217,9 @@ ______________________________________________________________________
        return [], 0
    ```
 
-1. After successful run, write `self._stdout_hash_cache[hook_name] = sig`.
+3. After successful run, write `self._stdout_hash_cache[hook_name] = sig`.
 
-1. Reset the cache in `_run_ai_fix_iteration_loop` / `_run_v2_ai_fix_iteration_loop` at `previous_files_modified = []` (already happens; good).
+4. Reset the cache in `_run_ai_fix_iteration_loop` / `_run_v2_ai_fix_iteration_loop` at `previous_files_modified = []` (already happens; good).
 
 **Test impact**:
 
@@ -251,7 +251,7 @@ ______________________________________________________________________
        (run_dir / ".open").write_text(str(time.time()))
    ```
 
-1. Move the `write` + `flush` inside a `try/except`:
+2. Move the `write` + `flush` inside a `try/except`:
 
    ```python
    async def handle(self, event: AIFixEvent) -> None:
@@ -268,9 +268,9 @@ ______________________________________________________________________
            logger.warning(f"JsonlSink dropped event after write error: {e}")
    ```
 
-1. Add `restore_run(run_id) -> Iterator[AIFixEvent]` classmethod that walks `.crackerjack/runs/{run_id}/events.jsonl` line-by-line and `dataclasses.fields` reconstructs each event. Pair with Tier-2 #7 helper.
+3. Add `restore_run(run_id) -> Iterator[AIFixEvent]` classmethod that walks `.crackerjack/runs/{run_id}/events.jsonl` line-by-line and `dataclasses.fields` reconstructs each event. Pair with Tier-2 #7 helper.
 
-1. `close()` becomes idempotent — already is, but ensure the `.open` sidecar is removed so a subsequent `restore_run` knows the run finished cleanly.
+4. `close()` becomes idempotent — already is, but ensure the `.open` sidecar is removed so a subsequent `restore_run` knows the run finished cleanly.
 
 **Test impact**:
 
@@ -525,9 +525,9 @@ Total ~1,870 LOC across five files; all are listed in the project's `.archive/` 
 **Diff sketch (per file)**:
 
 1. `git mv path/to/file.py .archive/path/to/file.py.removed-2026-07-04`
-1. Update `__init__.py` re-exports if any.
-1. `grep -rn "<name>" crackerjack tests` — chase stragglers.
-1. Run `pytest tests/ -q -x --co` to confirm collection still works.
+2. Update `__init__.py` re-exports if any.
+3. `grep -rn "<name>" crackerjack tests` — chase stragglers.
+4. Run `pytest tests/ -q -x --co` to confirm collection still works.
 
 **Test impact**: Coverage report will improve (these files have low coverage). No new tests needed.
 
@@ -553,13 +553,13 @@ ______________________________________________________________________
 **Recommended order** (each row independent unless noted):
 
 1. **L4, L7, L9, L11, L12, L13** — pure cleanups, ~4 h total, run in parallel.
-1. **L5, L6, L10** — small behaviour fixes, ~3.5 h.
-1. **Bulk delete** — 2 h, after L4-L13 (some bulk-deleted files may contain dead helpers that *are* still imported by the cleanup items).
-1. **#13 parallel preflight** — 2 h, standalone.
-1. **#12 ruff×3 gate** — 3 h (depends on #13's snapshot primitive if we share).
-1. **#14 stdout hash** — 3 h.
-1. **#15 JsonlSink** — 4 h.
-1. **#11 V1/V2 dedupe** — 5 h, last (it touches the most code paths and benefits from Tier-2 #4 + #7 already landing).
+2. **L5, L6, L10** — small behaviour fixes, ~3.5 h.
+3. **Bulk delete** — 2 h, after L4-L13 (some bulk-deleted files may contain dead helpers that *are* still imported by the cleanup items).
+4. **#13 parallel preflight** — 2 h, standalone.
+5. **#12 ruff×3 gate** — 3 h (depends on #13's snapshot primitive if we share).
+6. **#14 stdout hash** — 3 h.
+7. **#15 JsonlSink** — 4 h.
+8. **#11 V1/V2 dedupe** — 5 h, last (it touches the most code paths and benefits from Tier-2 #4 + #7 already landing).
 
 **Combined Tier-2 + Tier-3 effort**: Tier-2 ≈ 18 h + Tier-3 ≈ 26 h ≈ **44 h** of focused work. Reasonable for two-week sprint with parallel agents on the L\*-items.
 

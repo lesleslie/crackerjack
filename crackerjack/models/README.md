@@ -175,11 +175,11 @@ self.logger = logging.getLogger(__name__)
 ## Why Protocol-Based DI?
 
 1. **Loose Coupling**: Depend on interfaces, not implementations
-1. **Testability**: Easy to mock with protocol implementations
-1. **Flexibility**: Swap implementations without changing dependents
-1. **Type Safety**: Runtime type checking via `@runtime_checkable`
-1. **Clear Contracts**: Protocol defines exact interface requirements
-1. **legacy Integration**: Seamless integration with dependency injection
+2. **Testability**: Easy to mock with protocol implementations
+3. **Flexibility**: Swap implementations without changing dependents
+4. **Type Safety**: Runtime type checking via `@runtime_checkable`
+5. **Clear Contracts**: Protocol defines exact interface requirements
+6. **legacy Integration**: Seamless integration with dependency injection
 
 ## Usage Examples
 
@@ -281,12 +281,12 @@ class MyConfig(BaseModel):
 ## Best Practices
 
 1. **ALWAYS Import Protocols**: Never import concrete classes for dependencies
-1. **Use @runtime_checkable**: Mark all protocols with `@runtime_checkable`
-1. **Extend ServiceProtocol**: Base all service protocols on `ServiceProtocol`
-1. **Use Inject[T]**: Use `Inject[ProtocolType]` type hints for DI parameters
-1. **Validate with Pydantic**: Use Pydantic models for configuration validation
-1. **Document Protocols**: Add comprehensive docstrings to protocol methods
-1. **Type Annotate Everything**: Use Python 3.13+ type hints (`|` unions)
+2. **Use @runtime_checkable**: Mark all protocols with `@runtime_checkable`
+3. **Extend ServiceProtocol**: Base all service protocols on `ServiceProtocol`
+4. **Use Inject[T]**: Use `Inject[ProtocolType]` type hints for DI parameters
+5. **Validate with Pydantic**: Use Pydantic models for configuration validation
+6. **Document Protocols**: Add comprehensive docstrings to protocol methods
+7. **Type Annotate Everything**: Use Python 3.13+ type hints (`|` unions)
 
 ## Related Documentation
 

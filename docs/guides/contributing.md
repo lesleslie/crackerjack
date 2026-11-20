@@ -3,7 +3,7 @@ status: active
 role: canonical
 date: 2026-07-17
 last_reviewed: 2026-07-17
-superseded_by: null
+superseded_by:
 blocks_on: []
 topic: lifecycle
 ---
@@ -70,8 +70,8 @@ git commit -m "feat: add new feature"
 ## Pull Request Process
 
 1. Update documentation
-1. Pass all quality gates
-1. Request review via `/crackerjack:review-pr`
+2. Pass all quality gates
+3. Request review via `/crackerjack:review-pr`
 
 ## See Also
 

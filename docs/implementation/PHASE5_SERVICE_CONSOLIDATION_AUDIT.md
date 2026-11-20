@@ -3,7 +3,7 @@ status: complete
 role: historical
 date: 2026-07-17
 last_reviewed: 2026-07-17
-superseded_by: null
+superseded_by:
 blocks_on: []
 topic: lifecycle
 ---
@@ -15,7 +15,7 @@ topic: lifecycle
 This audit identified **significant duplication** across quality baseline and performance monitoring services. The codebase has evolved through multiple refactoring phases, creating parallel implementations at different levels. Two critical patterns emerge:
 
 1. **Quality Services**: Root-level versions are deprecated; refactored versions in `/services/quality/` are canonical
-1. **Performance Services**: Root-level versions use legacy logging; monitoring subdirectory versions use DI (newer pattern)
+2. **Performance Services**: Root-level versions use legacy logging; monitoring subdirectory versions use DI (newer pattern)
 
 **Total Consolidation Opportunity**: ~3,000+ lines of duplicated code that can be safely removed
 
@@ -112,13 +112,13 @@ quality/quality_baseline.py (395 lines) ← CANONICAL
 **Differences Between Versions:**
 
 1. Root `quality_baseline.py` lacks async support and protocol implementation
-1. `/quality/quality_baseline.py` adds:
+2. `/quality/quality_baseline.py` adds:
    - Protocol compliance (`QualityBaselineProtocol`)
    - Async/await support
    - Optional database persistence
    - Better DI pattern
-1. Enhanced versions are nearly identical (just import path differs)
-1. Intelligence layer is shared between branches
+3. Enhanced versions are nearly identical (just import path differs)
+4. Intelligence layer is shared between branches
 
 ### Recommendations:
 
@@ -313,7 +313,7 @@ conftest.py (test fixtures - needs update)
 **Files that will break if deprecated versions removed:**
 
 1. Any direct imports from `/services/performance_*.py` (root)
-1. Any direct imports from `/services/quality_baseline*.py` (root)
+2. Any direct imports from `/services/quality_baseline*.py` (root)
 
 **Safe removal**: Only if all imports redirect to monitoring/quality subdirectories
 
@@ -324,7 +324,7 @@ ______________________________________________________________________
 ### Phase 1: Preparation (No Code Changes)
 
 1. ✓ Audit imports in entire codebase
-1. Update import statements in:
+2. Update import statements in:
    - `tests/conftest.py` - use monitoring versions
    - `workflows/container_builder.py` - verify imports
    - Any other test files
@@ -332,22 +332,22 @@ ______________________________________________________________________
 ### Phase 2: Cleanup (Delete Deprecated Files)
 
 1. Delete: `/services/quality_baseline.py`
-1. Delete: `/services/quality_baseline_enhanced.py`
-1. Delete: `/services/performance_monitor.py`
-1. Delete: `/services/performance_cache.py`
-1. Delete: `/services/performance_benchmarks.py`
+2. Delete: `/services/quality_baseline_enhanced.py`
+3. Delete: `/services/performance_monitor.py`
+4. Delete: `/services/performance_cache.py`
+5. Delete: `/services/performance_benchmarks.py`
 
 ### Phase 3: Verification
 
 1. Run full test suite
-1. Verify MCP server functionality
-1. Check config initialization
+2. Verify MCP server functionality
+3. Check config initialization
 
 ### Phase 4: Documentation
 
 1. Update architecture docs
-1. Document canonical service locations
-1. Update migration guide if needed
+2. Document canonical service locations
+3. Update migration guide if needed
 
 ______________________________________________________________________
 

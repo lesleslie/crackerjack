@@ -3,7 +3,7 @@ status: active
 role: canonical
 date: 2026-07-17
 last_reviewed: 2026-07-17
-superseded_by: null
+superseded_by:
 blocks_on: []
 topic: mcp-design
 ---
@@ -106,13 +106,13 @@ oneiric.shell.AdminShell
    - Implements session tracking via Session-Buddy MCP
    - Provides quality check functions
 
-1. **Session Tracker** (`oneiric/shell/session_tracker.py`)
+2. **Session Tracker** (`oneiric/shell/session_tracker.py`)
 
    - Emits session start/end events
    - Tracks metadata (version, adapters, project root)
    - Integrates with Session-Buddy MCP
 
-1. **Namespace Helpers**
+3. **Namespace Helpers**
 
    - Quality functions (crack, test, lint, scan)
    - Inspection functions (show_adapters, show_hooks)
@@ -219,8 +219,8 @@ def _get_banner(self) -> str:
 If session tracking is not working:
 
 1. Check Session-Buddy MCP is running on port 8678
-1. Verify oneiric dependency is installed: `pip list | grep oneiric`
-1. Check logs for errors: `journalctl -u crackerjack -f`
+2. Verify oneiric dependency is installed: `pip list | grep oneiric`
+3. Check logs for errors: `journalctl -u crackerjack -f`
 
 ### Quality Checks Failing
 
@@ -232,13 +232,13 @@ If quality checks fail:
    typecheck()  # Check types
    scan()  # Check security
    ```
-1. Check tool installation:
+2. Check tool installation:
    ```bash
    which ruff
    which mypy
    which bandit
    ```
-1. Run checks directly for more detail:
+3. Run checks directly for more detail:
    ```bash
    ruff check .
    mypy crackerjack/

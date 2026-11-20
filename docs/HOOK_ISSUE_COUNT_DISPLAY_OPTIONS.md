@@ -3,7 +3,7 @@ status: complete
 role: historical
 date: 2026-07-17
 last_reviewed: 2026-07-17
-superseded_by: null
+superseded_by:
 blocks_on: []
 topic: lifecycle
 ---
@@ -248,7 +248,7 @@ Legend: ⚠️ = Configuration/tool error
 **Implementation Locations**:
 
 1. **`crackerjack/core/phase_coordinator.py:643-660`** (display logic)
-1. **`crackerjack/orchestration/hook_orchestrator.py:939-975`** (data preparation)
+2. **`crackerjack/orchestration/hook_orchestrator.py:939-975`** (data preparation)
 
 **Code Changes**:
 
@@ -328,9 +328,9 @@ ______________________________________________________________________
 For users with visual impairments or terminal limitations:
 
 1. **Text Alternative**: `ERR` or `CFG` instead of symbols
-1. **Screen Reader Hint**: Use aria-label equivalent in Rich
-1. **Color-Blind Safe**: Don't rely on color alone (use symbol + color)
-1. **High Contrast Mode**: Ensure symbols are visible in all terminal themes
+2. **Screen Reader Hint**: Use aria-label equivalent in Rich
+3. **Color-Blind Safe**: Don't rely on color alone (use symbol + color)
+4. **High Contrast Mode**: Ensure symbols are visible in all terminal themes
 
 ______________________________________________________________________
 
@@ -339,10 +339,10 @@ ______________________________________________________________________
 **Implement Option 1 with these enhancements**:
 
 1. **Primary**: Use `⚠️` symbol for config errors
-1. **Fallback**: Add `(err)` suffix if terminal doesn't support emoji
-1. **Legend**: Show legend footer if any config errors present
-1. **Config**: Allow users to customize via settings
-1. **Accessibility**: Provide text alternative in `--verbose` mode
+2. **Fallback**: Add `(err)` suffix if terminal doesn't support emoji
+3. **Legend**: Show legend footer if any config errors present
+4. **Config**: Allow users to customize via settings
+5. **Accessibility**: Provide text alternative in `--verbose` mode
 
 **Example Output**:
 

@@ -5,7 +5,7 @@ kind: plan
 topic: cli-lifecycle
 date: 2026-09-18
 last_reviewed: 2026-09-18
-superseded_by: null
+superseded_by:
 blocks_on:
   - "ext:mcp-common.2026-09-05-mcp-common-phase1"
 ---
@@ -23,7 +23,7 @@ lifecycle verbs are removed. No deprecation aliases. No legacy wrappers.
 **Sequencing**: This plan executes **after** the active
 `2026-09-05-mcp-common-phase1.md` plan completes. See Phase 0.
 
----
+______________________________________________________________________
 
 ## 1. Outcome
 
@@ -107,7 +107,7 @@ requirements:
 `audit_requirements.py` will assert each ID is referenced via
 `# req: REQ-NNN` / `# Implements: REQ-NNN` / `@pytest.mark.req(["REQ-NNN"])`.
 
----
+______________________________________________________________________
 
 ## 6. Implementation Phases
 
@@ -277,8 +277,7 @@ uv run pytest tests/ -q -k "cli or mcp_cli or lifecycle"
 - **Returns to / updates**: CLI surface. PID file at
   `/tmp/crackerjack-mcp.pid` (managed by `mcp_cli.py`) continues to be
   the canonical state.
-- **Demonstrable by**: `uv run python -m crackerjack --help | grep
-  -E '^\s+(start|stop|restart|status)\s'` returns empty.
+- **Demonstrable by**: `uv run python -m crackerjack --help | grep -E '^\s+(start|stop|restart|status)\s'` returns empty.
 - **Rollback signal**: `crackerjack --help` showing any of
   `start|stop|restart|status` at root indicates Phase 2 incomplete.
 - **Observability added**: None.
@@ -298,8 +297,7 @@ to `session-buddy mcp {start,...}`.
   Verify by inspection that no other OneiricCLIBase subclass in this
   repo defines a `health` command at root; if it does, pick a different
   name and document why.
-- Tests in `session_buddy/tests/` — replace `cli_runner.invoke(app,
-  ["server", "start"])` with `["mcp", "start"]` everywhere.
+- Tests in `session_buddy/tests/` — replace `cli_runner.invoke(app, ["server", "start"])` with `["mcp", "start"]` everywhere.
   `session_buddy/tests/cli/test_base.py:54` patches the handlers; update
   if any test still expects `server` in the registered names.
 - `session_buddy/cli/__init__.py` (if present and re-exporting) — confirm
@@ -322,9 +320,7 @@ uv run pytest tests/cli tests/unit/test_cli.py tests/unit/test_cli_with_modes.py
 - **Triggered from**: `python -m session-buddy {--help,server,mcp,...}`.
 - **Returns to / updates**: CLI surface. No change to PID file
   management (factory default settings unchanged).
-- **Demonstrable by**: `uv run python -m session-buddy --help | grep -E
-  '^\s+server\s'` returns empty; `uv run python -m session-buddy mcp
-  start --detach` produces a PID file.
+- **Demonstrable by**: `uv run python -m session-buddy --help | grep -E '^\s+server\s'` returns empty; `uv run python -m session-buddy mcp start --detach` produces a PID file.
 - **Rollback signal**: `session-buddy --help` listing a top-level
   `server` group means the rename was skipped.
 - **Observability added**: None.
@@ -466,7 +462,7 @@ to minimize churn.
   retag.
 - **Observability added**: None.
 
----
+______________________________________________________________________
 
 ## 7. Required Code Changes
 
@@ -550,7 +546,7 @@ This plan is "done enough" when:
 Scope pressure cuts at: Phase 5 (documentation). If a doc reference is
 in `docs/archive/`, leave it. Otherwise fix in this plan.
 
----
+______________________________________________________________________
 
 ## References
 

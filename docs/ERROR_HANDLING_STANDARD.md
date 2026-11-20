@@ -3,7 +3,7 @@ status: active
 role: canonical
 date: 2026-07-17
 last_reviewed: 2026-07-17
-superseded_by: null
+superseded_by:
 blocks_on: []
 topic: error-handling
 ---
@@ -21,9 +21,9 @@ ______________________________________________________________________
 This document defines the standard error handling pattern for the crackerjack codebase. Consistent error handling ensures:
 
 1. **Debuggability**: Full context for troubleshooting
-1. **Observability**: Persistent logs for headless execution
-1. **Reliability**: No silent failures or lost errors
-1. **Maintainability**: Predictable error handling patterns
+2. **Observability**: Persistent logs for headless execution
+3. **Reliability**: No silent failures or lost errors
+4. **Maintainability**: Predictable error handling patterns
 
 ______________________________________________________________________
 
@@ -351,9 +351,9 @@ ______________________________________________________________________
 Priority order:
 
 1. Coordinators (crackerjack/core/)
-1. Managers (crackerjack/managers/)
-1. Adapters (crackerjack/adapters/)
-1. Services (crackerjack/services/)
+2. Managers (crackerjack/managers/)
+3. Adapters (crackerjack/adapters/)
+4. Services (crackerjack/services/)
 
 ### Phase 3: Validation
 

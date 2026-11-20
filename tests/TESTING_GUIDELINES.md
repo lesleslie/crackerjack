@@ -184,12 +184,12 @@ pytest --benchmark-skip
 ## Best Practices
 
 1. **Keep tests fast**: Aim for tests that run in under 100ms
-1. **Make tests deterministic**: Tests should produce the same results every time
-1. **Test behavior, not implementation**: Focus on what the code does, not how it does it
-1. **Use descriptive names**: Test names should clearly indicate what is being tested
-1. **Test edge cases**: Include tests for boundary conditions and error cases
-1. **Maintain test independence**: Tests should not depend on each other's execution order
-1. **Use appropriate test doubles**: Choose between mocks, stubs, and fakes appropriately
+2. **Make tests deterministic**: Tests should produce the same results every time
+3. **Test behavior, not implementation**: Focus on what the code does, not how it does it
+4. **Use descriptive names**: Test names should clearly indicate what is being tested
+5. **Test edge cases**: Include tests for boundary conditions and error cases
+6. **Maintain test independence**: Tests should not depend on each other's execution order
+7. **Use appropriate test doubles**: Choose between mocks, stubs, and fakes appropriately
 
 ## Continuous Integration
 

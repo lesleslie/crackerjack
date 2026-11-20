@@ -3,7 +3,7 @@ status: active
 role: canonical
 date: 2026-07-17
 last_reviewed: 2026-07-17
-superseded_by: null
+superseded_by:
 blocks_on: []
 topic: observability
 ---
@@ -261,13 +261,13 @@ To validate the performance improvement:
    - Track: version checks, health checks, Ollama availability
    - Record: latency, throughput, memory usage
 
-1. **After Implementation**:
+2. **After Implementation**:
 
    - Measure same operations with connection pool
    - Compare: latency reduction, throughput increase
    - Verify: no connection leaks or resource exhaustion
 
-1. **Benchmark Scenarios**:
+3. **Benchmark Scenarios**:
 
    - **Version Checks**: 10 consecutive PyPI API calls
    - **Health Checks**: 20 health check requests to local services
@@ -434,13 +434,13 @@ ______________________________________________________________________
    python -m crackerjack run --run-tests -c
    ```
 
-1. **Measure Performance**:
+2. **Measure Performance**:
 
    - Create benchmark script
    - Measure baseline vs. pooled performance
    - Document results
 
-1. **Add Tests** (if desired):
+3. **Add Tests** (if desired):
 
    - Unit tests for connection pool
    - Integration tests for HTTP operations
@@ -459,13 +459,13 @@ ______________________________________________________________________
      total_timeout: 30.0
    ```
 
-1. **Metrics Collection**:
+2. **Metrics Collection**:
 
    - Track connection pool statistics
    - Monitor connection reuse rate
    - Alert on connection exhaustion
 
-1. **Advanced Features**:
+3. **Advanced Features**:
 
    - Connection pooling for other protocols (WebSocket, gRPC)
    - DNS caching integration

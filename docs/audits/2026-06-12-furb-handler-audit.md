@@ -3,7 +3,7 @@ status: complete
 role: historical
 date: 2026-07-17
 last_reviewed: 2026-07-17
-superseded_by: null
+superseded_by:
 blocks_on: []
 topic: lifecycle
 ---
@@ -139,19 +139,19 @@ the predicate. See the `suggested_fix` column in the raw log for sketches.
    catches the ghost-fix class of bug; the audit log catches the
    wrong-handler class.
 
-1. **The fixer layer (refurb_fixer.py) is healthier than the agent layer
+2. **The fixer layer (refurb_fixer.py) is healthier than the agent layer
    (refurb_agent.py).** The fixer has 24 working `_fix_furbXXX` methods that
    pass the audit; the agent's `_transform_furbXXX` has only 9. Most
    issues are routed through the fixer first, so practical impact is
    less than the 81% NOOP number suggests. But for codes not in the fixer,
    the agent dispatch is a silent dead end.
 
-1. **Refurb ground truth is in `refurb --explain <CODE>`.** Re-running
+3. **Refurb ground truth is in `refurb --explain <CODE>`.** Re-running
    this audit when refurb upgrades (currently v2.3.1) is cheap. The
    driver at `docs/audits/2026-06-12-furb-handler-audit-driver.py` can
    be re-invoked with `refurb` on PATH.
 
-1. **The right fix for the dict itself is per-handler tests.** For each
+4. **The right fix for the dict itself is per-handler tests.** For each
    of the 9 CORRECT handlers, add a test. For each of the 44 NOOPs, either
    add a test (after fixing) or add an explicit `pytest.skip` with a
    reason. The audit log has the input/output pair for each code already;

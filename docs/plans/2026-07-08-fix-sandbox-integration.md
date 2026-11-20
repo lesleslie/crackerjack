@@ -4,7 +4,7 @@ role: implementation
 topic: lifecycle
 date: 2026-07-17
 last_reviewed: 2026-07-17
-superseded_by: null
+superseded_by:
 blocks_on: []
 ---
 
@@ -1761,9 +1761,9 @@ After writing the plan, I checked:
    - Integration test in a worktree → Task 6.
    - Verification checklist → Task 7.
 
-1. **Placeholder scan**: No "TBD", "TODO", "implement later". Every step has concrete code or commands.
+2. **Placeholder scan**: No "TBD", "TODO", "implement later". Every step has concrete code or commands.
 
-1. **Type consistency**:
+3. **Type consistency**:
 
    - `SandboxedFixerDispatcher(sandbox=..., in_process_fallback=...)` — consistent in Tasks 3, 4, 5.
    - `dispatch_batch(plans, *, project_root, timeout_s=300)` — same signature in Task 3 and Task 4.

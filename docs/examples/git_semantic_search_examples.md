@@ -3,7 +3,7 @@ status: active
 role: canonical
 date: 2026-07-17
 last_reviewed: 2026-07-17
-superseded_by: null
+superseded_by:
 blocks_on: []
 topic: mcp-design
 ---
@@ -338,12 +338,12 @@ asyncio.run(weekly_health_check("/path/to/repo"))
    - ✓ "memory leaks in parser"
    - ✗ "parser" (too broad)
 
-1. **Use domain language**:
+2. **Use domain language**:
 
    - ✓ "authentication security issues"
    - ✗ "auth problems" (semantic search finds same)
 
-1. **Include context**:
+3. **Include context**:
 
    - ✓ "UI performance optimizations for mobile"
    - ✗ "performance" (too generic)
@@ -355,12 +355,12 @@ asyncio.run(weekly_health_check("/path/to/repo"))
    - 90-180 days for pattern detection
    - Shorter windows may miss patterns
 
-1. **Adjust min_frequency**:
+2. **Adjust min_frequency**:
 
    - Higher (5-10) for major patterns
    - Lower (2-3) for subtle patterns
 
-1. **Review example commits**:
+3. **Review example commits**:
 
    - Patterns include top examples
    - Helps validate pattern relevance
@@ -372,13 +372,13 @@ asyncio.run(weekly_health_check("/path/to/repo"))
    - Gets overall repository health
    - Then drill into specific areas
 
-1. **Check priority scores**:
+2. **Check priority scores**:
 
    - 5: Critical, address immediately
    - 3-4: Important, plan soon
    - 1-2: Nice to have
 
-1. **Review actionable steps**:
+3. **Review actionable steps**:
 
    - Recommendations include concrete steps
    - Prioritize based on team capacity
@@ -426,9 +426,9 @@ PYTHON
 **Solutions**:
 
 1. Lower `similarity_threshold` (try 0.5)
-1. Increase `days_back` window
-1. Use more general query terms
-1. Check repository has commits in time window
+2. Increase `days_back` window
+3. Use more general query terms
+4. Check repository has commits in time window
 
 ### Patterns Not Detected
 
@@ -437,9 +437,9 @@ PYTHON
 **Solutions**:
 
 1. Lower `min_frequency` (try 2-3)
-1. Increase `days_back` (try 180 days)
-1. Use more specific pattern description
-1. Check repository has sufficient commit history
+2. Increase `days_back` (try 180 days)
+3. Use more specific pattern description
+4. Check repository has sufficient commit history
 
 ### Recommendations Too Generic
 
@@ -448,6 +448,6 @@ PYTHON
 **Solutions**:
 
 1. Use specific `focus_area` instead of `general`
-1. Ensure sufficient history (`days_back` >= 60)
-1. Check repository matches best practices
-1. Review metric baselines for context
+2. Ensure sufficient history (`days_back` >= 60)
+3. Check repository matches best practices
+4. Review metric baselines for context

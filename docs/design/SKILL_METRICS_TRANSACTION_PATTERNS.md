@@ -3,7 +3,7 @@ status: active
 role: canonical
 date: 2026-07-17
 last_reviewed: 2026-07-17
-superseded_by: null
+superseded_by:
 blocks_on: []
 topic: architecture
 ---
@@ -763,11 +763,11 @@ ______________________________________________________________________
 **Key Transaction Patterns**:
 
 1. **Create Invocation + Update Metrics**: Atomic invocation tracking with automatic metric updates
-1. **Bulk Session End Updates**: Efficient batch updates on session completion
-1. **Concurrent Skill Usage**: Per-skill locking for thread-safe concurrent access
-1. **Analytical Queries**: Materialized views for instant dashboard results
-1. **Retry Logic**: Exponential backoff for transient failures
-1. **Isolation Levels**: Custom isolation for bulk operations
+2. **Bulk Session End Updates**: Efficient batch updates on session completion
+3. **Concurrent Skill Usage**: Per-skill locking for thread-safe concurrent access
+4. **Analytical Queries**: Materialized views for instant dashboard results
+5. **Retry Logic**: Exponential backoff for transient failures
+6. **Isolation Levels**: Custom isolation for bulk operations
 
 **ACID Guarantees**:
 
@@ -787,7 +787,7 @@ ______________________________________________________________________
 **Next Steps**:
 
 1. Implement connection pooling
-1. Add monitoring for lock contention
-1. Create migration runner utility
-1. Add query performance logging
-1. Document backup/restore procedures
+2. Add monitoring for lock contention
+3. Create migration runner utility
+4. Add query performance logging
+5. Document backup/restore procedures

@@ -3,7 +3,7 @@ status: active
 role: canonical
 date: 2026-07-17
 last_reviewed: 2026-07-17
-superseded_by: null
+superseded_by:
 blocks_on: []
 topic: architecture
 ---
@@ -208,10 +208,10 @@ class FixStrategyMemory:
 ## Competitive Advantages
 
 1. **Unique**: No AI code fixing tool has persistent memory
-1. **Compounding**: Gets smarter with every fix
-1. **Team-scale**: Learning benefits all developers
-1. **Transparent**: Can explain WHY it chose a strategy
-1. **Safe**: Avoids repeating past mistakes
+2. **Compounding**: Gets smarter with every fix
+3. **Team-scale**: Learning benefits all developers
+4. **Transparent**: Can explain WHY it chose a strategy
+5. **Safe**: Avoids repeating past mistakes
 
 ## Expected Impact
 

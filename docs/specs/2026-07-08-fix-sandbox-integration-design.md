@@ -4,7 +4,7 @@ role: implementation
 topic: lifecycle
 date: 2026-07-17
 last_reviewed: 2026-07-17
-superseded_by: null
+superseded_by:
 blocks_on: []
 ---
 
@@ -45,18 +45,18 @@ iteration loop, changing the OutputValidator.
 
 1. **Opt-in via oneiric setting + env var override** — not default.
    Default off keeps the existing 359 unit tests untouched.
-1. **Insertion at `FixerCoordinator`** — keeps the change localized
+2. **Insertion at `FixerCoordinator`** — keeps the change localized
    to one file. The in-process path stays as the default; the
    sandboxed path is a constructor-arg branch.
-1. **Per-batch subprocess** — one subprocess invocation per
+3. **Per-batch subprocess** — one subprocess invocation per
    `execute_plans` call (which contains N plans). Amortizes
    subprocess startup cost; the per-plan isolation comes from
    separate temp files in the subprocess, not separate subprocesses.
-1. **Plan-only JSON contract** — the subprocess driver re-instantiates
+4. **Plan-only JSON contract** — the subprocess driver re-instantiates
    fixers from a JSON-serialized plan + fixer ID. No parent-state
    leaks. Fixers must be re-importable in the subprocess (they
    already are, since they're importable modules).
-1. **Opt-in fallback via env var** — on sandbox failure, default
+5. **Opt-in fallback via env var** — on sandbox failure, default
    behavior is to surface the failure (no fallback). Operators
    who want the looser behavior set
    `CRACKERJACK_AI_FIX_SANDBOX_FALLBACK=1` to enable
@@ -115,15 +115,15 @@ Behavior:
 1. Parse args: `--plans-json=PATH` (input), `--output-json=PATH`
    (output), `--project-root=PATH` (for `CRACKERJACK_PROJECT_ROOT` env
    var passthrough).
-1. Read the input JSON (a list of `FixPlan`-shaped dicts, each with
+2. Read the input JSON (a list of `FixPlan`-shaped dicts, each with
    `fixer_id`, `file_path`, `issue_type`, `changes`, `risk_level`).
-1. Copy the **first** plan's `file_path` into the working directory
+3. Copy the **first** plan's `file_path` into the working directory
    as `out.py` (the single name the sandbox's contract requires;
    see `crackerjack/ai_fix/fix_sandbox.py:164`). All other plans'
    files are copied to `out_N.py` where N is the plan's index in
    the batch. The first plan is the "anchor" that the sandbox
    validates; the others are validated separately by the runner.
-1. For each plan, dispatch via the registry: load the fixer class
+4. For each plan, dispatch via the registry: load the fixer class
    from `fixer_id` (format `"module.path:ClassName"`), instantiate,
    and call its execution method. The dispatch follows the
    `FixerCoordinator._execute_single_plan` contract (see
@@ -132,11 +132,11 @@ Behavior:
    - Else if the fixer has `analyze_and_fix`, call it with an
      `Issue` reconstructed from the plan.
    - Else, fail the plan with `remaining_issues=["<class> lacks execute_fix_plan or analyze_and_fix"]`.
-1. Read each `out_N.py` (and `out.py` for the first plan) back
+5. Read each `out_N.py` (and `out.py` for the first plan) back
    into memory. Per-plan validation via `OutputValidator` is the
    dispatcher's responsibility (the sandbox already validated
    `out.py`, the runner validates the rest).
-1. Write a single result JSON: `{"results": [{plan_idx, success, modified_content, files_modified, remaining_issues, reason}, ...]}`
+6. Write a single result JSON: `{"results": [{plan_idx, success, modified_content, files_modified, remaining_issues, reason}, ...]}`
    to the output path. Exit 0 if all results are `success=True`,
    exit 1 if any result is `success=False`, exit 2 on a setup error
    (couldn't read input, unknown fixer, etc.).
@@ -155,15 +155,15 @@ Behavior:
 
 1. Serialize plans to JSON via `plan.model_dump_json()` (Pydantic
    v2 idiom; works because `FixPlan` is a Pydantic model).
-1. Build the subprocess command: `[sys.executable, "-m", "crackerjack", "fix-runner", "--plans-json=PLANS_PATH", "--output-json=OUTPUT_PATH", "--project-root=PKG_PATH"]`.
-1. Call `sandbox.run_command(command=..., file_path=first_plan_file, timeout=settings.ai.ai_fix_sandbox_timeout_s)`.
-1. On `SandboxResult.passed=True`: read the output JSON, parse
+2. Build the subprocess command: `[sys.executable, "-m", "crackerjack", "fix-runner", "--plans-json=PLANS_PATH", "--output-json=OUTPUT_PATH", "--project-root=PKG_PATH"]`.
+3. Call `sandbox.run_command(command=..., file_path=first_plan_file, timeout=settings.ai.ai_fix_sandbox_timeout_s)`.
+4. On `SandboxResult.passed=True`: read the output JSON, parse
    per-plan results, and return a list of `FixResult` objects (one
    per plan, in the same order).
-1. On `SandboxResult.passed=False`: synthesize a per-plan
+5. On `SandboxResult.passed=False`: synthesize a per-plan
    `FixResult(success=False, remaining_issues=[result.reason])` for
    every plan in the batch. The whole batch fails together.
-1. If `CRACKERJACK_AI_FIX_SANDBOX_FALLBACK=1` AND the sandbox
+6. If `CRACKERJACK_AI_FIX_SANDBOX_FALLBACK=1` AND the sandbox
    failure is recoverable (subprocess error or timeout, but not
    validation failure): log a warning and re-dispatch via
    `FixerCoordinator.execute_plans(plans)` (the in-process path).
@@ -241,38 +241,38 @@ constructed), pass `use_sandbox=self._get_ai_fix_use_sandbox()`.
 
 The data flow for a single batched subprocess invocation:
 
-1. `AutofixCoordinator._execute_plan_with_validation(plan, ...)` is
-   called.
-1. It calls `fixer_coordinator.execute_plans([plan])` (line 2911).
-1. `FixerCoordinator._execute_single_plan(plan)` runs.
-1. If `use_sandbox=True`, `SandboxedFixerDispatcher.dispatch_batch([plan])`
-   runs.
-1. The dispatcher serializes `[plan]` to JSON, writes
-   `/tmp/.../plans.json`, and calls
-   `sandbox.run_command(command=[sys.executable, "-m", "crackerjack", "fix-runner", "--plans-json=.../plans.json", "--output-json=.../out/results.json"], file_path=plan.file_path, timeout=300)`.
-1. The sandbox copies `plan.file_path` (the **first** plan's file)
-   to `out.py` in the temp dir. This is the file the sandbox
-   validates after the subprocess exits.
-1. The subprocess runs the fix-runner, which reads the plans JSON,
-   copies each plan's input file to `out_N.py` (the first plan
-   to `out.py` to satisfy the sandbox's contract), dispatches each
-   plan via the fixer registry, writes per-plan results to the
-   output JSON, and exits.
-1. The sandbox validates `out.py` (the first plan's output) via
-   `OutputValidator`. The per-plan outputs `out_0.py`, `out_1.py`,
-   etc. are read by the dispatcher from the result JSON; the
-   dispatcher runs `OutputValidator` on each one too, because
-   the sandbox only validates `out.py`.
-1. On validation success, the sandbox returns
-   `SandboxResult(passed=True, modified_content=<unused for batches>, duration_s=...)`.
-1. The dispatcher reads the result JSON, runs per-plan
-   `OutputValidator` on each `out_N.py`, builds a `FixResult` per
-   plan, and returns the list.
-1. `FixerCoordinator._execute_single_plan` returns the first
-   `FixResult` (the only one in the batch of 1).
-1. `AutofixCoordinator._execute_plan_with_validation` continues
-   with the no-op check, OutputValidator, and retry chain — all
-   unchanged.
+01. `AutofixCoordinator._execute_plan_with_validation(plan, ...)` is
+    called.
+02. It calls `fixer_coordinator.execute_plans([plan])` (line 2911).
+03. `FixerCoordinator._execute_single_plan(plan)` runs.
+04. If `use_sandbox=True`, `SandboxedFixerDispatcher.dispatch_batch([plan])`
+    runs.
+05. The dispatcher serializes `[plan]` to JSON, writes
+    `/tmp/.../plans.json`, and calls
+    `sandbox.run_command(command=[sys.executable, "-m", "crackerjack", "fix-runner", "--plans-json=.../plans.json", "--output-json=.../out/results.json"], file_path=plan.file_path, timeout=300)`.
+06. The sandbox copies `plan.file_path` (the **first** plan's file)
+    to `out.py` in the temp dir. This is the file the sandbox
+    validates after the subprocess exits.
+07. The subprocess runs the fix-runner, which reads the plans JSON,
+    copies each plan's input file to `out_N.py` (the first plan
+    to `out.py` to satisfy the sandbox's contract), dispatches each
+    plan via the fixer registry, writes per-plan results to the
+    output JSON, and exits.
+08. The sandbox validates `out.py` (the first plan's output) via
+    `OutputValidator`. The per-plan outputs `out_0.py`, `out_1.py`,
+    etc. are read by the dispatcher from the result JSON; the
+    dispatcher runs `OutputValidator` on each one too, because
+    the sandbox only validates `out.py`.
+09. On validation success, the sandbox returns
+    `SandboxResult(passed=True, modified_content=<unused for batches>, duration_s=...)`.
+10. The dispatcher reads the result JSON, runs per-plan
+    `OutputValidator` on each `out_N.py`, builds a `FixResult` per
+    plan, and returns the list.
+11. `FixerCoordinator._execute_single_plan` returns the first
+    `FixResult` (the only one in the batch of 1).
+12. `AutofixCoordinator._execute_plan_with_validation` continues
+    with the no-op check, OutputValidator, and retry chain — all
+    unchanged.
 
 For multi-plan batches (N > 1), step 4 dispatches the whole batch in
 one subprocess; steps 7-10 produce N per-plan `FixResult` objects;
@@ -354,11 +354,11 @@ After implementation:
 1. **Default off**: `ai_fix_use_sandbox: false` in
    `settings/crackerjack.yaml`. All existing tests pass without
    modification.
-1. **Manual opt-in**: developers set
+2. **Manual opt-in**: developers set
    `CRACKERJACK_AI_FIX_USE_SANDBOX=1` to test the sandboxed path
    on a worktree (per the e2e pattern we used in
    sub-project 3).
-1. **Future PR**: once the sandboxed path has been verified
+3. **Future PR**: once the sandboxed path has been verified
    manually, consider making `ai_fix_use_sandbox: true` the
    default. This is a separate decision; out of scope for this
    design.

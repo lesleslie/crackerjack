@@ -3,7 +3,7 @@ status: complete
 role: triage
 date: 2026-08-03
 last_reviewed: 2026-08-03
-superseded_by: null
+superseded_by:
 blocks_on: []
 topic: lifecycle
 ---
@@ -95,16 +95,14 @@ implementation. The branch was merged or abandoned; the test scaffolding landed
 on main but the implementation didn't.
 
 **Fix location**: implementation in `crackerjack/tools/_git_utils.py` (or
-similar). The implementation is in **stash@{1}** (parent: `feat/add-get-git-root:
-7addf420 chore(crackerjack): drop unused call-non-callable from KNOWN_TY_CODES`).
+similar). The implementation is in **stash@{1}** (parent: `feat/add-get-git-root: 7addf420 chore(crackerjack): drop unused call-non-callable from KNOWN_TY_CODES`).
 
 ### Cluster C: zuban default flipped (1 test)
 
 - `tests/unit/test_config_settings.py::TestZubanLSPSettings::test_default_values`
 - Asserts `ZubanLSPSettings.enabled = True`; actual default is `False`.
 
-**Probable root cause**: `13be8c1c feat(crackerjack): disable zuban LSP by
-default (ty is the new default type checker)` flipped the default. The test
+**Probable root cause**: `13be8c1c feat(crackerjack): disable zuban LSP by default (ty is the new default type checker)` flipped the default. The test
 was never updated.
 
 **Fix**: 1-line assertion flip. Test or production code could be updated
@@ -176,8 +174,7 @@ for `analyze_errors_with_caching`? when does Phase 3 land?).
 
 #### stash@{1} — `feat/add-get-git-root` work (CLOSES 5 FAILING TESTS)
 
-WIP on `feat/add-get-git-root: 7addf420 chore(crackerjack): drop unused
-call-non-callable from KNOWN_TY_CODES`. 1 file, 16/7.
+WIP on `feat/add-get-git-root: 7addf420 chore(crackerjack): drop unused call-non-callable from KNOWN_TY_CODES`. 1 file, 16/7.
 
 Single file: `scripts/validate_document_frontmatter.py`. Modifies the
 `_validate_file` function and the `--allow-nonstandard` argparse help string.
@@ -213,8 +210,7 @@ follow-up work (likely needs to be written or extracted from another stash).
 
 #### stash@{3} — `task-1-pypi-auth` cleanup WIP (DANGEROUS)
 
-WIP on `task-1-pypi-auth: cae27456 chore(pypi_auth): retain quality-run
-cleanup`. 251 files, +988/-12699.
+WIP on `task-1-pypi-auth: cae27456 chore(pypi_auth): retain quality-run cleanup`. 251 files, +988/-12699.
 
 Files include:
 
@@ -298,8 +294,7 @@ cleanup. The 60-line `fix_runner.py` deletion is the most striking.
 
 #### stash@{8} — pyproject.toml bug (SAFE TO DROP)
 
-WIP on `67038398 feat(ai-fix): route FixerCoordinator through sandbox when
-use_sandbox=True`. 1 file, +1/-0.
+WIP on `67038398 feat(ai-fix): route FixerCoordinator through sandbox when use_sandbox=True`. 1 file, +1/-0.
 
 The single hunk is:
 
@@ -315,16 +310,14 @@ diff --git a/pyproject.toml b/pyproject.toml
 ```
 
 **This is a bug**: `from __future__ import annotations` is Python syntax, not
-TOML. The import was placed in the wrong file. The line `from __future__ import
-annotations` is harmless in a TOML file (TOML parsers ignore it as an unknown
+TOML. The import was placed in the wrong file. The line `from __future__ import annotations` is harmless in a TOML file (TOML parsers ignore it as an unknown
 key) but it's clearly accidental.
 
 **Action**: **drop safely**. The stash contains no recoverable work.
 
 #### stash@{9} — sandbox routing (49 files)
 
-WIP on `9f9d2115 refactor(pip-audit): consolidate 3 ignore lists into one
-canonical tuple + project layer`. 49 files, +987/-629.
+WIP on `9f9d2115 refactor(pip-audit): consolidate 3 ignore lists into one canonical tuple + project layer`. 49 files, +987/-629.
 
 Touches: `CHANGELOG.md`, `crackerjack/adapters/lint/codespell.py`,
 `config/pip_audit_ignores.py`, `core/autofix_coordinator.py`,
@@ -431,31 +424,31 @@ deleted the recovered stash@{8} branch), the path taken was **drop everything**
 ### Tier 2 (medium effort, ~2-3 hours) — DEFERRED
 
 - [ ] Branch stash@{1} as `feat/restore-get-git-root` and verify the 5
-      git_utils tests pass
+  git_utils tests pass
 - [ ] Branch stash@{2} as `fix/pypi-auth-format` and apply the colon-no-space
-      format change
+  format change
 - [ ] Branch stash@{5} (the small frontmatter Phase 8 WIP) as a standalone
-      `feat/frontmatter-validation-phase` — cleanest entry point
+  `feat/frontmatter-validation-phase` — cleanest entry point
 
 ### Tier 3 (heavy effort, ~4-6 hours) — DEFERRED
 
 - [ ] Investigate stash@{3} (the 251-file destructive cleanup) — confirm
-      whether the work was meant to be merged or is a stale artifact
+  whether the work was meant to be merged or is a stale artifact
 - [ ] Resolve stash@{4}/{5}/{6} (the docs-validate consolidation trio) —
-      diff against main, pick the most-current branch, drop the others
+  diff against main, pick the most-current branch, drop the others
 - [ ] Branch stash@{7} (Task 7 cleanup) — review the 60-line `fix_runner.py`
-      deletion
+  deletion
 
 ### Tier 4 (design-doc-required, project-scale) — DEFERRED
 
 - [ ] stash@{0} — MEMORY_ARCHITECTURE 5.6/5.7 consolidation. Needs a spec
-      for the `analyze_errors_with_caching` contract and Phase 3 timeline.
+  for the `analyze_errors_with_caching` contract and Phase 3 timeline.
 - [ ] stash@{9} — sandbox routing. 96-line change in `hook_executor.py`;
-      needs design review.
+  needs design review.
 - [ ] stash@{10} — anti-AI flavor + cross-repo. Touches vendored
-      `mahavishnu/...`; needs integration review.
+  `mahavishnu/...`; needs integration review.
 - [ ] stash@{11} — LSP refactor + integrations. Touches akosha/
-      session-buddy integration modules; needs ecosystem review.
+  session-buddy integration modules; needs ecosystem review.
 
 The Tier 2-4 work above represents the canonical implementations of multiple
 active plans and MEMORY_ARCHITECTURE contracts. By dropping the stashes
@@ -609,13 +602,13 @@ Given the deep-dig, the Tier 1 actions become:
 - [x] Drop stash@{8} (the pyproject.toml bug stash)
 - [x] Fix the 4 stale `test_hooks_config.py` assertions
 - [ ] **MEMORY_ARCHITECTURE.md contract audit**: re-derive Contract 5.1–5.10
-      status against current stashes and main. ~1 hour. This produces a
-      decision document for stashes @{0}, @{9}, @{11} which all touch
-      contract-coded work.
+  status against current stashes and main. ~1 hour. This produces a
+  decision document for stashes @{0}, @{9}, @{11} which all touch
+  contract-coded work.
 - [ ] **Multi-plan stash breakdown** (stash@{9}): for each of the 5 plans
-      it covers, extract the relevant files and create a branch per plan.
-      ~3 hours. This is the highest-leverage action because it converts
-      5 active plans from "no implementation" to "branched but unmerged".
+  it covers, extract the relevant files and create a branch per plan.
+  ~3 hours. This is the highest-leverage action because it converts
+  5 active plans from "no implementation" to "branched but unmerged".
 
 ### What this deep-dig did NOT do
 

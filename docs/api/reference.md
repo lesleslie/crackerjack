@@ -3,7 +3,7 @@ status: active
 role: canonical
 date: 2026-07-17
 last_reviewed: 2026-07-17
-superseded_by: null
+superseded_by:
 blocks_on: []
 topic: mcp-design
 ---
@@ -124,8 +124,8 @@ from crackerjack.adapters.web.jinja_formatter import format_template
 Returns `str`. Tier 1 canonicalization only:
 
 1. Trailing newline at EOF.
-1. Strip trailing whitespace from every line.
-1. Preserve `{%-` / `-%}` / `{{-` / `-}}` whitespace markers (untouched by construction).
+2. Strip trailing whitespace from every line.
+3. Preserve `{%-` / `-%}` / `{{-` / `-}}` whitespace markers (untouched by construction).
 
 The function calls `jinja2.Environment.lex(source)` as a syntax-validation
 gate. On `TemplateSyntaxError`, or when the configured delimiters

@@ -3,7 +3,7 @@ status: active
 role: implementation
 date: 2026-07-17
 last_reviewed: 2026-07-17
-superseded_by: null
+superseded_by:
 blocks_on: []
 topic: lifecycle
 ---
@@ -44,7 +44,7 @@ The user's earlier 4-cluster diagnosis of the broken AI-fix loop included 3 mode
 The error originates from `OutputValidator.import_check` (crackerjack-side validator). Either:
 
 1. `import_check` itself returns `None` somewhere and a downstream caller does `result.__dict__[...]`, or
-1. `import_check` calls a helper that returns `None`, and `import_check` then tries to read `.__dict__` on it.
+2. `import_check` calls a helper that returns `None`, and `import_check` then tries to read `.__dict__` on it.
 
 Both shapes produce the same error string; the recon agent is locating the exact line.
 
@@ -87,10 +87,10 @@ The right answer depends on which helper is the source of the None — recon wil
 ## Recommended next steps
 
 1. **Recon** (in progress): find `OutputValidator`, find `import_check`, identify the line that returns `None`. Already dispatched.
-1. **Brainstorming** — present 2-3 design alternatives (Shape A vs Shape B vs "skip + log" vs other).
-1. **Spec** at `docs/specs/2026-07-10-output-validator-import-check-design.md`.
-1. **Plan + SDD execution** — likely 1 task: implement fix + regression test.
-1. **Push** to `origin/main`.
+2. **Brainstorming** — present 2-3 design alternatives (Shape A vs Shape B vs "skip + log" vs other).
+3. **Spec** at `docs/specs/2026-07-10-output-validator-import-check-design.md`.
+4. **Plan + SDD execution** — likely 1 task: implement fix + regression test.
+5. **Push** to `origin/main`.
 
 ## Effort estimate
 

@@ -58,7 +58,7 @@ Pick a hook set and a minimum-score threshold by repo shape:
 
 | Repo shape | Hook set | Min score | Coverage |
 |---|---|---|---|
-| Personal script (<500 LOC) | `pre-commit` | none | none |
+| Personal script (\<500 LOC) | `pre-commit` | none | none |
 | Internal tool | `minor` | 80 | 70% |
 | Shared library (PyPI) | `minor` | 90 | 85% |
 | Bodai ecosystem component | `comprehensive` | 95 | 89.02% |

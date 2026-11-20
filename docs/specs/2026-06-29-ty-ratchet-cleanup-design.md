@@ -4,7 +4,7 @@ role: implementation
 topic: lifecycle
 date: 2026-07-17
 last_reviewed: 2026-07-17
-superseded_by: null
+superseded_by:
 blocks_on: []
 ---
 
@@ -48,7 +48,7 @@ Two code changes; no per-project pyproject keys added.
 
 1. **`HookResult.advisory_issues`** — add field, wire it through
    `_parse_ty_ratchet` (producer) and `_display_hook_result` (consumer).
-1. **Missing-dir detection** — pre-check `Path(...).is_dir()` before invoking
+2. **Missing-dir detection** — pre-check `Path(...).is_dir()` before invoking
    `ty`; emit a stderr warning; substitute a zero-result for the gate math.
 
 Both changes preserve the existing prod-gate-controls-exit-code contract and
@@ -441,10 +441,10 @@ Single PR, three commits (or one commit if reviewer prefers unified diff):
 
 1. **E.3 — `HookResult.advisory_issues`**: producer + consumer + field
    addition + tests. Land first because it's the largest blast radius.
-1. **Missing-dir detection**: pure addition to `_run_split`. Land second
+2. **Missing-dir detection**: pure addition to `_run_split`. Land second
    because it builds on the prod-only exit-code contract that E.3
    reaffirms.
-1. **Skip item 2**: no commit needed.
+3. **Skip item 2**: no commit needed.
 
 After both land, run the verification suite to confirm the warning banner
 still appears and the prod-only exit-code contract is preserved.

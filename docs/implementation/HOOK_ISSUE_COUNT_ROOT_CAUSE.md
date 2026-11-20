@@ -3,7 +3,7 @@ status: complete
 role: historical
 date: 2026-07-17
 last_reviewed: 2026-07-17
-superseded_by: null
+superseded_by:
 blocks_on: []
 topic: lifecycle
 ---
@@ -59,7 +59,7 @@ def _calculate_total_issues(
    - `_calculate_total_issues()` forces `max(0, 1) = 1`
    - Display shows "1 issue"
 
-1. **Reporting Tools with No Violations**: When tools like complexipy find no violations:
+2. **Reporting Tools with No Violations**: When tools like complexipy find no violations:
 
    - They exit with code 0
    - Adapter returns `QAResult(status=SUCCESS, issues_found=0)`
@@ -137,8 +137,8 @@ The `max(total_issues, 1)` logic was likely added to ensure that failed hooks al
 However, this creates a **misleading display** when:
 
 1. The failure is a configuration error (not code issues)
-1. The tool has an error (binary not found, invalid args)
-1. The adapter couldn't parse the output
+2. The tool has an error (binary not found, invalid args)
+3. The adapter couldn't parse the output
 
 ## Solution Options
 
@@ -238,9 +238,9 @@ def _calculate_total_issues(
 **Option 3** is the recommended solution because:
 
 1. It uses the existing `QAResultStatus` enum to distinguish error types
-1. Config/tool errors (status=ERROR) show 0 issues (truthful)
-1. Parsing failures (status=FAILURE) can still show 1 issue if needed
-1. Preserves semantic correctness while maintaining useful visual cues
+2. Config/tool errors (status=ERROR) show 0 issues (truthful)
+3. Parsing failures (status=FAILURE) can still show 1 issue if needed
+4. Preserves semantic correctness while maintaining useful visual cues
 
 ## Testing Plan
 
@@ -252,19 +252,19 @@ def _calculate_total_issues(
    - qa_result.issues_found = 0
    - Expected: issues_count = 0
 
-1. **Hook with code violations** (ruff-check with 95 E402s):
+2. **Hook with code violations** (ruff-check with 95 E402s):
 
    - qa_result.status = FAILURE
    - qa_result.issues_found = 95
    - Expected: issues_count = 95
 
-1. **Reporting tool with no violations** (complexipy):
+3. **Reporting tool with no violations** (complexipy):
 
    - qa_result.status = SUCCESS
    - qa_result.issues_found = 0
    - Expected: status="passed", issues_count = 0
 
-1. **Hook with parsing failure** (tool output in unexpected format):
+4. **Hook with parsing failure** (tool output in unexpected format):
 
    - qa_result.status = FAILURE
    - qa_result.issues_found = 0
@@ -276,12 +276,12 @@ def _calculate_total_issues(
 
    - Modify `_calculate_total_issues()` (lines 939-956)
 
-1. `tests/unit/orchestration/test_hook_result_details.py`:
+2. `tests/unit/orchestration/test_hook_result_details.py`:
 
    - Add test for config error case
    - Add test for parsing failure case
 
-1. `tests/integration/test_hook_reporting_e2e.py`:
+3. `tests/integration/test_hook_reporting_e2e.py`:
 
    - Add end-to-end test with actual tool config error
 

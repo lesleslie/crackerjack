@@ -74,8 +74,7 @@ through the run) is preserved — it carries within-run task
 information and is not persisted.
 
 The previous workaround (`_clear_oneiric_cache`,
-`_resolve_workflow_checkpoints_path`, the `pipeline.phases.phases.
-runtime_paths.workflow_checkpoints_path` setting override) is deleted.
+`_resolve_workflow_checkpoints_path`, the `pipeline.phases.phases. runtime_paths.workflow_checkpoints_path` setting override) is deleted.
 
 The previous-session follow-up note in
 `2026-10-12-hook-stage-documentary-vs-enforced.md` (which proposed

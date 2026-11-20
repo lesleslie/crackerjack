@@ -3,7 +3,7 @@ status: active
 role: canonical
 date: 2026-07-17
 last_reviewed: 2026-07-17
-superseded_by: null
+superseded_by:
 blocks_on: []
 topic: architecture
 ---
@@ -444,11 +444,11 @@ ______________________________________________________________________
 **Key Benefits**:
 
 1. **ACID Guarantees**: All mutations atomic and consistent
-1. **Concurrent Access**: Multiple readers/writers via WAL mode
-1. **Schema Evolution**: Automatic migrations with rollback support
-1. **Query Performance**: Indexed queries, materialized views
-1. **Data Integrity**: Foreign key constraints, validation
-1. **Analytics**: SQL queries, aggregations, timelines
+2. **Concurrent Access**: Multiple readers/writers via WAL mode
+3. **Schema Evolution**: Automatic migrations with rollback support
+4. **Query Performance**: Indexed queries, materialized views
+5. **Data Integrity**: Foreign key constraints, validation
+6. **Analytics**: SQL queries, aggregations, timelines
 
 **Estimated Migration Timeline**:
 

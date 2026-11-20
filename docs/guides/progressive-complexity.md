@@ -3,7 +3,7 @@ status: active
 role: canonical
 date: 2026-07-17
 last_reviewed: 2026-07-17
-superseded_by: null
+superseded_by:
 blocks_on: []
 topic: lifecycle
 ---
@@ -427,7 +427,7 @@ ______________________________________________________________________
 If the quick profile is catching too many issues:
 
 1. Fix the errors (recommended)
-1. Or temporarily use specific checks:
+2. Or temporarily use specific checks:
 
 ```bash
 crackerjack run --check ruff --select E,F
@@ -438,8 +438,8 @@ crackerjack run --check ruff --select E,F
 If the standard profile is taking too long:
 
 1. Check if tests are inefficient
-1. Use incremental testing (default for standard)
-1. Reduce parallel workers if machine is overloaded:
+2. Use incremental testing (default for standard)
+3. Reduce parallel workers if machine is overloaded:
 
 ```bash
 crackerjack run --profile standard --test-workers 2

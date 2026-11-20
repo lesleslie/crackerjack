@@ -8,7 +8,7 @@ role: implementation
 topic: security
 date: 2026-10-28
 last_reviewed: 2026-10-28
-superseded_by: null
+superseded_by:
 blocks_on: []
 ---
 
@@ -93,12 +93,12 @@ registry when the resolver quietly used another one.
 ### Integration Contract
 
 **Integration Contract:**
+
 - **Triggered from:** `crackerjack gitignore check|sync`, and the publish
   gate's `_validate_gitignore_conformance`.
 - **Returns to / updates:** `is_bodai_fleet_member()` now consults a
   dynamically resolved registry; unchanged return contract.
-- **Demonstrable by:** `python -m crackerjack gitignore check --pkg-path
-  <fleet repo>` prints a home-relative path and exits 0.
+- **Demonstrable by:** `python -m crackerjack gitignore check --pkg-path <fleet repo>` prints a home-relative path and exits 0.
 - **Rollback signal:** registry resolves to `None` where it previously
   resolved to a file — fleet membership silently drops to zero.
 - **Observability added:** a `logger.warning` naming every candidate tried
@@ -133,6 +133,7 @@ behavior for non-home paths.
 ### Integration Contract
 
 **Integration Contract:**
+
 - **Triggered from:** every `logger.*` and `console.print` call that names a
   path.
 - **Returns to / updates:** message text only; no control flow changes.

@@ -3,7 +3,7 @@ status: active
 role: canonical
 date: 2026-07-17
 last_reviewed: 2026-07-17
-superseded_by: null
+superseded_by:
 blocks_on: []
 topic: lifecycle
 ---
@@ -56,10 +56,10 @@ mahavishnu:
 ### Available Tools
 
 1. **get_portfolio_velocity_dashboard** - Portfolio-wide velocity metrics
-1. **analyze_merge_patterns** - Merge/rebase pattern analysis
-1. **get_best_practices_propagation** - Best practice discovery
-1. **get_repository_comparison** - Side-by-side repository comparison
-1. **get_cross_project_conflicts** - Conflict pattern detection
+2. **analyze_merge_patterns** - Merge/rebase pattern analysis
+3. **get_best_practices_propagation** - Best practice discovery
+4. **get_repository_comparison** - Side-by-side repository comparison
+5. **get_cross_project_conflicts** - Conflict pattern detection
 
 ## WebSocket Events
 

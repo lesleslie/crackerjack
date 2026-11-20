@@ -3,7 +3,7 @@ status: active
 role: canonical
 date: 2026-07-17
 last_reviewed: 2026-07-17
-superseded_by: null
+superseded_by:
 blocks_on: []
 topic: lifecycle
 ---
@@ -300,20 +300,20 @@ embeddings = embedder.embed_batch([issue1, issue2, issue3])
    embedder = get_issue_embedder()  # Cached globally
    ```
 
-1. **Batch Embeddings**: Process multiple issues at once
+2. **Batch Embeddings**: Process multiple issues at once
 
    ```python
    embeddings = embedder.embed_batch(issues)  # Faster than loop
    ```
 
-1. **Close Connections**: Always close storage connections
+3. **Close Connections**: Always close storage connections
 
    ```python
    collector.close()
    storage.close()
    ```
 
-1. **Adjust Similarity Threshold**: Lower for more results, higher for precision
+4. **Adjust Similarity Threshold**: Lower for more results, higher for precision
 
    ```python
    similar = storage.find_similar_issues(
@@ -381,14 +381,14 @@ collector = GitMetricsCollector(repo_path)
    storage.record_attempt(issue, result, agent, strategy, embedding)
    ```
 
-1. **Use Conventional Commits**: Improves metrics accuracy
+2. **Use Conventional Commits**: Improves metrics accuracy
 
    ```bash
    git commit -m "feat: add user authentication"
    git commit -m "fix: resolve login timeout"
    ```
 
-1. **Review Recommendations**: Don't blindly follow suggestions
+3. **Review Recommendations**: Don't blindly follow suggestions
 
    ```python
    if recommendation and recommendation.confidence > 0.7:
@@ -402,7 +402,7 @@ collector = GitMetricsCollector(repo_path)
        pass
    ```
 
-1. **Monitor Metrics**: Regularly check velocity and trends
+4. **Monitor Metrics**: Regularly check velocity and trends
 
    ```python
    dashboard = collector.get_velocity_dashboard(days_back=7)
@@ -414,9 +414,9 @@ collector = GitMetricsCollector(repo_path)
 ## Next Steps
 
 1. **Explore Integration**: See `docs/symbiotic-ecosystem.md` for full architecture
-1. **Configure Ecosystem**: Set up Akosha, Session-Buddy, Mahavishnu integration
-1. **Build Dashboards**: Create Grafana dashboards for metrics visualization
-1. **Customize Algorithms**: Adjust recommendation thresholds for your workflow
+2. **Configure Ecosystem**: Set up Akosha, Session-Buddy, Mahavishnu integration
+3. **Build Dashboards**: Create Grafana dashboards for metrics visualization
+4. **Customize Algorithms**: Adjust recommendation thresholds for your workflow
 
 ## Support
 

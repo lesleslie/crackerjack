@@ -18,9 +18,9 @@
 **Recommendation.**
 
 1. Rename `_require_auth` to `_require_auth_config()` and add a docstring that explicitly states: "config check only; does not validate JWTs."
-1. Implement actual JWT validation: `jwt.decode(token, secret, algorithms=[...], audience=..., options={"require": ["exp"]})`. Reject tokens that fail to decode or are expired.
-1. Bind the validated `sub` / `aud` claim to the resulting commit/tag message.
-1. Add a test that proves a forged/invalid JWT raises `PermissionError`.
+2. Implement actual JWT validation: `jwt.decode(token, secret, algorithms=[...], audience=..., options={"require": ["exp"]})`. Reject tokens that fail to decode or are expired.
+3. Bind the validated `sub` / `aud` claim to the resulting commit/tag message.
+4. Add a test that proves a forged/invalid JWT raises `PermissionError`.
 
 ______________________________________________________________________
 
@@ -33,8 +33,8 @@ ______________________________________________________________________
 **Recommendation.**
 
 1. Immediately call `root = Path(project_root).resolve(strict=True).absolute()` and reject any path outside a configured allowlist (`MAHAVISHNU_PROJECT_ROOTS` env var or `[tool.crackerjack.allowed_roots]`).
-1. Reject paths containing NUL bytes or control characters.
-1. Add a regression test asserting that `project_root="../../etc"` is rejected before any subprocess is invoked.
+2. Reject paths containing NUL bytes or control characters.
+3. Add a regression test asserting that `project_root="../../etc"` is rejected before any subprocess is invoked.
 
 ______________________________________________________________________
 
@@ -47,8 +47,8 @@ ______________________________________________________________________
 **Recommendation.**
 
 1. Check `result.returncode != 0` and raise `RuntimeError` with `result.stderr` attached.
-1. Remove the synthetic fallback URL. Contract: "URL or exception," not "URL or fake URL."
-1. Test that a non-zero `gh` exit raises.
+2. Remove the synthetic fallback URL. Contract: "URL or exception," not "URL or fake URL."
+3. Test that a non-zero `gh` exit raises.
 
 ______________________________________________________________________
 
@@ -83,8 +83,8 @@ ______________________________________________________________________
 **Recommendation.**
 
 1. Add `--notes-file` with an explicit body that summarizes commits without embedding raw messages.
-1. Pre-release scan for token-shaped strings.
-1. Document release policy.
+2. Pre-release scan for token-shaped strings.
+3. Document release policy.
 
 ______________________________________________________________________
 
@@ -99,7 +99,7 @@ ______________________________________________________________________
 **Recommendation.**
 
 1. Insert `--` before any user-influenced positional: `["git", "tag", "-a", "--", name, "-m", message]`.
-1. Add a `re.fullmatch(r"v\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?", tag_name)` pre-check in `GitTagVersionSource.read()`.
+2. Add a `re.fullmatch(r"v\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?", tag_name)` pre-check in `GitTagVersionSource.read()`.
 
 ______________________________________________________________________
 
@@ -114,7 +114,7 @@ ______________________________________________________________________
 **Recommendation.**
 
 1. Add a second `_require_auth()` call inside `_run_swift_lifecycle` at the top.
-1. Document the auth contract in the `Lifecycle` Protocol docstring.
+2. Document the auth contract in the `Lifecycle` Protocol docstring.
 
 ______________________________________________________________________
 

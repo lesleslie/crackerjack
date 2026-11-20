@@ -4,7 +4,7 @@ role: lifecycle
 topic: testing-infrastructure
 date: 2026-11-06
 last_reviewed: 2026-11-07
-superseded_by: null
+superseded_by:
 blocks_on: []
 ---
 

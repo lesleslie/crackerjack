@@ -4,7 +4,7 @@ role: implementation
 topic: lifecycle
 date: 2026-08-11
 last_reviewed: 2026-08-11
-superseded_by: null
+superseded_by:
 blocks_on: []
 ---
 
@@ -34,11 +34,12 @@ blocks_on: []
 - **Ruff line length:** 88 chars. Hard limits: max-args 10, max-branches 15, max-returns 6, max-statements 55.
 - **Deprecation policy:** A hook deleted in a minor release must have been non-default for at least one full minor release. `check-local-links` therefore survives one cycle as an opt-out escape hatch before its files are deleted.
 
----
+______________________________________________________________________
 
 ## Phase 1 — Wrapper module + `darnlink` as an opt-in hook
 
 **Files:**
+
 - Create: `crackerjack/tools/darnlink_wrapper.py`
 - Create: `tests/unit/tools/test_darnlink_wrapper.py`
 - Modify: `crackerjack/config/hooks.py` (add `HookDefinition(name="darnlink", ...)` in the FAST_HOOKS section, marked `enable_darnlink: bool` flag-controlled via the existing opt-in flag system)
@@ -47,14 +48,20 @@ blocks_on: []
 - Modify: `crackerjack/config/settings.py` (add `enable_darnlink: bool = False` field; mirror how `fast_iteration` and other opt-in flags are wired)
 
 **Interfaces:**
+
 - `crackerjack.tools.darnlink_wrapper.main(argv: list[str] | None = None) -> int` — entry point called by crackerjack's hook runner. Invokes `python -m darnlink check <paths>` via `subprocess.run`, parses stdout (JSON findings shape per darnlink docs: `{"findings": [...], "kind": "..."}`) into the existing `Issue` model.
 - Exit code mapping: `0` clean, `2` integrity failure → `return 1` for crackerjack, `3` strict robustify failure → `return 1`, anything else → propagate. (darnlink's `2`/`3` distinction is preserved in the parser output for downstream visibility.)
 
 **Integration Contract:**
+
 - **Triggered from:** the `crackerjack` orchestrator when `enable_darnlink=True` is set in `settings/local.yaml` or `--enable-darnlink` CLI flag is passed. The existing `check-local-links` hook keeps running in parallel during this phase so a side-by-side diff is visible.
+
 - **Returns to / updates:** the `Issue` registry via `IssueType.DOCUMENTATION` (same as `check-local-links`).
+
 - **Demonstrable by:** `crackerjack --enable-darnlink run -- -v` prints both `check-local-links` and `darnlink` results tables; in a repo with no broken links the exit code is `0`; in a repo with broken links the exit code is `1`.
+
 - **Rollback signal:** Set `enable_darnlink: false` in `settings/local.yaml` (or unset the CLI flag). `darnlink` is dormant; `check-local-links` continues to be the only path. No data loss — neither hook mutates files unless the operator explicitly invokes `darnlink --write` (which is out of scope here).
+
 - **Observability added:** `darnlink`'s JSON output is captured into `~/.crackerjack/logs/darnlink.log` (mirror the existing `lychee` log pattern). The wrapper's run duration is reported in the standard hook results table.
 
 - [ ] **Step 1: Write the failing tests**
@@ -308,19 +315,25 @@ git add crackerjack/tools/darnlink_wrapper.py \
 git commit -m "feat(hooks): add darnlink as opt-in fast hook (Phase 1)"
 ```
 
----
+______________________________________________________________________
 
 ## Phase 2 — Pilot run on crackerjack's own docs
 
 **Files:**
+
 - Modify: `crackerjack/settings/local.yaml.example` (add `enable_darnlink: true` with a comment block explaining the opt-in)
 - Modify: `docs/dev/setup.md` (or equivalent) — short note: "to run the experimental darnlink hook alongside check-local-links, set `enable_darnlink: true` in your `settings/local.yaml`."
 
 **Integration Contract:**
+
 - **Triggered from:** running `crackerjack run` inside the `crackerjack` repo with `enable_darnlink: true` set. Operators see two adjacent results tables — `check-local-links` and `darnlink` — for one release cycle.
+
 - **Returns to / updates:** no production code; only docs and example settings.
+
 - **Demonstrable by:** `crackerjack run --enable-darnlink` exits with the same code as `crackerjack run` (without `--enable-darnlink`) on a docs-clean commit, and exits with `1` if either hook finds a broken link.
+
 - **Rollback signal:** unset the flag / remove from `local.yaml`. The wrapper stays dormant.
+
 - **Observability added:** none beyond what Phase 1's wrapper already emits.
 
 - [ ] **Step 1: Add the example settings entry**
@@ -352,20 +365,26 @@ git add crackerjack/settings/local.yaml.example docs/dev/setup.md
 git commit -m "docs(darnlink): pilot opt-in flag in local.yaml.example (Phase 2)"
 ```
 
----
+______________________________________________________________________
 
 ## Phase 3 — Promote `darnlink` to default for new runs in `crackerjack` itself
 
 **Files:**
+
 - Modify: `crackerjack/config/settings.py` (`enable_darnlink: bool = True` for new projects — keep the field, default it to True)
 - Modify: `crackerjack/config/hooks.py` (`enable_darnlink` flag default now True)
 - Modify: `docs/CHANGELOG.md` (entry: "darnlink is now the default local link checker; check-local-links is deprecated and will be removed in the next minor release")
 
 **Integration Contract:**
+
 - **Triggered from:** every `crackerjack run` invocation now runs `darnlink` by default. `check-local-links` still runs alongside for one more cycle, but `darnlink` is the authoritative result.
+
 - **Returns to / updates:** existing `Issue` registry. No schema changes.
+
 - **Demonstrable by:** `crackerjack run` (no flag) shows `darnlink` in the fast hooks table. Running with `--no-darnlink` falls back to `check-local-links` only.
+
 - **Rollback signal:** `enable_darnlink: false` in `settings/local.yaml`. Production default can also be reverted in a hotfix if a blocker is found.
+
 - **Observability added:** a single new metric — `crackerjack_darnlink_findings_total` (count of findings across runs) — exposed via the existing Prometheus exporter if it accepts new counters; otherwise log-line only.
 
 - [ ] **Step 1: Flip the default**
@@ -394,11 +413,12 @@ git add crackerjack/config/settings.py \
 git commit -m "feat(hooks): make darnlink the default local link checker (Phase 3)"
 ```
 
----
+______________________________________________________________________
 
 ## Phase 4 — Roll out to the four other core Bodai repos
 
 **Files (per repo, 4 repos × similar patch):**
+
 - Akosha: `akosha/settings/local.yaml`, `akosha/pyproject.toml` (add `darnlink` to dev deps if the repo pins its own deps)
 - Session-Buddy: `session-buddy/settings/local.yaml`, `session-buddy/pyproject.toml`
 - Oneiric: `oneiric/settings/local.yaml`, `oneiric/pyproject.toml`
@@ -407,10 +427,15 @@ git commit -m "feat(hooks): make darnlink the default local link checker (Phase 
 Each patch is minimal because none of the other Bodai repos run their own link-checking hook today — they inherit from `crackerjack` via the manifest. The only repo-specific change is to **opt in to the new default** by either (a) ensuring the local settings file inherits the crackerjack default of `enable_darnlink: true`, or (b) explicitly setting `enable_darnlink: true` if a per-repo override is required.
 
 **Integration Contract:**
+
 - **Triggered from:** `mahavishnu sweep --tag bodai-core` (or the equivalent manifest dispatch) with `crackerjack >= <post-Phase-3 version>`. Each repo's docs tree is checked by `darnlink` automatically.
+
 - **Returns to / updates:** `darnlink` findings appear in the consolidated sweep report alongside other per-repo hook results.
+
 - **Demonstrable by:** introducing a deliberately broken link in `akosha/docs/`, running the sweep, and confirming the finding surfaces in the Akosha row of the sweep report.
+
 - **Rollback signal:** revert the per-repo `local.yaml` change; `darnlink` falls back to `check-local-links` for that repo only.
+
 - **Observability added:** the sweep dashboard gains a per-repo "darnlink clean / has findings" indicator (column add in `mahavishnu/monitoring/dashboards/sweep.json`).
 
 - [ ] **Step 1: Per-repo local.yaml pin**
@@ -445,11 +470,12 @@ git add settings/local.yaml.example pyproject.toml
 git commit -m "chore: opt in to darnlink as default local link checker"
 ```
 
----
+______________________________________________________________________
 
 ## Phase 5 — Delete `check-local-links`
 
 **Files:**
+
 - Delete: `crackerjack/tools/local_link_checker.py`
 - Delete: `crackerjack/tools/linkcheckmd_wrapper.py` (if no other consumer — verify with `grep -rn "linkcheckmd" crackerjack/ tests/` first)
 - Delete: `tests/unit/tools/test_local_link_checker.py` (or wherever its tests live — confirm by grep)
@@ -460,10 +486,15 @@ git commit -m "chore: opt in to darnlink as default local link checker"
 - Modify: `docs/CHANGELOG.md` (entry: "Removed `check-local-links`; superseded by `darnlink`.")
 
 **Integration Contract:**
+
 - **Triggered from:** the next minor release after Phase 4 has been live for one full release cycle.
+
 - **Returns to / updates:** no functional change for users — `darnlink` is already the authoritative local link checker.
+
 - **Demonstrable by:** `grep -rn "check-local-links\|local_link_checker" crackerjack/` returns no production hits; tests that referenced these symbols are deleted or migrated.
+
 - **Rollback signal:** if a critical regression is found, restore the deleted files via `git revert` of the Phase 5 commit. The flag-based opt-out is gone at this point, so a revert is the only path back.
+
 - **Observability added:** the metrics counter for `check-local-links` (if any) is removed; `darnlink` counter remains.
 
 - [ ] **Step 1: Verify no production consumer of `check-local-links`**
@@ -499,7 +530,7 @@ git add -A
 git commit -m "chore(hooks): remove check-local-links; darnlink is the sole local link checker (Phase 5)"
 ```
 
----
+______________________________________________________________________
 
 ## Self-review
 
@@ -549,7 +580,7 @@ This is a `{built, wired, adopted}` change spanning five phases. Track state in 
 3. **Per-repo docs tree diversity:** Mahavishnu, Akosha, Session-Buddy, and Oneiric each have their own docs conventions (some have `docs/`, some have `README.md` only). Phase 4 Step 4 may surface findings in repos that had no prior link-checker; budget time to triage rather than auto-revert.
 4. **Anchor coverage gap:** `darnlink`'s UUID anchoring is opt-in (`<!-- dvn-anchor:UUID -->` markers must be added per file). The Phase 1 wrapper runs `darnlink check` (integrity mode), not `darnlink check --strict`. If anchor coverage becomes a goal later, it belongs in a separate plan.
 
----
+______________________________________________________________________
 
 Plan complete. Status is `draft`; ready to move to `active` when an implementer picks it up. Two execution options:
 

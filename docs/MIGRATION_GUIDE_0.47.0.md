@@ -3,7 +3,7 @@ status: complete
 role: historical
 date: 2026-07-17
 last_reviewed: 2026-07-17
-superseded_by: null
+superseded_by:
 blocks_on: []
 topic: lifecycle
 ---
@@ -128,7 +128,7 @@ python -m crackerjack --version
    - Windows: `%APPDATA%\Claude\claude_desktop_config.json`
    - Linux: `~/.config/Claude/claude_desktop_config.json`
 
-1. **Update the Crackerjack server configuration:**
+2. **Update the Crackerjack server configuration:**
 
    **Before (v0.46.x):**
 
@@ -162,7 +162,7 @@ python -m crackerjack --version
    }
    ```
 
-1. **For local development installations:**
+3. **For local development installations:**
 
    **Before (v0.46.x):**
 
@@ -200,7 +200,7 @@ python -m crackerjack --version
    }
    ```
 
-1. **Restart Claude Desktop** to apply changes
+4. **Restart Claude Desktop** to apply changes
 
 #### For Other MCP Clients (Cline, Continue, etc.):
 
@@ -222,12 +222,12 @@ python -m crackerjack start --verbose
 ### Step 4: Verify MCP Integration
 
 1. **Open your MCP client** (Claude Desktop, etc.)
-1. **Verify Crackerjack server is listed** in available servers
-1. **Test a simple command:**
+2. **Verify Crackerjack server is listed** in available servers
+3. **Test a simple command:**
    ```
    Can you run crackerjack quality checks on my project?
    ```
-1. **Confirm tools are working** (execute_crackerjack, get_job_progress, etc.)
+4. **Confirm tools are working** (execute_crackerjack, get_job_progress, etc.)
 
 ______________________________________________________________________
 
@@ -268,9 +268,9 @@ ______________________________________________________________________
 **Solution:**
 
 1. Check Python version: `python --version` (must be 3.13+)
-1. Reinstall dependencies: `uv sync` or `pip install --force-reinstall crackerjack`
-1. Check for conflicting processes: `lsof -i :8675`
-1. Try verbose mode: `python -m crackerjack start --verbose`
+2. Reinstall dependencies: `uv sync` or `pip install --force-reinstall crackerjack`
+3. Check for conflicting processes: `lsof -i :8675`
+4. Try verbose mode: `python -m crackerjack start --verbose`
 
 ### Issue: Claude Desktop Not Connecting
 
@@ -279,10 +279,10 @@ ______________________________________________________________________
 **Solution:**
 
 1. Verify configuration syntax (JSON must be valid)
-1. Check file path in error logs: `~/Library/Logs/Claude/mcp*.log` (macOS)
-1. Restart Claude Desktop completely (quit and reopen)
-1. Test server independently: `python -m crackerjack start --verbose`
-1. Verify `uvx` is in PATH: `which uvx`
+2. Check file path in error logs: `~/Library/Logs/Claude/mcp*.log` (macOS)
+3. Restart Claude Desktop completely (quit and reopen)
+4. Test server independently: `python -m crackerjack start --verbose`
+5. Verify `uvx` is in PATH: `which uvx`
 
 ### Issue: "Command Not Found" Error
 
@@ -291,9 +291,9 @@ ______________________________________________________________________
 **Solution:**
 
 1. Use full module syntax: `python -m crackerjack start`
-1. Verify installation: `uv pip list | grep crackerjack`
-1. Check Python environment: `which python`
-1. Reinstall: `uv pip install --force-reinstall crackerjack`
+2. Verify installation: `uv pip list | grep crackerjack`
+3. Check Python environment: `which python`
+4. Reinstall: `uv pip install --force-reinstall crackerjack`
 
 ### Issue: Old Flags Still in Scripts
 
@@ -341,9 +341,9 @@ cp -r .venv.backup .venv
 **After Rollback:**
 
 1. Restore old MCP configurations (use `--start-mcp-server` flags)
-1. Restart MCP clients
-1. Verify v0.46.4: `python -m crackerjack --version`
-1. Report issues: https://github.com/lesleslie/crackerjack/issues
+2. Restart MCP clients
+3. Verify v0.46.4: `python -m crackerjack --version`
+4. Report issues: https://github.com/lesleslie/crackerjack/issues
 
 ______________________________________________________________________
 
@@ -376,7 +376,7 @@ ______________________________________________________________________
        self.console = console or Console()
    ```
 
-1. **Use Static UUIDs:**
+2. **Use Static UUIDs:**
 
    **Before (v0.46.x):**
 
@@ -398,7 +398,7 @@ ______________________________________________________________________
    MODULE_STATUS = AdapterStatus.STABLE  # Enum
    ```
 
-1. **Update Imports:**
+3. **Update Imports:**
 
    **Before (v0.46.x):**
 
@@ -449,10 +449,10 @@ ______________________________________________________________________
 If you encounter issues during migration:
 
 1. **Check this guide's Troubleshooting section** (above)
-1. **Review the CHANGELOG:** `CHANGELOG.md` (comprehensive list of changes)
-1. **Check migration status:** `ONEIRIC_MIGRATION_STATUS.md` (technical details)
-1. **Report issues:** https://github.com/lesleslie/crackerjack/issues
-1. **Community support:** GitHub Discussions
+2. **Review the CHANGELOG:** `CHANGELOG.md` (comprehensive list of changes)
+3. **Check migration status:** `ONEIRIC_MIGRATION_STATUS.md` (technical details)
+4. **Report issues:** https://github.com/lesleslie/crackerjack/issues
+5. **Community support:** GitHub Discussions
 
 **When reporting issues, include:**
 

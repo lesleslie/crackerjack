@@ -3,7 +3,7 @@ status: active
 role: canonical
 date: 2026-07-17
 last_reviewed: 2026-07-17
-superseded_by: null
+superseded_by:
 blocks_on: []
 topic: lifecycle
 ---
@@ -48,13 +48,13 @@ four pattern styles:
 1. **Directory prefix** (entry ends in `/`) — matches anything under that tree.
    Example: `config/` matches `crackerjack/config/anything.py`,
    `mahavishnu/config/anything.py`, etc.
-1. **Basename match** — entry compared against the path's basename.
+2. **Basename match** — entry compared against the path's basename.
    Example: `hooks.py` matches `crackerjack/config/hooks.py`,
    `mahavishnu/config/hooks.py`, `anything/hooks.py`.
-1. **Path fragment substring** — entry is searched for anywhere in the path.
+3. **Path fragment substring** — entry is searched for anywhere in the path.
    Example: `mcp_server` matches `crackerjack/mcp_server_config.json`,
    `mahavishnu/mcp_server.toml`.
-1. **Exact / suffix match** — entry equals the path or is a path-prefix.
+4. **Exact / suffix match** — entry equals the path or is a path-prefix.
    Example: `.env` matches `/repo/.env`, `crackerjack/.env`.
    Example: `pyproject.toml` matches `repo/pyproject.toml`,
    `crackerjack/pyproject.toml`.
@@ -92,10 +92,10 @@ a future audit):
 1. Pick the right pattern style — directory prefix, basename, path fragment,
    or exact/suffix. Prefer the most general form so the entry works across
    repos.
-1. Append to `SELFPATCHER_DENY_PATHS` in `crackerjack/services/self_patcher.py`.
-1. Add at least one assertion in
+2. Append to `SELFPATCHER_DENY_PATHS` in `crackerjack/services/self_patcher.py`.
+3. Add at least one assertion in
    `tests/unit/services/test_self_patcher_deny_paths.py` that proves the
    pattern actually denies a representative path.
-1. Add a cross-repo example (e.g. `some_repo/<denied_path>`) so the test
+4. Add a cross-repo example (e.g. `some_repo/<denied_path>`) so the test
    would catch a future regression that accidentally reverts to exact matching.
-1. Update the table in this runbook so future operators know what is covered.
+5. Update the table in this runbook so future operators know what is covered.

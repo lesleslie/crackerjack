@@ -3,7 +3,7 @@ status: active
 role: canonical
 date: 2026-08-11
 last_reviewed: 2026-08-11
-superseded_by: null
+superseded_by:
 blocks_on: []
 topic: lifecycle
 ---
@@ -90,6 +90,7 @@ Bullet list of the user-visible behavior, hook names, CLI flags, or MCP tools th
 ### Rollback signal
 
 The exact reversible action an operator takes if the feature needs to be turned off. Examples:
+
 - "Set `enable_<feature>: false` in `settings/local.yaml`."
 - "Run `git revert <SHA>` of the wiring commit."
 - "Unset the CLI flag and re-run `crackerjack`."
@@ -117,7 +118,7 @@ The two existing plans that already cite this template are good references once 
 
 When in doubt, look at how those entries resolve their `{built, wired, adopted}` mapping in the plans' Self-review sections, then mirror that structure here.
 
----
+______________________________________________________________________
 
 # Example filled-in entry (delete this section before committing the template)
 

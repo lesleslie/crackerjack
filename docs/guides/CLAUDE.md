@@ -3,7 +3,7 @@ status: active
 role: canonical
 date: 2026-07-17
 last_reviewed: 2026-10-09
-superseded_by: null
+superseded_by:
 blocks_on: []
 topic: lifecycle
 ---
@@ -76,8 +76,7 @@ python -m crackerjack run --all patch
 
 The ai-fix-loop is invoked through Claude Code's `Workflow` tool, not
 the shell. The script lives at `.claude/workflows/ai-fix-loop.js` and
-runs `crackerjack run -v` itself, so there's no separate `crackerjack
---ai-fix` flag.
+runs `crackerjack run -v` itself, so there's no separate `crackerjack --ai-fix` flag.
 
 Supported knobs (forwarded via `args`):
 
@@ -210,9 +209,9 @@ grep -r "from crackerjack" crackerjack/ --include="*.py" | grep -v protocols | g
 **Workflow Order**:
 
 1. **Fast Tools/Hooks** (~5s): formatting, basic checks → retry once if fail
-1. **Full Test Suite**: collect ALL failures (don't stop on first)
-1. **Comprehensive Tools/Hooks** (~30s): type checking, security, complexity → collect ALL issues
-1. **AI Batch Fixing**: process all failures together (up to 10 iterations)
+2. **Full Test Suite**: collect ALL failures (don't stop on first)
+3. **Comprehensive Tools/Hooks** (~30s): type checking, security, complexity → collect ALL issues
+4. **AI Batch Fixing**: process all failures together (up to 10 iterations)
 
 **Testing**: pytest with asyncio, 300s timeout, auto-detected workers via pytest-xdist
 **Coverage**: Ratchet system targeting 100%, never decrease
@@ -397,6 +396,7 @@ Canonical rule: `.claude/decisions/mcp-backend-wiring-discipline.md`
 (lives in the mahavishnu repo and is cross-referenced for the ecosystem).
 
 When adding any new MCP tool to this repo:
+
 - [ ] Tool registration includes `tests/integration/test_<tool>_e2e.py`.
 - [ ] Data feed exposes the four mandatory metrics.
 - [ ] `/health` aggregator includes this feed's state.
@@ -406,7 +406,9 @@ When adding any new MCP tool to this repo:
 
 Inherit the user-level convention from `~/.claude/CLAUDE.md`. The canonical path for this repo is:
 
-    ~/.local/state/mahavishnu/worktrees/<basename-of-cwd>/
+```
+~/.local/state/mahavishnu/worktrees/<basename-of-cwd>/
+```
 
 The superpowers `using-git-worktrees` skill reads this block before its hard-coded project-local default, so the XDG path wins.
 

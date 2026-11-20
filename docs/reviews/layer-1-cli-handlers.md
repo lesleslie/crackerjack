@@ -3,7 +3,7 @@ status: complete
 role: historical
 date: 2026-07-17
 last_reviewed: 2026-07-17
-superseded_by: null
+superseded_by:
 blocks_on: []
 topic: lifecycle
 ---
@@ -41,14 +41,14 @@ ______________________________________________________________________
 **Files Affected**:
 
 1. `crackerjack/cli/handlers/advanced.py:6`
-1. `crackerjack/cli/handlers/ai_features.py:6`
-1. `crackerjack/cli/handlers/analytics.py:6`
-1. `crackerjack/cli/handlers/coverage.py:6`
-1. `crackerjack/cli/handlers/documentation.py:6`
-1. `crackerjack/cli/semantic_handlers.py:6`
-1. `crackerjack/cli/lifecycle_handlers.py:17`
-1. `crackerjack/cli/cache_handlers.py:10`
-1. `crackerjack/cli/handlers/changelog.py:6`
+2. `crackerjack/cli/handlers/ai_features.py:6`
+3. `crackerjack/cli/handlers/analytics.py:6`
+4. `crackerjack/cli/handlers/coverage.py:6`
+5. `crackerjack/cli/handlers/documentation.py:6`
+6. `crackerjack/cli/semantic_handlers.py:6`
+7. `crackerjack/cli/lifecycle_handlers.py:17`
+8. `crackerjack/cli/cache_handlers.py:10`
+9. `crackerjack/cli/handlers/changelog.py:6`
 
 **Violation Pattern**:
 
@@ -178,8 +178,8 @@ ______________________________________________________________________
 **Low-Medium Impact**:
 
 1. Repeated `SemanticConfig` instantiation (4x duplication)
-1. Unnecessary `asyncio.run()` wrapper for provider selection
-1. String replacement operations could use helper function
+2. Unnecessary `asyncio.run()` wrapper for provider selection
+3. String replacement operations could use helper function
 
 **Recommendation**: Focus on code quality improvements, not micro-optimizations
 
@@ -201,12 +201,12 @@ ______________________________________________________________________
 **Production Code Completely Untested**:
 
 1. `__main__.py` (618 lines) - **CRITICAL** - Entry point untested
-1. `handlers.py` (153 lines) - **CRITICAL** - Server lifecycle untested
-1. `interactive.py` (287 lines) - Interactive mode untested
-1. `cache_handlers.py` (105 lines) - Cache management untested
-1. `provider_selection.py` (106 lines) - AI configuration untested
-1. `lifecycle_handlers.py` (51 lines) - MCP server lifecycle untested
-1. Plus 6 more files with 0% coverage
+2. `handlers.py` (153 lines) - **CRITICAL** - Server lifecycle untested
+3. `interactive.py` (287 lines) - Interactive mode untested
+4. `cache_handlers.py` (105 lines) - Cache management untested
+5. `provider_selection.py` (106 lines) - AI configuration untested
+6. `lifecycle_handlers.py` (51 lines) - MCP server lifecycle untested
+7. Plus 6 more files with 0% coverage
 
 ### ⚠️ HIGH-PRIORITY GAPS
 
@@ -234,8 +234,8 @@ ______________________________________________________________________
 **Massive Function Signatures** (Maintenance Nightmare):
 
 1. `__main__.py:112-386` - `run()` with **100+ parameters** (complexity: 35-40)
-1. `options.py:942-1145` - `create_options()` with **97 parameters** (complexity: 20+)
-1. `options.py:266-939` - `CLI_OPTIONS` dict with **673 lines**
+2. `options.py:942-1145` - `create_options()` with **97 parameters** (complexity: 20+)
+3. `options.py:266-939` - `CLI_OPTIONS` dict with **673 lines**
 
 **Impact**: Impossible to test, difficult to maintain, error-prone
 
@@ -253,9 +253,9 @@ def run(**kwargs: typer.ParamSpec) -> None:
 **200+ Lines of Duplication**:
 
 1. `setup_ai_agent_env()` - Duplicated in 2 locations (40 lines × 2)
-1. Config update handlers - Duplicated in 2 locations (140 lines × 2)
-1. Console instantiation - Repeated in 12 files
-1. Semantic config boilerplate - Repeated 4 times (7 lines × 4)
+2. Config update handlers - Duplicated in 2 locations (140 lines × 2)
+3. Console instantiation - Repeated in 12 files
+4. Semantic config boilerplate - Repeated 4 times (7 lines × 4)
 
 **Recommendation**: Consolidate to single source of truth
 
@@ -417,22 +417,22 @@ ______________________________________________________________________
 ### Immediate Actions (This Week)
 
 1. Refactor 9 handler modules to remove module-level console singletons
-1. Add tests for CLI entry point (`__main__.py`)
-1. Add tests for MCP server handlers
-1. Fix generic exception handling
+2. Add tests for CLI entry point (`__main__.py`)
+3. Add tests for MCP server handlers
+4. Fix generic exception handling
 
 ### Short-Term (Next Sprint)
 
 5. Refactor `run()` function signature
-1. Remove code duplication (200+ lines)
-1. Add tests for options validation
-1. Add docstrings to public functions
+6. Remove code duplication (200+ lines)
+7. Add tests for options validation
+8. Add docstrings to public functions
 
 ### Long-Term (Next Quarter)
 
-9. Increase test coverage from 39.6% to 80%
-1. Implement Oneiric workflow integration (resolve Phase 3 TODOs)
-1. Split `CLI_OPTIONS` dict for better maintainability
+09. Increase test coverage from 39.6% to 80%
+10. Implement Oneiric workflow integration (resolve Phase 3 TODOs)
+11. Split `CLI_OPTIONS` dict for better maintainability
 
 ______________________________________________________________________
 

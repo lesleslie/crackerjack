@@ -3,7 +3,7 @@ status: complete
 role: historical
 date: 2026-07-17
 last_reviewed: 2026-07-17
-superseded_by: null
+superseded_by:
 blocks_on: []
 topic: lifecycle
 ---
@@ -21,10 +21,10 @@ ______________________________________________________________________
 Audit identified **12 consolidation opportunities** and **15+ redundant/unused settings** across configuration files. Primary recommendations:
 
 1. **Eliminate mypy.ini** → Consolidate into pyproject.toml (saves 1 config file)
-1. **Simplify gitleaksignore** → Can use crackerjack settings (optional)
-1. **Remove duplicate pyright/mypy configs** in pyproject.toml
-1. **Consolidate test worker settings** → Remove redundant config keys
-1. **Simplify tool.refurb** → Remove duplicate test path ignores
+2. **Simplify gitleaksignore** → Can use crackerjack settings (optional)
+3. **Remove duplicate pyright/mypy configs** in pyproject.toml
+4. **Consolidate test worker settings** → Remove redundant config keys
+5. **Simplify tool.refurb** → Remove duplicate test path ignores
 
 **Impact:**
 
@@ -267,8 +267,8 @@ ignore = ["FURB184", "FURB120"]
 **Why it's redundant:**
 
 1. Global `ignore` already applies to ALL files
-1. Test files get the same ignore rules as non-test files
-1. Three `amend` blocks add no additional value
+2. Test files get the same ignore rules as non-test files
+3. Three `amend` blocks add no additional value
 
 **Refurb behavior:**
 
@@ -346,8 +346,8 @@ pythonVersion = "3.13"
 **Questions:**
 
 1. Is pyright config **used anywhere**?
-1. Is it for IDE support (VS Code)?
-1. Should it be kept for editor integration?
+2. Is it for IDE support (VS Code)?
+3. Should it be kept for editor integration?
 
 **Findings:**
 
@@ -545,7 +545,7 @@ pyproject.toml
 **Questions:**
 
 1. Should `pyproject.toml` be excluded from secret scanning?
-1. Should `*.md` be excluded? (might contain leaked secrets in docs)
+2. Should `*.md` be excluded? (might contain leaked secrets in docs)
 
 **Recommendations:**
 
@@ -714,8 +714,8 @@ grep -r "@pytest.mark\." tests/ | \
 Keep only markers that are:
 
 1. Actually used in tests
-1. Planned for near-term use
-1. Required by pytest plugins
+2. Planned for near-term use
+3. Required by pytest plugins
 
 **Estimated removal:** ~8-10 unused markers
 
@@ -1016,12 +1016,12 @@ Currently **not possible** but watch for future support:
    - Currently: CLI flags only
    - Future: `[tool.mdformat]` support?
 
-1. **gitleaks config**
+2. **gitleaks config**
 
    - Currently: .gitleaksignore file
    - Future: `[tool.gitleaks]` support?
 
-1. **semgrep rules**
+3. **semgrep rules**
 
    - Currently: Remote ruleset (`p/security-audit`)
    - Future: Local rules in pyproject.toml?
@@ -1041,19 +1041,19 @@ ______________________________________________________________________
 ### Must Do (Priority 1)
 
 1. ✅ **Eliminate mypy.ini** - Consolidate into pyproject.toml
-1. ✅ **Remove refurb redundancy** - Delete duplicate amend blocks
-1. ✅ **Enable branch coverage** - Better quality metrics
+2. ✅ **Remove refurb redundancy** - Delete duplicate amend blocks
+3. ✅ **Enable branch coverage** - Better quality metrics
 
 ### Should Do (Priority 2)
 
 4. ✅ **Simplify test workers** - Remove redundant config keys
-1. ✅ **Modernize creosote** - Use categories instead of lists
-1. ✅ **Audit pytest markers** - Remove unused markers
+5. ✅ **Modernize creosote** - Use categories instead of lists
+6. ✅ **Audit pytest markers** - Remove unused markers
 
 ### Nice to Have (Priority 3)
 
 7. ⚠️ **Simplify pyright** - Only if not used by IDEs
-1. ⚠️ **Lint test files** - Team decision needed
+8. ⚠️ **Lint test files** - Team decision needed
 
 ______________________________________________________________________
 
@@ -1087,11 +1087,11 @@ ______________________________________________________________________
 **Next Steps:**
 
 1. Review this audit with the team
-1. Approve consolidation priorities
-1. Implement Phase 1 (critical consolidations)
-1. Test thoroughly
-1. Document changes in CHANGELOG
-1. Update documentation (CLAUDE.md, README.md)
+2. Approve consolidation priorities
+3. Implement Phase 1 (critical consolidations)
+4. Test thoroughly
+5. Document changes in CHANGELOG
+6. Update documentation (CLAUDE.md, README.md)
 
 **Estimated Effort:** 2-3 days across 3 weeks
 **Risk Level:** Low (all changes reversible, tested incrementally)

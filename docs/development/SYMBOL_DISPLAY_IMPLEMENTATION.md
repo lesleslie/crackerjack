@@ -3,7 +3,7 @@ status: complete
 role: historical
 date: 2026-07-17
 last_reviewed: 2026-11-14
-superseded_by: null
+superseded_by:
 blocks_on: []
 topic: architecture
 ---
@@ -241,7 +241,7 @@ tests/unit/orchestration/test_issue_count_fix.py::TestIssueCountEdgeCases::test_
 To verify in the user's ../legacy project:
 
 1. Run `python -m crackerjack run` in the legacy directory
-1. Check the Fast Hooks Results table:
+2. Check the Fast Hooks Results table:
    - Config errors (ruff-format, codespell) should show `⚠️`
    - Code violations (ruff-check) should show actual count (e.g., 95)
    - Legend should appear at bottom if any `⚠️` present
@@ -268,8 +268,8 @@ ______________________________________________________________________
 ## Files Modified
 
 1. **`crackerjack/models/task.py`**: Added `is_config_error` field to HookResult
-1. **`crackerjack/orchestration/hook_orchestrator.py`**: Set flag based on QAResultStatus.ERROR
-1. **`crackerjack/core/phase_coordinator.py`**: Display symbol and legend
+2. **`crackerjack/orchestration/hook_orchestrator.py`**: Set flag based on QAResultStatus.ERROR
+3. **`crackerjack/core/phase_coordinator.py`**: Display symbol and legend
 
 **Total Changes**: 3 files, ~20 lines of code added
 

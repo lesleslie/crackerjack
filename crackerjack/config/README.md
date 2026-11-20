@@ -31,8 +31,8 @@ settings/
 Configuration is loaded with the following priority (highest to lowest):
 
 1. **`settings/local.yaml`** — Local developer overrides (gitignored)
-1. **`settings/crackerjack.yaml`** — Base project configuration
-1. **Default values** in `CrackerjackSettings` class definitions
+2. **`settings/crackerjack.yaml`** — Base project configuration
+3. **Default values** in `CrackerjackSettings` class definitions
 
 ### Loading Modes
 
@@ -282,25 +282,25 @@ hooks:
    - Override defaults for your workflow
    - Test different configurations
 
-1. **Keep Base Configuration Minimal**
+2. **Keep Base Configuration Minimal**
 
    - settings/crackerjack.yaml should have sane defaults
    - Document why non-obvious values are chosen
    - Use comments to explain complex settings
 
-1. **Validate Configuration**
+3. **Validate Configuration**
 
    - Pydantic provides automatic validation
    - Add custom validators for business rules
    - Use type hints for all settings
 
-1. **Access via Dependency Injection**
+4. **Access via Dependency Injection**
 
    - Use `Inject[CrackerjackSettings]` in functions
    - Avoid `Settings.load()` in business logic
    - Let DI container manage lifecycle
 
-1. **Organize by Domain**
+5. **Organize by Domain**
 
    - Group related settings in sub-classes
    - Use clear, descriptive names

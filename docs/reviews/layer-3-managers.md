@@ -3,7 +3,7 @@ status: complete
 role: historical
 date: 2026-07-17
 last_reviewed: 2026-07-17
-superseded_by: null
+superseded_by:
 blocks_on: []
 topic: lifecycle
 ---
@@ -132,8 +132,8 @@ ______________________________________________________________________
 **TestManager Complex Methods**:
 
 1. **`_handle_test_failure()`** (lines 458-517) - Complexity ~18
-1. **`_extract_structured_failures()`** (lines 1324-1366) - Complexity ~16
-1. **`_render_structured_failures_with_summary()`** (lines 1149-1169) - Complexity ~14
+2. **`_extract_structured_failures()`** (lines 1324-1366) - Complexity ~16
+3. **`_render_structured_failures_with_summary()`** (lines 1149-1169) - Complexity ~14
 
 **Recommendation**: Refactor into smaller methods following single responsibility principle.
 
@@ -511,23 +511,23 @@ ______________________________________________________________________
 ### Immediate Actions (This Week)
 
 1. Refactor HookManagerImpl and AsyncHookManager to use protocols
-1. Add integration tests for failure parsing
-1. Refactor 3 complex methods in TestManager
-1. Add path validation
+2. Add integration tests for failure parsing
+3. Refactor 3 complex methods in TestManager
+4. Add path validation
 
 ### Short-Term (Next Sprint)
 
 5. Extract DRY patterns (Rich imports, parsing strategies)
-1. Add async error propagation tests
-1. Add memory limit fallback tests
-1. Fix overly broad exception handling
+6. Add async error propagation tests
+7. Add memory limit fallback tests
+8. Fix overly broad exception handling
 
 ### Long-Term (Next Quarter)
 
-9. Split TestManager into 3 focused managers
-1. Achieve 80% test coverage target
-1. Add comprehensive docstrings
-1. Extract all magic numbers to constants
+09. Split TestManager into 3 focused managers
+10. Achieve 80% test coverage target
+11. Add comprehensive docstrings
+12. Extract all magic numbers to constants
 
 ______________________________________________________________________
 

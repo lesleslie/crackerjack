@@ -464,9 +464,9 @@ ______________________________________________________________________
 `attemptRollback(auditLog, iteration)` reads `auditLog[auditLog.length - 1]` for the last snapshot's `stashMessage` and `stashSha`, then runs an `agent()` call that:
 
 1. `git stash list --grep '^<stashMessage>$'` to find the entry by message (positional index may have shifted).
-1. Verify the entry's commit SHA matches the captured `stashSha` (via `git rev-parse "<entry>^3"`).
-1. If SHA matches: `git stash pop "<entry>"`, then `git stash drop "<entry>"` to prevent accumulation.
-1. If SHA mismatch: abort with `rollback-error` rather than guess.
+2. Verify the entry's commit SHA matches the captured `stashSha` (via `git rev-parse "<entry>^3"`).
+3. If SHA matches: `git stash pop "<entry>"`, then `git stash drop "<entry>"` to prevent accumulation.
+4. If SHA mismatch: abort with `rollback-error` rather than guess.
 
 The positional `stashRef` (`stash@{N}`) is never used for rollback. Document this in the helper's leading comment.
 
@@ -530,13 +530,13 @@ The positional `stashRef` (`stash@{N}`) is never used for rollback. Document thi
 Final iteration body order is:
 
 1. Verify (Task 3) — with `parseVerifyText` and `Number.isFinite` guard
-1. Clean-exit check (Task 3)
-1. Initial-issue-count + MAX_ITERATIONS adjustment (Task 3, on first iter only)
-1. **No-improvement / regressed / progress-stalled check (Task 6 Step 1)**
-1. Snapshot (Task 4) — with clean-tree invariant
-1. Fix (Task 5) — with hard constraints in prompt
-1. **Diff-sanity check (Task 6 Step 3)**
-1. **Audit-log append + persist (Task 6 Step 4)**
+2. Clean-exit check (Task 3)
+3. Initial-issue-count + MAX_ITERATIONS adjustment (Task 3, on first iter only)
+4. **No-improvement / regressed / progress-stalled check (Task 6 Step 1)**
+5. Snapshot (Task 4) — with clean-tree invariant
+6. Fix (Task 5) — with hard constraints in prompt
+7. **Diff-sanity check (Task 6 Step 3)**
+8. **Audit-log append + persist (Task 6 Step 4)**
 
 Re-read the full file after assembly to confirm no phase was duplicated or dropped during the incremental edits across Tasks 3-6.
 

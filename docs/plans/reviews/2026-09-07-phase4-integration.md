@@ -534,11 +534,11 @@ The 3 test defects (F-1, F-2, F-3) are blockers in the sense that running Task 4
 **Recommended pre-execution amendments:**
 
 1. Fix `test_lex_failure_returns_source_unchanged` (F-1) — replace `bad = _env(...)` + `bad[1]` with direct `delimiters=` arg.
-1. Fix `test_does_not_strip_crlf_terminators` (F-2) — change expected value from `"hello\r\n"` to `"hello\n"` (and rename test).
-1. Reword `name = "web"` citation (F-3) — "Mirrors Swift's bare-assignment style; Kotlin uses annotated style and would also be valid."
-1. Fix test count arithmetic (F-4) — "13 prior + 4 new = 17, plus 1 registry = 18".
-1. Rename `test_register_language_tools_registers_three_tools` → `_seven_tools` and assert all 7 tool names (F-5).
-1. Add fastblocks/splashstand to Spec Revision Notes #9 as deferred (F-16).
+2. Fix `test_does_not_strip_crlf_terminators` (F-2) — change expected value from `"hello\r\n"` to `"hello\n"` (and rename test).
+3. Reword `name = "web"` citation (F-3) — "Mirrors Swift's bare-assignment style; Kotlin uses annotated style and would also be valid."
+4. Fix test count arithmetic (F-4) — "13 prior + 4 new = 17, plus 1 registry = 18".
+5. Rename `test_register_language_tools_registers_three_tools` → `_seven_tools` and assert all 7 tool names (F-5).
+6. Add fastblocks/splashstand to Spec Revision Notes #9 as deferred (F-16).
 
 After these 6 amendments, the plan is ready for `subagent-driven-development` or `executing-plans` execution.
 

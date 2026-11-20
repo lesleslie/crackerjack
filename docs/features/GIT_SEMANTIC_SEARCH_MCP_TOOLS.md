@@ -3,7 +3,7 @@ status: active
 role: canonical
 date: 2026-07-17
 last_reviewed: 2026-07-17
-superseded_by: null
+superseded_by:
 blocks_on: []
 topic: lifecycle
 ---
@@ -25,7 +25,7 @@ Successfully implemented semantic search MCP tools for git workflows in the crac
    - Main class: `GitSemanticSearch`
    - Factory function: `create_git_semantic_search()`
 
-1. **`/Users/les/Projects/crackerjack/crackerjack/mcp/tools/git_semantic_tools.py`** (450 lines)
+2. **`/Users/les/Projects/crackerjack/crackerjack/mcp/tools/git_semantic_tools.py`** (450 lines)
 
    - MCP tool endpoints
    - Four tools registered:
@@ -34,13 +34,13 @@ Successfully implemented semantic search MCP tools for git workflows in the crac
      - `recommend_git_practices`: AI-powered recommendations
      - `index_git_history`: Manual indexing control
 
-1. **`/Users/les/Projects/crackerjack/tests/integration/test_git_semantic_search.py`** (550 lines)
+3. **`/Users/les/Projects/crackerjack/tests/integration/test_git_semantic_search.py`** (550 lines)
 
    - Comprehensive test suite
    - 15 test cases covering all functionality
    - Mock-based testing for isolation
 
-1. **`/Users/les/Projects/crackerjack/docs/implementation/git_semantic_search_implementation.md`**
+4. **`/Users/les/Projects/crackerjack/docs/implementation/git_semantic_search_implementation.md`**
 
    - Implementation plan and architecture documentation
 
@@ -55,12 +55,12 @@ Successfully implemented semantic search MCP tools for git workflows in the crac
      - `WorkflowPattern`
      - `create_git_semantic_search`
 
-1. **`/Users/les/Projects/crackerjack/crackerjack/mcp/tools/__init__.py`**
+2. **`/Users/les/Projects/crackerjack/crackerjack/mcp/tools/__init__.py`**
 
    - Added `register_git_semantic_tools` to exports
    - Imported from `git_semantic_tools`
 
-1. **`/Users/les/Projects/crackerjack/crackerjack/mcp/server_core.py`**
+3. **`/Users/les/Projects/crackerjack/crackerjack/mcp/server_core.py`**
 
    - Added `register_git_semantic_tools` to imports
    - Added `register_git_semantic_tools(mcp_app)` call
@@ -166,19 +166,19 @@ MCP Tools
    GitMetricsCollector → GitEvents → AkoshaGitIntegration → Vector Embeddings
    ```
 
-1. **Search Phase**:
+2. **Search Phase**:
 
    ```
    Query → Embedding → Vector Search → Ranked Results
    ```
 
-1. **Pattern Detection**:
+3. **Pattern Detection**:
 
    ```
    Search Results → Clustering → Frequency Analysis → Patterns
    ```
 
-1. **Recommendations**:
+4. **Recommendations**:
 
    ```
    Metrics → Analysis → Best Practices → Recommendations
@@ -218,9 +218,9 @@ All MCP tools use `InputValidator` for security:
 ### Security Features
 
 1. **Path traversal prevention**: All paths validated
-1. **Command injection protection**: Input sanitization
-1. **Repository isolation**: Each repo indexed separately
-1. **No arbitrary code execution**: Pure semantic search
+2. **Command injection protection**: Input sanitization
+3. **Repository isolation**: Each repo indexed separately
+4. **No arbitrary code execution**: Pure semantic search
 
 ## Testing
 
@@ -241,16 +241,16 @@ python -m pytest tests/integration/test_git_semantic_search.py::TestGitSemanticS
    - `TestWorkflowPattern`: Pattern creation and formatting
    - `TestPracticeRecommendation`: Recommendation structure
 
-1. **Configuration Tests**:
+2. **Configuration Tests**:
 
    - `TestGitSemanticSearchConfig`: Default and custom configs
 
-1. **Integration Tests**:
+3. **Integration Tests**:
 
    - `TestGitSemanticSearch`: Main class functionality
    - Mock-based testing with AkoshaMCP
 
-1. **Validation Tests**:
+4. **Validation Tests**:
 
    - `TestParameterValidation`: Input validation logic
 
@@ -406,10 +406,10 @@ test_git_semantic_search: 550 lines, 15 test cases
 ## Benefits
 
 1. **Natural Language Discovery**: Find commits by intent
-1. **Pattern Recognition**: Automatically detect recurring workflows
-1. **Practice Improvement**: Data-driven recommendations
-1. **Integration**: Works with existing crackerjack infrastructure
-1. **Privacy**: All processing local, no external services
+2. **Pattern Recognition**: Automatically detect recurring workflows
+3. **Practice Improvement**: Data-driven recommendations
+4. **Integration**: Works with existing crackerjack infrastructure
+5. **Privacy**: All processing local, no external services
 
 ## Next Steps
 
@@ -423,19 +423,19 @@ test_git_semantic_search: 550 lines, 15 test cases
    crackerjack git-recommend --focus=merge_conflicts
    ```
 
-1. **Add web UI**:
+2. **Add web UI**:
 
    - Search interface
    - Pattern visualization
    - Recommendation dashboard
 
-1. **Expand pattern detection**:
+3. **Expand pattern detection**:
 
    - Time-based patterns (day of week, hour)
    - Author-specific patterns
    - File hot-spot detection
 
-1. **Improve recommendations**:
+4. **Improve recommendations**:
 
    - Machine learning-based
    - Cross-repository insights

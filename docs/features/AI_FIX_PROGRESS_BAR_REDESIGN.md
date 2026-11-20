@@ -3,7 +3,7 @@ status: active
 role: canonical
 date: 2026-07-17
 last_reviewed: 2026-07-17
-superseded_by: null
+superseded_by:
 blocks_on: []
 topic: lifecycle
 ---
@@ -449,8 +449,8 @@ ______________________________________________________________________
 ## Migration Strategy
 
 1. **Phase 1**: Add Live display alongside existing Progress (no breaking changes)
-1. **Phase 2**: Migrate activity logging to use Live display
-1. **Phase 3**: Deprecate old Progress-based iteration bar (optional)
+2. **Phase 2**: Migrate activity logging to use Live display
+3. **Phase 3**: Deprecate old Progress-based iteration bar (optional)
 
 **Recommended**: Start with Phase 1, validate UX, then complete migration.
 
@@ -554,10 +554,10 @@ ______________________________________________________________________
 ## Future Enhancements
 
 1. **Adaptive Terminal Sizing** - Hide panel on small terminals (< 30 rows)
-1. **Detailed Event View** - Expand to show full event details on demand
-1. **Event Filtering** - Filter by severity, agent, or file pattern
-1. **Historical Timeline** - Show complete event history after session
-1. **Export Progress** - Save progress to JSON for later analysis
+2. **Detailed Event View** - Expand to show full event details on demand
+3. **Event Filtering** - Filter by severity, agent, or file pattern
+4. **Historical Timeline** - Show complete event history after session
+5. **Export Progress** - Save progress to JSON for later analysis
 
 ______________________________________________________________________
 

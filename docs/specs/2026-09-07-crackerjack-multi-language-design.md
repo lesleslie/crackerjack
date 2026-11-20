@@ -42,21 +42,25 @@ crackerjack today has no path to manage any of these. Quality hooks (`crackerjac
 ### In scope (v0.81+)
 
 **Swift** (Phase 2):
+
 - **Lifecycle**: read version from `git describe --tags --match "v*"` → bump → commit → tag → push → `gh release create`. **No Package.swift mutation in v1.** SwiftSyntax-based in-file version reading is deferred to v2 (real use case needed).
 - **Hooks**: `swift test`, `swift build`, `swift format` (built-in fallback), `swift package update`. All argv-list invocations (no shell). iOS-Simulator destination detected from `Package.swift` `platforms:` directive.
 - **MCP tools**: `swift_bump_version` (mutation; auth required), `swift_run_hooks`, `detect_languages`.
 
 **Kotlin/Gradle** (Phase 3):
+
 - **Lifecycle**: read version via `GradlePropertiesVersionSource` (probe `pluginVersion`/`projectVersion`/`version` with `\b` anchors; fall back to `build.gradle.kts` scan; verify via `./gradlew properties`) → bump → commit → tag → push → `gh release create`. JetBrains Marketplace publishing is OUT of scope.
 - **Hooks**: `kotlin.ktlint`, `kotlin.detekt`, `kotlin.test`. All use `./gradlew --no-daemon --no-configuration-cache`. Task-existence probe before invocation (skip-with-warning if absent).
 - **MCP tools**: `kotlin_bump_version` (mutation; auth required), `kotlin_run_hooks`.
 
 **Web (CSS/HTML/JS/TS)** (Phase 4):
+
 - **Hooks only**: `stylelint` (CSS), `eslint` + `tsc --noEmit` (JS/TS), `html-validate` (HTML).
 - **Jinja template formatter** (Python, ~250-400 LOC): handles custom delimiters `[%`, `[[`, `[#` etc. via `jinja2.Environment.lex()` (NOT `parse()`).
 - **MCP tools**: `check_web_lint`, `format_jinja_templates`.
 
 **Cross-cutting** (Phase 1):
+
 - **Language auto-detection** from project marker files (with Web detection guarded against Python-project false-positives)
 - **Adapter registry** via Python entry points (`crackerjack.language_adapters`)
 - **Hybrid implementation** strategy: external CLI primary, Python fallback (single canonical interpretation; see Error Handling)
@@ -408,14 +412,15 @@ fastblocks sets all 6 in `fastblocks/adapters/templates/jinja2.py:803-808`. Sour
 Rules 2, 4, and 5 of the original policy **change rendered output** because inter-tag whitespace is program output in Jinja (`{% if a %}A{% endif %}{% if b %}B{% endif %}` renders `AB`; inserting Rule 2's blank line makes it `A\n\nB`). Rules split by semantics-preserving:
 
 **Tier 1 — semantics-preserving (always on):**
+
 1. Trailing newline at EOF
 2. No trailing whitespace on lines
 3. Preserve existing whitespace stripping (`{%-` / `-%}` / `{{-` / `-}}`)
 
 **Tier 2 — output-affecting (opt-in via `[tool.crackerjack.jinja] normalize = true`):**
-4. "One space inside delimiters"
-5. Blank line between block-level tags at the top level
-6. Inline `{{ var }}` may remain inline
+4\. "One space inside delimiters"
+5\. Blank line between block-level tags at the top level
+6\. Inline `{{ var }}` may remain inline
 
 **Round-trip invariant** (per Testing F9 + Jinja F1): `format_lex(format_lex(x)) == format_lex(x)`. Test asserts this for every fixture, with **golden-master expected output** (not just "idempotence" which is weaker than it looks).
 
@@ -535,6 +540,7 @@ async def format_jinja_templates(paths: list[str]) -> dict:
 ### Tool naming (per MCP F4)
 
 Language-segmented to avoid Bodai umbrella collisions:
+
 - `swift_bump_version` (not `bump_swift_version`)
 - `kotlin_run_hooks` (not `run_kotlin_hooks`)
 - `format_jinja_templates` (Jinja-specific)

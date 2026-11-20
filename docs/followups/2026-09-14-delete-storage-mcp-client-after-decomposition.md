@@ -4,7 +4,7 @@ role: implementation
 topic: integration
 date: 2026-09-14
 last_reviewed: 2026-09-20
-superseded_by: null
+superseded_by:
 blocks_on: []
 related:
   - "mahavishnu/docs/plans/2026-09-14-bodai-serverless-readiness-and-component-substitution.md"

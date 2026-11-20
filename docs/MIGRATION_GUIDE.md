@@ -3,7 +3,7 @@ status: active
 role: canonical
 date: 2026-07-17
 last_reviewed: 2026-07-17
-superseded_by: null
+superseded_by:
 blocks_on: []
 topic: lifecycle
 ---
@@ -30,10 +30,10 @@ This guide helps you migrate your project from basic quality checks or pre-commi
 **Key Benefits**:
 
 1. **Performance**: 47% faster than pre-commit due to direct Python API calls
-1. **AI Integration**: 12 specialized AI agents for automatic error fixing
-1. **Unified Workflow**: Quality checks + testing + publishing in one command
-1. **Coverage Ratchet**: Revolutionary coverage system targeting 100%
-1. **Zero Configuration**: 17 tools pre-configured with Python best practices
+2. **AI Integration**: 12 specialized AI agents for automatic error fixing
+3. **Unified Workflow**: Quality checks + testing + publishing in one command
+4. **Coverage Ratchet**: Revolutionary coverage system targeting 100%
+5. **Zero Configuration**: 17 tools pre-configured with Python best practices
 
 **Comparison with Pre-commit**:
 

@@ -3,7 +3,7 @@ status: active
 role: canonical
 date: 2026-07-17
 last_reviewed: 2026-07-17
-superseded_by: null
+superseded_by:
 blocks_on: []
 topic: mcp-design
 ---
@@ -30,12 +30,12 @@ Complete command-line interface reference for Crackerjack.
 
 ### Ruff fix-safety matrix
 
-| Subcommand / path                      | Default   | Mutates files? | Notes                                       |
+| Subcommand / path | Default | Mutates files? | Notes |
 |----------------------------------------|-----------|----------------|---------------------------------------------|
-| `crackerjack run`                      | safe fix  | yes (safe)     | `--fix` only; no `--unsafe-fixes`           |
-| `crackerjack run --allow-unsafe-fixes` | unsafe    | yes (unsafe)   | Per-file `.bak` siblings; dirty-tree guard  |
-| `crackerjack run --safe-only`          | read-only | no             | Refuses any invocation that emits `--unsafe-fixes` |
-| Generated `pyproject.toml`             | safe      | n/a            | `unsafe-fixes = false`                      |
+| `crackerjack run` | safe fix | yes (safe) | `--fix` only; no `--unsafe-fixes` |
+| `crackerjack run --allow-unsafe-fixes` | unsafe | yes (unsafe) | Per-file `.bak` siblings; dirty-tree guard |
+| `crackerjack run --safe-only` | read-only | no | Refuses any invocation that emits `--unsafe-fixes` |
+| Generated `pyproject.toml` | safe | n/a | `unsafe-fixes = false` |
 
 ### `crackerjack run`
 
@@ -92,19 +92,19 @@ Several hooks read **file-based config** rather than `[tool.crackerjack.X]` pypr
 
 **Hooks with file-based config:**
 
-| Hook                | File                                            | Format                                       | Discovery location    |
+| Hook | File | Format | Discovery location |
 | ------------------- | ----------------------------------------------- | -------------------------------------------- | --------------------- |
-| `lychee`            | `.lycheeignore`                                 | gitignore-like, one pattern per line         | repo root (`cwd`)     |
-| `betterleaks`       | `.betterleaks.toml` *or* `.gitleaks.toml`       | gitleaks schema — `[allowlist] paths = [...]` | git toplevel          |
-| `betterleaks`       | `.gitleaksignore`                               | gitleaks schema, line-noise filter           | git toplevel          |
+| `lychee` | `.lycheeignore` | gitignore-like, one pattern per line | repo root (`cwd`) |
+| `betterleaks` | `.betterleaks.toml` *or* `.gitleaks.toml` | gitleaks schema — `[allowlist] paths = [...]` | git toplevel |
+| `betterleaks` | `.gitleaksignore` | gitleaks schema, line-noise filter | git toplevel |
 
 **Hooks with NO config file (built-in defaults only):**
 
-| Hook                          | Excluding files                                       |
+| Hook | Excluding files |
 | ----------------------------- | ----------------------------------------------------- |
-| `creosote`                    | *(none today — see `crackerjack/adapters/refactor/creosote.py`)* |
-| `refurb`                      | *(tool defaults only)*                                 |
-| `check-added-large-files`     | `.gitignore` patterns (already honored)               |
+| `creosote` | *(none today — see `crackerjack/adapters/refactor/creosote.py`)* |
+| `refurb` | *(tool defaults only)* |
+| `check-added-large-files` | `.gitignore` patterns (already honored) |
 
 For every other hook, behaviour depends on the hook itself — see the hook's adapter source if you need to exclude something.
 
@@ -329,8 +329,8 @@ The Web adapter also ships `crackerjack.adapters.web.jinja_formatter`
 there is no CLI wrapper today. Tier 1 rules:
 
 1. Trailing newline at EOF.
-1. Strip trailing whitespace from every line.
-1. Preserve `{%-` / `-%}` / `{{-` / `-}}` whitespace markers.
+2. Strip trailing whitespace from every line.
+3. Preserve `{%-` / `-%}` / `{{-` / `-}}` whitespace markers.
 
 Per-project delimiter overrides live under `[tool.crackerjack.jinja]`
 in `pyproject.toml` (six keys: `block_start`, `block_end`,

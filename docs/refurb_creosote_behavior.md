@@ -3,7 +3,7 @@ status: complete
 role: historical
 date: 2026-07-17
 last_reviewed: 2026-07-17
-superseded_by: null
+superseded_by:
 blocks_on: []
 topic: lifecycle
 ---
@@ -52,9 +52,9 @@ ______________________________________________________________________
 **Why It Fails:**
 
 1. Refurb is a **checker**, not a formatter
-1. Security level (MEDIUM) is metadata - not currently enforcing behavior
-1. Hook has `retry_on_failure=False` and `is_formatting=False`
-1. Non-zero exit code = build failure
+2. Security level (MEDIUM) is metadata - not currently enforcing behavior
+3. Hook has `retry_on_failure=False` and `is_formatting=False`
+4. Non-zero exit code = build failure
 
 ### Autofix Support
 
@@ -102,9 +102,9 @@ ______________________________________________________________________
 **Why It Fails:**
 
 1. Creosote is a **checker**, not a fixer
-1. Security level (HIGH) indicates dependency hygiene is important
-1. Hook has `retry_on_failure=False` and `is_formatting=False`
-1. Non-zero exit code = build failure
+2. Security level (HIGH) indicates dependency hygiene is important
+3. Hook has `retry_on_failure=False` and `is_formatting=False`
+4. Non-zero exit code = build failure
 
 ### Autofix Support
 
@@ -194,14 +194,14 @@ ______________________________________________________________________
 **Potential Security Level Enforcement:**
 
 1. **MEDIUM** (refurb): Warn only, don't fail
-1. **HIGH** (creosote): Fail build
-1. **CRITICAL** (semgrep, zuban): Always fail
+2. **HIGH** (creosote): Fail build
+3. **CRITICAL** (semgrep, zuban): Always fail
 
 **Potential Autofix:**
 
 1. Integrate refurb with AST rewriting for safe transformations
-1. Automate creosote dependency removal with user confirmation
-1. Add `--autofix` mode for checkers
+2. Automate creosote dependency removal with user confirmation
+3. Add `--autofix` mode for checkers
 
 ______________________________________________________________________
 

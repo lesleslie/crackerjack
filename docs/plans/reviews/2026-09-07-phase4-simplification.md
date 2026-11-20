@@ -35,7 +35,7 @@ out = re.sub(pattern, repl, out, flags=re.DOTALL)
 Two consequences:
 
 1. **The plan's own test fails.** `test_tier2_when_normalize_true` asserts `"{% if x %}" in result` for input `{%if x%}A{%endif%}`. Actual result is `{% f  %}A{% ndi %}` *(verified: assertion is `False`)*. **Task 4 Step 5's "Expected: 9 passed" is unachievable as written.**
-1. **The rule never fires on the inputs it's for.** `(\S)` cannot match the space immediately after `{%`, so already-spaced tags never match — including `{%  if x  %}` (double space), which is precisely what "exactly one space inside delimiters" exists to fix. The only inputs the regex touches are the ones it corrupts.
+2. **The rule never fires on the inputs it's for.** `(\S)` cannot match the space immediately after `{%`, so already-spaced tags never match — including `{%  if x  %}` (double space), which is precisely what "exactly one space inside delimiters" exists to fix. The only inputs the regex touches are the ones it corrupts.
 
 **Answer to review Q11 ("is the regex simple enough?"):** it is not too simple — it is *too clever and wrong*. `re.escape` + non-greedy + `DOTALL` + a closure + three delimiter pairs is four abstractions solving a problem the plan has already paid for a better tool to solve.
 
@@ -198,7 +198,7 @@ It fires only on gross tag imbalance. `<DIV></div>` false-positives on case.
 **Answer to review Q5 ("too simple? too complex?"): both, simultaneously.** Too crude to catch anything a developer would care about; too intricate (hand-rolled scanners with per-character line-number bookkeeping, a void-element table, comment skipping) for what they deliver. Given F5 makes them unreachable in the default configuration, the two honest options are:
 
 1. **Delete all three.** Set `cli_required=True`, `fallback=None`, and fail with install instructions — exactly the Swift and Kotlin precedent, and exactly the call Phase 3 review F8 blessed ("The plan correctly does NOT add `fallback` callbacks. This is YAGNI-correct."). Removes ~90 LOC, 3 tests, a whole module, and the inverted guard.
-1. If a fallback is genuinely wanted, ship **one** function — `_brace_balance(path)` shared by CSS and JS — and drop HTML.
+2. If a fallback is genuinely wanted, ship **one** function — `_brace_balance(path)` shared by CSS and JS — and drop HTML.
 
 Option 1 is the recommendation. Note that choosing it means Phase 4 has **no hybrid hooks**, which resolves spec Testing F3's mandatory two-path pair the same way Phase 3 did, and should be stated explicitly in the plan (Phase 3 review F8's under-documentation complaint).
 
@@ -342,7 +342,7 @@ ______________________________________________________________________
 Two changes:
 
 1. **Add `keep_trailing_newline=True`.** It is the documented lexer caveat (spec line 377) and *(verified)* it is the difference between `'A\n' → 'A'` and `'A\n' → 'A\n'`. Today Tier 1's "add trailing newline" rule and this lexer artifact happen to cancel out; make the behavior intentional. (Moot if F2's recommendation lands and Tier 1 stops going through the token stream — but then `_env()` is purely a validation gate and the flag still belongs there.)
-1. **Don't `KeyError` on a partial config.** `delimiters["block_start"]` against a 5-key `[tool.crackerjack.jinja]` block gives a bare `KeyError` with no indication which key or which file. One `_REQUIRED_KEYS - delims.keys()` guard raising a named error, or an explicit docstring line that callers must pass complete dicts. Relevant the moment F8's config reader exists.
+2. **Don't `KeyError` on a partial config.** `delimiters["block_start"]` against a 5-key `[tool.crackerjack.jinja]` block gives a bare `KeyError` with no indication which key or which file. One `_REQUIRED_KEYS - delims.keys()` guard raising a named error, or an explicit docstring line that callers must pass complete dicts. Relevant the moment F8's config reader exists.
 
 **Severity:** Low.
 
@@ -417,8 +417,8 @@ ______________________________________________________________________
 Over-engineering is concentrated in exactly three places, all covered above:
 
 1. The fused eslint+tsc argv with its imaginary sequential runner (F4).
-1. Three hand-rolled, duplicated, unreachable Python fallbacks (F6).
-1. The Tier 2 regex, where a token walk was already available and free (F1).
+2. Three hand-rolled, duplicated, unreachable Python fallbacks (F6).
+3. The Tier 2 regex, where a token walk was already available and free (F1).
 
 Everything else is appropriately scoped, and several scope *omissions* are correct:
 
@@ -462,23 +462,23 @@ ______________________________________________________________________
 
 Reviewed the full Phase 4 plan (~1437 lines / 7 tasks / 7 commits) against all eleven focus areas:
 
-1. **YAGNI** — covered. F1, F4, F6 are the three concentrations; scope *omissions* are mostly correct.
-1. **Pattern adherence** — covered in the Q2 table. Entry point, 4-step MCP, and per-invocation auth all hold; CF-2 is the cleanest of the three adapters; test style, return shape, tool naming, and `detection.py` all drift.
-1. **Jinja formatter scope** — covered in Q3. ~85 LOC vs spec's 250-400; under-built, not over-built; recommendation is to narrow the claim to Tier 1.
-1. **Hybrid pattern complexity** — F5. Above minimum, below working; the guard is inverted in both directions.
-1. **Python fallback simplicity** — F6. Both too crude and too intricate; recommend deletion per the Swift/Kotlin precedent.
-1. **Detection guard split** — F10. The split is fine; the module is the divergence, and a third of it is dead on 3.14.
-1. **CLI combined command** — F4. Should be two hooks; the `;` argv is not executable.
-1. **`_env()` helper** — F12. Acceptable; add `keep_trailing_newline=True` and a completeness guard.
-1. **Magic strings** — F13. Hoist `JINJA_SUFFIXES` and fix the type alias; the rest are fine inline.
-1. **Phase 3 CF-2 carry-over** — F11. Followed correctly; only the "lazily built" prose needs a fix.
-1. **Tier 2 normalization regex** — F1. Not too simple: wrong, and it fails its own test.
+01. **YAGNI** — covered. F1, F4, F6 are the three concentrations; scope *omissions* are mostly correct.
+02. **Pattern adherence** — covered in the Q2 table. Entry point, 4-step MCP, and per-invocation auth all hold; CF-2 is the cleanest of the three adapters; test style, return shape, tool naming, and `detection.py` all drift.
+03. **Jinja formatter scope** — covered in Q3. ~85 LOC vs spec's 250-400; under-built, not over-built; recommendation is to narrow the claim to Tier 1.
+04. **Hybrid pattern complexity** — F5. Above minimum, below working; the guard is inverted in both directions.
+05. **Python fallback simplicity** — F6. Both too crude and too intricate; recommend deletion per the Swift/Kotlin precedent.
+06. **Detection guard split** — F10. The split is fine; the module is the divergence, and a third of it is dead on 3.14.
+07. **CLI combined command** — F4. Should be two hooks; the `;` argv is not executable.
+08. **`_env()` helper** — F12. Acceptable; add `keep_trailing_newline=True` and a completeness guard.
+09. **Magic strings** — F13. Hoist `JINJA_SUFFIXES` and fix the type alias; the rest are fine inline.
+10. **Phase 3 CF-2 carry-over** — F11. Followed correctly; only the "lazily built" prose needs a fix.
+11. **Tier 2 normalization regex** — F1. Not too simple: wrong, and it fails its own test.
 
 **Top 3 actions for the plan author:**
 
 1. **F1 + F2 (both blockers, both in Task 4).** Replace the Tier 2 regex with a token walk, and stop using the token join as a source reconstruction. The smallest correct Task 4 is: `lex()` as a validation gate only, Tier 1 as two line-level string ops on raw source, Tier 2 deferred. That is *less* code than the plan and it does not mutate templates. Add the golden-master test from F9 against the `whitespace.html` fixture the plan already wrote — it is ~10 lines and it is what catches both bugs.
-1. **F4 + F5 + F6 (Task 3).** Split `web.eslint_tsc` into `web.eslint` + `web.tsc`; replace `_npx_command` / `_has_pinned_version` / the inverted `which` guard with one `_resolve(project_root, tool)`; delete `python_fallbacks.py` and set `cli_required=True`, `fallback=None` per the Swift/Kotlin precedent. Then state explicitly, as Phase 3 review F8 asked, that Phase 4 hooks are non-hybrid so spec Testing F3's two-path pair is N/A. Net: −1 module, ~−120 LOC, and three hooks that fail honestly instead of passing vacuously.
-1. **F3 + F8 (Task 6).** Make the four new tests sync `def` with `mock.patch.dict(..., clear=True)` to match the file, and update `test_register_language_tools_registers_three_tools` for the new count. Add the `_jinja_config()` reader so custom delimiters and `normalize` are reachable — without it the 6-delimiter constraint is decorative and fastblocks (the named Phase 4 target) cannot be formatted.
+2. **F4 + F5 + F6 (Task 3).** Split `web.eslint_tsc` into `web.eslint` + `web.tsc`; replace `_npx_command` / `_has_pinned_version` / the inverted `which` guard with one `_resolve(project_root, tool)`; delete `python_fallbacks.py` and set `cli_required=True`, `fallback=None` per the Swift/Kotlin precedent. Then state explicitly, as Phase 3 review F8 asked, that Phase 4 hooks are non-hybrid so spec Testing F3's two-path pair is N/A. Net: −1 module, ~−120 LOC, and three hooks that fail honestly instead of passing vacuously.
+3. **F3 + F8 (Task 6).** Make the four new tests sync `def` with `mock.patch.dict(..., clear=True)` to match the file, and update `test_register_language_tools_registers_three_tools` for the new count. Add the `_jinja_config()` reader so custom delimiters and `normalize` are reachable — without it the 6-delimiter constraint is decorative and fastblocks (the named Phase 4 target) cannot be formatted.
 
 ______________________________________________________________________
 

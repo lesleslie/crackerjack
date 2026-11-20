@@ -3,7 +3,7 @@ status: active
 role: canonical
 date: 2026-07-17
 last_reviewed: 2026-07-17
-superseded_by: null
+superseded_by:
 blocks_on: []
 topic: lifecycle
 ---
@@ -15,11 +15,11 @@ topic: lifecycle
 ## Core Principles
 
 1. **Active implementation plans stay in project root or `docs/`**
-1. **Closed documents go to `<area>/.archive/` (gitignored)** — a document
+2. **Closed documents go to `<area>/.archive/` (gitignored)** — a document
    is closed at `status: shipped`, not at `status: complete`
-1. **User-facing documentation stays in easily accessible locations**
-1. **Reference documentation goes to `docs/reference/`**
-1. **Feature documentation goes to `docs/features/`**
+3. **User-facing documentation stays in easily accessible locations**
+4. **Reference documentation goes to `docs/reference/`**
+5. **Feature documentation goes to `docs/features/`**
 
 ## File Organization Rules
 
@@ -220,10 +220,10 @@ pass the lifecycle gate before it moves.
 Implementation plans should follow this lifecycle:
 
 1. **Create** in project root (e.g., `FEATURE_MIGRATION_PLAN.md`)
-1. **Active Development** → Keep in root
-1. **Complete** → Flip to `status: shipped`, then move to
+2. **Active Development** → Keep in root
+3. **Complete** → Flip to `status: shipped`, then move to
    `<area>/.archive/implementation-plans/`
-1. **Completion Report** → Create separate report in `<area>/.archive/summaries/`
+4. **Completion Report** → Create separate report in `<area>/.archive/summaries/`
 
 ### The lifecycle gate
 

@@ -4,7 +4,7 @@ role: operations
 kind: how-to
 date: 2026-10-09
 last_reviewed: 2026-10-09
-superseded_by: null
+superseded_by:
 blocks_on: []
 topic: operations
 ---
@@ -83,8 +83,7 @@ flip from `"degraded"` to `"ok"`. The MCP tool
 - **No incremental write path is exposed.** Changing a file's content
   re-indexes it fully (delete-then-insert in the same transaction). The
   `crackerjack index` driver currently only adds new files; it does not
-  refresh changed files. See `crackerjack/services/vector_store.py:101
-  ::index_file()` for the add-or-update contract.
+  refresh changed files. See `crackerjack/services/vector_store.py:101 ::index_file()` for the add-or-update contract.
 - **The `crackerjack run` quality gate does not depend on the semantic
   index.** The `crackerjack run -v` gate runs ruff, mypy, pyright, bandit,
   complexipy, pytest. Search is an observability surface; it is not on

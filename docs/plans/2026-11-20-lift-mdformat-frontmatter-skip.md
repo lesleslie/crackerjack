@@ -8,7 +8,7 @@ role: implementation
 topic: process-discipline
 date: 2026-11-20
 last_reviewed: 2026-11-20
-superseded_by: null
+superseded_by:
 blocks_on: []
 ---
 
@@ -423,8 +423,7 @@ inconsistency, unchanged by this plan and not fixed by it.
 - **Demonstrable by**: `pytest tests/unit/tools/test_mdformat_wrapper.py`
   passes, and `python -m crackerjack.tools.mdformat_wrapper` exits 0
   with a clean tree afterwards.
-- **Rollback signal**: the hook exits 1 with `files were modified by
-  this hook` on a second consecutive run, which means the formatter is
+- **Rollback signal**: the hook exits 1 with `files were modified by this hook` on a second consecutive run, which means the formatter is
   not idempotent over the tree.
 - **Observability added**: the hook's existing stderr surface now
   reports the files it reformatted, including frontmatter documents
@@ -607,10 +606,9 @@ turned up during execution that the plan did not anticipate.)_
 ### Phase 1 — the wrapper change
 
 **Commits:**
-- `e9448967` — `fix(format): format frontmatter documents and preserve
-  list numbering` — the lift itself
-- `7556b402` — `fix(format): close three holes the frontmatter lift left
-  open` — the review findings below
+
+- `e9448967` — `fix(format): format frontmatter documents and preserve list numbering` — the lift itself
+- `7556b402` — `fix(format): close three holes the frontmatter lift left open` — the review findings below
 
 **Baseline:** `c8bd7d4c`
 **Changed:** `crackerjack/tools/mdformat_wrapper.py`,
@@ -688,21 +686,21 @@ turned up during execution that the plan did not anticipate.)_
 
 **What a fresh review of the lift found, and `7556b402` fixed:**
 
-8. **A BOM'd frontmatter document was destroyed.** The plugin's
-   front-matter rule is BOM-blind, and a byte-order mark is not
-   whitespace, so every `---` test in the wrapper missed it. Formatting
-   such a document flattened its frontmatter into a heading, and the
-   document then dropped out of `PLAN_INDEX.md` — the exact failure the
-   guard exists to prevent. Such documents are now excluded from
-   formatting and reported, because an excluded document is one nobody
-   notices. No tracked document in the fleet has one today.
-9. **A second front-matter extension was invisible.** The two packages
-   register under different entry-point names (`frontmatter` and
-   `front_matters`), so pip installs both side by side; mdformat then
-   logs a plugin conflict, keeps one renderer, and the disagreement
-   about quotes becomes a silent semantic change. The probe now counts
-   front-matter extensions, and the guard refuses to run unless there is
-   exactly one.
+08. **A BOM'd frontmatter document was destroyed.** The plugin's
+    front-matter rule is BOM-blind, and a byte-order mark is not
+    whitespace, so every `---` test in the wrapper missed it. Formatting
+    such a document flattened its frontmatter into a heading, and the
+    document then dropped out of `PLAN_INDEX.md` — the exact failure the
+    guard exists to prevent. Such documents are now excluded from
+    formatting and reported, because an excluded document is one nobody
+    notices. No tracked document in the fleet has one today.
+09. **A second front-matter extension was invisible.** The two packages
+    register under different entry-point names (`frontmatter` and
+    `front_matters`), so pip installs both side by side; mdformat then
+    logs a plugin conflict, keeps one renderer, and the disagreement
+    about quotes becomes a silent semantic change. The probe now counts
+    front-matter extensions, and the guard refuses to run unless there is
+    exactly one.
 10. **mdformat's own diagnostics were swallowed.** The wrapper
     discarded `check_result.stderr` entirely when the check passed, so a
     front-matter block mdformat could not parse — or a plugin conflict —
@@ -732,4 +730,3 @@ frontmatter'd documents on its next run — 172 of them are newly in
 scope — and 287 files are in the wrapper's set. That churn, plus the
 regenerated plan index, is Phase 2's crackerjack commit, and it is
 deliberately not folded into Phase 1's commits.
-

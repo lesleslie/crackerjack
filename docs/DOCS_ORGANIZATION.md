@@ -3,7 +3,7 @@ status: active
 role: canonical
 date: 2026-07-17
 last_reviewed: 2026-07-17
-superseded_by: null
+superseded_by:
 blocks_on: []
 topic: lifecycle
 ---
@@ -53,8 +53,8 @@ The `./docs` directory is organized into subdirectories based on the purpose and
 
 1. Key documentation files (AGENTS.md, CLAUDE.md, RULES.md, QWEN.md) are kept in the root directory as they are frequently accessed and provide essential guidance for developers.
 
-1. The `./docs` directory contains more specialized documentation that is less frequently accessed but still important for project understanding and maintenance.
+2. The `./docs` directory contains more specialized documentation that is less frequently accessed but still important for project understanding and maintenance.
 
-1. All internal documentation references have been updated to point to the correct locations after reorganization.
+3. All internal documentation references have been updated to point to the correct locations after reorganization.
 
-1. The overall documentation structure is now cleaner with a clear separation between primary reference documents (in root) and specialized documentation (in docs subdirectories).
+4. The overall documentation structure is now cleaner with a clear separation between primary reference documents (in root) and specialized documentation (in docs subdirectories).

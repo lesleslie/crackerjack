@@ -3,7 +3,7 @@ status: active
 role: canonical
 date: 2026-07-17
 last_reviewed: 2026-07-17
-superseded_by: null
+superseded_by:
 blocks_on: []
 topic: lifecycle
 ---
@@ -68,9 +68,9 @@ All functions must maintain cognitive complexity \<= 15 as enforced by complexip
 **Refactoring Principles**:
 
 1. Extract helpers when complexity > 10
-1. Use progressive fallback for multiple strategies
-1. Isolate recursive logic in dedicated methods
-1. Apply Single Responsibility Principle consistently
+2. Use progressive fallback for multiple strategies
+3. Isolate recursive logic in dedicated methods
+4. Apply Single Responsibility Principle consistently
 
 ## Testing
 

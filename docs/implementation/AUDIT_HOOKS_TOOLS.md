@@ -3,7 +3,7 @@ status: complete
 role: historical
 date: 2026-07-17
 last_reviewed: 2026-07-17
-superseded_by: null
+superseded_by:
 blocks_on: []
 topic: lifecycle
 ---
@@ -52,8 +52,8 @@ def _should_include_line(self, line: str, package_name: str) -> bool:
 **Required Changes:**
 
 1. Pass `package_name` from command detection in `tool_commands.py`
-1. Update `_parse_complexipy_issues` to accept package name parameter
-1. Update `_extract_issues_for_reporting_tools` call chain
+2. Update `_parse_complexipy_issues` to accept package name parameter
+3. Update `_extract_issues_for_reporting_tools` call chain
 
 ______________________________________________________________________
 
@@ -82,8 +82,8 @@ ______________________________________________________________________
 **Investigation Needed:**
 
 1. What specific issue was this trying to fix?
-1. Does zuban output error summary in a format that breaks parsing?
-1. Can we parse zuban output correctly WITH the error summary?
+2. Does zuban output error summary in a format that breaks parsing?
+3. Can we parse zuban output correctly WITH the error summary?
 
 **Recommendation:** Remove `--no-error-summary` unless there's documented evidence it causes false positives
 
@@ -119,9 +119,9 @@ def _parse_creosote_issues(self, output: str) -> list[str]:
 **Problems:**
 
 1. **Assumption:** Unused dependencies are listed after a header containing "unused" and "dependenc"
-1. **Fragile:** Breaks if creosote changes output format
-1. **ANSI codes:** Only filters lines starting with `[`, but ANSI codes can appear anywhere
-1. **No validation:** Doesn't verify dependency names are valid package names
+2. **Fragile:** Breaks if creosote changes output format
+3. **ANSI codes:** Only filters lines starting with `[`, but ANSI codes can appear anywhere
+4. **No validation:** Doesn't verify dependency names are valid package names
 
 **Test Cases Missing:**
 
@@ -164,9 +164,9 @@ def _parse_gitleaks_issues(self, output: str) -> list[str]:
    - Matches "no leaks found" (filtered by earlier check, but fragile)
    - Matches "checking for leaks..." (progress messages)
    - Matches "api.example.com" (URLs, not API keys)
-1. **Summary exclusion:** `"found" not in line.lower()` excludes any line with "found"
+2. **Summary exclusion:** `"found" not in line.lower()` excludes any line with "found"
    - Could exclude "API key found in file.py:10"
-1. **No structure:** Relies on unstructured text parsing instead of JSON
+3. **No structure:** Relies on unstructured text parsing instead of JSON
 
 **Better Approach:**
 
@@ -178,8 +178,8 @@ def _parse_gitleaks_issues(self, output: str) -> list[str]:
 **Required Changes:**
 
 1. Update `tool_commands.py` to add `--report-format=json` flag
-1. Rewrite parser to handle JSON output
-1. Add test fixtures with real gitleaks JSON output
+2. Rewrite parser to handle JSON output
+3. Add test fixtures with real gitleaks JSON output
 
 ______________________________________________________________________
 
@@ -545,21 +545,21 @@ ______________________________________________________________________
    - [ ] Add package name auto-detection
    - [ ] Test against 3 external projects
 
-1. **Short Term (Next Sprint)**
+2. **Short Term (Next Sprint)**
 
    - [ ] Investigate zuban `--no-error-summary` rationale
    - [ ] Add gitleaks JSON parsing
    - [ ] Fix path separator for Windows
    - [ ] Add tool output test fixtures
 
-1. **Medium Term (Next Month)**
+3. **Medium Term (Next Month)**
 
    - [ ] Refactor all parsers to use structured output (JSON)
    - [ ] Create integration test suite
    - [ ] Document all tool output formats
    - [ ] Add parser robustness tests
 
-1. **Long Term (Roadmap)**
+4. **Long Term (Roadmap)**
 
    - [ ] Consider using tool adapters/plugins pattern
    - [ ] Add parser versioning for tool compatibility

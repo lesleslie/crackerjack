@@ -277,13 +277,13 @@ async def handle_my_command(
 ## Best Practices
 
 1. **Use Protocol-Based DI**: Import from `models/protocols.py`, not concrete classes
-1. **Validate Options Early**: Use Pydantic validators in the `Options` model
-1. **Keep Handlers Focused**: Single responsibility per handler
-1. **Provide User Feedback**: Use rich console for progress and status
-1. **Handle Errors Gracefully**: Catch exceptions and provide helpful error messages
-1. **Support --verbose**: Add verbose logging for troubleshooting
-1. **Document Options**: Clear help text for all CLI options
-1. **Test Interactive Flows**: Verify prompts and validation work correctly
+2. **Validate Options Early**: Use Pydantic validators in the `Options` model
+3. **Keep Handlers Focused**: Single responsibility per handler
+4. **Provide User Feedback**: Use rich console for progress and status
+5. **Handle Errors Gracefully**: Catch exceptions and provide helpful error messages
+6. **Support --verbose**: Add verbose logging for troubleshooting
+7. **Document Options**: Clear help text for all CLI options
+8. **Test Interactive Flows**: Verify prompts and validation work correctly
 
 ## Anti-Patterns to Avoid
 

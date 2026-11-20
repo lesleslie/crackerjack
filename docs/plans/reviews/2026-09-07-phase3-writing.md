@@ -27,9 +27,9 @@ ______________________________________________________________________
    - `kotlin_run_hooks` (per spec) — implies running the hooks.
    - `kotlin_list_hooks` (per plan, line 1065: `"Return Kotlin/Gradle hook metadata (read-only; no auth)"`) — returns hook metadata only, explicitly read-only.
 
-1. The plan perpetuates a divergence Phase 2 already introduced. The spec line 39 says Swift gets `swift_run_hooks`. Phase 2's writing review did not flag this in Phase 2's review file (`2026-09-07-phase2-writing.md`), which means Phase 2's implementation likely also used `swift_list_hooks` and the divergence went unreviewed. Phase 3 compounds the issue: the plan makes the divergence load-bearing (used in architecture header, CHANGELOG, tests) without amending the spec or recording the deviation.
+2. The plan perpetuates a divergence Phase 2 already introduced. The spec line 39 says Swift gets `swift_run_hooks`. Phase 2's writing review did not flag this in Phase 2's review file (`2026-09-07-phase2-writing.md`), which means Phase 2's implementation likely also used `swift_list_hooks` and the divergence went unreviewed. Phase 3 compounds the issue: the plan makes the divergence load-bearing (used in architecture header, CHANGELOG, tests) without amending the spec or recording the deviation.
 
-1. The Spec Revision Notes section explicitly states "None for Phase 3 — the spec Rev 2 already covers Phase 3 adequately" — this is false. The plan makes a SPEC DEVIATION and the section should record it. The "no BLOCKER, HIGH, or MEDIUM findings required spec amendment" assertion is unfounded because the plan was not compared row-by-row against the spec (no Self-Review section exists — see HIGH-4/5).
+3. The Spec Revision Notes section explicitly states "None for Phase 3 — the spec Rev 2 already covers Phase 3 adequately" — this is false. The plan makes a SPEC DEVIATION and the section should record it. The "no BLOCKER, HIGH, or MEDIUM findings required spec amendment" assertion is unfounded because the plan was not compared row-by-row against the spec (no Self-Review section exists — see HIGH-4/5).
 
 **Why this matters:**
 
@@ -45,7 +45,7 @@ Either (pick one):
 
    > Spec amended (Phase 3): replaced `kotlin_run_hooks` with `kotlin_list_hooks`. Tool returns hook metadata only (read-only), matching Phase 2's `swift_list_hooks` pattern.
 
-1. **Change the plan** to use `kotlin_run_hooks` and implement actual hook execution. Update Spec Revision Notes:
+2. **Change the plan** to use `kotlin_run_hooks` and implement actual hook execution. Update Spec Revision Notes:
 
    > Plan implements `kotlin_list_hooks` (Phase 3 choice); spec retained `kotlin_run_hooks`. To unify with Phase 2, future spec revision should rename Swift/Kotlin tools to `*_list_hooks`.
 
@@ -81,14 +81,14 @@ def _build_hooks(project_root: Path) -> tuple[Hook, ...]:
 
 1. **Dead code:** `probe = GradleTaskProbe(project_root)` is created but never used. Ruff F841 (unused-variable) will flag this. The plan instructs the implementer to ship code that fails lint on day one.
 
-1. **Misleading closure name:** the inner function is named `hook_with_probe` but does not probe. It is just a factory that builds `Hook` objects.
+2. **Misleading closure name:** the inner function is named `hook_with_probe` but does not probe. It is just a factory that builds `Hook` objects.
 
-1. **Misleading comment:** "If probe fails (task absent), the hook still emits; CLI invocation will skip-with-warning at execution time" — but:
+3. **Misleading comment:** "If probe fails (task absent), the hook still emits; CLI invocation will skip-with-warning at execution time" — but:
 
    - No probe is performed.
    - The "CLI invocation will skip-with-warning at execution time" is asserted but never implemented. The plan doesn't define where the skip-with-warning logic lives. Is it in the CLI runner? In the Hook runner? Where?
 
-1. **Function naming:** the outer function is `_build_hooks` (no probe) but contains a closure named `hook_with_probe`. The naming drift tells the reader something the code does not.
+4. **Function naming:** the outer function is `_build_hooks` (no probe) but contains a closure named `hook_with_probe`. The naming drift tells the reader something the code does not.
 
 **Why this matters:**
 
@@ -116,7 +116,7 @@ Either:
 
    Then add a Global Constraint or new step clarifying "Gradle task probing happens in the CLI/Hook runner, not in `_build_hooks`. See `crackerjack.adapters.kotlin.hooks` (TODO: link to runner code in later phase)."
 
-1. **Actually use the probe** to filter missing tasks:
+2. **Actually use the probe** to filter missing tasks:
 
    ```python
    def _build_hooks(project_root: Path) -> tuple[Hook, ...]:
@@ -409,8 +409,8 @@ ______________________________________________________________________
 A new contributor implementing Phase 3 must:
 
 1. Find Phase 2's source files (the plan names them, but doesn't show contents).
-1. Read and understand them.
-1. Apply the listed changes.
+2. Read and understand them.
+3. Apply the listed changes.
 
 The plan shows:
 
@@ -429,7 +429,7 @@ Either:
 
 1. Reproduce the source code in the plan (Phase 2's approach). Add the full `git_backend.py` (132 lines) and `lifecycle.py` (with the `_bump` change) to Task 4 and Task 5 respectively.
 
-1. Add a clear cross-reference with a pre-flight check:
+2. Add a clear cross-reference with a pre-flight check:
 
    > **Pre-flight (mirror Phase 2 BLOCKER B1):** Read `crackerjack/adapters/swift/git_backend.py` and confirm it implements the 6 functions (`commit`, `tag`, `push`, `delete_tag`, `reset`, `gh_release`) with the Phase 2 commit `b2199190` fix. If Phase 2's source is missing or doesn't match, escalate BEFORE implementing Task 4.
 
@@ -468,7 +468,7 @@ The docstring says "Use this factory for parity with `git_tag_version_source()` 
 A new contributor will either:
 
 1. Ship the factory unused (Ruff F401, dead export).
-1. Add usage of the factory throughout (more code churn than planned).
+2. Add usage of the factory throughout (more code churn than planned).
 
 **Recommended fix:**
 
@@ -485,7 +485,7 @@ Either:
    version_source = gradle_properties_version_source(root)
    ```
 
-1. **Drop the factory from `__all__`** and document that the class is used directly. Remove `gradle_properties_version_source` from `__init__.py` exports.
+2. **Drop the factory from `__all__`** and document that the class is used directly. Remove `gradle_properties_version_source` from `__init__.py` exports.
 
 The current state has it exported but unused — a contradiction the plan should resolve.
 
@@ -601,8 +601,8 @@ def _bump(version: str, level: str) -> str:
 **Why this is a writing defect:**
 
 1. **Trailing whitespace on line 2.** After the first summary line, there is a blank line with trailing whitespace (spaces after the newline). Ruff W293 will flag this.
-1. **Idiomatic docstring structure** typically puts the summary on one line, then a blank line, then detailed explanation. The current format is correct in structure but the trailing whitespace on the blank line is wrong.
-1. **The summary line** says "major/minor/patch each bump the named component" — but technically `patch` does NOT bump `major` or `minor`; it bumps only `patch`. The phrase is technically true (each level bumps its named component) but could be misread as "all three levels bump all three components." This is a minor ambiguity.
+2. **Idiomatic docstring structure** typically puts the summary on one line, then a blank line, then detailed explanation. The current format is correct in structure but the trailing whitespace on the blank line is wrong.
+3. **The summary line** says "major/minor/patch each bump the named component" — but technically `patch` does NOT bump `major` or `minor`; it bumps only `patch`. The phrase is technically true (each level bumps its named component) but could be misread as "all three levels bump all three components." This is a minor ambiguity.
 
 **Recommended fix:**
 
@@ -660,8 +660,8 @@ ______________________________________________________________________
 The plan references `init_git_repo` from Phase 2 but doesn't show its signature or contents. A new contributor must:
 
 1. Find Phase 2's `_git_helpers.py`.
-1. Read it.
-1. Implement the Kotlin equivalent.
+2. Read it.
+3. Implement the Kotlin equivalent.
 
 The plan should either reproduce the signature or note where to find it explicitly. Currently the reference is a parenthetical hint, easy to miss.
 
@@ -707,7 +707,7 @@ Either:
 
    > Phase 3 review lenses (mirror Phase 2): a11y, api, mcp, security, simplification, testing, writing, kotlin. (8 lenses; spec mentions "11-agent-review" for the original spec review, but the per-phase lens set is smaller.)
 
-1. OR drop the count:
+2. OR drop the count:
 
    > Phase 3 plan should be reviewed via multi-agent review before execution (see spec review directory for lens list).
 
@@ -757,9 +757,9 @@ def capabilities(self, project_root: Path) -> Capabilities:
 **Why this is a writing defect:**
 
 1. The inline import (`from ... import make_git_backend`) inside a method is unusual style.
-1. The `_ = make_git_backend` idiom is non-standard; `# noqa: F401` is the Python convention.
-1. The comment references Phase 2's CF-2 fix without explaining what CF-2 was (see MEDIUM-2).
-1. The variable name `_` doesn't communicate intent; `# noqa: F401  # used by MCP layer` does.
+2. The `_ = make_git_backend` idiom is non-standard; `# noqa: F401` is the Python convention.
+3. The comment references Phase 2's CF-2 fix without explaining what CF-2 was (see MEDIUM-2).
+4. The variable name `_` doesn't communicate intent; `# noqa: F401  # used by MCP layer` does.
 
 **Recommended fix:**
 
@@ -902,7 +902,7 @@ Either:
        ...
    ```
 
-1. Or make the helper and tool calls all async with proper `await`:
+2. Or make the helper and tool calls all async with proper `await`:
 
    ```python
    async def test_kotlin_list_hooks_returns_three_hook_names(tmp_path: Path) -> None:
@@ -949,53 +949,53 @@ ______________________________________________________________________
 
 **What the plan does well (writing lens):**
 
-1. **TDD structure is consistent.** Every task has explicit "write failing tests → run → implement → run → commit" steps. New contributors can follow the rhythm.
-1. **CHANGELOG entry uses correct spelling.** `crackerjack.language_adapters` is correct (no `crackageck` typo from Phase 2 HIGH H12). The entry mentions the cross-adapter `_bump` divergence, the three hook names with their CLI commands, and the entry-point group.
-1. **Test code blocks are mostly complete.** Tasks 2-6 show full test code (40+ tests). The TDD discipline is applied consistently.
-1. **Naming is consistent.** `KotlinAdapter`, `KotlinLifecycle`, `GradlePropertiesVersionSource`, `GradleTaskProbe`, `kotlin_hooks`, `gradle_properties_version_source`, `make_git_backend`, `KotlinAdapter.name = "kotlin"` — all consistent across tasks.
-1. **Global Constraints block consolidates the lessons** from Phase 1/2 (auth posture, no assert in production, argv list no shell, async I/O, module-docstring-implicit-from-Phase-2). It references Phase 2 fix commits by hash, which aids cross-referencing.
-1. **Cross-adapter `_bump` divergence is documented** inline in the docstring AND in a dedicated section at the plan's end. The semantics are explicit: real-semver for Kotlin, pre-1.0 for Swift.
-1. **Spec invariants are pinned.** `--no-daemon --no-configuration-cache` for all Gradle invocations is repeated in Tasks 2 and 3. Per-invocation auth check is pinned. `_bump` semantics are pinned in Task 5.
-1. **Constructor injection replaces Phase 2's monkey-patching.** Phase 2's writing review flagged `lifecycle._commit = _commit  # type: ignore[method-assign]`. Phase 3 avoids this by injecting the 6 git/gh methods as `Callable` constructor parameters (Global Constraints line 44). This is a clear improvement.
-1. **Commit messages are traceable.** Each task ends with a `git commit -m` with a specific prefix (`feat(adapters.kotlin):`, `feat(mcp):`, `docs(changelog):`).
-1. **`crackerjack.language_adapters` entry-point spelling is correct** — no `crackageck` typo carried from Phase 2 HIGH H12.
+01. **TDD structure is consistent.** Every task has explicit "write failing tests → run → implement → run → commit" steps. New contributors can follow the rhythm.
+02. **CHANGELOG entry uses correct spelling.** `crackerjack.language_adapters` is correct (no `crackageck` typo from Phase 2 HIGH H12). The entry mentions the cross-adapter `_bump` divergence, the three hook names with their CLI commands, and the entry-point group.
+03. **Test code blocks are mostly complete.** Tasks 2-6 show full test code (40+ tests). The TDD discipline is applied consistently.
+04. **Naming is consistent.** `KotlinAdapter`, `KotlinLifecycle`, `GradlePropertiesVersionSource`, `GradleTaskProbe`, `kotlin_hooks`, `gradle_properties_version_source`, `make_git_backend`, `KotlinAdapter.name = "kotlin"` — all consistent across tasks.
+05. **Global Constraints block consolidates the lessons** from Phase 1/2 (auth posture, no assert in production, argv list no shell, async I/O, module-docstring-implicit-from-Phase-2). It references Phase 2 fix commits by hash, which aids cross-referencing.
+06. **Cross-adapter `_bump` divergence is documented** inline in the docstring AND in a dedicated section at the plan's end. The semantics are explicit: real-semver for Kotlin, pre-1.0 for Swift.
+07. **Spec invariants are pinned.** `--no-daemon --no-configuration-cache` for all Gradle invocations is repeated in Tasks 2 and 3. Per-invocation auth check is pinned. `_bump` semantics are pinned in Task 5.
+08. **Constructor injection replaces Phase 2's monkey-patching.** Phase 2's writing review flagged `lifecycle._commit = _commit  # type: ignore[method-assign]`. Phase 3 avoids this by injecting the 6 git/gh methods as `Callable` constructor parameters (Global Constraints line 44). This is a clear improvement.
+09. **Commit messages are traceable.** Each task ends with a `git commit -m` with a specific prefix (`feat(adapters.kotlin):`, `feat(mcp):`, `docs(changelog):`).
+10. **`crackerjack.language_adapters` entry-point spelling is correct** — no `crackageck` typo carried from Phase 2 HIGH H12.
 
 **What the plan does less well (writing lens):**
 
-1. **HIGH-1: Empty Spec Revision Notes despite a real spec divergence** (`kotlin_list_hooks` vs spec's `kotlin_run_hooks`). The plan silently deviates.
-1. **HIGH-2: Dead `probe` variable and misleading "with_probe" comment** in `_build_hooks`. Code claims to probe but doesn't. Lint will fail.
-1. **HIGH-3: Module docstrings absent** from 4 of 5 new files. Only `git_backend.py` is explicitly required.
-1. **HIGH-4/5: No self-review section, no spec coverage table** (regression from Phase 2).
-1. **MEDIUM-1: Cross-adapter `_bump` divergence documented but no ADR** — Phase 4 will re-litigate.
-1. **MEDIUM-2: Phase 2 short-hand references not inlined.** Same defect Phase 2's writing review flagged; Phase 3 inherits.
-1. **MEDIUM-3: `lifecycle.py` and `git_backend.py` implementations not reproduced.** Phase 2's plan had full source; Phase 3 has only "Mirror".
-1. **MEDIUM-4: `gradle_properties_version_source` factory exported but unused.** Dead export.
-1. **MEDIUM-5: Task 7 Step 4 hedging language** ("No code change likely needed").
-1. **MEDIUM-6: `write()` raises `FileNotFoundError` instead of `VersionWriteError`** for missing file; design choice undocumented.
-1. **LOW-1: Acronyms `MCP`, `FastMCP` not expanded** (Phase 2's MEDIUM-8 not addressed).
-1. **LOW-7: CHANGELOG entry doesn't mention `gradle-vanilla/` fixture.**
-1. **LOW-8: Task 7 tests mix `async def` with `asyncio.run`** — code smell.
+01. **HIGH-1: Empty Spec Revision Notes despite a real spec divergence** (`kotlin_list_hooks` vs spec's `kotlin_run_hooks`). The plan silently deviates.
+02. **HIGH-2: Dead `probe` variable and misleading "with_probe" comment** in `_build_hooks`. Code claims to probe but doesn't. Lint will fail.
+03. **HIGH-3: Module docstrings absent** from 4 of 5 new files. Only `git_backend.py` is explicitly required.
+04. **HIGH-4/5: No self-review section, no spec coverage table** (regression from Phase 2).
+05. **MEDIUM-1: Cross-adapter `_bump` divergence documented but no ADR** — Phase 4 will re-litigate.
+06. **MEDIUM-2: Phase 2 short-hand references not inlined.** Same defect Phase 2's writing review flagged; Phase 3 inherits.
+07. **MEDIUM-3: `lifecycle.py` and `git_backend.py` implementations not reproduced.** Phase 2's plan had full source; Phase 3 has only "Mirror".
+08. **MEDIUM-4: `gradle_properties_version_source` factory exported but unused.** Dead export.
+09. **MEDIUM-5: Task 7 Step 4 hedging language** ("No code change likely needed").
+10. **MEDIUM-6: `write()` raises `FileNotFoundError` instead of `VersionWriteError`** for missing file; design choice undocumented.
+11. **LOW-1: Acronyms `MCP`, `FastMCP` not expanded** (Phase 2's MEDIUM-8 not addressed).
+12. **LOW-7: CHANGELOG entry doesn't mention `gradle-vanilla/` fixture.**
+13. **LOW-8: Task 7 tests mix `async def` with `asyncio.run`** — code smell.
 
 **Reviewer recommendations (priority order):**
 
-1. **(HIGH)** Update Spec Revision Notes to record the `kotlin_list_hooks` deviation and the choice (HIGH-1).
-1. **(HIGH)** Drop the unused `probe = GradleTaskProbe(...)` line and misleading comment in `_build_hooks` (HIGH-2).
-1. **(HIGH)** Add explicit module-docstring requirements to `version_source.py`, `hooks.py`, `__init__.py`, and `lifecycle.py` (HIGH-3).
-1. **(HIGH)** Add a Self-Review section with spec coverage table (HIGH-4, HIGH-5).
-1. **(MEDIUM)** Create or stub an ADR for cross-adapter `_bump` semantics before Phase 4 lands (MEDIUM-1).
-1. **(MEDIUM)** Inline 3-5 lines per Phase 2 short-hand reference so the plan is self-contained (MEDIUM-2).
-1. **(MEDIUM)** Reproduce the full `git_backend.py` and `lifecycle.py` source in Task 4 and Task 5, or add an explicit pre-flight check that Phase 2 source exists (MEDIUM-3).
-1. **(MEDIUM)** Either use `gradle_properties_version_source` factory consistently OR drop it from `__all__` (MEDIUM-4).
-1. **(MEDIUM)** Replace Task 7 Step 4 hedging language with a definite statement (MEDIUM-5).
-1. **(MEDIUM)** Add a `write()` docstring documenting the `FileNotFoundError` vs `VersionWriteError` distinction (MEDIUM-6).
-1. **(LOW)** Expand Tech Stack acronyms (LOW-1).
-1. **(LOW)** Show `_gradle_helpers.py::init_git_repo` signature (LOW-2).
-1. **(LOW)** List the review lenses or drop the count claim (LOW-3).
-1. **(LOW)** Inline the BLOCKER B1 lesson (LOW-4).
-1. **(LOW)** Move `make_git_backend` import to module level with `# noqa: F401` (LOW-5).
-1. **(LOW)** Update Task 2 commit message to say "reads and writes" (LOW-6).
-1. **(LOW)** Add `gradle-vanilla/` fixture to CHANGELOG entry (LOW-7).
-1. **(LOW)** Resolve the `async def` + `asyncio.run` ambiguity in Task 7 tests (LOW-8).
+01. **(HIGH)** Update Spec Revision Notes to record the `kotlin_list_hooks` deviation and the choice (HIGH-1).
+02. **(HIGH)** Drop the unused `probe = GradleTaskProbe(...)` line and misleading comment in `_build_hooks` (HIGH-2).
+03. **(HIGH)** Add explicit module-docstring requirements to `version_source.py`, `hooks.py`, `__init__.py`, and `lifecycle.py` (HIGH-3).
+04. **(HIGH)** Add a Self-Review section with spec coverage table (HIGH-4, HIGH-5).
+05. **(MEDIUM)** Create or stub an ADR for cross-adapter `_bump` semantics before Phase 4 lands (MEDIUM-1).
+06. **(MEDIUM)** Inline 3-5 lines per Phase 2 short-hand reference so the plan is self-contained (MEDIUM-2).
+07. **(MEDIUM)** Reproduce the full `git_backend.py` and `lifecycle.py` source in Task 4 and Task 5, or add an explicit pre-flight check that Phase 2 source exists (MEDIUM-3).
+08. **(MEDIUM)** Either use `gradle_properties_version_source` factory consistently OR drop it from `__all__` (MEDIUM-4).
+09. **(MEDIUM)** Replace Task 7 Step 4 hedging language with a definite statement (MEDIUM-5).
+10. **(MEDIUM)** Add a `write()` docstring documenting the `FileNotFoundError` vs `VersionWriteError` distinction (MEDIUM-6).
+11. **(LOW)** Expand Tech Stack acronyms (LOW-1).
+12. **(LOW)** Show `_gradle_helpers.py::init_git_repo` signature (LOW-2).
+13. **(LOW)** List the review lenses or drop the count claim (LOW-3).
+14. **(LOW)** Inline the BLOCKER B1 lesson (LOW-4).
+15. **(LOW)** Move `make_git_backend` import to module level with `# noqa: F401` (LOW-5).
+16. **(LOW)** Update Task 2 commit message to say "reads and writes" (LOW-6).
+17. **(LOW)** Add `gradle-vanilla/` fixture to CHANGELOG entry (LOW-7).
+18. **(LOW)** Resolve the `async def` + `asyncio.run` ambiguity in Task 7 tests (LOW-8).
 
 ______________________________________________________________________
 
@@ -1008,9 +1008,9 @@ The 5 HIGH-severity findings cluster around three categories: documentation comp
 The most actionable improvements are:
 
 1. **Add the missing Spec Revision Notes entry** for `kotlin_list_hooks` (HIGH-1). This is a 5-minute fix that prevents the deviation from silently propagating to Phase 4.
-1. **Drop the dead `probe = GradleTaskProbe(...)` line** (HIGH-2). A 2-line removal that prevents a Ruff F841 lint failure on day one.
-1. **Add a one-line "Module docstrings required" rule** to Global Constraints (HIGH-3). One line; eliminates ambiguity for all 5 new files.
-1. **Add a Self-Review section with spec coverage table** (HIGH-4, HIGH-5). 20-30 lines that catch the divergences a reviewer would catch.
+2. **Drop the dead `probe = GradleTaskProbe(...)` line** (HIGH-2). A 2-line removal that prevents a Ruff F841 lint failure on day one.
+3. **Add a one-line "Module docstrings required" rule** to Global Constraints (HIGH-3). One line; eliminates ambiguity for all 5 new files.
+4. **Add a Self-Review section with spec coverage table** (HIGH-4, HIGH-5). 20-30 lines that catch the divergences a reviewer would catch.
 
 The MEDIUM and LOW findings are polish and can be filed as Phase 3 ledger entries for a future polish pass.
 

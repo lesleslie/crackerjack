@@ -8,7 +8,7 @@ role: implementation
 topic: architecture
 date: 2026-11-13
 last_reviewed: 2026-11-13
-superseded_by: null
+superseded_by:
 blocks_on: []
 ---
 
@@ -54,27 +54,27 @@ carrying ~52,000 lines of code that only its own tests exercise.
 
 ### Failure Conditions (verifier-only)
 
-1. `crackerjack/fixers/` does not exist; `uv run python -c "import crackerjack.fixers"`
-   raises `ModuleNotFoundError`.
-2. `crackerjack/core/autofix_coordinator.py`, `crackerjack/core/preflight.py`,
-   `crackerjack/core/ai_fix_event_bus.py`, `crackerjack/services/ai_fix_progress.py`
-   do not exist. `crackerjack/models/fix_plan.py` **still exists** and is
-   still exported from `crackerjack.models`.
-3. `crackerjack/tools/ty_imports.py`, `ty_classify.py`, `ty_cleanup.py`,
-   `ty_narrow.py`, `ty_audit.py` do not exist.
-4. `crackerjack/agents/` does not exist; `crackerjack/models/agent_context.py`
-   does, and exports `AgentContext`; `crackerjack/models/protocols.py`
-   imports it from there.
-5. `crackerjack/tools/ty_ignore_syntax.py` and `crackerjack/tools/ty_ratchet.py`
-   still exist and are still registered as hook commands in
-   `crackerjack/config/tool_commands.py`.
-6. `crackerjack/core/ai_fix_sinks.py` still exists and still exports
-   `JsonlSink` and `runs_root`; `crackerjack/cli/replay.py` still imports them.
-7. `crackerjack/tools/jsonc.py` exists and exports the two strip functions.
-8. `git grep -n "autofix_coordinator\|AutofixCoordinator" -- crackerjack/ scripts/`
-   returns zero matches.
-9. `git grep -n "crackerjack.fixers\|from .fixers\|from ..fixers" -- crackerjack/ scripts/`
-   returns zero matches.
+01. `crackerjack/fixers/` does not exist; `uv run python -c "import crackerjack.fixers"`
+    raises `ModuleNotFoundError`.
+02. `crackerjack/core/autofix_coordinator.py`, `crackerjack/core/preflight.py`,
+    `crackerjack/core/ai_fix_event_bus.py`, `crackerjack/services/ai_fix_progress.py`
+    do not exist. `crackerjack/models/fix_plan.py` **still exists** and is
+    still exported from `crackerjack.models`.
+03. `crackerjack/tools/ty_imports.py`, `ty_classify.py`, `ty_cleanup.py`,
+    `ty_narrow.py`, `ty_audit.py` do not exist.
+04. `crackerjack/agents/` does not exist; `crackerjack/models/agent_context.py`
+    does, and exports `AgentContext`; `crackerjack/models/protocols.py`
+    imports it from there.
+05. `crackerjack/tools/ty_ignore_syntax.py` and `crackerjack/tools/ty_ratchet.py`
+    still exist and are still registered as hook commands in
+    `crackerjack/config/tool_commands.py`.
+06. `crackerjack/core/ai_fix_sinks.py` still exists and still exports
+    `JsonlSink` and `runs_root`; `crackerjack/cli/replay.py` still imports them.
+07. `crackerjack/tools/jsonc.py` exists and exports the two strip functions.
+08. `git grep -n "autofix_coordinator\|AutofixCoordinator" -- crackerjack/ scripts/`
+    returns zero matches.
+09. `git grep -n "crackerjack.fixers\|from .fixers\|from ..fixers" -- crackerjack/ scripts/`
+    returns zero matches.
 10. `scripts/validate_imports.py` no longer lists `crackerjack.core.autofix_coordinator`
     and still exits 0.
 11. `pytest tests/` collects and runs without an import error; the pass/fail
@@ -183,6 +183,7 @@ and deletes the whole `agents/` package, including the two stale `.backup`
 files and the README.
 
 ### The ty tools are not uniformly dead
+
 | Module | How it is invoked | Verdict |
 |---|---|---|
 | `ty_ignore_syntax.py` | `crackerjack/config/tool_commands.py:221` (hook) | **LIVE** |
@@ -277,6 +278,7 @@ with an unaccounted-for dependent is touched.
 ### Phase 1 — Rehome the live JSONC remnant
 
 **Files:**
+
 - `crackerjack/tools/jsonc.py` — **new**. `strip_jsonc_comments()` and
   `strip_jsonc_comments_from_failed_json_files()`, moved verbatim from
   `AutofixCoordinator._strip_jsonc_comments` /
@@ -292,6 +294,7 @@ with an unaccounted-for dependent is touched.
   already-valid JSON untouched).
 
 **Integration Contract:**
+
 - Triggered from: this plan (manual edit)
 - Returns to / updates: `crackerjack/tools/jsonc.py` (new),
   `crackerjack/core/phase_coordinator.py`
@@ -306,11 +309,13 @@ with an unaccounted-for dependent is touched.
 ### Phase 2 — Delete `crackerjack/fixers/` and the orphaned ty tools
 
 **Delete (production, 3,155 lines):**
+
 - `crackerjack/fixers/` — all 33 files and the directory
 - `crackerjack/tools/ty_audit.py`, `ty_classify.py`, `ty_cleanup.py`,
   `ty_imports.py`, `ty_narrow.py`
 
 **Move:**
+
 - `crackerjack/agents/base.py` → `crackerjack/models/agent_context.py` —
   the `AgentContext` dataclass only (the unused `FixResult` re-export is
   dropped). `crackerjack/models/protocols.py:16` imports it from the new
@@ -318,12 +323,14 @@ with an unaccounted-for dependent is touched.
   `README.md` and the two stale `.backup` files under `helpers/refactoring/`.
 
 **Delete (tests, 20,628 lines):**
+
 - `tests/fixers/` — all 21 files and the directory
 - `tests/tools/test_ty_audit.py`, `test_ty_classify.py`, `test_ty_cleanup.py`,
   `test_ty_imports.py`, `test_ty_narrow.py`
 - `tests/integration/test_tier_architecture_e2e.py`
 
 **Edit:**
+
 - `crackerjack/models/protocols.py` — line 16 becomes
   `from crackerjack.models.agent_context import AgentContext`
 - `crackerjack/config/tool_commands.py` — **no change** (`ty_ignore_syntax`
@@ -332,6 +339,7 @@ with an unaccounted-for dependent is touched.
   file imports it (verified during execution)
 
 **Integration Contract:**
+
 - Triggered from: Phase 1 complete
 - Returns to / updates: deletes `crackerjack/fixers/`, `tests/fixers/`,
   `crackerjack/agents/`, and the five orphaned ty tools + their tests; adds
@@ -351,6 +359,7 @@ with an unaccounted-for dependent is touched.
 ### Phase 3 — Delete `autofix_coordinator.py` and its exclusive support modules
 
 **Delete (production, 2,391 lines):**
+
 - `crackerjack/core/autofix_coordinator.py` (1,803)
 - `crackerjack/core/preflight.py` (389)
 - `crackerjack/services/ai_fix_progress.py` (145)
@@ -360,9 +369,11 @@ with an unaccounted-for dependent is touched.
 `crackerjack.models` (see Context).
 
 **Delete (test):**
+
 - `tests/test_autofix_coordinator.py` (159)
 
 **Edit:**
+
 - `crackerjack/core/phase_coordinator.py` — drop the `_lazy_autofix` lazy
   service (lines 181-186) and the `AutofixCoordinator` import (line 24)
 - `crackerjack/core/ai_fix_sinks.py` — drop `build_default_bus`,
@@ -372,6 +383,7 @@ with an unaccounted-for dependent is touched.
   from `CRITICAL_MODULES` (line 23)
 
 **Integration Contract:**
+
 - Triggered from: Phase 2 complete
 - Returns to / updates: deletes the five modules above; edits
   `crackerjack/core/phase_coordinator.py`, `crackerjack/core/ai_fix_sinks.py`,
@@ -387,6 +399,7 @@ with an unaccounted-for dependent is touched.
 ### Phase 4 — Docs and references
 
 **Files:**
+
 - `CHANGELOG.md` — add an `### Removed` entry under `[Unreleased]`
 - `docs/followups/triage/2026-07-10-output-validator-import-check.md` — the
   triage note names `ty_narrow.py`, `ty_classify.py`, and
@@ -402,6 +415,7 @@ with an unaccounted-for dependent is touched.
   superseded by this plan's Context section
 
 **Integration Contract:**
+
 - Triggered from: Phase 3 complete
 - Returns to / updates: `CHANGELOG.md`,
   `docs/followups/triage/2026-07-10-output-validator-import-check.md`
@@ -416,6 +430,7 @@ with an unaccounted-for dependent is touched.
 ### Phase 5 — Final validation
 
 **Commands:**
+
 - `pytest tests/` — must not introduce a new failure against the recorded
   baseline (20 pre-existing failures; see Risks)
 - `uv run python scripts/validate_imports.py` — exit 0
@@ -424,6 +439,7 @@ with an unaccounted-for dependent is touched.
   — zero matches
 
 **Integration Contract:**
+
 - Triggered from: Phase 4 complete
 - Returns to / updates: nothing — validation only
 - Demonstrable by: all four commands above pass
@@ -503,8 +519,7 @@ Executed in five phases, one commit each. Two findings turned up during
 execution that the plan did not anticipate:
 
 1. **`crackerjack/intelligence/` was left behind by the August 2026
-   AI-fix removal.** `docs/plans/2026-08-11-darnlink-replaces-check-local-
-   links.md` records that the package "was deleted in commit 907ab860",
+   AI-fix removal.** `docs/plans/2026-08-11-darnlink-replaces-check-local- links.md` records that the package "was deleted in commit 907ab860",
    but its README survived. It described an intelligence layer whose code
    was gone. Deleted.
 

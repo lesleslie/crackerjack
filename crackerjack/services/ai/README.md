@@ -190,10 +190,10 @@ class AIServiceBase:
 AI services analyze project context to provide relevant recommendations:
 
 1. **Project Detection** - Identifies project type, dependencies, and configuration
-1. **State Analysis** - Analyzes current quality metrics and trends
-1. **Pattern Recognition** - Recognizes code patterns and anti-patterns
-1. **Recommendation Generation** - Generates prioritized, actionable recommendations
-1. **Confidence Scoring** - Assigns confidence levels to recommendations
+2. **State Analysis** - Analyzes current quality metrics and trends
+3. **Pattern Recognition** - Recognizes code patterns and anti-patterns
+4. **Recommendation Generation** - Generates prioritized, actionable recommendations
+5. **Confidence Scoring** - Assigns confidence levels to recommendations
 
 ## Configuration
 
@@ -267,12 +267,12 @@ await limiter.acquire()
 ## Best Practices
 
 1. **Enable Selectively** - Enable AI features only where valuable
-1. **Monitor Usage** - Track API usage and costs
-1. **Cache Aggressively** - Leverage caching to minimize API calls
-1. **Validate Recommendations** - Always review AI recommendations before applying
-1. **Set Confidence Thresholds** - Filter low-confidence recommendations
-1. **Use Batch Operations** - Batch similar operations to reduce API calls
-1. **Handle Failures Gracefully** - Implement fallbacks when AI unavailable
+2. **Monitor Usage** - Track API usage and costs
+3. **Cache Aggressively** - Leverage caching to minimize API calls
+4. **Validate Recommendations** - Always review AI recommendations before applying
+5. **Set Confidence Thresholds** - Filter low-confidence recommendations
+6. **Use Batch Operations** - Batch similar operations to reduce API calls
+7. **Handle Failures Gracefully** - Implement fallbacks when AI unavailable
 
 ## Related
 

@@ -4,7 +4,7 @@ role: implementation
 topic: lifecycle
 date: 2026-07-17
 last_reviewed: 2026-07-17
-superseded_by: null
+superseded_by:
 blocks_on: []
 ---
 
@@ -36,9 +36,9 @@ Three findings from the recon agent that reframe the bug:
 
 1. **`OutputValidator` is internally consistent.** The `import_check` method, the `OutputValidator.validate` wrapper, and all three check functions (`syntax_check`, `import_check`, `ruff_sanity_check`) never touch `.__dict__` on anything. The `'NoneType' object has no attribute '__dict__'` error string is **the last line of stderr from a child Python process**, not from crackerjack's validator code.
 
-1. **No top-level `None.__dict__` exists in any reported file.** Recon grep'd `ty_imports.py`, `ty_narrow.py`, `ty_classify.py` for `__dict__|__class__|__bases__|__mro__|__subclasses__|__name__|__module__` at module scope. The only hits are inside function bodies. `ty_imports.py:220` is `file_path: Path,` — a parameter declaration inside `def apply_import_fix(`, not an executable statement.
+2. **No top-level `None.__dict__` exists in any reported file.** Recon grep'd `ty_imports.py`, `ty_narrow.py`, `ty_classify.py` for `__dict__|__class__|__bases__|__mro__|__subclasses__|__name__|__module__` at module scope. The only hits are inside function bodies. `ty_imports.py:220` is `file_path: Path,` — a parameter declaration inside `def apply_import_fix(`, not an executable statement.
 
-1. **`import_check` discards traceback frames** (`output_validator.py:95-96`):
+3. **`import_check` discards traceback frames** (`output_validator.py:95-96`):
 
    ```python
    err_lines = (proc.stderr or proc.stdout).strip().splitlines()
@@ -75,19 +75,19 @@ Out of scope (separate triage if/when prioritized):
 
 1. **Additive change to `ValidationResult`.** New field `details: list[str] | None = None` placed last. Existing constructions (`ValidationResult(passed=False, reason="x")`) continue to work without modification. Frozen dataclass + Optional default sidesteps linter warnings about mutable defaults.
 
-1. **Raw `splitlines()`, not stripped.** `details = stderr_text.splitlines()` preserves the leading whitespace on traceback frame lines (e.g., `  File "..."`), which gives the fixer visual indentation to parse. The `reason` field continues to use `.strip().splitlines()[-1]` for backward compat.
+2. **Raw `splitlines()`, not stripped.** `details = stderr_text.splitlines()` preserves the leading whitespace on traceback frame lines (e.g., `  File "..."`), which gives the fixer visual indentation to parse. The `reason` field continues to use `.strip().splitlines()[-1]` for backward compat.
 
-1. **`None` for empty stderr, not `[]`.** When the subprocess exits non-zero with no captured output, `details = None`. This is the unambiguous "no structured details" signal. Consumers default with `details or []`.
+3. **`None` for empty stderr, not `[]`.** When the subprocess exits non-zero with no captured output, `details = None`. This is the unambiguous "no structured details" signal. Consumers default with `details or []`.
 
-1. **Wiring channel: `PlanResult.error_details`.** The autofix failure path adds a new field next to the existing `remaining_issues: list[str]` on `PlanResult`. Mirrors an existing field. Type-safe, discoverable, no shared state (avoids race risk under `ParallelDispatcher`). Implementer subagent picks this exact shape during SDD execution; if the actual return type is structurally different from `PlanResult`, the subagent chooses Option A (`result.error_details`) instead.
+4. **Wiring channel: `PlanResult.error_details`.** The autofix failure path adds a new field next to the existing `remaining_issues: list[str]` on `PlanResult`. Mirrors an existing field. Type-safe, discoverable, no shared state (avoids race risk under `ParallelDispatcher`). Implementer subagent picks this exact shape during SDD execution; if the actual return type is structurally different from `PlanResult`, the subagent chooses Option A (`result.error_details`) instead.
 
-1. **Traceback cap at 30 lines.** A real traceback can be 100+ lines. Capping at 30 keeps the most recent frames (where the actual crash site is) and bounds the prompt budget. Trimming suffix `... (N more lines)` is informational only.
+5. **Traceback cap at 30 lines.** A real traceback can be 100+ lines. Capping at 30 keeps the most recent frames (where the actual crash site is) and bounds the prompt budget. Trimming suffix `... (N more lines)` is informational only.
 
-1. **`Reason:` always first in the prompt block.** Even when `details` is non-empty, the first line of the block is the same `reason` the fixer sees today. Backward-compatible signal at the top; rich signal below. Without this, an LLM might fall back to ignoring `details` and pattern-matching on `Reason:`.
+6. **`Reason:` always first in the prompt block.** Even when `details` is non-empty, the first line of the block is the same `reason` the fixer sees today. Backward-compatible signal at the top; rich signal below. Without this, an LLM might fall back to ignoring `details` and pattern-matching on `Reason:`.
 
-1. **Explicit instruction to the LLM:** "Diagnose that frame, not the abstract error string." Without it, the LLM may overfit to the exception text rather than reading the traceback. With it, the LLM is told where to look.
+7. **Explicit instruction to the LLM:** "Diagnose that frame, not the abstract error string." Without it, the LLM may overfit to the exception text rather than reading the traceback. With it, the LLM is told where to look.
 
-1. **No new public API.** `FixerCoordinator`'s new behavior is internal to the prompt-construction function. External callers don't see anything change.
+8. **No new public API.** `FixerCoordinator`'s new behavior is internal to the prompt-construction function. External callers don't see anything change.
 
 ## Implementation Outline
 

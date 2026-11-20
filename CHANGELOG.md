@@ -5,7 +5,7 @@ status: active
 role: canonical
 date: 2026-09-09
 last_reviewed: 2026-09-09
-superseded_by: null
+superseded_by:
 blocks_on: []
 topic: changelog
 ---
@@ -159,6 +159,7 @@ topic: changelog
   parseable issues"), and the adapter's budget is the hook's budget
   rather than its own. The adapter's structured issues are now used as
   that fallback instead of being discarded.
+
 - coverage: The release audit refused a present, readable coverage ratchet
   with "ratchet file could not be read". `update_coverage()` only wrote
   `.coverage-ratchet.json` on the *improved* path, so a repo whose
@@ -170,17 +171,20 @@ topic: changelog
   re-measured since the last write, on the *maintained* and *regression*
   paths as well. The write is skipped when no new measurement happened,
   so a run that does not touch the test suite leaves the file alone.
+
 - release-audit: A stale ratchet is now reported as stale, with the
   remedy, instead of reusing the "could not be read" message that a
   genuinely missing file gets. The two need different fixes, and
   reporting a present, readable file as unreadable sends the operator
   looking for a file that is right there.
+
 - tests: The release-audit fixture ratchet in mcp-common predates the
   staleness metadata, so it carries no `generated_at` and reads as
   stale — the floor is unusable and every coverage claim fails. The
   fixture now stamps a fresh timestamp into the copy it makes for the
   test, so it cannot go stale on a timer the way a checked-in date
   would.
+
 - coverage: `lower_baseline()` wrote only `current_minimum`, leaving
   `baseline` at the old value. The release audit reads
   `current_minimum` while the ratchet gate reads `baseline`, so the
@@ -188,23 +192,26 @@ topic: changelog
   accept a coverage that the gate still called a regression, and a
   ratchet lowered to unblock a publish could block it anyway. Both
   floor fields are now written together.
+
 - coverage: `_update_pyproject_requirement()` updated only the
   `--cov-fail-under` mirror site in `addopts`, leaving
   `[tool.coverage.report].fail_under` stale. pytest-cov and coverage.py
   are two enforcement points for the same floor, so the repo enforced
   whichever number nobody looked at. Both sites are now written
   together, through the same helper `mirror_to_pyproject()` uses.
+
 - coverage: The ratchet wrote `generated_at` and `last_updated` as
   naive local timestamps, but the release audit parses them and
   normalizes a naive value to UTC — so on a machine west of Greenwich
   the ratchet read as hours in the past, shortening the 30-day
   staleness window by the machine's UTC offset. The timestamps are now
   timezone-aware UTC.
+
 - test-manager: The legacy ratchet gate wrote `.coverage-ratchet.json`
   directly, carrying neither fresh staleness metadata nor both floor
   fields, so a ratchet written that way was data-stale the moment it
-  was written. The write now goes through `CoverageRatchetService.
-  raise_floor()`, so there is a single writer for the ratchet file.
+  was written. The write now goes through `CoverageRatchetService. raise_floor()`, so there is a single writer for the ratchet file.
+
 - tools: `ty_imports.resolve_symbol()` resolves an unknown symbol by
   importing every stdlib module in turn and looking for one that owns
   it. That sweep imported `antigravity`, whose import-time side effect
@@ -213,6 +220,7 @@ topic: changelog
   the developer's desktop. The sweep now skips the stdlib modules whose
   import has a visible side effect (`antigravity`, `this`), which is the
   same set mypy skips as `ANNOYING_STDLIB_MODULES`.
+
 - executors: JSON hook output was thrown away, so `check-jsonschema`'s
   findings never reached the report. When a hook failed, the executor
   handed the output to the generic line extractor, which cannot read
@@ -233,8 +241,7 @@ topic: changelog
   while `urllib` does not, so a triple-slash path still escaped the
   redirect check. 6.6.1 completes the detection and also fixes a
   regression in the 6.6.0 implementation.
-  `tornado` is transitive here (`creosote -> nbconvert -> nbclient ->
-  jupyter-client`), and `jupyter-client` declares it with no version
+  `tornado` is transitive here (`creosote -> nbconvert -> nbclient -> jupyter-client`), and `jupyter-client` declares it with no version
   specifier, so 6.6.1 is a drop-in bump with no resolver conflict. The
   fix landed inside the repo's 7-day `exclude-newer` cooldown, which
   would have kept the resolver on the vulnerable 6.6, so `tornado`
@@ -258,6 +265,7 @@ topic: changelog
   registry and are deliberately left in place: the
   `individual_hook_executor` still reads them, and that module is
   scheduled for removal by a separate plan.
+
 - adapters: `crackerjack.adapters.benchmark.adapter.py` and the rest of the
   `crackerjack/adapters/benchmark/` package — the pytest benchmark adapter.
   It had zero production importers: the adapter factory is keyed by a fixed
@@ -270,6 +278,7 @@ topic: changelog
   values into a `QAResult`. Removing it removes the collision. The
   package's only consumer was `tests/adapters/test_benchmark_adapter.py`,
   which goes with it.
+
 - adapters: `crackerjack.adapters.type.ty.py` — the stale first copy of the
   `ty` adapter. `crackerjack/adapters/type/ty_adapter.py` has carried the
   same `TySettings`/`TyAdapter` classes and the same `MODULE_ID` UUID
@@ -282,11 +291,13 @@ topic: changelog
   importing it would have registered a second adapter class claiming an
   identity the factory already knows. See
   `docs/decisions/2026-11-01-ty-adapter-module-name-shadows-ty-distribution.md`.
+
 - core: The dead AI-fix module cluster. The AI-fix stage was removed
   from production in the 2026-08-12 refactor (commit 907ab860), but its
   skeleton stayed behind. Reachability was computed with an AST sweep
   rather than grep — a module referenced only by other dead modules is
   dead.
+
   - Removed the whole `crackerjack/fixers/` package (33 files, 26,665
     lines) and its 21 test files. It had zero production importers; it
     was the extraction target for the deleted agent runtime and was
@@ -313,6 +324,7 @@ topic: changelog
     deleted AST-transform surgeon. `libcst` stays.
   - Net: 73 files and 52,338 lines.
   - Plan: `docs/plans/2026-11-13-remove-dead-ai-fix-module-cluster.md`.
+
 - adapters: The QA adapter layer, in full —
   `crackerjack.adapters._qa_adapter_base`,
   `crackerjack.adapters._tool_adapter_base`, `crackerjack.adapters.factory`,
@@ -390,13 +402,21 @@ topic: changelog
   empty list. Collapsing those two would turn a broken toolchain into
   a silent clean bill of health — "the outcome is unknown" and "the
   repo is clean" have to read differently.
+
 - Chore/gitignore-session-buddy -> main
+
 - Feat/pyscn-ruff-integration -> main
+
 - Feat/test-selection-run-state -> main
+
 - Feat/test-selection-run-state -> main
+
 - Feat/xdg-runtime-paths-and-observability -> main
+
 - Fix/gate-timeout-and-plan-index -> main
+
 - Fix/security-review-findings -> main
+
 - Fix/ty-rule-rename -> main
 
 ### Internal
@@ -473,8 +493,7 @@ topic: changelog
   The effect depends on the repository's Mypy configuration. Where
   `follow_imports` is left at the default, the scan drops from minutes to
   seconds — mcp-common from 294s to 55s, mahavishnu from minutes to
-  about 75s. Where a repository's config already sets `follow_imports =
-  "skip"` (this repo's mypy.ini does), the flag is effectively a no-op; it
+  about 75s. Where a repository's config already sets `follow_imports = "skip"` (this repo's mypy.ini does), the flag is effectively a no-op; it
   still makes the behaviour explicit rather than incidental, so a change
   to mypy.ini cannot silently slow the hook back down.
 
@@ -544,7 +563,7 @@ topic: changelog
 ### Internal
 
 - Crackerjack slice — finish residual ollama strings (plan 5)
-- deps: Bump fastmcp pin to >=4.0.0,<5 (operator correction 2026-10-18)
+- deps: Bump fastmcp pin to >=4.0.0,\<5 (operator correction 2026-10-18)
 
 ## [0.89.2] - 2026-10-16
 
@@ -578,7 +597,7 @@ topic: changelog
 - crackerjack: Drop dead topic-vocabulary SCHEMA_PATHS entry
 - crackerjack: Drop redundant topic-vocabulary-v1.md
 - crackerjack: Untrack docs/archive/ and docs/.archive/, merge legacy content on disk, evict test-artifacts
-- gitignore-template: Add .archive catchall + **/.archive/ for fleet-wide ignore
+- gitignore-template: Add .archive catchall + \*\*/.archive/ for fleet-wide ignore
 - Regenerate PLAN_INDEX.md via plan_index_sync (git-aware)
 
 ## [0.89.1] - 2026-10-15
@@ -722,7 +741,7 @@ topic: changelog
 - crackerjack: Add .claude/decisions README index
 - crackerjack: Bump mcp-common pin (Phase 1.2 dependency update)
 - crackerjack: SessionEnd hook wire-up + push governance cross-link
-- Remove tracked .gitignore.bak.* backups, drop unused anthropic stub + .superpowers stray, add .gitignore.bak.* to canonical template
+- Remove tracked .gitignore.bak.\* backups, drop unused anthropic stub + .superpowers stray, add .gitignore.bak.\* to canonical template
 
 ## [0.85.0] - 2026-10-03
 
@@ -928,7 +947,7 @@ topic: changelog
 - adapters.swift: SwiftAdapter wires VersionSource + hooks
 - adapters.swift: SwiftHooks aggregator
 - adapters.swift: SwiftLifecycle with constructor-injected methods
-- adapters.web: 4 CLI hooks with JSON parsing, _resolve() resolver, WebHookError on missing CLI
+- adapters.web: 4 CLI hooks with JSON parsing, \_resolve() resolver, WebHookError on missing CLI
 - adapters.web: Detection guard (package.json OR [tool.crackerjack.web] opt-in)
 - adapters.web: Tier 1 Jinja formatter (raw-source ops + lex validation; Tier 2 deferred)
 - adapters.web: WebAdapter wires detection + 4 hooks into Capabilities
@@ -959,14 +978,14 @@ topic: changelog
 - phase3: Task 5 trailing newlines
 - phase3: Task 6 trailing newlines
 - phase3: Task 7 trailing newlines
-- scripts: Update _frontmatter_apply_C1.py to current archive paths (Batch A from 2026-09-09 audit)
+- scripts: Update \_frontmatter_apply_C1.py to current archive paths (Batch A from 2026-09-09 audit)
 - services.pool_router: Drop stale 'vulture' mapping (replaced by skylos)
 - services.pool_router: Drop stale 'vulture' reason entry
 - swift+registry: Phase 2 Task 7 review fixes
 
 ### Documentation
 
-- adapters.web: Clarify _delimiters_match_source is one-directional (drop 'or vice versa' claim)
+- adapters.web: Clarify \_delimiters_match_source is one-directional (drop 'or vice versa' claim)
 - Add 3 missing CHANGELOG entries + archive reference CHANGELOG (Cat E from 2026-09-09 audit)
 - Add docs/assets/images/ + .scratch/ convention
 - agents: Flag python -m crackerjack as canonical in-repo invocation
@@ -1047,9 +1066,9 @@ topic: changelog
   When the CLI is unresolvable, `WebHookError` is raised with install
   instructions (Swift/Kotlin precedent — no Python fallbacks).
 - Jinja template formatter (`format_template`): Tier 1 only (trailing newline
-  + no trailing whitespace + preserve `{%-` / `-%}` markers). Uses
-  `Environment.lex()` as a syntax-validation gate; Tier 2 normalization
-  (`[tool.crackerjack.jinja] normalize = true`) is deferred.
+  - no trailing whitespace + preserve `{%-` / `-%}` markers). Uses
+    `Environment.lex()` as a syntax-validation gate; Tier 2 normalization
+    (`[tool.crackerjack.jinja] normalize = true`) is deferred.
 - 2 new MCP tools: `check_web_lint` (read-only, returns hook metadata) and
   `format_jinja_templates` (mutation, `dry_run=True` default, per-project
   delimiter config from `[tool.crackerjack.jinja]`, symlink guard).
@@ -1064,8 +1083,11 @@ topic: changelog
 ### Not yet shipped
 
 - Tier 2 normalization (`[tool.crackerjack.jinja] normalize = true`).
+
 - Shared `jinja-test-fixtures/` Bodai sibling package (spec line 420).
+
 - PyCharm parity script (spec Jinja F10).
+
 - CLI subcommand `crackerjack web jinja format` (CLI mirror per spec).
 
 - Multi-language extension foundation (Phase 1): new `crackerjack/adapters/`
@@ -1073,6 +1095,7 @@ topic: changelog
   `Capabilities` / `Hook` / `Lifecycle` types, and a `PythonAdapter`
   that wraps the existing Python lifecycle. No CLI behavior change;
   all 11K+ existing tests pass. Spec: dd9d9c05.
+
 - Swift language adapter (Phase 2): GitTagVersionSource reads version from
   `git describe --tags --match "v*"`; lifecycle bumps via git tags only
   (no Package.swift mutation in v1); hooks include swift test/build
@@ -1088,6 +1111,7 @@ topic: changelog
   `crackerjack.adapters.registry.discover_adapters()` that now
   instantiates class entry points before indexing them, so adapter
   detection returns instances (not classes) in Phase 2 as well.
+
 - Kotlin/Gradle language adapter (Phase 3): GradlePropertiesVersionSource reads version from
   gradle.properties (keys: pluginVersion, projectVersion, version) with fallback to
   build.gradle.kts scan and `./gradlew properties` as source of truth. Lifecycle bumps via
@@ -1169,7 +1193,7 @@ topic: changelog
 - Raise fixers/formatting.py to 100% (75 tests)
 - Raise integration/akosha_learning.py to 99% (37 tests)
 - Raise mcp/service_watchdog.py to 99% (74 tests)
-- Raise quality/anti_ai_flavor{,_adapter}.py to 100% (38 tests)
+- Raise quality/anti_ai_flavor{,\_adapter}.py to 100% (38 tests)
 - Raise services/anomaly_detector.py to 97% (41 tests)
 - Raise services/server_manager.py to 99% (37 tests)
 - Raise tools/ty_audit.py to 98% (45 tests)
@@ -1183,7 +1207,7 @@ topic: changelog
 - coverage: Defer docstring_extractor import via PEP 562 __getattr__
 - decorators: Pass eval_str=True to inspect.signature in validate_args
 - decorators: Suppress retry_on_error warning on final attempt
-- tool_commands: Filter _build_targets to existing directories
+- tool_commands: Filter \_build_targets to existing directories
 - Validate_docstring_quality returns violations list (CLI was broken)
 
 ### Documentation
@@ -1192,7 +1216,7 @@ topic: changelog
 
 ### Testing
 
-- Add coverage for _git_utils (12% → 97%)
+- Add coverage for \_git_utils (12% → 97%)
 - Add coverage for connection_pool (28% → 100%)
 - Add coverage for decorators/error_handling (0% to 99%)
 - Add coverage for decorators/patterns (15% → 98%)
@@ -1247,7 +1271,7 @@ topic: changelog
 - crackerjack: Tighten release-audit parsers to reduce false positives
 - deps: Post-review polish for osv-scanner swap
 - release-audit: Match dataclass fields with type annotations
-- types: Narrow recommendation to None-safe in _resolve_bump_type (ty)
+- types: Narrow recommendation to None-safe in \_resolve_bump_type (ty)
 
 ### Documentation
 
@@ -1338,13 +1362,13 @@ topic: changelog
 ### Fixed
 
 - git: Revert staged files to HEAD + kill child on timeout
-- workflow: Preserve error context + verbose detail dump in _PhaseTask
+- workflow: Preserve error context + verbose detail dump in \_PhaseTask
 
 ### Internal
 
 - crackerjack: Drop direct mcp SDK dependency (transitive only)
-- crackerjack: Drop mcp<2 upper bound (v1 imports migrated)
-- crackerjack: Pin mcp<2 to defer v2 SDK migration
+- crackerjack: Drop mcp\<2 upper bound (v1 imports migrated)
+- crackerjack: Pin mcp\<2 to defer v2 SDK migration
 
 ## [0.75.7] - 2026-08-24
 
@@ -1386,7 +1410,7 @@ topic: changelog
 - crackerjack: Handle list-typed error["type"] in semgrep PartialParsing events
 - crackerjack: Mirror unhashable-path fix on async semgrep parser
 - crackerjack: Remove stale 'will fail to import' NOTE from autofix_coordinator
-- crackerjack: Repair broken YAML frontmatter in commands/*.md
+- crackerjack: Repair broken YAML frontmatter in commands/\*.md
 - crackerjack: Resolve 2 pre-existing test failures in fixer return-value-contract
 - crackerjack: Rewrite type-ignore mentions in comments to satisfy ty
 - crackerjack: Round 1 reviewer fixes for W2a MCP tool-profile retrofit
@@ -1395,7 +1419,7 @@ topic: changelog
 - crackerjack: Sync version stamps (2026-08-19)
 - crackerjack: Test_models_focused + test_config + test_validate — 4 tests
 - crackerjack: Ty + refurb errors in test_creation/test_specialist/hook_executor
-- executors: Dispatch ParserFactory as default fallthrough in async _parse_hook_output
+- executors: Dispatch ParserFactory as default fallthrough in async \_parse_hook_output
 - executors: Populate structured issues in check-added-large-files parser path
 - executors: Use extract_issue_lines filter in async raw-fallback
 - executors: Use extract_issue_lines in sync path raw-fallback
@@ -1494,7 +1518,7 @@ topic: changelog
 - crackerjack: Collapse lychee Rust traceback frames into single issue
 - crackerjack: Create annotated git tag in create_git_tag_local
 - crackerjack: Remove stale 'will fail to import' NOTE from autofix_coordinator
-- crackerjack: Repair broken YAML frontmatter in commands/*.md
+- crackerjack: Repair broken YAML frontmatter in commands/\*.md
 - crackerjack: Resolve 2 pre-existing test failures in fixer return-value-contract
 - crackerjack: Rewrite type-ignore mentions in comments to satisfy ty
 - crackerjack: Round 1 reviewer fixes for W2a MCP tool-profile retrofit
@@ -1502,7 +1526,7 @@ topic: changelog
 - crackerjack: Sync version stamps (2026-08-19)
 - crackerjack: Test_models_focused + test_config + test_validate — 4 tests
 - crackerjack: Ty + refurb errors in test_creation/test_specialist/hook_executor
-- executors: Dispatch ParserFactory as default fallthrough in async _parse_hook_output
+- executors: Dispatch ParserFactory as default fallthrough in async \_parse_hook_output
 - executors: Populate structured issues in check-added-large-files parser path
 - executors: Use extract_issue_lines filter in async raw-fallback
 - executors: Use extract_issue_lines in sync path raw-fallback
@@ -1588,7 +1612,7 @@ topic: changelog
 ### Testing
 
 - Assert ZubanLSPConfig disabled-by-default (ty replaces zuban)
-- check_jsonschema: Align _process_file signature with production
+- check_jsonschema: Align \_process_file signature with production
 - cleanup: Align 5 final failures with current production
 - Fix stale FAST_HOOKS count assertion (17 -> 16)
 - misc: Align fixtures with production behavior
@@ -1633,8 +1657,8 @@ topic: changelog
 - ratchet: Handle array-form addopts in mirror_to_pyproject
 - ratchet: Preserve full float precision in update_coverage_requirement
 - ratchet: Restore correct ⚠️ emoji bytes in init CLI
-- skills: Align _post_json signature with call site; add regression test; trailing newlines
-- test-manager: Wire run_with_ratchet_check into _process_coverage_ratchet
+- skills: Align \_post_json signature with call site; add regression test; trailing newlines
+- test-manager: Wire run_with_ratchet_check into \_process_coverage_ratchet
 - Wire dirty-tree guard into production ruff path
 
 ### Documentation
@@ -1706,8 +1730,8 @@ topic: changelog
 - ratchet: Handle array-form addopts in mirror_to_pyproject
 - ratchet: Preserve full float precision in update_coverage_requirement
 - ratchet: Restore correct ⚠️ emoji bytes in init CLI
-- skills: Align _post_json signature with call site; add regression test; trailing newlines
-- test-manager: Wire run_with_ratchet_check into _process_coverage_ratchet
+- skills: Align \_post_json signature with call site; add regression test; trailing newlines
+- test-manager: Wire run_with_ratchet_check into \_process_coverage_ratchet
 - Wire dirty-tree guard into production ruff path
 
 ### Documentation
@@ -1788,7 +1812,7 @@ topic: changelog
 - crackerjack: Wire skill-coverage gate into FAST_HOOKS
 - git_history_embedder: Clear module thread-local on close
 - hooks: Make ty opt-in via enable_ty (mirror zuban pattern)
-- phase_coordinator: Add class-level _event_publisher default for bare __new__ tests
+- phase_coordinator: Add class-level \_event_publisher default for bare __new__ tests
 - plugins: Trust invariants + URL and python-spec defaults
 - production: Align string formats with expected test values
 - ratchet: Fix array double-comma + mirror to coverage.report block
@@ -1797,12 +1821,12 @@ topic: changelog
 - ratchet: Restore correct ⚠️ emoji bytes in init CLI
 - ruff: Drop --unsafe-fixes from default hook; close scaffold leak
 - security: Add semgrep and secrets-scanner to CRITICAL_HOOKS
-- skills: Align _post_json signature with call site; add regression test; trailing newlines
+- skills: Align \_post_json signature with call site; add regression test; trailing newlines
 - skills: Wire failure/timeout EMA + repair skill-tools kwarg
-- test-manager: Wire run_with_ratchet_check into _process_coverage_ratchet
+- test-manager: Wire run_with_ratchet_check into \_process_coverage_ratchet
 - test_manager: Wrap pkg_path in Path() before CoverageBadgeService
 - tests: Apply C-WIRE deferred minors (imports + caplog)
-- tests: Patch _execute_batch instead of _execute_single_plan
+- tests: Patch \_execute_batch instead of \_execute_single_plan
 - Update 5 tests to match current production state
 - websocket: Canonicalize subscription permission + honest test-status stub
 - Wire dirty-tree guard into production ruff path
@@ -1859,12 +1883,12 @@ topic: changelog
 - crackerjack: Add hook rejecting mypy/ruff-syntax # type: ignore comments
 - crackerjack: Validate frontmatter in doc cleanup phase
 - frontmatter: Bulk-convert 38 crackerjack docs to v1 schema
-- pypi_auth: _keyring_get_raw() — unmasked keyring subprocess helper
+- pypi_auth: \_keyring_get_raw() — unmasked keyring subprocess helper
 - pypi_auth: EnvVarAuthProvider and KeyringAuthProvider
 - pypi_auth: PyPIAuth opaque wrapper + Protocol + discover_auth()
 - pypi_auth: TrustedPublishingProvider for OIDC-based auth
 - Remove legacy slash_commands/; crackerjack plugin is canonical
-- tools: Add get_git_root helper to _git_utils with tests
+- tools: Add get_git_root helper to \_git_utils with tests
 
 ### Changed
 
@@ -1872,7 +1896,7 @@ topic: changelog
 - mdformat: Use Path.open() instead of open() (FURB117)
 - Move validate_document_frontmatter.py into crackerjack.services.frontmatter
 - publish: Use PyPIAuth abstraction; remove old auth pipeline
-- secure_path: Tighten _check_malicious_patterns to str
+- secure_path: Tighten \_check_malicious_patterns to str
 
 ### Fixed
 
@@ -1913,7 +1937,7 @@ topic: changelog
 - Bump version to 0.70.0
 - crackerjack: Bump version to 0.69.0 (frontmatter validator wiring)
 - crackerjack: Drop unused call-non-callable from KNOWN_TY_CODES; sync with decision file
-- pypi_auth: Add trailing newlines to _keyring + tests
+- pypi_auth: Add trailing newlines to \_keyring + tests
 - pypi_auth: Polish — drop no-op assertion, add trailing newlines
 - pypi_auth: Retain quality-run cleanup
 
@@ -1961,7 +1985,7 @@ ______________________________________________________________________
 
 - cli: Docs validate --repo-root with --allow-nonstandard flag
 - crackerjack: Add hook rejecting mypy/ruff-syntax # type: ignore comments
-- tools: Add get_git_root helper to _git_utils with tests
+- tools: Add get_git_root helper to \_git_utils with tests
 
 ### Changed
 
@@ -1989,7 +2013,7 @@ ______________________________________________________________________
 
 ### Changed
 
-- secure_path: Tighten _check_malicious_patterns to str
+- secure_path: Tighten \_check_malicious_patterns to str
 
 ### Internal
 
@@ -3829,15 +3853,15 @@ This release completes the migration from legacy (Architecture Component Base) t
 **For Users:**
 
 1. Update MCP client configurations to use `crackerjack start`
-1. Remove any legacy-specific environment variables
-1. Review adapter initialization if you have custom integrations
+2. Remove any legacy-specific environment variables
+3. Review adapter initialization if you have custom integrations
 
 **For Developers:**
 
 1. Adapters now use constructor injection instead of DI
-1. Use static UUIDs from `ADAPTER_UUID_REGISTRY.md` (never change)
-1. Import from `models/protocols.py` for protocol-based dependencies
-1. Replace `MODULE_STATUS` strings with `AdapterStatus` enum
+2. Use static UUIDs from `ADAPTER_UUID_REGISTRY.md` (never change)
+3. Import from `models/protocols.py` for protocol-based dependencies
+4. Replace `MODULE_STATUS` strings with `AdapterStatus` enum
 
 See `ONEIRIC_MIGRATION_STATUS.md` for complete migration details.
 
@@ -6265,7 +6289,7 @@ ______________________________________________________________________
 
 - **CRITICAL:** Fixed `--ai-fix` flag completely broken due to two separate bugs:
   1. Parameter passing bug in `_setup_debug_and_verbose_flags()` - was hardcoding `ai_fix=False` instead of preserving user's flag value
-  1. Workflow routing bug in three orchestrator functions - weren't checking `options.ai_agent` before routing to AI workflow
+  2. Workflow routing bug in three orchestrator functions - weren't checking `options.ai_agent` before routing to AI workflow
 - Added comprehensive unit tests for parameter passing fix (4 tests, all passing)
 - Verified complete data flow: `--ai-fix` → parameter preservation → `options.ai_agent` property → workflow routing
 - All three workflow paths now correctly delegate to AI agent when `--ai-fix` is enabled:
@@ -7096,10 +7120,10 @@ For detailed commit history, use: `git log --oneline --since="2025-08-01"`
 When updating this changelog:
 
 1. Follow [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) format
-1. Group changes under Added, Changed, Deprecated, Removed, Fixed, Security
-1. Include version numbers and dates for all releases
-1. Link to relevant issues and pull requests when applicable
-1. Focus on user-facing changes rather than internal refactoring details
+2. Group changes under Added, Changed, Deprecated, Removed, Fixed, Security
+3. Include version numbers and dates for all releases
+4. Link to relevant issues and pull requests when applicable
+5. Focus on user-facing changes rather than internal refactoring details
 
 ## Version Links
 
