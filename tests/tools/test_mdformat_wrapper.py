@@ -73,6 +73,7 @@ def test_mdformat_already_formatted(monkeypatch):
             # Simulate files already formatted (check passes)
             mock_check = MagicMock()
             mock_check.returncode = 0
+            mock_check.stderr = ""
             mock_run.return_value = mock_check
 
             result = main()
@@ -161,6 +162,7 @@ def test_mdformat_with_custom_args(monkeypatch):
         with patch('subprocess.run') as mock_run:
             mock_result = MagicMock()
             mock_result.returncode = 0
+            mock_result.stderr = ""
             mock_run.return_value = mock_result
 
             # Pass custom arguments

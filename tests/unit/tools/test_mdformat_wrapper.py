@@ -4,9 +4,11 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 from crackerjack.tools.mdformat_wrapper import (
+    _bom_frontmatter_documents,
     _build_mdformat_cmd,
     _frontmatter_documents,
     _frontmatter_extension_available,
+    _frontmatter_extension_count,
     _resolve_mdformat_bin,
     main,
     should_skip_file,
@@ -78,10 +80,11 @@ class TestShouldSkipFile:
         The skip existed because mdformat 1.0.0 core destroys YAML
         frontmatter, so a document whose first line is ``---`` was
         excluded rather than mangled. The ``mdformat-frontmatter``
-        plugin preserves the block byte-for-byte, so the exclusion is
-        no longer needed and lifting it is the point of the change: a
-        plan whose frontmatter stays intact still parses, and still
-        reaches the plan index.
+        plugin re-serialises the block through a ruamel round-trip
+        that preserves quotes, comments and key order, so the parsed
+        values survive and the exclusion is no longer needed. Lifting
+        it is the point of the change: a plan whose frontmatter still
+        parses still reaches the plan index.
 
         The rule keys off the file's FIRST LINE, so the file has to
         exist for it to apply.
@@ -105,6 +108,34 @@ class TestShouldSkipFile:
         underline = tmp_path / "doc.md"
         underline.write_text("___\n\n# Body\n")
         assert should_skip_file(underline)
+
+    def test_underscore_rule_needs_three_characters(self, tmp_path):
+        """Two underscores is not a rule; three is.
+
+        The clause is ``len(stripped) >= 3``, so a run of two
+        underscores falls through and the document is formatted.
+        """
+        two = tmp_path / "two.md"
+        two.write_text("__\n\n# Body\n")
+        assert not should_skip_file(two)
+
+    def test_bom_frontmatter_document_is_skipped(self, tmp_path):
+        """A BOM'd frontmatter document is excluded, not mangled.
+
+        The plugin's own front-matter rule is BOM-blind, so formatting
+        such a document would flatten its frontmatter into a heading and
+        drop the document out of the plan index -- the exact failure the
+        guard exists to prevent. A byte-order mark is also not
+        whitespace, so ``"﻿".strip()`` keeps it and the fence
+        test would never match.
+        """
+        bom_plan = tmp_path / "bomplan.md"
+        bom_plan.write_text("﻿---\nstatus: draft\n---\n\n# Body\n", encoding="utf-8")
+        assert should_skip_file(bom_plan)
+
+        plain = tmp_path / "plain.md"
+        plain.write_text("---\nstatus: draft\n---\n\n# Body\n", encoding="utf-8")
+        assert not should_skip_file(plain)
 
 
 class TestFrontmatterSafety:
@@ -138,19 +169,37 @@ class TestFrontmatterSafety:
         """
         cmd = _build_mdformat_cmd([Path("README.md")], None)
         assert "--number" in cmd
+        # Position matters. mdformat's paths are a ``nargs="*"``
+        # positional, so a flag after the file list would be read as a
+        # path rather than as a flag.
+        assert cmd.index("--number") < cmd.index("README.md")
         assert "--extensions" not in cmd
         assert "--no-codeformatters" in cmd
 
-    def test_extension_available_when_probe_reports_true(self):
-        """A probe printing True means the plugin is registered."""
+    def test_extension_available_when_probe_reports_one(self):
+        """A probe printing 1 means exactly one front-matter extension."""
         with patch("crackerjack.tools.mdformat_wrapper.subprocess.run") as mock_run:
-            mock_run.return_value = Mock(stdout="True\n", stderr="", returncode=0)
+            mock_run.return_value = Mock(stdout="1\n", stderr="", returncode=0)
             assert _frontmatter_extension_available("/tmp/x/mdformat") is True
 
-    def test_extension_unavailable_when_probe_reports_false(self):
-        """A probe printing False means the plugin is missing."""
+    def test_extension_unavailable_when_probe_reports_zero(self):
+        """A probe printing 0 means the plugin is missing."""
         with patch("crackerjack.tools.mdformat_wrapper.subprocess.run") as mock_run:
-            mock_run.return_value = Mock(stdout="False\n", stderr="", returncode=0)
+            mock_run.return_value = Mock(stdout="0\n", stderr="", returncode=0)
+            assert _frontmatter_extension_available("/tmp/x/mdformat") is False
+
+    def test_extension_unavailable_when_two_are_installed(self):
+        """Two front-matter extensions is not "available" either.
+
+        ``mdformat-frontmatter`` registers as ``frontmatter`` and
+        ``mdformat-front-matters`` as ``front_matters``, so pip lets
+        both be installed side by side. mdformat then logs a plugin
+        conflict and silently keeps one renderer -- and the two packages
+        behave oppositely on the same input. Exactly one is the only
+        safe state.
+        """
+        with patch("crackerjack.tools.mdformat_wrapper.subprocess.run") as mock_run:
+            mock_run.return_value = Mock(stdout="2\n", stderr="", returncode=0)
             assert _frontmatter_extension_available("/tmp/x/mdformat") is False
 
     def test_extension_unavailable_when_probe_crashes(self):
@@ -160,6 +209,31 @@ class TestFrontmatterSafety:
             side_effect=OSError("boom"),
         ):
             assert _frontmatter_extension_available("/tmp/x/mdformat") is False
+
+    def test_extension_count_is_none_when_the_probe_crashes(self):
+        """A probe that cannot run reports no count at all."""
+        with patch(
+            "crackerjack.tools.mdformat_wrapper.subprocess.run",
+            side_effect=OSError("boom"),
+        ):
+            assert _frontmatter_extension_count("/tmp/x/mdformat") is None
+
+    def test_extension_count_is_none_when_the_probe_prints_nonsense(self):
+        """Unparseable probe output is no count at all."""
+        with patch("crackerjack.tools.mdformat_wrapper.subprocess.run") as mock_run:
+            mock_run.return_value = Mock(
+                stdout="not a number\n", stderr="", returncode=0
+            )
+            assert _frontmatter_extension_count("/tmp/x/mdformat") is None
+
+    def test_bom_frontmatter_documents_detects_the_bom(self, tmp_path):
+        """Only a BOM'd frontmatter document is detected."""
+        bom_plan = tmp_path / "bomplan.md"
+        bom_plan.write_text("﻿---\nstatus: draft\n---\n\n# Body\n", encoding="utf-8")
+        plain = tmp_path / "plain.md"
+        plain.write_text("---\nstatus: draft\n---\n\n# Body\n", encoding="utf-8")
+
+        assert _bom_frontmatter_documents([bom_plan, plain]) == [bom_plan]
 
     def test_frontmatter_documents_detects_the_fence(self, tmp_path):
         """Only files whose FIRST line opens a YAML block are detected."""
@@ -195,7 +269,7 @@ class TestFrontmatterSafety:
         target.write_text("---\nstatus: draft\n---\n\n# Body\n")
         mock_get_files.return_value = [target]
 
-        mock_run.return_value = Mock(stdout="False\n", stderr="", returncode=0)
+        mock_run.return_value = Mock(stdout="0\n", stderr="", returncode=0)
 
         result = main()
         captured = capsys.readouterr()
@@ -215,9 +289,15 @@ class TestFrontmatterSafety:
         """A tracked frontmatter document is safe when the plugin exists."""
         target = tmp_path / "plan.md"
         target.write_text("---\nstatus: draft\n---\n\n# Body\n")
-        mock_get_files.return_value = [target]
+        # The two patterns are disjoint in production, so the mock
+        # returns the document for one and nothing for the other. A
+        # single ``return_value`` would put every document in the list
+        # twice, which production never does.
+        mock_get_files.side_effect = lambda pattern: (
+            [target] if pattern == "*.md" else []
+        )
 
-        mock_probe = Mock(stdout="True\n", stderr="", returncode=0)
+        mock_probe = Mock(stdout="1\n", stderr="", returncode=0)
         mock_check = Mock(returncode=0, stdout="", stderr="")
         mock_run.side_effect = [mock_probe, mock_check]
 
@@ -226,7 +306,7 @@ class TestFrontmatterSafety:
         # extension probe, not the formatter's --check
         probe_call = mock_run.call_args_list[0].args[0]
         assert "-c" in probe_call
-        assert any("frontmatter" in str(part) for part in probe_call)
+        assert any("mdformat.parser_extension" in str(part) for part in probe_call)
 
         # The frontmatter document reached mdformat. Before the skip was
         # lifted, the "nothing to do" short-circuit returned before any
@@ -239,6 +319,143 @@ class TestFrontmatterSafety:
         formatter_call = mock_run.call_args_list[1].args[0]
         assert "--number" in formatter_call
         assert str(target) in formatter_call
+
+    @patch("crackerjack.tools.mdformat_wrapper.get_git_tracked_files")
+    @patch("crackerjack.tools.mdformat_wrapper.subprocess.run")
+    def test_main_fails_loud_when_two_frontmatter_extensions_are_installed(
+        self,
+        mock_run,
+        mock_get_files,
+        tmp_path,
+        capsys,
+    ):
+        """Two front-matter extensions must stop the run.
+
+        The two packages register under different entry-point names, so
+        pip installs both without complaint. mdformat then logs a plugin
+        conflict and keeps one renderer, and the packages behave
+        oppositely on the same input -- one preserves quotes, the other
+        strips them, which turns a quoted "yes" into a YAML 1.1 boolean.
+        That is a silent semantic change to frontmatter, so the guard
+        has to fail loudly rather than let it happen.
+        """
+        target = tmp_path / "plan.md"
+        target.write_text("---\nstatus: draft\n---\n\n# Body\n")
+        mock_get_files.return_value = [target]
+
+        mock_run.return_value = Mock(stdout="2\n", stderr="", returncode=0)
+
+        result = main()
+        captured = capsys.readouterr()
+
+        assert result == 1
+        assert "2" in captured.err
+        assert "frontmatter" in captured.err
+
+    @patch("crackerjack.tools.mdformat_wrapper.get_git_tracked_files")
+    @patch("crackerjack.tools.mdformat_wrapper.subprocess.run")
+    def test_main_surfaces_mdformat_stderr_on_the_clean_path(
+        self,
+        mock_run,
+        mock_get_files,
+        tmp_path,
+        capsys,
+    ):
+        """mdformat's own warnings must not be swallowed.
+
+        The wrapper used to discard ``check_result.stderr`` entirely
+        when the check passed, so a front-matter block mdformat could
+        not parse -- or a plugin conflict -- was invisible. The
+        diagnostic is prefixed with the success marker so it reaches the
+        operator without being counted as an issue by the regex parser
+        or the line-counting safety net.
+        """
+        target = tmp_path / "plan.md"
+        target.write_text("---\nstatus: draft\n---\n\n# Body\n")
+        mock_get_files.return_value = [target]
+
+        mock_probe = Mock(stdout="1\n", stderr="", returncode=0)
+        mock_check = Mock(
+            returncode=0,
+            stdout="",
+            stderr="Warning: Invalid YAML in a front matter block: boom.\n",
+        )
+        mock_run.side_effect = [mock_probe, mock_check]
+
+        assert main() == 0
+        captured = capsys.readouterr()
+
+        assert "Invalid YAML" in captured.err
+        assert captured.err.strip().startswith("✓")
+
+        from crackerjack.parsers.factory import ParserFactory
+        from crackerjack.utils.issue_detection import extract_issue_lines
+
+        assert ParserFactory().parse_with_validation("mdformat", captured.err) == []
+        assert extract_issue_lines(captured.err, tool_name="mdformat") == []
+
+    @patch("crackerjack.tools.mdformat_wrapper.get_git_tracked_files")
+    @patch("crackerjack.tools.mdformat_wrapper.subprocess.run")
+    def test_main_reports_bom_frontmatter_documents(
+        self,
+        mock_run,
+        mock_get_files,
+        tmp_path,
+        capsys,
+    ):
+        """A BOM'd frontmatter document is reported, not silently skipped.
+
+        It is excluded from formatting because the plugin's front-matter
+        rule is BOM-blind, and excluded documents are the ones nobody
+        notices. Saying so is the difference between a visible
+        condition and a plan that quietly stops being formatted.
+        """
+        bom_plan = tmp_path / "bomplan.md"
+        bom_plan.write_text("﻿---\nstatus: draft\n---\n\n# Body\n", encoding="utf-8")
+        mock_get_files.return_value = [bom_plan]
+
+        mock_probe = Mock(stdout="1\n", stderr="", returncode=0)
+        mock_check = Mock(returncode=0, stdout="", stderr="")
+        mock_run.side_effect = [mock_probe, mock_check]
+
+        assert main() == 0
+        captured = capsys.readouterr()
+
+        assert "byte-order mark" in captured.err
+        assert "bomplan.md" in captured.err
+
+    @patch("crackerjack.tools.mdformat_wrapper.get_git_tracked_files")
+    @patch("crackerjack.tools.mdformat_wrapper.subprocess.run")
+    def test_format_invocation_carries_number(
+        self,
+        mock_run,
+        mock_get_files,
+        tmp_path,
+    ):
+        """The FORMAT command carries --number, not only the check.
+
+        The check command is what most assertions look at, so a
+        regression that dropped the flag from the format path would
+        pass every other test in this file.
+        """
+        target = tmp_path / "plan.md"
+        target.write_text("---\nstatus: draft\n---\n\n# Body\n")
+        mock_get_files.side_effect = lambda pattern: (
+            [target] if pattern == "*.md" else []
+        )
+
+        mock_probe = Mock(stdout="1\n", stderr="", returncode=0)
+        mock_check = Mock(returncode=1, stdout="", stderr="")
+        mock_format = Mock(returncode=0, stdout="", stderr="")
+        mock_diff = Mock(returncode=0, stdout="plan.md\n", stderr="")
+        mock_run.side_effect = [mock_probe, mock_check, mock_format, mock_diff]
+
+        assert main() == 1
+
+        format_cmd = mock_run.call_args_list[2].args[0]
+        assert "--number" in format_cmd
+        assert "--check" not in format_cmd
+        assert format_cmd.index("--number") < format_cmd.index(str(target))
 
     @patch("crackerjack.tools.mdformat_wrapper.get_git_tracked_files")
     @patch("crackerjack.tools.mdformat_wrapper.subprocess.run")
@@ -255,6 +472,7 @@ class TestFrontmatterSafety:
 
         mock_check = Mock()
         mock_check.returncode = 0
+        mock_check.stderr = ""
         mock_run.return_value = mock_check
 
         assert main() == 0
@@ -272,6 +490,7 @@ class TestMdformatMain:
         # Mock successful check (already formatted)
         mock_check = Mock()
         mock_check.returncode = 0
+        mock_check.stderr = ""
         mock_run.return_value = mock_check
 
         result = main()
@@ -324,6 +543,7 @@ class TestMdformatMain:
 
         mock_check = Mock()
         mock_check.returncode = 0
+        mock_check.stderr = ""
         mock_run.return_value = mock_check
 
         with patch.object(Path, "exists", return_value=True):
@@ -352,6 +572,7 @@ class TestMdformatMain:
 
         mock_check = Mock()
         mock_check.returncode = 0
+        mock_check.stderr = ""
         mock_run.return_value = mock_check
 
         result = main(["--wrap", "80"])
@@ -371,6 +592,7 @@ class TestMdformatMain:
 
         mock_check = Mock()
         mock_check.returncode = 0
+        mock_check.stderr = ""
         mock_run.return_value = mock_check
 
         result = main()
