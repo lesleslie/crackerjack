@@ -68,9 +68,16 @@ Each condition is mechanically checkable.
    (§2.3) reports `semantic differences: 0` and `errors: 0`.
 4. For each of the six repositories: `git diff --name-only` contains no
    file with an extension other than `.md` or `.markdown`.
-5. For each of the six repositories: `git diff -U0` contains no hunk
-   whose only change is an ordered-list marker (source numbering is
-   preserved, so `2.` never becomes `1.`).
+5. For each of the six repositories: no ordered-list marker is
+   *decreased* by the diff. Every marker that changes increases or
+   stays the same. This is what "source numbering is preserved" has to
+   mean in practice, and it is the property that protects a reference
+   like "item 4": no marker ever decreases, so `2.` never becomes `1.`
+   and the item a reader was pointed at is still the item they find.
+   (A marker-only hunk is not a failure. `--number` renders consecutive
+   numbering, so a list whose markers were collapsed to `1. 1. 1.` by an
+   earlier default-mode pass is *repaired* to `1. 2. 3.` — see §2.4 and
+   §2.7.)
 6. For each of the six repositories: the plan-index audit reports zero
    frontmatter'd files missing from `PLAN_INDEX.md`.
 7. `pytest tests/unit/tools/test_mdformat_wrapper.py` passes.
@@ -179,15 +186,32 @@ The second item's number is now a lie, and any prose referring to
 "item 4" refers to nothing. This is the damage recorded in the fleet's
 own gotcha memory for the mdformat hook.
 
-mdformat's `--number` flag renders consecutive numbering instead, and
-it preserves the source numbers exactly, including a list that
-deliberately continues at 3:
+mdformat's `--number` flag renders consecutive numbering instead. It
+keeps the FIRST marker of each list and numbers the rest consecutively
+from it, so a well-formed list is unchanged, a list that continues a
+count from a sibling list is unchanged, and a list that an earlier
+default-mode pass collapsed is repaired:
 
 | source | default | `--number` |
 |---|---|---|
 | `1. 2. 3.` | `1. 1. 1.` | `1. 2. 3.` |
 | `3. 4.` (continuing) | `3. 1.` | `3. 4.` |
+| `1. 1. 1.` (collapsed by an earlier pass) | `1. 1. 1.` | `1. 2. 3.` |
 | nested `1. / 1. 2. / 1.` | `1. / 1. 1. / 1.` | `1. / 1. 2. / 2.` |
+
+Two consequences the fleet's own documents decide for us:
+
+- **A collapsed list is repaired, not preserved.** 5545 of the fleet's
+  7897 ordered lists carry the `1. 1. 1.` signature of an earlier
+  default-mode format pass. `--number` turns them back into
+  consecutive numbering. That is a content change to
+  already-committed documents, in the direction of correctness, and it
+  is the larger part of the churn.
+- **A list of ten or more items is rendered zero-padded.** `1. 2. …
+  13.` becomes `01. 02. … 13.`. 98 lists in the fleet are long enough
+  to be affected. CommonMark renders the list as `1.` through `13.`
+  regardless — the leading zero is a source-text artefact, not a
+  rendered one.
 
 **`--number` is therefore a prerequisite for the lift, not an
 afterthought.** Lifting the skip first would collapse the numbering in
@@ -245,6 +269,40 @@ why Phase 1's diff is larger than "the files the skip was hiding".
 **The default column is not zero either.** 648 live files are not
 mdformat-clean today, because the frontmatter exclusion hides most of
 them from the gate entirely.
+
+### 2.7 What the fleet's ordered lists actually look like
+
+`--number` renumbers a list consecutively from its first marker, so
+whether that is a repair or a loss depends entirely on the shape of the
+list it finds. Measured over every tracked markdown file in all six
+repositories, classifying each ordered list by what `--number` does to
+it:
+
+| shape | example | what `--number` does | count (fleet) |
+|---|---|---|---|
+| **collapsed** | `1. 1. 1.` | repairs to `1. 2. 3.` | 5545 |
+| **signature** | `4. 1. 1.` | repairs to `4. 5. 6.` | 53 |
+| **consecutive** | `1. 2. 3.` | unchanged | 2296 |
+| **genuine hole** | `1. 2. 4. 5.` | closes the hole: `1. 2. 3. 4.` | 3 |
+
+The first two shapes are damage from the earlier default-mode format
+pass, and `--number` undoes it. The **signature** shape is the one that
+looks alarming and is not: the first item keeps its number, so a
+reference to "item 4" still lands on the same item.
+
+The genuine holes are the only lists where `--number` moves a number a
+reader might have been given. There are three, and one is a false
+positive:
+
+| repository | document | markers | verdict |
+|---|---|---|---|
+| crackerjack | `docs/plans/2026-09-07-bodai-shared-gitignore-snippet.md` | `1. 2. 4. 5. 6.` | item 3 was deleted at some point; no prose in the document names a list item by number |
+| mahavishnu | `docs/decisions/2026-10-15-unified-event-bus-wrapper.md` | `1. 3. 4. 5.` | item 2 was deleted; the only numbered references in the document are to "Phase 6.4", not to list items |
+| oneiric | `docs/implementation/PACKAGE7_SUMMARY.md` | `1. 5.` | **false positive** — a numbered sequence written inline inside a fenced code block, which mdformat does not touch |
+
+So two documents in the fleet have a hole in a list, and neither has
+prose that names a list item by number. Closing both holes is a fix,
+not a loss.
 
 ## 3. Phases
 
@@ -312,7 +370,9 @@ them from the gate entirely.
    `2.` where the file said `2.` is a fix. Restoring it where the file
    deliberately said `1.` because a previous format pass collapsed it
    is a change to history. Phase 1's diff must be read for this, not
-   skimmed.
+   skimmed. Measured: the collapsed shape dominates the fleet and is
+   unambiguously repair (§2.7), and exactly two documents fleet-wide
+   have a genuine hole, neither of which names a list item by number.
 
 #### Estimated scope
 
@@ -447,3 +507,74 @@ _(To be filled in as the phases execute. Each phase records the commit SHA,
 the baseline captured before it, the deltas it produced, and any decision
 taken that the plan left open. The closing entry names the findings that
 turned up during execution that the plan did not anticipate.)_
+
+### Phase 1 — the wrapper change
+
+**Commit:** `e9448967` — `fix(format): format frontmatter documents and
+preserve list numbering`
+**Baseline:** `c8bd7d4c`
+**Changed:** `crackerjack/tools/mdformat_wrapper.py`,
+`crackerjack/services/doc_categorizer.py` (docstring only),
+`tests/unit/tools/test_mdformat_wrapper.py`,
+`tests/tools/test_mdformat_wrapper.py` (docstring only).
+
+**What was measured, before the change was made:**
+
+- `--number` exists in mdformat 1.0.0 and is a top-level CLI flag, not
+  an extension. Verified against the binary in this repo's venv.
+- Its behaviour, on a scratch fixture in both modes: `3. 4.` becomes
+  `3. 1.` under the default and stays `3. 4.` under `--number`; a
+  nested `1. 2.` becomes `1. 1.` under the default and stays under
+  `--number`.
+- The safety property, over the 307 tracked frontmatter'd documents in
+  this repo, using the wrapper's exact command line on scratch copies:
+  **zero** semantic differences in the parsed YAML, **zero**
+  frontmatter blocks vanished, **zero** YAML parse errors caused by the
+  change, and every one of the **277** text-only differences is the
+  identical rewrite `superseded_by: null` → `superseded_by:`, which
+  parses to the same `None`.
+- The shape of every ordered list in all six repositories, classified by
+  what `--number` does to it — §2.7.
+
+**What the plan did not anticipate:**
+
+1. **Failure Condition 5 was unsatisfiable as written.** It required
+   "no hunk whose only change is an ordered-list marker", but
+   `--number` renders consecutive numbering, so it *repairs* the 5545
+   collapsed lists fleet-wide and those repairs are marker-only hunks.
+   The condition now says what its own parenthetical meant: no marker
+   is decreased.
+2. **`--number` zero-pads lists of ten or more items** (`1.` → `01.`).
+   98 lists in the fleet are affected. CommonMark renders the list as
+   `1.` through `13.` either way, so the leading zero is a source-text
+   artefact and not a rendered one.
+3. **The `[N, 1, 1, …]` shape looks like a hazard and is not.** The
+   first marker is kept and the rest are numbered consecutively from it,
+   so a reference to "item N" still lands on the same item. 53 lists
+   fleet-wide.
+4. **Exactly two documents in the fleet have a genuine hole in a list**,
+   and neither names a list item by number in its prose. A third
+   candidate is a false positive — a numbered sequence written inline
+   inside a fenced code block, which mdformat does not touch. §2.7.
+5. **One tracked document has invalid YAML frontmatter already**:
+   `crackerjack/mcp/agents/crackerjack-specialist.md`, whose unquoted
+   `description` contains a bare colon, so PyYAML rejects it. This
+   change neither causes nor worsens it — the block is byte-identical
+   before and after formatting, and mdformat preserves it and warns.
+   Left alone as out of scope; it is an authoring problem, not a
+   formatter problem.
+6. **`doc_categorizer` documented itself as mirroring this module's
+   `---` rule**, and that claim became false when the skip was lifted.
+   The docstring is corrected; the behaviour is deliberately unchanged.
+
+**A note the plan does not need but the record should carry:** this plan
+file is itself one of the damaged documents. Its own §2.4 example list
+is `[3, 1]` in the source — the damage signature of the earlier
+default-mode pass — and `--number` restores it to `[3, 4]`. The plan's
+central hazard, demonstrated on the plan itself.
+
+**Phase 2 is not executed.** The wrapper now formats crackerjack's own
+306 frontmatter'd documents on its next run; that churn, plus the
+regenerated plan index, is Phase 2's crackerjack commit, and it is
+deliberately not folded into Phase 1's commit.
+
