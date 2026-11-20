@@ -280,6 +280,17 @@ why Phase 1's diff is larger than "the files the skip was hiding".
 mdformat-clean today, because the frontmatter exclusion hides most of
 them from the gate entirely.
 
+One correction to how "live" is counted, which the rollout depends on.
+The wrapper does not see every tracked markdown file:
+`get_git_tracked_files` drops any file matching a `.gitignore` pattern,
+and tracked files can match an ignore rule. In crackerjack that is 556
+tracked `.md` files, of which **300** reach the wrapper — 254 of the
+256 exclusions being `docs/**/.archive/**` (which `should_skip_file`
+excludes anyway) and two `data/README.md` files. Of the 180
+frontmatter'd documents the wrapper sees, **172** are now in scope.
+So Phase 2's crackerjack rollout touches 287 files, not 556, and the
+archives stay where they are.
+
 ### 2.7 What the fleet's ordered lists actually look like
 
 `--number` renumbers a list consecutively from its first marker, so
@@ -313,6 +324,36 @@ positive:
 So two documents in the fleet have a hole in a list, and neither has
 prose that names a list item by number. Closing both holes is a fix,
 not a loss.
+
+### 2.8 How the hook actually invokes the wrapper
+
+The hook runs `python -m crackerjack.tools.mdformat_wrapper`
+(`crackerjack/config/tool_commands.py`), and the wrapper computes its
+own file list from `get_git_tracked_files`. The executor also has an
+incremental path: for a hook with `accepts_file_paths=True` it calls
+`hook.build_command(changed_files)`, which appends the changed files to
+the command line
+(`crackerjack/executors/hook_executor.py:525-531`,
+`crackerjack/config/hooks.py:92-99`).
+
+Two consequences:
+
+- **The wrapper formats its whole tracked set in either mode.** The
+  changed files are appended to a command that already carries every
+  tracked non-skipped file, so the incremental path adds a duplicate
+  argument, not a narrower scope.
+- **The changed files bypass `should_skip_file` entirely.** The
+  wrapper passes `argv` straight through to mdformat
+  (`_build_mdformat_cmd` does `cmd.extend(argv)`), so a changed
+  document that the skip list excluded is still handed to mdformat.
+  This is how the original frontmatter destruction was reachable even
+  while the skip existed — and it is why the fail-loud guard, which
+  scans every tracked document regardless of how the command was
+  built, is the protection that actually holds.
+
+The skip patterns that remain (`*PLAN.md`, `**/.archive/**`, …) are
+still bypassable in incremental mode. That is a pre-existing
+inconsistency, unchanged by this plan and not fixed by it.
 
 ## 3. Phases
 
@@ -545,6 +586,16 @@ preserve list numbering`
   parses to the same `None`.
 - The shape of every ordered list in all six repositories, classified by
   what `--number` does to it — §2.7.
+- The guard's precondition, on the real tree rather than in a fixture:
+  the plugin is present in the environment that will run mdformat
+  (`.venv/bin/mdformat`, `mdformat_frontmatter 2.2.0`), so the guard
+  does not fire — and it is live rather than vacuous, because 180
+  tracked frontmatter'd documents exist here and 172 of them are now
+  in scope.
+- That every tracked `.md` and `.markdown` file in all six
+  repositories whose first line is `---` also has a closing `---`
+  fence: there is no frontmatter lookalike anywhere in the fleet
+  (§2.3).
 
 **What the plan did not anticipate:**
 
