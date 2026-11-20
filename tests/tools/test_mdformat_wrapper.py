@@ -32,9 +32,9 @@ def test_should_skip_file_regular_files(tmp_path):
     """Test should_skip_file with regular markdown files.
 
     Uses ``tmp_path`` so the file-content heuristic (production reads
-    the first line and skips lines made entirely of underscores/dashes)
-    is tested against content we control rather than whatever happens
-    to live in the repo at test time.
+    the first line and skips lines made entirely of underscores) is
+    tested against content we control rather than whatever happens to
+    live in the repo at test time.
     """
     regular = tmp_path / "regular.md"
     regular.write_text("# Heading\n\nSome content.\n")

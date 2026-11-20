@@ -72,25 +72,39 @@ class TestShouldSkipFile:
         assert not should_skip_file(Path("script.py"))
         assert not should_skip_file(Path("config.yaml"))
 
-    def test_skip_frontmatter_documents(self, tmp_path):
-        """Frontmatter documents are still kept out of scope.
+    def test_frontmatter_documents_are_not_skipped(self, tmp_path):
+        """Frontmatter documents are now IN scope for the formatter.
 
-        This is the current contract: mdformat 1.0.0 core destroys YAML
-        frontmatter, so a document whose first line is ``---`` is
+        The skip existed because mdformat 1.0.0 core destroys YAML
+        frontmatter, so a document whose first line is ``---`` was
         excluded rather than mangled. The ``mdformat-frontmatter``
-        plugin makes it safe to lift this skip; that lift is a separate,
-        deliberately reviewed change, not an incidental edit.
+        plugin preserves the block byte-for-byte, so the exclusion is
+        no longer needed and lifting it is the point of the change: a
+        plan whose frontmatter stays intact still parses, and still
+        reaches the plan index.
 
-        The skip keys off the file's FIRST LINE, so the file has to
-        exist for the rule to apply.
+        The rule keys off the file's FIRST LINE, so the file has to
+        exist for it to apply.
         """
         plan = tmp_path / "plan.md"
         plan.write_text("---\nstatus: draft\n---\n\n# Body\n")
-        assert should_skip_file(plan)
+        assert not should_skip_file(plan)
 
         readme = tmp_path / "README.md"
         readme.write_text("# Body\n")
         assert not should_skip_file(readme)
+
+    def test_underscore_rule_still_skips(self, tmp_path):
+        """The underscore clause is a different rule about a different
+        thing, and it stays.
+
+        Only the ``---`` clause was lifted. A document whose first line
+        is a run of underscores is still excluded, because that rule is
+        not about YAML frontmatter.
+        """
+        underline = tmp_path / "doc.md"
+        underline.write_text("___\n\n# Body\n")
+        assert should_skip_file(underline)
 
 
 class TestFrontmatterSafety:
@@ -108,15 +122,22 @@ class TestFrontmatterSafety:
             resolved = _resolve_mdformat_bin()
         assert resolved.endswith(".venv/bin/mdformat")
 
-    def test_build_cmd_does_not_pass_an_extensions_flag(self):
-        """Naming one extension RESTRICTS the enabled set.
+    def test_build_cmd_passes_number_and_names_no_extension(self):
+        """Two flags, both load-bearing.
 
-        ``mdformat --extensions frontmatter`` disables every other
-        installed extension -- verified against mdformat-gfm, whose
-        ``tables`` extension stopped formatting tables. The CLI enables
-        all installed extensions by default, so the wrapper names none.
+        ``--number`` preserves the source numbering of ordered lists.
+        mdformat's default renders every ordered-list item with the
+        marker ``1.``, so a list written ``3. 4.`` becomes ``3. 1.`` and
+        any prose pointing at "item 4" points at nothing. The number is
+        often a reference, not decoration.
+
+        The wrapper names NO extension. ``mdformat --extensions
+        frontmatter`` RESTRICTS the enabled set -- verified against
+        mdformat-gfm, whose ``tables`` extension stopped formatting
+        tables. The CLI enables all installed extensions by default.
         """
         cmd = _build_mdformat_cmd([Path("README.md")], None)
+        assert "--number" in cmd
         assert "--extensions" not in cmd
         assert "--no-codeformatters" in cmd
 
@@ -165,8 +186,10 @@ class TestFrontmatterSafety:
         how a plan ends up missing from the plan index.
 
         The guard scans every tracked document, not only the ones in
-        scope: ``should_skip_file`` removes frontmatter documents
-        before formatting, so a scope-limited check would never fire.
+        scope. The skip list still excludes documents by other rules
+        (archive paths, ``*PLAN.md``), and the guard asserts the safety
+        property over the whole tracked tree rather than only over what
+        this particular run would format.
         """
         target = tmp_path / "plan.md"
         target.write_text("---\nstatus: draft\n---\n\n# Body\n")
@@ -204,6 +227,18 @@ class TestFrontmatterSafety:
         probe_call = mock_run.call_args_list[0].args[0]
         assert "-c" in probe_call
         assert any("frontmatter" in str(part) for part in probe_call)
+
+        # The frontmatter document reached mdformat. Before the skip was
+        # lifted, the "nothing to do" short-circuit returned before any
+        # formatter call, so this assertion is what proves the document
+        # is in scope now rather than merely tolerated.
+        assert len(mock_run.call_args_list) == 2, (
+            "expected the formatter to be invoked on the frontmatter "
+            "document; it was skipped"
+        )
+        formatter_call = mock_run.call_args_list[1].args[0]
+        assert "--number" in formatter_call
+        assert str(target) in formatter_call
 
     @patch("crackerjack.tools.mdformat_wrapper.get_git_tracked_files")
     @patch("crackerjack.tools.mdformat_wrapper.subprocess.run")

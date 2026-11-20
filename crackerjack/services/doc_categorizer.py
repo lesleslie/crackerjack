@@ -29,8 +29,15 @@ def _declares_frontmatter(text: str) -> bool:
     direction that must never happen. A document whose lifecycle we
     cannot read stays put.
 
-    This mirrors ``crackerjack.tools.mdformat_wrapper.should_skip_file``,
-    which already treats a leading ``---`` as a frontmatter file.
+    Note that this is NOT the same rule as
+    ``crackerjack.tools.mdformat_wrapper.should_skip_file``, and the
+    two are deliberately independent. The formatter used to skip a
+    leading ``---`` because mdformat core destroyed frontmatter; the
+    ``mdformat-frontmatter`` plugin removed that need and the skip was
+    lifted, so the formatter now formats frontmatter'd documents. This
+    detector still recognises them, because categorising a document by
+    its declared lifecycle is its job. The two answers are about
+    different questions and are not expected to agree.
     """
     stripped = text.lstrip()
     while stripped.startswith("\ufeff"):

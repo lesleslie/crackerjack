@@ -40,7 +40,18 @@ def should_skip_file(file_path: Path) -> bool:
     except OSError:
         return False
     stripped = first_line.strip()
-    return stripped == "---" or (len(stripped) >= 3 and set(stripped) == {"_"})
+    # NOTE: a document whose first line is ``---`` is NOT skipped. That
+    # exclusion existed because mdformat 1.0.0 core has no frontmatter
+    # support -- it rewrites the fence into a horizontal rule and
+    # flattens the YAML into body text, and a plan whose frontmatter
+    # stops parsing drops out of PLAN_INDEX.md entirely. The
+    # ``mdformat-frontmatter`` plugin preserves the block byte-for-byte,
+    # so the exclusion is no longer needed and the fleet's 783
+    # frontmatter'd documents can finally be formatted.
+    #
+    # The underscore clause below is a different rule about a different
+    # thing and stays.
+    return len(stripped) >= 3 and set(stripped) == {"_"}
 
 
 def _resolve_mdformat_bin() -> str:
@@ -58,6 +69,14 @@ def _resolve_mdformat_bin() -> str:
 def _build_mdformat_cmd(files: list[Path], argv: list[str] | None) -> list[str]:
     """Assemble the mdformat command line for ``files``.
 
+    ``--number`` preserves the source numbering of ordered lists.
+    mdformat's default renders every ordered-list item with the marker
+    ``1.``, so a list written ``3. 4.`` becomes ``3. 1.``. In a decision
+    record or a plan the number is often a reference rather than
+    decoration -- an item numbered 4 becomes 1, and any prose pointing
+    at "item 4" points at nothing. With ``--number`` mdformat applies
+    consecutive numbering, which leaves the source numbers alone.
+
     The ``--extensions`` flag is deliberately NOT passed. mdformat's CLI
     enables every installed parser extension by default, and naming one
     explicitly *restricts* the enabled set to just that one -- passing
@@ -66,7 +85,7 @@ def _build_mdformat_cmd(files: list[Path], argv: list[str] | None) -> list[str]:
     extension is verified separately, by
     :func:`_frontmatter_extension_available`.
     """
-    cmd = [_resolve_mdformat_bin(), "--no-codeformatters"]
+    cmd = [_resolve_mdformat_bin(), "--no-codeformatters", "--number"]
 
     if argv:
         cmd.extend(argv)
@@ -199,12 +218,19 @@ def main(argv: list[str] | None = None) -> int:
     # state invisible.
     #
     # The check scans every tracked document, not just the ones in
-    # scope, and it runs BEFORE the "nothing to do" short-circuit:
-    # `should_skip_file` keeps frontmatter documents out of scope
-    # today, so a scope-limited or later check would never fire.
+    # scope, and it runs BEFORE the "nothing to do" short-circuit. The
+    # skip list still excludes documents by other rules (archive paths,
+    # `*PLAN.md`), so a scope-limited check would miss a frontmatter'd
+    # document that this run would not have formatted anyway, and a
+    # later check would never fire at all when the scope is empty.
     # Scoping it to `all_files` makes it a live assertion of the safety
-    # property, and it is the guard that must already be in place
-    # before that skip is lifted.
+    # property over the whole tracked tree.
+    #
+    # The guard predates the lift of the frontmatter skip and is kept
+    # unchanged by it. It is now the thing that makes the lift safe:
+    # if the plugin is ever missing from the environment that will run
+    # mdformat, the run stops instead of flattening 783 documents'
+    # frontmatter into body text.
     if _frontmatter_documents(all_files) and not _frontmatter_extension_available(
         _resolve_mdformat_bin()
     ):
