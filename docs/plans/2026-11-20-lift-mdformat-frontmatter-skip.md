@@ -216,9 +216,35 @@ frontmatter extension is verified separately by the probe added in
 The wrapper runs against the repository it is invoked in, preferring
 that repository's own `.venv/bin/mdformat`. Every fleet repository
 installs crackerjack as a dependency, so every repository's venv
-carries the plugin. The rollout is therefore six runs of the existing
-hook, one per repository, plus the plan-index regeneration each
-repository needs.
+carries the plugin once it is synced. The rollout is therefore six runs
+of the existing hook, one per repository, plus the plan-index
+regeneration each repository needs.
+
+Measured over the live (non-archived) markdown of all six
+repositories, by formatting each file and comparing:
+
+| repository | live `.md` files | change under default | change under `--number` |
+|---|---|---|---|
+| crackerjack | 301 | 172 | 236 |
+| mahavishnu | 551 | 256 | 430 |
+| oneiric | 133 | 85 | 112 |
+| akosha | 80 | 30 | 55 |
+| session-buddy | 153 | 102 | 129 |
+| mcp-common | 40 | 3 | 14 |
+| **total** | **1258** | **648** | **976** |
+
+Two things this table says.
+
+**`--number` touches MORE files than the default does**, because the
+fleet's markdown was formatted under the default, so its ordered lists
+carry the collapsed `1.` markers. Switching to `--number` restores the
+real numbering, which changes documents that the current gate already
+considers formatted. That is a correction, not new damage, but it is
+why Phase 1's diff is larger than "the files the skip was hiding".
+
+**The default column is not zero either.** 648 live files are not
+mdformat-clean today, because the frontmatter exclusion hides most of
+them from the gate entirely.
 
 ## 3. Phases
 
@@ -303,6 +329,10 @@ mcp-common.
 
 Per repository:
 
+- Sync the venv: `uv sync --all-groups`. The plugin arrives with the
+  crackerjack dependency bump, and the hook's guard fails loud until
+  it is there. The guard naming the fix is the intended behaviour, not
+  a problem to route around.
 - Run the format hook: `python -m crackerjack.tools.mdformat_wrapper`
   from the repository root, using that repository's own venv.
 - Re-run the frontmatter semantic check (§2.3) over the live
@@ -360,9 +390,11 @@ Per repository:
 
 #### Estimated scope
 
-783 documents across six repositories, plus six regenerated plan
-indexes. Roughly 4000 changed lines fleet-wide, almost all
-indentation, table padding and list-marker width.
+976 live documents across six repositories change under `--number`
+(§2.6), plus six regenerated plan indexes. The changes are almost all
+indentation, table padding and list-marker width. Two of the six
+repositories carry most of it: mahavishnu (430 files) and crackerjack
+(236).
 
 ## 4. Risks
 
