@@ -1,6 +1,6 @@
 # Plan Index
 
-_Regenerated 2026-11-17 by `crackerjack.tools.plan_index_sync` (phase)._
+_Regenerated 2026-11-20 by `crackerjack.tools.plan_index_sync` (phase)._
 
 ### Docs: adr
 
@@ -44,6 +44,7 @@ _Regenerated 2026-11-17 by `crackerjack.tools.plan_index_sync` (phase)._
 | [`docs/plans/2026-11-14-consolidate-tool-taxonomies.md`](2026-11-14-consolidate-tool-taxonomies.md) | 2026-11-14 | `active` | `implementation` | `architecture` | Consolidate the Tool Taxonomies in Crackerjack |
 | [`docs/plans/2026-11-14-remove-dead-module-cluster.md`](2026-11-14-remove-dead-module-cluster.md) | 2026-11-14 | `active` | `implementation` | `architecture` | Remove the Dead Module Cluster from Crackerjack |
 | [`docs/plans/2026-11-15-archive-lifecycle-gate.md`](2026-11-15-archive-lifecycle-gate.md) | 2026-11-15 | `active` | `implementation` | `lifecycle` | Archive lifecycle gate — the cleanup must not archive live documents |
+| [`docs/plans/2026-11-20-lift-mdformat-frontmatter-skip.md`](2026-11-20-lift-mdformat-frontmatter-skip.md) | 2026-11-20 | `draft` | `implementation` | `process-discipline` | Lift the mdformat frontmatter skip and protect numbered lists |
 | [`docs/plans/TEMPLATE.md`](TEMPLATE.md) | 2026-11-14 | `active` | `canonical` | `process-discipline` | Plan Template — Integration-Contract Required |
 
 ### Docs: specs
@@ -93,8 +94,8 @@ _Regenerated 2026-11-17 by `crackerjack.tools.plan_index_sync` (phase)._
 | Role \\ Lifecycle | draft | active | partial | shipped | complete | Total |
 |---|---|---|---|---|---|---|
 | `canonical` | · | 11 | · | · | 2 | **13** |
-| `implementation` | 17 | 27 | · | · | 3 | **47** |
+| `implementation` | 18 | 27 | · | · | 3 | **48** |
 | `umbrella` | · | · | · | · | · | **0** |
 | `historical` | · | · | · | · | 1 | **1** |
 | `superseded` | · | · | · | · | · | **0** |
-| **Total** | **17** | **38** | **·** | **·** | **6** | **61** |
+| **Total** | **18** | **38** | **·** | **·** | **6** | **62** |
