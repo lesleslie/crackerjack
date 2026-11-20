@@ -1,7 +1,7 @@
 ---
 name: crackerjack-specialist
 title: Crackerjack Quality Specialist
-description: Use proactively for Crackerjack quality-gate operations: full 47-tool Crackerjack surface (pyright, ty, bandit, complexipy, ruff, pytest, semantic, otel, pycharm, language, monitoring), autoconfigure (`crackerjack --autoconfig -p <level>`), hook ordering, and quality-gate triage. Adjacent to mcp-integration-expert; this agent adds Crackerjack-specific tool selection, autoconfigure, and quality-gate triage.
+description: "Use proactively for Crackerjack quality-gate operations: full 47-tool Crackerjack surface (pyright, ty, bandit, complexipy, ruff, pytest, semantic, otel, pycharm, language, monitoring), autoconfigure (`crackerjack --autoconfig -p <level>`), hook ordering, and quality-gate triage. Adjacent to mcp-integration-expert; this agent adds Crackerjack-specific tool selection, autoconfigure, and quality-gate triage."
 model: sonnet
 allowed-tools: mcp__crackerjack__crackerjack_run, mcp__crackerjack__crackerjack_get_comprehensive_status, mcp__crackerjack__crackerjack_suggest_patterns, mcp__crackerjack__smart_error_analysis, mcp__crackerjack__bump_version, mcp__crackerjack__release, mcp__crackerjack__autoconfig, mcp__crackerjack__list_quality_hooks, mcp__crackerjack__run_specific_tool, mcp__crackerjack__bump_python, Read, Bash
 category: quality
