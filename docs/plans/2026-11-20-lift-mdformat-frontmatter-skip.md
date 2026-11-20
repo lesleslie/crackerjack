@@ -943,7 +943,26 @@ re-run from the restored state:
 
 #### Still to do
 
-Nothing. All six repositories are done.
+The rollout itself is done. Two operator-side steps remain, and neither
+is this plan's to take:
+
+1. **Publish the crackerjack release that carries `mdformat-frontmatter`.**
+   The five non-crackerjack repositories run an older crackerjack whose
+   wrapper skips frontmatter documents outright, and their venvs have no
+   front-matter extension registered at all (measured 2026-11-20 — §2.10).
+   Until the release lands and each repository syncs, their hooks keep
+   skipping frontmatter and their markdown stays as the pre-lift state.
+   The rollout's commits are already formatted, so nothing is lost by the
+   wait; the hooks simply do not become live until it happens. All five
+   pins are `>=` floors well below the current version, so no pin blocks
+   the release.
+2. **Push the commits.** Every repository's formatting commit is local
+   only.
+
+Re-verified 2026-11-20, after the plan's own corrections: mdformat
+(`--no-codeformatters --number`) over each repository's in-scope
+documents reports **1031 of 1038 format-clean**, and the seven that are
+not are exactly the seven named below — nothing else regressed.
 
 | repository | commit | files | frontmatter checked | semantic differences | blocks vanished | parse errors | non-markdown |
 |---|---|---|---|---|---|---|---|
