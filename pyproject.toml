@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "crackerjack"
-version = "0.96.0"
+version = "0.96.1"
 description = "Crackerjack Python project management tool"
 readme = "README.md"
 authors = [
@@ -854,6 +854,14 @@ exclude-deps = [
     "types-psutil",
     "types-aiofiles",
     "mdformat",
+    # mdformat-frontmatter is plugin-only: mdformat loads it through the
+    # `mdformat.parser_extension` entry-point group at runtime, so it is
+    # never imported by name and creosote -- which scans `import`
+    # statements -- cannot see it in use. It is NOT optional: without it
+    # mdformat rewrites YAML frontmatter into body text, which is what
+    # the mdformat hook's guard refuses to run without (see
+    # crackerjack/tools/mdformat_wrapper.py).
+    "mdformat-frontmatter",
     "ipython",
     # Lazy-import false positives (used via import inside function bodies):
     "complexipy",

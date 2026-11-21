@@ -10,6 +10,37 @@ blocks_on: []
 topic: changelog
 ---
 
+## [0.96.1] - 2026-11-21
+
+### Changed
+
+- Docs/dead-subsystem-records -> main
+- docs: Format the fleet's markdown for the first time
+
+### Fixed
+
+- agent: Quote the description so the frontmatter parses as YAML
+- Format frontmatter documents and preserve list numbering
+- format: Close three holes the frontmatter lift left open
+- format: Stop the rollout from corrupting YAML streams and GFM tables
+- Preserve YAML frontmatter in the mdformat hook
+
+### Documentation
+
+- Add the plan for lifting the mdformat frontmatter skip
+- Correct the churn estimate in the mdformat lift plan
+- Correct the mdformat lift plan after a post-execution review
+- Correct the plan's claims after the review of the lift
+- plan: Check the table claims against mdformat's source, and record the plugin census
+- plan: Correct the marker condition and record Phase 1's findings
+- plan: Name the two operator steps the rollout still needs
+- plan: Record how the hook invokes the wrapper, and what it sees
+- plan: Record the fleet rollout as complete
+- plan: Record what the fleet rollout found, and correct the census
+- State --number's actual semantics and record the lookalike check
+- test: Correct the cross-reference to the formatter's frontmatter rule
+- The Crackerjack surface of the fleet feature inventory
+
 ## [0.96.0] - 2026-11-17
 
 ### Added

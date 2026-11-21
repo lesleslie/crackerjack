@@ -5,6 +5,7 @@ import re
 import shutil
 import subprocess
 import sys
+from contextlib import suppress
 from pathlib import Path
 from typing import Any
 
@@ -474,72 +475,81 @@ def _report_auto_formatted(files: list[Path]) -> None:
         print(f"✓   {path}", file=sys.stderr)
 
 
-def main(argv: list[str] | None = None) -> int:
-    md_files = get_git_tracked_files("*.md")
-    markdown_files = get_git_tracked_files("*.markdown")
-    all_files = md_files + markdown_files
+def _frontmatter_environment_is_unsafe(all_files: list[Path]) -> bool:
+    """True when the environment cannot format frontmatter safely.
 
-    # Fail loud rather than silently destroy frontmatter.
-    #
-    # mdformat 1.0.0 core rewrites a document's `---` YAML frontmatter
-    # fence into a horizontal rule and flattens the YAML into body
-    # text. A plan whose frontmatter is mangled can then fail
-    # extraction and disappear from PLAN_INDEX.md, making its lifecycle
-    # state invisible.
-    #
-    # The check scans every tracked document, not just the ones in
-    # scope, and it runs BEFORE the "nothing to do" short-circuit. The
-    # skip list still excludes documents by other rules (archive paths,
-    # `*PLAN.md`), so a scope-limited check would miss a frontmatter'd
-    # document that this run would not have formatted anyway, and a
-    # later check would never fire at all when the scope is empty.
-    # Scoping it to `all_files` makes it a live assertion of the safety
-    # property over the whole tracked tree.
-    #
-    # The guard predates the lift of the frontmatter skip and is what
-    # makes the lift safe: if the plugin is ever missing from the
-    # environment that will run mdformat, the run stops instead of
-    # flattening 783 documents' frontmatter into body text. It also
-    # refuses to run when a SECOND front-matter extension is present,
-    # because mdformat resolves that conflict silently apart from a log
-    # line and the two packages disagree about quotes.
-    if _frontmatter_documents(all_files):
-        count = _frontmatter_extension_count(_resolve_mdformat_bin())
-        if count == 0:
-            print(
-                "mdformat: the 'frontmatter' parser extension is not installed "
-                "in the environment that will run mdformat. Without it "
-                "mdformat rewrites YAML frontmatter into body text, which can "
-                "drop a document out of the plan index. Run 'uv sync "
-                "--all-groups' in the repo (crackerjack declares "
-                "mdformat-frontmatter) and retry.",
-                file=sys.stderr,
-            )
-            return 1
-        if count is None:
-            print(
-                "mdformat: could not determine whether the 'frontmatter' "
-                "parser extension is installed in the environment that will "
-                "run mdformat. Without it mdformat rewrites YAML frontmatter "
-                "into body text, which can drop a document out of the plan "
-                "index. Refusing to format.",
-                file=sys.stderr,
-            )
-            return 1
-        if count > 1:
-            print(
-                f"mdformat: {count} front-matter parser extensions are "
-                "installed in the environment that will run mdformat. They "
-                "register under different entry-point names, so pip installs "
-                "both without complaint, and mdformat resolves the conflict "
-                "silently apart from a log line. One of them strips quotes, "
-                'which turns a quoted "yes" into a YAML 1.1 boolean. Keep '
-                "exactly one (crackerjack declares mdformat-frontmatter) and "
-                "retry.",
-                file=sys.stderr,
-            )
-            return 1
+    Fail loud rather than silently destroy frontmatter.
 
+    mdformat 1.0.0 core rewrites a document's ``---`` YAML frontmatter
+    fence into a horizontal rule and flattens the YAML into body text. A
+    plan whose frontmatter is mangled can then fail extraction and
+    disappear from PLAN_INDEX.md, making its lifecycle state invisible.
+
+    The check scans every tracked document, not just the ones in scope,
+    and it runs BEFORE the "nothing to do" short-circuit. The skip list
+    still excludes documents by other rules (archive paths, ``*PLAN.md``),
+    so a scope-limited check would miss a frontmatter'd document that
+    this run would not have formatted anyway, and a later check would
+    never fire at all when the scope is empty. Scoping it to
+    ``all_files`` makes it a live assertion of the safety property over
+    the whole tracked tree.
+
+    The guard predates the lift of the frontmatter skip and is what
+    makes the lift safe: if the plugin is ever missing from the
+    environment that will run mdformat, the run stops instead of
+    flattening 783 documents' frontmatter into body text. It also
+    refuses to run when a SECOND front-matter extension is present,
+    because mdformat resolves that conflict silently apart from a log
+    line and the two packages disagree about quotes.
+    """
+    if not _frontmatter_documents(all_files):
+        return False
+
+    count = _frontmatter_extension_count(_resolve_mdformat_bin())
+    if count == 0:
+        print(
+            "mdformat: the 'frontmatter' parser extension is not installed "
+            "in the environment that will run mdformat. Without it "
+            "mdformat rewrites YAML frontmatter into body text, which can "
+            "drop a document out of the plan index. Run 'uv sync "
+            "--all-groups' in the repo (crackerjack declares "
+            "mdformat-frontmatter) and retry.",
+            file=sys.stderr,
+        )
+        return True
+    if count is None:
+        print(
+            "mdformat: could not determine whether the 'frontmatter' "
+            "parser extension is installed in the environment that will "
+            "run mdformat. Without it mdformat rewrites YAML frontmatter "
+            "into body text, which can drop a document out of the plan "
+            "index. Refusing to format.",
+            file=sys.stderr,
+        )
+        return True
+    if count > 1:
+        print(
+            f"mdformat: {count} front-matter parser extensions are "
+            "installed in the environment that will run mdformat. They "
+            "register under different entry-point names, so pip installs "
+            "both without complaint, and mdformat resolves the conflict "
+            "silently apart from a log line. One of them strips quotes, "
+            'which turns a quoted "yes" into a YAML 1.1 boolean. Keep '
+            "exactly one (crackerjack declares mdformat-frontmatter) and "
+            "retry.",
+            file=sys.stderr,
+        )
+        return True
+    return False
+
+
+def _report_excluded_documents(all_files: list[Path]) -> None:
+    """Report the documents that are excluded from formatting.
+
+    An excluded document is one nobody notices: the operator sees a
+    file that is never formatted and has no idea why. Both exclusions
+    below are reported by name.
+    """
     bom_docs = _bom_frontmatter_documents(all_files)
     if bom_docs:
         _report_tool_output(
@@ -559,12 +569,63 @@ def main(argv: list[str] | None = None) -> int:
             f"{len(yaml_docs)} document(s) are streams of YAML documents "
             "rather than markdown, and are excluded from formatting: "
             "mdformat reads the prose line before each '---' separator as "
-            "a setext heading underline and turns every separator into an "
+            "a settext heading underline and turns every separator into an "
             "ATX heading, which destroys the file rather than formatting "
             "it. Rename them to a .yaml extension to have them covered."
         )
         for path in yaml_docs:
             _report_tool_output(f"excluded (multi-document YAML): {path}")
+
+
+def _report_format_outcome(
+    changed: list[Path],
+    refused: list[Path],
+    damaged: list[Path],
+) -> int:
+    """Report what the format run did, and return the hook's exit code.
+
+    A run that changed a file exits 1. The hook is marked as a
+    formatter, and the executor reads an exit-1 formatter as "it
+    rewrote something" rather than as a failure.
+    """
+    if refused:
+        _report_tool_output(
+            f"{len(refused)} document(s) could not be formatted by mdformat "
+            "and are left as they are: mdformat refuses a document whose "
+            "formatted output renders to different HTML than the input, "
+            "and it aborts the whole batch at the first refusal. These "
+            "documents are reported so they are not mistaken for "
+            "formatted."
+        )
+        for path in refused:
+            _report_tool_output(f"not formatted (mdformat refused): {path}")
+
+    if damaged:
+        _report_tool_output(
+            f"{len(damaged)} document(s) were changed by mdformat in a way "
+            "that alters how they read, and have been restored: mdformat "
+            "has no GFM table support, so it can merge a table's rows or "
+            "re-indent a table out of its list item without noticing. "
+            "They are left as they were."
+        )
+        for path in damaged:
+            _report_tool_output(f"restored (rendering changed): {path}")
+
+    if changed:
+        _report_auto_formatted(changed)
+        return 1
+    return 0
+
+
+def main(argv: list[str] | None = None) -> int:
+    md_files = get_git_tracked_files("*.md")
+    markdown_files = get_git_tracked_files("*.markdown")
+    all_files = md_files + markdown_files
+
+    if _frontmatter_environment_is_unsafe(all_files):
+        return 1
+
+    _report_excluded_documents(all_files)
 
     files = [f for f in all_files if not should_skip_file(f)]
 
@@ -594,34 +655,7 @@ def main(argv: list[str] | None = None) -> int:
             return 0
 
         changed, refused, damaged = _format_with_rollback(files, argv)
-
-        if refused:
-            _report_tool_output(
-                f"{len(refused)} document(s) could not be formatted by mdformat "
-                "and are left as they are: mdformat refuses a document whose "
-                "formatted output renders to different HTML than the input, "
-                "and it aborts the whole batch at the first refusal. These "
-                "documents are reported so they are not mistaken for "
-                "formatted."
-            )
-            for path in refused:
-                _report_tool_output(f"not formatted (mdformat refused): {path}")
-
-        if damaged:
-            _report_tool_output(
-                f"{len(damaged)} document(s) were changed by mdformat in a way "
-                "that alters how they read, and have been restored: mdformat "
-                "has no GFM table support, so it can merge a table's rows or "
-                "re-indent a table out of its list item without noticing. "
-                "They are left as they were."
-            )
-            for path in damaged:
-                _report_tool_output(f"restored (rendering changed): {path}")
-
-        if changed:
-            _report_auto_formatted(changed)
-            return 1
-        return 0
+        return _report_format_outcome(changed, refused, damaged)
     except FileNotFoundError:
         return 127
     except Exception as e:
@@ -664,7 +698,7 @@ def _format_with_rollback(
         except OSError, UnicodeDecodeError:
             snapshot[path] = ""
 
-    pending = list(files)
+    pending = files.copy()
     refused: list[Path] = []
     while pending:
         result = subprocess.run(
@@ -700,10 +734,8 @@ def _format_with_rollback(
             continue
         if _rendering_changes(before, after):
             # mdformat changed what the document says. Put it back.
-            try:
+            with suppress(OSError):
                 path.write_text(before, encoding="utf-8")
-            except OSError:
-                pass
             damaged.append(path)
             continue
         changed.append(path)

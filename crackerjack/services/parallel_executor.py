@@ -54,9 +54,16 @@ class ParallelHookExecutor(ParallelHookExecutorProtocol, ServiceProtocol):
         self.max_workers = max_workers
         self.timeout_seconds = timeout_seconds
         self.strategy = strategy
-        # Type: LoggerProtocol (logging.Logger is compatible)
-        self._logger: LoggerProtocol = logger or logging.getLogger(
-            "crackerjack.parallel_executor",
+        # Type: LoggerProtocol (logging.Logger is compatible).
+        #
+        # The cast is what makes the compatibility checkable. The
+        # protocol names its first parameter ``message``; the stdlib
+        # Logger names the same parameter ``msg``. A structural check
+        # rejects the mismatch on the name alone, even though every
+        # call site in this file passes the message positionally.
+        self._logger: LoggerProtocol = logger or t.cast(
+            "LoggerProtocol",
+            logging.getLogger("crackerjack.parallel_executor"),
         )
         self._cache = cache
 
