@@ -1,13 +1,13 @@
 ---
 title: Lift the mdformat frontmatter skip and protect numbered lists
-description: "The mdformat hook keeps every YAML-frontmatter document out of formatting, which leaves 783 documents across the six fleet repos unformatted. The mdformat-frontmatter plugin, installed by 78b3c8ca, makes it safe to lift that exclusion -- but only once the hook also stops renumbering ordered lists, because mdformat's default collapses `1. 2. 3.` to `1. 1. 1.` and that destroys cross-references inside decision records and plans. This plan adds `--number` first, lifts the skip second, and rolls the resulting formatting churn across the fleet one repository at a time."
+description: "The mdformat hook kept every YAML-frontmatter document out of formatting, which left 783 documents across the six fleet repos unformatted. The mdformat-frontmatter plugin, installed by 78b3c8ca, made it safe to lift that exclusion -- but only once the hook also stopped renumbering ordered lists, because mdformat's default collapses `1. 2. 3.` to `1. 1. 1.` and that destroys cross-references inside decision records and plans. Phase 1 added `--number` and lifted the skip; Phase 2 rolled the resulting formatting churn across the fleet, one repository at a time. Both phases are executed and committed locally. The rollout reaches the other five repositories once the release carrying `mdformat-frontmatter` is published and each repository syncs -- see §6, 'Still to do'."
 audience: crackerjack maintainer
 created: 2026-11-20
-status: draft
+status: partial
 role: implementation
 topic: process-discipline
 date: 2026-11-20
-last_reviewed: 2026-11-20
+last_reviewed: 2026-11-21
 superseded_by:
 blocks_on: []
 ---
@@ -21,14 +21,25 @@ blocks_on: []
 
 ## 1. Brief (intent-driven)
 
+> **Current state (2026-11-21):** both phases are executed. Phase 1 shipped in
+> crackerjack (`e9448967`, `7556b402`, `10341d2a`); Phase 2's rollout is
+> committed locally in all six repositories (§6, per-repository table). What
+> remains is operator-side: publish the release that carries
+> `mdformat-frontmatter`, then push each repository's commit. Until the
+> release lands, the other five repositories' hooks still skip frontmatter
+> documents and their markdown stays in the pre-lift state. **This document is
+> therefore a record of executed work, not a brief to execute.** The sections
+> below are preserved as written so the reasoning survives, with the
+> corrections the post-execution review made marked in place.
+
 ### Goal
 
 783 YAML-frontmatter documents across the six fleet repositories are
 formatted for the first time, and no document loses meaning in the
 process.
 
-Today `should_skip_file` excludes every document whose first line is
-`---`, so those files never reach mdformat at all: their bodies keep
+`should_skip_file` excluded every document whose first line is
+`---`, so those files never reached mdformat at all: their bodies kept
 whatever formatting they had when written. Lifting the exclusion gives
 the fleet one markdown style, which is the point of having a format
 gate at all.
@@ -60,12 +71,21 @@ than style, and both are measured below rather than assumed.
 
 Each condition is mechanically checkable.
 
-1. `rg -n 'stripped == "---"' crackerjack/tools/mdformat_wrapper.py`
-   returns nothing.
+1. `should_skip_file` in `crackerjack/tools/mdformat_wrapper.py` no longer
+   excludes a document whose first line is `---`. Two `stripped == "---"`
+   tests survive (lines 140 and 162), and both are the *guarded* BOM and
+   multi-document-YAML checks this plan's own follow-up commits added
+   (`7556b402`, `10341d2a`) — not the blanket exclusion. This condition
+   was written before those commits existed and was falsified by them.
 2. `rg -n '\-\-number' crackerjack/tools/mdformat_wrapper.py` returns
    a match.
 3. For each of the six repositories: the frontmatter semantic check
-   (§2.3) reports `semantic differences: 0` and `errors: 0`.
+   (§2.3) reports `semantic differences: 0` and `errors: 0`. This check
+   is an operator measurement over the repository's live frontmatter'd
+   documents, not a committed script: the §6 per-repository table records
+   the numbers each repository produced. No script in the fleet emits
+   `semantic differences: 0`, so this condition cannot be re-run as a
+   one-liner today.
 4. For each of the six repositories: `git diff --name-only` contains no
    file with an extension other than `.md` or `.markdown`.
 5. For each of the six repositories: no ordered-list marker is
@@ -81,13 +101,27 @@ Each condition is mechanically checkable.
    §2.7. The comparison is numeric because the zero-padded rendering of
    §2.4 changes `1.` to `01.`, which is numerically equal but
    textually smaller.)
-   **The one exception:** the three documents named in §2.7 have a
-   genuine hole in a list, and `--number` closes it by decreasing three
-   markers. That is the accepted repair of R4, and those three documents
-   are the only allowed exception.
-6. For each of the six repositories: the plan-index audit reports zero
-   frontmatter'd files missing from `PLAN_INDEX.md`.
-7. `pytest tests/unit/tools/test_mdformat_wrapper.py` passes.
+   **The one exception:** the three documents with a genuine hole listed in
+   §2.7 each have one marker decreased when `--number` closes the gap.
+   That is the accepted repair, and those three documents are the only
+   allowed exception:
+   - `crackerjack/mcp/agents/crackerjack-specialist.md`
+   - `crackerjack/docs/plans/2026-09-07-bodai-shared-gitignore-snippet.md`
+   - `mahavishnu/docs/decisions/2026-10-15-unified-event-bus-wrapper.md`
+6. The plan-index audit reports zero frontmatter'd files missing from
+   `PLAN_INDEX.md`. **Only mahavishnu ships an index audit**
+   (`scripts/audit_plan_index.py`); the other five repositories have no
+   such script, so for them this condition is satisfied by regenerating
+   the index with that repository's own `scripts/regenerate_plan_index.py`
+   and confirming a second run reports no change. mahavishnu's audit
+   currently **fails** — `docs/plans/2026-11-21-fleet-session-start-status-banners.md`
+   is missing from its index. That is a post-rollout addition, not a
+   rollout defect.
+7. `pytest tests/unit/tools/test_mdformat_wrapper.py --no-cov` passes. The
+   `--no-cov` is required: the repository's `addopts` carry
+   `--cov-fail-under=75.0`, so a single-file run exits 1 on the coverage
+   floor (5.23% measured) even when all 53 tests pass. The bare command
+   fails as written.
 
 ## 2. Context
 
@@ -255,13 +289,21 @@ Two consequences the fleet's own documents decide for us:
   consecutive numbering. That is a content change to
   already-committed documents, in the direction of correctness, and it
   is the larger part of the churn.
-- **A list whose last marker reaches 10 is rendered zero-padded.** The
-  rule is `pad = len(str(list_len + starting_number - 1))`, so the
-  trigger is the largest marker in the list, not the number of items:
-  `9. 10.` (two items) becomes `09. 10.`, and `1. … 9.` (nine items)
-  does not change at all. **179** lists in the fleet are affected.
-  CommonMark renders the list as `1.` through `13.` regardless — the
-  leading zero is a source-text artefact, not a rendered one.
+- **A list is rendered zero-padded once it would number past 9.** The
+  rule is `pad = len(str(list_len + starting_number - 1))`, so the width
+  comes from the **item count plus the starting number**, not from the
+  largest marker in the source. A ten-item list whose source markers are
+  all `1.` renders `01. … 10.`, even though no marker above `1.` appears
+  anywhere in the source; a two-item list starting at `9.` renders
+  `09. 10.`, because 2 + 9 - 1 = 10; and `1. … 9.` (nine items) does not
+  change, because 9 + 1 - 1 = 9. Measured over every tracked
+  `.md`/`.markdown` in the six repositories — 1,532 files, archived
+  included — **1,027 zero-padded markers across 99 files**, over **610
+  lists** of 4,137 ordered lists. The earlier figure of **179** was taken
+  over a narrower, live-only corpus, so the two counts measure different
+  sets; the trigger itself was wrong either way. CommonMark renders the
+  list as `1.` through `13.` regardless — the leading zero is a
+  source-text artefact, not a rendered one.
 
 **`--number` is therefore a prerequisite for the lift, not an
 afterthought.** Lifting the skip first would collapse the numbering in
@@ -324,6 +366,22 @@ repositories, by formatting each file and comparing:
 | mcp-common | 40 | 3 | 14 |
 | **total** | **1258** | **648** | **976** |
 
+**Reconciling the counts that appear across this plan** (added
+2026-11-21, after the rollout made them look inconsistent). They measure
+different sets, and the plan did not say so:
+
+| figure | what it counts | measured over |
+|---|---|---|
+| **1,258** | live markdown files | live, non-archived tracked markdown (the table above) |
+| **976** | files that *change* under `--number` | that same live set, before the rollout |
+| **1,038** | the wrapper's in-scope set across the fleet | tracked, non-gitignored, non-skipped documents (§2.9) |
+| **777** | files the rollout actually changed | the six rollout commits, added up (221 + 403 + 81 + 32 + 32 + 8) |
+
+The 976 and the 777 differ because the census ran over live markdown
+while the rollout ran over the wrapper's tracked set, and because some of
+the predicted changes were already applied when the rollout reached those
+repositories.
+
 Two things this table says.
 
 **`--number` touches MORE files than the default does**, because the
@@ -361,7 +419,7 @@ it:
 | **collapsed** | `1. 1. 1.` | repairs to `1. 2. 3.` | 3366 |
 | **signature** | `4. 1. 1.` | repairs to `4. 5. 6.` | 80 |
 | **consecutive** | `1. 2. 3.` | unchanged | 1101 |
-| **genuine hole** | `1. 2. 4. 5.` | closes the hole: `1. 2. 3. 4.` | 4 |
+| **genuine hole** | `1. 2. 4. 5.` | closes the hole: `1. 2. 3. 4.` | 3 |
 
 The census that produced these numbers treats a list as continuing
 across a continuation line — an indented line that is not itself a
@@ -377,19 +435,26 @@ pass, and `--number` undoes it. The **signature** shape is the one that
 looks alarming and is not: the first item keeps its number, so a
 reference to "item 4" still lands on the same item.
 
-The genuine holes are the only lists where `--number` moves a number a
-reader might have been given. There are four:
+The genuine holes are the only lists where `--number` *decreases* a
+number a reader might have been given. There are three:
 
 | repository | document | markers | verdict |
 |---|---|---|---|
 | crackerjack | `crackerjack/mcp/agents/crackerjack-specialist.md` | `1. 2. 3. 4. 5. 7.` | item 6 was deleted at some point; no prose in the document names a list item by number |
 | crackerjack | `docs/plans/2026-09-07-bodai-shared-gitignore-snippet.md` | `1. 2. 4. 5. 6.` | item 3 was deleted at some point; no prose in the document names a list item by number |
 | mahavishnu | `docs/decisions/2026-10-15-unified-event-bus-wrapper.md` | `1. 3. 4. 5.` | item 2 was deleted; the only numbered references in the document are to "Phase 6.4", not to list items |
-| mahavishnu | `docs/plans/2026-10-29-bifrost-bodai-cache-wiring.md` | `1. 2. 1.` | the third item is mis-numbered in the source — it should be `3.`; the only prose reference is to "step 1", which `--number` leaves alone |
 
-So three documents in the fleet have a hole in a list, and none of them
-has prose that names a list item by number. Closing the holes is a fix,
-not a loss.
+None of them has prose that names a list item by number, so closing the
+holes is a fix, not a loss. The rollout confirms the count: exactly three
+documents decreased a marker — crackerjack's two and mahavishnu's one.
+
+A fourth candidate is **not** a hole.
+`mahavishnu/docs/plans/2026-10-29-bifrost-bodai-cache-wiring.md` carries
+`1. 2. 1.` — the third item is mis-numbered in the source and should be
+`3.`, so `--number` *raises* it to `1. 2. 3.`. The only prose reference is
+to "step 1", which `--number` leaves alone. It sat in the table above
+because it was counted alongside the genuine holes; the rollout diffs show
+it as an increase, not a decrease.
 
 An earlier census also counted `oneiric/docs/implementation/PACKAGE7_SUMMARY.md`
 (`1. 5.`) as a hole. It is a false positive: the sequence is inside a
@@ -426,6 +491,11 @@ The skip patterns that remain (`*PLAN.md`, `**/.archive/**`, …) are
 still bypassable in incremental mode. That is a pre-existing
 inconsistency, unchanged by this plan and not fixed by it.
 
+**Correction (2026-11-21):** the last clause no longer holds for this
+plan's own additions. The BOM and multi-document-YAML guards introduced
+in §2.9 sit *inside* the bypassed function, so they do not hold on the
+argv path — see the end of §2.9.
+
 ### 2.9 Three things the lift is not safe against
 
 The frontmatter skip was the only thing standing between mdformat and
@@ -433,7 +503,8 @@ this fleet's documents, and removing it exposed three hazards that the
 plan did not anticipate. All three were found by running the rollout,
 not by reading mdformat's source, and all three corrupt a file rather
 than failing loudly. The wrapper now handles them (crackerjack
-`10341d2a`).
+`10341d2a`) — with one exception, recorded at the end of this section:
+the two new guards do not cover the argv path.
 
 **A `.md` file that is really a stream of YAML documents.**
 `mahavishnu/mahavishnu/commands/jot.md` holds Claude Code slash-command
@@ -498,6 +569,27 @@ iteratively: the refused file is named in mdformat's own error
 message, dropped from the set, and the batch re-run. The refusal is
 reported, because an excluded document is one nobody notices.
 
+**The argv path, which the two new guards do not cover.** §2.8 records
+that the wrapper passes `argv` straight through to mdformat, so a file
+handed to it on the command line bypasses `should_skip_file` entirely.
+The BOM and multi-document-YAML guards added by this plan live *inside*
+that bypassed function, so they do not hold there. Demonstrated against
+the real `mahavishnu/mahavishnu/commands/jot.md`: passed via argv, the
+YAML stream was corrupted — its `---` separators and keys replaced by
+`## description: …` headings — while the wrapper simultaneously printed
+`excluded (multi-document YAML): jot.md`. The control run, the same file
+through the tracked set, excluded it correctly and preserved the bytes.
+The GFM-table restore, by contrast, holds on both paths.
+
+That is a guard reporting success on a path it does not run, which is
+worse than no guard: it converts a corruption into a false all-clear. The
+argv path is not reachable from `crackerjack run` today —
+`use_incremental` defaults to `False` and the only production
+construction site does not set it — and it becomes live the moment any
+caller passes changed files to `build_command`. **This is an open
+defect. The plan does not fix it, and §2.9's "the wrapper now handles
+them" does not extend to it.**
+
 ### 2.10 The front-matter extension is required per repository, and the wrapper fails closed
 
 mdformat 1.0.0 core has no frontmatter support: given a document whose
@@ -532,7 +624,7 @@ the same install, which is what keeps the guard from refusing.
   - `_build_mdformat_cmd` — add `--number` to the command.
   - `should_skip_file` — remove the `stripped == "---"` clause; keep
     the underscore clause.
-- `crackerjack/tests/unit/tools/test_mdformat_wrapper.py`
+- `tests/unit/tools/test_mdformat_wrapper.py`
   - `test_skip_frontmatter_documents` — replace with an assertion that
     a frontmatter document is now NOT skipped.
   - `test_build_cmd_does_not_pass_an_extensions_flag` — extend to
@@ -547,9 +639,11 @@ the same install, which is what keeps the guard from refusing.
   invoked by the `mdformat` hook in `crackerjack/config/hooks.py`.
 - **Returns to / updates**: the markdown files of the repository the
   hook runs in. Nothing else mutates.
-- **Demonstrable by**: `pytest tests/unit/tools/test_mdformat_wrapper.py`
+- **Demonstrable by**: `pytest tests/unit/tools/test_mdformat_wrapper.py --no-cov`
   passes, and `python -m crackerjack.tools.mdformat_wrapper` exits 0
-  with a clean tree afterwards.
+  with a clean tree afterwards. The `--no-cov` is required — the
+  repository's `addopts` carry `--cov-fail-under=75.0`, so a single-file
+  run exits 1 on the coverage floor even when every test passes.
 - **Rollback signal**: the hook exits 1 with `files were modified by this hook` on a second consecutive run, which means the formatter is
   not idempotent over the tree.
 - **Observability added**: the hook's existing stderr surface now
@@ -606,6 +700,16 @@ mcp-common.
 
 Per repository:
 
+- **Publish first, then sync.** The plugin arrives with a *published*
+  crackerjack release, not with a local edit. The latest release on PyPI
+  at the time of writing is 0.96.0, published 2026-11-17; the three lift
+  commits are dated 2026-11-20, so **no published release carries the
+  lift yet**, and `uv sync --all-groups` against an unchanged lockfile
+  moves nothing — `uv sync --all-groups --dry-run` reports "no changes"
+  and `uv lock --dry-run --upgrade-package crackerjack` reports "no
+  lockfile changes detected". The operator publishes the release first;
+  until then the sync step is a no-op and the hook's guard correctly
+  fails loud.
 - Sync the venv: `uv sync --all-groups`. The plugin arrives with the
   crackerjack dependency bump, and the hook's guard fails loud until
   it is there. The guard naming the fix is the intended behaviour, not
@@ -614,11 +718,22 @@ Per repository:
   from the repository root, using that repository's own venv.
 - Re-run the frontmatter semantic check (§2.3) over the live
   documents and require `semantic differences: 0` and `errors: 0`.
-- Regenerate the plan index: `python -m crackerjack.tools.plan_index_sync`
-  (the sanctioned renderer; `scripts/regenerate_plan_index.py` in
-  mahavishnu is known to produce a broken shape and must not be used).
+- **Regenerate the plan index with that repository's own renderer**:
+  `python scripts/regenerate_plan_index.py`. Every one of the six
+  repositories ships this script, and each one reproduces its own
+  committed `PLAN_INDEX.md` byte-for-byte. Do **not** use crackerjack's
+  `plan_index_sync` tool here: it renders the simple shape, and against
+  mahavishnu it would rewrite `docs/plans/PLAN_INDEX.md` from 95,120 B /
+  470 table rows / 31 headers down to 28.0 KB / 138 rows, dropping the
+  Status Legend, the Authority Matrix, the Review Entry Points, the
+  per-store registries and the By Kind section. The instruction this
+  replaces was backwards: it named `plan_index_sync` as the sanctioned
+  renderer and forbade mahavishnu's own script, which is the one that
+  reproduces the rich shape.
 - Confirm the plan-index audit reports no frontmatter'd file missing
-  from `PLAN_INDEX.md`.
+  from `PLAN_INDEX.md`. Only mahavishnu ships such an audit
+  (`scripts/audit_plan_index.py`); in the other five repositories,
+  confirm instead that a second regeneration reports no change.
 - Confirm `git diff --name-only` lists only `.md` and `.markdown`.
 - Confirm the hook's stderr names no excluded document. A byte-order
   mark before a frontmatter fence, a second front-matter extension in
@@ -639,9 +754,10 @@ Per repository:
 - **Returns to / updates**: the markdown documents of that repository,
   and its `docs/plans/PLAN_INDEX.md`.
 - **Demonstrable by**: `git diff --name-only` in each repository lists
-  only markdown; the plan-index audit reports zero missing files; a
-  second hook run in each repository is a no-op; the hook's stderr names
-  no excluded document.
+  only markdown; the plan index reports zero missing files (in
+  mahavishnu, via its `scripts/audit_plan_index.py`; elsewhere, by a
+  second regeneration reporting no change); a second hook run in each
+  repository is a no-op; the hook's stderr names no excluded document.
 - **Rollback signal**: any repository whose second hook run still
   reports changes. The formatter is not idempotent over that tree, and
   the commit must not land until it is.
@@ -726,8 +842,10 @@ repositories carry most of it: mahavishnu (430 files) and crackerjack
 
 - `78b3c8ca` — Step one: the plugin declaration and the fail-loud
   guard.
-- `crackerjack/tools/mdformat_wrapper.py:43` — the exclusion this plan
-  lifts.
+- `crackerjack/tools/mdformat_wrapper.py` — `should_skip_file`, where
+  this plan lifts the `stripped == "---"` exclusion. The line number 43
+  was correct when the plan was written (pre-`e9448967`) and has since
+  aged: line 43 now falls inside `_is_multi_document_yaml`.
 - `crackerjack/docs/plans/TEMPLATE.md` — this plan's template.
 - `oneiric/oneiric/schemas/topic-vocabulary-v1.md` — the `topic:`
   vocabulary.
@@ -799,19 +917,28 @@ turned up during execution that the plan did not anticipate.)_
    The condition now says what its own parenthetical meant: no marker
    is decreased, compared numerically, with an explicit exception for
    the documents of §2.7.
-2. **`--number` zero-pads a list whose last marker reaches 10** (`1.` →
-   `01.`). The trigger is the largest marker, not the item count.
-   **179** lists in the fleet are affected. CommonMark renders the list
-   as `1.` through `13.` either way, so the leading zero is a
-   source-text artefact and not a rendered one.
+2. **`--number` zero-pads a list that would number past 9** (`1.` →
+   `01.`). The trigger is the item count plus the starting number, *not*
+   the largest marker: a ten-item list whose source markers are all `1.`
+   renders `01. … 10.`. Measured over every tracked markdown in the six
+   repositories, **1,027 zero-padded markers across 99 files**, over 610
+   lists of 4,137 ordered lists — against the 179 this record originally
+   claimed, which was taken over a narrower, live-only corpus.
+   CommonMark renders the list as `1.` through `13.` either way, so the
+   leading zero is a source-text artefact and not a rendered one.
 3. **The `[N, 1, 1, …]` shape looks like a hazard and is not.** The
    first marker is kept and the rest are numbered consecutively from it,
    so a reference to "item N" still lands on the same item. 53 lists
    fleet-wide.
-4. **Exactly two documents in the fleet have a genuine hole in a list**,
-   and neither names a list item by number in its prose. A third
-   candidate is a false positive — a numbered sequence written inline
-   inside a fenced code block, which mdformat does not touch. §2.7.
+4. **Exactly three documents in the fleet have a genuine hole in a list**,
+   and none of them names a list item by number in its prose. A fourth
+   candidate is a false positive of a different kind —
+   `mahavishnu/docs/plans/2026-10-29-bifrost-bodai-cache-wiring.md`
+   carries `1. 2. 1.`, which `--number` *raises* to `1. 2. 3.`, so it is
+   an increase rather than a hole. (An earlier census also counted
+   `oneiric/docs/implementation/PACKAGE7_SUMMARY.md` (`1. 5.`), a
+   numbered sequence written inline inside a fenced code block, which
+   mdformat does not touch.) §2.7.
 5. **One tracked document has invalid YAML frontmatter already**:
    `crackerjack/mcp/agents/crackerjack-specialist.md`, whose unquoted
    `description` contains a bare colon, so PyYAML rejects it. This
@@ -956,6 +1083,14 @@ is this plan's to take:
    wait; the hooks simply do not become live until it happens. All five
    pins are `>=` floors well below the current version, so no pin blocks
    the release.
+   **The publish is still outstanding (re-measured 2026-11-21).** The
+   latest release on PyPI is 0.96.0, published 2026-11-17; the three lift
+   commits are dated 2026-11-20. No published release carries the lift,
+   and `uv sync --all-groups` against the current lockfiles reports no
+   changes — so the fleet-wide effect of this plan cannot begin until the
+   release lands. `mdformat-frontmatter` 2.2.0 is installed in
+   crackerjack's venv only; mahavishnu, oneiric, akosha and session-buddy
+   each report `mdformat 1.0.0` with the extension absent.
 2. **Push the commits.** Every repository's formatting commit is local
    only.
 
@@ -977,6 +1112,13 @@ Every repository reports `ordered-list markers decreased: 0` except
 crackerjack's two and mahavishnu's one, which are the genuine holes of
 §2.7 — the accepted repair, named.
 
+`PLAN_INDEX.md` appears in the rollout commit of **two** repositories
+(session-buddy and akosha). The other four regenerated their index and
+got byte-identical output, so the file did not appear in the commit —
+resolved decision 3 was honoured in all six, and four of them simply had
+nothing to change. (Verified per repository against the rollout commit
+SHAs above.)
+
 #### What is deliberately not formatted
 
 Seven documents across the fleet are left as they were, and the hook
@@ -997,10 +1139,25 @@ restored byte-for-byte after it, so the other session's working tree is
 exactly what it was. The hook will report them on every run until their
 owner commits; that is the exclusion being visible, not a failure.
 
-Two further files are not formatted because Crackerjack's own
-`[tool.mdformat] exclude` list excludes them (`templates/*.md`,
-`CLAUDE*.md`). mdformat resolves that list from the file's own
-directory, so they are skipped wherever they are copied to.
+Two further files are not formatted because crackerjack's own
+`.mdformat.toml` exclude list covers them
+(`exclude = ["commands/*.md", "templates/*.md"]`).
+
+**Correction (2026-11-21):** this paragraph was wrong twice, and both
+errors would mislead an operator. mdformat 1.0.0 **never reads
+`pyproject.toml`** — the installed package contains no reference to it
+whatsoever; it reads only `.mdformat.toml` (`mdformat/_conf.py:36-47`).
+So `[tool.mdformat]` in `pyproject.toml`, which lists `templates/*.md`
+and `CLAUDE*.md`, is a list mdformat never sees. The rollout bears this
+out: `docs/guides/CLAUDE.md` **was** reformatted despite `CLAUDE*.md`
+sitting in `pyproject.toml`, while `.claude/commands/` and
+`templates/*.md` were untouched — exactly matching `.mdformat.toml`.
+Second, the resolution root is **not** the file's own directory: mdformat
+resolves the patterns relative to the `.mdformat.toml`'s parent
+(`mdformat/_cli.py:359-378`). Tested against a temporary root,
+`templates/x.md` is excluded while `docs/templates/y.md` is **not**.
+The corrected statement: those paths are excluded relative to the
+directory holding `.mdformat.toml`, not wherever they are copied to.
 
 #### How the rollout was run
 
@@ -1016,3 +1173,35 @@ touched.
 A second run of the hook in each repository reports no changes. The
 files listed above are reported by name; they are excluded and
 restored, not silently reformatted.
+
+## 7. Post-execution review (2026-11-21)
+
+A review of this document against the tree, after both phases executed,
+found nine defects in the plan itself. Two of them are instructions that
+would damage state if an operator followed them literally. The
+corrections are applied in place above; this section is the index of
+them.
+
+| # | was | now | where |
+|---|---|---|---|
+| 1 | `status: draft` | `status: partial` — both phases executed, effect not yet distributed | frontmatter, §1 |
+| 2 | FC1: `rg 'stripped == "---"'` returns nothing | returns two matches — the guarded BOM and multi-doc-YAML checks this plan's own later commits added | §1 FC1 |
+| 3 | FC7: `pytest …test_mdformat_wrapper.py` passes | exits 1 on `--cov-fail-under=75.0`; needs `--no-cov` | §1 FC7, Phase 1 |
+| 4 | FC3, FC5, FC6 named checks that do not exist | FC3 is an operator measurement, not a script; FC5's exception now names its three documents; FC6 scoped to mahavishnu, the only repo with an index audit | §1 |
+| 5 | zero-padding trigger read as "the largest marker in the list" | it is the item count plus the starting number — a ten-item list of all `1.` renders `01. … 10.` | §2.4, §6 finding 2 |
+| 6 | 179 affected lists | 1,027 zero-padded markers across 99 files, over 610 lists of 4,137 — a narrower corpus than the earlier figure | §2.4, §6 finding 2 |
+| 7 | four genuine holes, "three documents" in the prose | three — the bifrost document is an *increase* (`1. 2. 1.` → `1. 2. 3.`), not a hole | §2.7, §6 finding 4 |
+| 8 | the argv bypass is "unchanged by this plan" | the plan's own BOM and multi-doc-YAML guards live inside the bypassed function and do not hold there — an open defect | §2.8, §2.9 |
+| 9 | Phase 2: `uv sync --all-groups` delivers the lift; use `plan_index_sync`, never mahavishnu's own script | no published release carries the lift yet (0.96.0 is 2026-11-17; the lift is 2026-11-20), so the sync is a no-op — and the index instruction was backwards: `plan_index_sync` would cut mahavishnu's index from 95,120 B / 470 rows / 31 headers to 28.0 KB / 138 rows | Phase 2 |
+| 10 | `[tool.mdformat]` in `pyproject.toml` excludes `templates/*.md` and `CLAUDE*.md`; mdformat resolves it from the file's own directory | mdformat 1.0.0 never reads `pyproject.toml` — it reads `.mdformat.toml`, and resolves relative to that file's parent | §6 |
+| 11 | Phase 1's test path `crackerjack/tests/unit/tools/test_mdformat_wrapper.py` | `tests/unit/tools/test_mdformat_wrapper.py` — the tests live at the repository root | Phase 1 |
+| 12 | `crackerjack/tools/mdformat_wrapper.py:43` | line 43 now falls inside `_is_multi_document_yaml`; the citation aged | §5 |
+
+The three counts that appear across the document are reconciled in §2.6.
+
+**What the review did not change.** The plan's diagnosis holds: mdformat's
+default really does collapse ordered lists, and `--number` really is a
+prerequisite for the lift. The rollout really did produce zero semantic
+frontmatter differences in every repository, and the seven documents the
+hook refuses are the seven the plan names. The two dangerous instructions
+were the only findings that would have cost something if followed.
