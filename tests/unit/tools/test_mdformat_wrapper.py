@@ -431,7 +431,7 @@ class TestFrontmatterSafety:
             assert _frontmatter_extension_count("/tmp/x/mdformat") is None
 
     def test_extension_count_is_none_when_the_probe_prints_nonsense(self):
-        """Unparseable probe output is no count at all."""
+        """Unparsable probe output is no count at all."""
         with patch("crackerjack.tools.mdformat_wrapper.subprocess.run") as mock_run:
             mock_run.return_value = Mock(
                 stdout="not a number\n", stderr="", returncode=0

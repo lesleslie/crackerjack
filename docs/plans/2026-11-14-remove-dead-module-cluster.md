@@ -3,7 +3,7 @@ title: Remove the Dead Module Cluster from Crackerjack
 description: "Delete 128 production modules (26,659 lines) that no code path in the repo or the fleet ever loads, plus 104 test files (35,368 lines) that exist only to exercise them. The inventory was wrong the first time — 30 modules in `crackerjack/services/patterns/` are live — so this plan records the corrected set, the runtime proof behind it, and the four places where 'dead' is really 'documented but never wired'. Net: ~62,000 lines removed, zero capability that currently runs is lost, and `git_analytics.py`'s 3,275 lines get a real home instead of the bin."
 audience: crackerjack maintainer
 created: 2026-11-14
-status: active
+status: shipped
 role: implementation
 topic: architecture
 date: 2026-11-14

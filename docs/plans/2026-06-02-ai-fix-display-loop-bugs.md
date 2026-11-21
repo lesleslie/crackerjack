@@ -1,6 +1,6 @@
 ---
-status: active
-role: implementation
+status: complete
+role: historical
 topic: lifecycle
 date: 2026-07-17
 last_reviewed: 2026-07-17
@@ -9,6 +9,13 @@ blocks_on: []
 ---
 
 # AI-Fix Display & Loop Bugs Implementation Plan
+
+> **2026-11-21.** The subsystem this document describes was removed
+> from production on 2026-11-13; the removal is recorded in
+> `docs/plans/2026-11-13-remove-dead-ai-fix-module-cluster.md`
+> (-73 files, -52,338 lines). This document is retained as a record of
+> what was decided and built, not as a description of anything that
+> still runs.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 

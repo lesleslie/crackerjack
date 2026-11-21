@@ -1,6 +1,6 @@
 # Plan Index
 
-_Regenerated 2026-11-20 by `crackerjack.tools.plan_index_sync` (phase)._
+_Regenerated 2026-11-21 by `crackerjack.tools.plan_index_sync` (phase)._
 
 ### Docs: adr
 
@@ -16,15 +16,15 @@ _Regenerated 2026-11-20 by `crackerjack.tools.plan_index_sync` (phase)._
 | Path | Date | Status | Role | Topic | Title |
 |---|---|---|---|---|---|
 | [`docs/plans/2026-05-20-phase-0-event-bus-plan.md`](2026-05-20-phase-0-event-bus-plan.md) | 2026-07-17 | `active` | `implementation` | `lifecycle` | Phase 0 Implementation Plan — AI-Fix Event Bus |
-| [`docs/plans/2026-06-02-ai-fix-display-loop-bugs.md`](2026-06-02-ai-fix-display-loop-bugs.md) | 2026-07-17 | `active` | `implementation` | `lifecycle` | AI-Fix Display & Loop Bugs Implementation Plan |
+| [`docs/plans/2026-06-02-ai-fix-display-loop-bugs.md`](2026-06-02-ai-fix-display-loop-bugs.md) | 2026-07-17 | `complete` | `historical` | `lifecycle` | AI-Fix Display & Loop Bugs Implementation Plan |
 | [`docs/plans/2026-06-29-ty-ratchet-cleanup.md`](2026-06-29-ty-ratchet-cleanup.md) | 2026-07-17 | `active` | `implementation` | `lifecycle` | ty-ratchet pipeline cleanup (E.3 + missing-dir) Implementation Plan |
 | [`docs/plans/2026-07-08-fix-sandbox-integration.md`](2026-07-08-fix-sandbox-integration.md) | 2026-07-17 | `active` | `implementation` | `lifecycle` | FixSandbox Production Integration Plan |
 | [`docs/plans/2026-07-10-libcst-surgeon-extract-method-fallback.md`](2026-07-10-libcst-surgeon-extract-method-fallback.md) | 2026-07-17 | `active` | `implementation` | `lifecycle` | W3 LibcstSurgeon Extract-Method Fallback Fix — Implementation Plan |
 | [`docs/plans/2026-07-10-output-validator-traceback-details.md`](2026-07-10-output-validator-traceback-details.md) | 2026-07-17 | `active` | `implementation` | `lifecycle` | OutputValidator Traceback Details Implementation Plan |
 | [`docs/plans/2026-07-10-validation-coordinator-serialization.md`](2026-07-10-validation-coordinator-serialization.md) | 2026-07-17 | `active` | `implementation` | `lifecycle` | ValidationCoordinator Concurrency Serialization Implementation Plan |
-| [`docs/plans/2026-07-11-ai-fix-e501-post-processor.md`](2026-07-11-ai-fix-e501-post-processor.md) | 2026-07-17 | `active` | `implementation` | `lifecycle` | AI-fix ruff E501 line-length post-processor — Implementation Plan |
-| [`docs/plans/2026-07-11-ai-fix-no-op-circuit-breaker.md`](2026-07-11-ai-fix-no-op-circuit-breaker.md) | 2026-07-17 | `active` | `implementation` | `lifecycle` | AI-fix no-op circuit breaker — Implementation Plan |
-| [`docs/plans/2026-07-11-ai-fix-regen-timeout.md`](2026-07-11-ai-fix-regen-timeout.md) | 2026-07-17 | `active` | `implementation` | `lifecycle` | AI-fix plan-regeneration timeout — Implementation Plan |
+| [`docs/plans/2026-07-11-ai-fix-e501-post-processor.md`](2026-07-11-ai-fix-e501-post-processor.md) | 2026-07-17 | `complete` | `historical` | `lifecycle` | AI-fix ruff E501 line-length post-processor — Implementation Plan |
+| [`docs/plans/2026-07-11-ai-fix-no-op-circuit-breaker.md`](2026-07-11-ai-fix-no-op-circuit-breaker.md) | 2026-07-17 | `complete` | `historical` | `lifecycle` | AI-fix no-op circuit breaker — Implementation Plan |
+| [`docs/plans/2026-07-11-ai-fix-regen-timeout.md`](2026-07-11-ai-fix-regen-timeout.md) | 2026-07-17 | `complete` | `historical` | `lifecycle` | AI-fix plan-regeneration timeout — Implementation Plan |
 | [`docs/plans/2026-07-12-eventbridge-publisher.md`](2026-07-12-eventbridge-publisher.md) | 2026-07-17 | `active` | `implementation` | `lifecycle` | Crackerjack EventBridge Publisher Implementation Plan |
 | [`docs/plans/2026-08-06-ai-fix-external-loop.md`](2026-08-06-ai-fix-external-loop.md) | 2026-08-06 | `complete` | `historical` | `lifecycle` | AI-Fix External Loop + Akosha Hook Implementation Plan |
 | [`docs/plans/2026-08-06-crackerjack-ruff-fix-policy.md`](2026-08-06-crackerjack-ruff-fix-policy.md) | 2026-08-06 | `draft` | `implementation` | `lifecycle` | Crackerjack Ruff Fix Policy Implementation Plan |
@@ -40,9 +40,9 @@ _Regenerated 2026-11-20 by `crackerjack.tools.plan_index_sync` (phase)._
 | [`docs/plans/2026-11-07-pyscn-intel-marker-and-json-schema.md`](2026-11-07-pyscn-intel-marker-and-json-schema.md) | 2026-11-07 | `active` | `implementation` | `dependency-management` | Adopt pyscn >= 1.30 via an Intel-Skipping Dependency Marker |
 | [`docs/plans/2026-11-07-ruff-pin-range.md`](2026-11-07-ruff-pin-range.md) | 2026-11-07 | `draft` | `implementation` | `dependency-management` | Replace the Exact `ruff==0.16.0` Pin with a Bounded Version Range |
 | [`docs/plans/2026-11-07-xdg-runtime-paths-and-observability.md`](2026-11-07-xdg-runtime-paths-and-observability.md) | 2026-11-07 | `complete` | `implementation` | `testing-infrastructure` | XDG Runtime Paths and Run-State Observability |
-| [`docs/plans/2026-11-13-remove-dead-ai-fix-module-cluster.md`](2026-11-13-remove-dead-ai-fix-module-cluster.md) | 2026-11-13 | `active` | `implementation` | `architecture` | Remove the Dead AI-Fix Module Cluster from Crackerjack |
+| [`docs/plans/2026-11-13-remove-dead-ai-fix-module-cluster.md`](2026-11-13-remove-dead-ai-fix-module-cluster.md) | 2026-11-13 | `shipped` | `implementation` | `architecture` | Remove the Dead AI-Fix Module Cluster from Crackerjack |
 | [`docs/plans/2026-11-14-consolidate-tool-taxonomies.md`](2026-11-14-consolidate-tool-taxonomies.md) | 2026-11-14 | `active` | `implementation` | `architecture` | Consolidate the Tool Taxonomies in Crackerjack |
-| [`docs/plans/2026-11-14-remove-dead-module-cluster.md`](2026-11-14-remove-dead-module-cluster.md) | 2026-11-14 | `active` | `implementation` | `architecture` | Remove the Dead Module Cluster from Crackerjack |
+| [`docs/plans/2026-11-14-remove-dead-module-cluster.md`](2026-11-14-remove-dead-module-cluster.md) | 2026-11-14 | `shipped` | `implementation` | `architecture` | Remove the Dead Module Cluster from Crackerjack |
 | [`docs/plans/2026-11-15-archive-lifecycle-gate.md`](2026-11-15-archive-lifecycle-gate.md) | 2026-11-15 | `active` | `implementation` | `lifecycle` | Archive lifecycle gate — the cleanup must not archive live documents |
 | [`docs/plans/2026-11-20-lift-mdformat-frontmatter-skip.md`](2026-11-20-lift-mdformat-frontmatter-skip.md) | 2026-11-20 | `draft` | `implementation` | `process-discipline` | Lift the mdformat frontmatter skip and protect numbered lists |
 | [`docs/plans/TEMPLATE.md`](TEMPLATE.md) | 2026-11-14 | `active` | `canonical` | `process-discipline` | Plan Template — Integration-Contract Required |
@@ -51,14 +51,14 @@ _Regenerated 2026-11-20 by `crackerjack.tools.plan_index_sync` (phase)._
 
 | Path | Date | Status | Role | Topic | Title |
 |---|---|---|---|---|---|
-| [`docs/specs/2026-05-20-ai-fix-comprehensive-overhaul-design.md`](../specs/2026-05-20-ai-fix-comprehensive-overhaul-design.md) | 2026-07-17 | `draft` | `implementation` | `lifecycle` | AI-Fix Comprehensive-Stage Overhaul — Design |
+| [`docs/specs/2026-05-20-ai-fix-comprehensive-overhaul-design.md`](../specs/2026-05-20-ai-fix-comprehensive-overhaul-design.md) | 2026-07-17 | `complete` | `historical` | `lifecycle` | AI-Fix Comprehensive-Stage Overhaul — Design |
 | [`docs/specs/2026-06-29-ty-ratchet-cleanup-design.md`](../specs/2026-06-29-ty-ratchet-cleanup-design.md) | 2026-07-17 | `draft` | `implementation` | `lifecycle` | Plan: ty-ratchet pipeline cleanup (E.3 + missing-dir) |
 | [`docs/specs/2026-07-08-fix-sandbox-integration-design.md`](../specs/2026-07-08-fix-sandbox-integration-design.md) | 2026-07-17 | `draft` | `implementation` | `lifecycle` | FixSandbox Production Integration Design |
 | [`docs/specs/2026-07-10-libcst-surgeon-extract-method-fallback-design.md`](../specs/2026-07-10-libcst-surgeon-extract-method-fallback-design.md) | 2026-07-17 | `draft` | `implementation` | `lifecycle` | LibcstSurgeon Extract-Method Fallback Fix — Design |
 | [`docs/specs/2026-07-10-output-validator-traceback-details-design.md`](../specs/2026-07-10-output-validator-traceback-details-design.md) | 2026-07-17 | `draft` | `implementation` | `lifecycle` | OutputValidator Traceback Details — Design |
 | [`docs/specs/2026-07-10-validation-coordinator-serialization-design.md`](../specs/2026-07-10-validation-coordinator-serialization-design.md) | 2026-07-17 | `draft` | `implementation` | `lifecycle` | ValidationCoordinator Concurrency Serialization — Design |
-| [`docs/specs/2026-07-11-ai-fix-no-op-circuit-breaker-design.md`](../specs/2026-07-11-ai-fix-no-op-circuit-breaker-design.md) | 2026-07-17 | `draft` | `implementation` | `lifecycle` | AI-fix no-op circuit breaker — design |
-| [`docs/specs/2026-07-11-ai-fix-regen-timeout-design.md`](../specs/2026-07-11-ai-fix-regen-timeout-design.md) | 2026-07-17 | `draft` | `implementation` | `lifecycle` | AI-fix plan-regeneration timeout — design |
+| [`docs/specs/2026-07-11-ai-fix-no-op-circuit-breaker-design.md`](../specs/2026-07-11-ai-fix-no-op-circuit-breaker-design.md) | 2026-07-17 | `complete` | `historical` | `lifecycle` | AI-fix no-op circuit breaker — design |
+| [`docs/specs/2026-07-11-ai-fix-regen-timeout-design.md`](../specs/2026-07-11-ai-fix-regen-timeout-design.md) | 2026-07-17 | `complete` | `historical` | `lifecycle` | AI-fix plan-regeneration timeout — design |
 | [`docs/specs/2026-08-06-crackerjack-ruff-fix-policy-design.md`](../specs/2026-08-06-crackerjack-ruff-fix-policy-design.md) | 2026-08-06 | `draft` | `implementation` | `architecture` | Crackerjack Ruff Fix Policy Design |
 | [`docs/specs/2026-08-11-bodai-coverage-ratchet-standard-design.md`](../specs/2026-08-11-bodai-coverage-ratchet-standard-design.md) | 2026-08-11 | `complete` | `canonical` | `architecture` | Coverage-Ratchet Standardization — Design |
 | [`docs/specs/2026-09-07-crackerjack-multi-language-design.md`](../specs/2026-09-07-crackerjack-multi-language-design.md) | 2026-09-07 | `complete` | `canonical` | `architecture` | Crackerjack Multi-Language Extension |
@@ -94,8 +94,8 @@ _Regenerated 2026-11-20 by `crackerjack.tools.plan_index_sync` (phase)._
 | Role \\ Lifecycle | draft | active | partial | shipped | complete | Total |
 |---|---|---|---|---|---|---|
 | `canonical` | · | 11 | · | · | 2 | **13** |
-| `implementation` | 18 | 27 | · | · | 3 | **48** |
+| `implementation` | 15 | 21 | · | 2 | 3 | **41** |
 | `umbrella` | · | · | · | · | · | **0** |
-| `historical` | · | · | · | · | 1 | **1** |
+| `historical` | · | · | · | · | 8 | **8** |
 | `superseded` | · | · | · | · | · | **0** |
-| **Total** | **18** | **38** | **·** | **·** | **6** | **62** |
+| **Total** | **15** | **32** | **·** | **2** | **13** | **62** |

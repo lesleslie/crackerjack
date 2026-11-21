@@ -1,6 +1,6 @@
 ---
-status: draft
-role: implementation
+status: complete
+role: historical
 topic: lifecycle
 date: 2026-07-17
 last_reviewed: 2026-07-17
@@ -9,6 +9,13 @@ blocks_on: []
 ---
 
 # AI-fix no-op circuit breaker — design
+
+> **2026-11-21.** The subsystem this document describes was removed
+> from production on 2026-11-13; the removal is recorded in
+> `docs/plans/2026-11-13-remove-dead-ai-fix-module-cluster.md`
+> (-73 files, -52,338 lines). This document is retained as a record of
+> what was decided and built, not as a description of anything that
+> still runs.
 
 **Date:** 2026-07-11
 **Status:** Approved (hard skip after 2 identical plans chosen) <!-- legacy status — see YAML frontmatter -->

@@ -44,7 +44,7 @@ than style, and both are measured below rather than assumed.
   (`crackerjack/pyproject.toml`, commit `78b3c8ca`) and already
   guarded: the hook fails loud when a tracked frontmatter document
   exists and the extension is missing from the environment that will run
-  mdformat. This plan does not re-declare the dependency and does not
+  mdformat. This plan does not redeclare the dependency and does not
   re-architect the guard.
 - Version bumps and PyPI publishes are the operator's.
 - Push is the operator's.
